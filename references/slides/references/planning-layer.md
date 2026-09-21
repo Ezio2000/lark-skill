@@ -1,18 +1,16 @@
 # Planning Layer
 
-新建演示文稿或大幅改写页面时，必须先写 `.lark-slides/plan/<deck-or-task-id>/slide_plan.json`，再生成 XML。这个文件是 deck 的设计中间层，用来把叙事、页面角色、布局、视觉重点和文字密度固定下来，避免从用户提示直接跳到 XML。
+For a new deck or major page rewrite, write `.lark-slides/plan/<deck-or-task-id>/slide_plan.json` before XML. Use a task-specific temporary working directory unless the user requested retained project artifacts. The plan records narrative, page roles, geometry, visual focus, and text density.
 
-小型已有页编辑可豁免，例如只替换一个标题、改一个数字、插入一个块、上传并插入一张图。只要任务会重排多页、生成新 deck、替换整页结构，仍然需要规划层。
+Small existing-page edits (one title, number, block, or image) do not need a new plan. A new deck, multi-page restructuring, or full-page redesign does.
 
 ## Required Flow
 
-1. 理解用户需求，必要时澄清主题、受众、页数、风格。
-2. 选择唯一 plan 目录：`.lark-slides/plan/<deck-or-task-id>/`。
-3. 先创建目录：`mkdir -p .lark-slides/plan/<deck-or-task-id>`。
-4. 写入 `.lark-slides/plan/<deck-or-task-id>/slide_plan.json`。
-5. 读取 `xml/xml-schema-quick-ref.md`、`visual-planning.md` 和 `asset-planning.md`。
-6. 按 plan、visual planning 和 asset planning 规则逐页生成 XML，把 `layout_type`、`visual_focus`、`text_density` 转成具体页面几何和文本量约束，并把缺失素材转成可执行兜底视觉。
-7. 创建 PPT 后用 `slides +xml-get` 回读，核对页面数量、关键元素和 plan 到 XML 的对应关系，空白 PPT 中没有 slide 元素。
+1. Resolve the requested topic, audience, page count, and style; ask only for material missing choices.
+2. Create a unique task/deck plan directory and write `slide_plan.json`.
+3. Read the [XML quick reference](xml/xml-schema-quick-ref.md), [visual planning](visual-planning.md), and [asset planning](asset-planning.md).
+4. Translate layout/focus/density into actual XML geometry, with task-appropriate fallbacks for missing assets.
+5. After creation, read back with `slides +xml-get` and verify page count, key elements, and plan correspondence. A blank presentation contains no slide elements.
 
 
 ## Plan Path
@@ -35,10 +33,7 @@ Rules:
 
 `.lark-slides/` is local agent state. It supports recovery, iteration, and later edits, but it should not be treated as source code or committed by default.
 
-Keep:
-
-- `.lark-slides/plan/<deck-or-task-id>/slide_plan.json` after successful creation or major rewrite. The plan is the editable design state for the deck.
-- A small manifest when useful for follow-up work, such as `xml_presentation_id`, slide IDs, `revision_id`, plan path, and verification status.
+Keep the plan and resource IDs while creation, recovery, or current follow-up editing is in progress. After successful delivery, retain files only when they are requested deliverables or necessary for a continuing task; otherwise clean the temporary plan along with transient XML/screenshots. Do not automatically add a manifest to the user's project.
 
 Clean or avoid keeping:
 
@@ -88,7 +83,7 @@ Exception:
         "asset_type": "logo",
         "purpose": "Signal product or team identity on the opening page.",
         "suggested_query": "product logo",
-        "fallback_if_missing": "Create a close-enough image with the image generation tool instead of a real logo."
+        "fallback_if_missing": "Use the actual product name as text; do not invent a replacement brand mark."
       },
       "text_density": "low",
       "speaker_intent": "Frame the decision and establish the deck's point of view."
@@ -144,9 +139,9 @@ When `chart_contract.required == true`, XML generation must produce a `<chart>` 
 
 - `user_provided`: the user supplied concrete values, tables, CSV, or metric lists; use them and do not replace them with mock data.
 - `mock_placeholder`: the user asked for a placeholder, template, example, or later-replaceable chart position; use mock data in native `<chart>`.
-- `mock_required_by_intent`: the user did not provide concrete values but asked for data expression, charts, trends, comparisons, or distributions; use mock data in native `<chart>`.
+- `sourced`: values were obtained from a verifiable source within the task; retain that source. A factual chart request without data does not authorize inventing values. Retrieve a permitted source, ask for the missing data, or mark the chart as unavailable.
 
-`data_series_required` means the generated XML must include `<chartData>`. It does not require user-provided real-world values. When real values are unavailable but chart expression is part of the user's intent, write mock or placeholder values into native `<chart>` and label them clearly instead of switching to manual drawing primitives or metric blocks.
+`data_series_required` means the XML must include `<chartData>`. Use real supplied/sourced values for factual charts. Labeled mock data is appropriate only for a requested example, template, or placeholder. Missing data must not silently become a fabricated series.
 
 ## Layout Vocabulary
 
@@ -211,7 +206,7 @@ Use an object for one planned asset, an array for multiple real needs, or `asset
 - `asset_type`: one of `paper_figure`, `architecture_diagram`, `icon`, `logo`, `chart`, `infographic`, `screenshot`, `flow_diagram`, or `none`.
 - `purpose`: why this asset helps the page's key message.
 - `suggested_query`: short future lookup hint only; do not execute it unless separately requested.
-- `fallback_if_missing`: a plan to create a close-enough image with the image generation tool, or a native `<chart>` for data.
+- `fallback_if_missing`: a concrete alternative consistent with user style and evidence, such as typography, a native diagram, a labeled mock in an illustrative task, or an explicit data gap. Generated imagery is optional, not mandatory.
 - `chart_contract`: when `asset_type` is `chart` and the visual is a supported standard data chart, set this optional slide-level field so generation is locked to native `<chart>`.
 
 For detailed rules and examples, read `asset-planning.md`.
@@ -219,8 +214,8 @@ For detailed rules and examples, read `asset-planning.md`.
 Good examples:
 
 - `{"asset_type":"architecture_diagram","purpose":"Explain component relationships.","suggested_query":"service architecture diagram","fallback_if_missing":"Render the component diagram with <shape> + <line>."}`
-- `{"asset_type":"logo","purpose":"Identify the customer context.","suggested_query":"customer logo","fallback_if_missing":"Create a close-enough image with the image generation tool instead of a real logo."}`
-- `{"asset_type":"chart","purpose":"Show adoption trend.","suggested_query":"monthly adoption trend chart","fallback_if_missing":"Render a native `<chart>` using the provided series when available; otherwise render a native `<chart>` with mock placeholder values and label it as 模拟数据，仅占位，待替换真实数据."}`
+- `{"asset_type":"logo","purpose":"Identify the customer context.","suggested_query":"customer logo","fallback_if_missing":"Use the customer's name in text; do not invent its logo."}`
+- `{"asset_type":"chart","purpose":"Show adoption trend.","suggested_query":"monthly adoption trend chart","fallback_if_missing":"Use a native chart with supplied or sourced values; if unavailable, report the missing series."}`
 
 ## XML Generation Contract
 

@@ -1,15 +1,15 @@
 # Asset Planning
 
-新建演示文稿或大幅改写页面时，在写入 `slide_plan.json` 前后都可以参考本文件。目标是让 agent 主动识别有价值的图、图标、图表、流程图、时序图、架构图、装饰图案、截图或示意图需求，同时保持 deck 在没有真实素材时也能完整执行。
+Use while planning a new deck or major rewrite to identify meaningful images, diagrams, charts, icons, and screenshots, with useful alternatives when assets are unavailable.
 
-本文件只定义轻量资产规划。不要把它理解成素材采集流程。
+This is lightweight planning, not a mandatory asset-acquisition workflow. Explicit no-image or minimal-style requests take precedence.
 
 ## Core Rules
 
 - `asset_need` is metadata only. It can guide page design.
 - Every planned asset must include a fallback visual plan. The fallback can use native charts, tables, placeholder regions, or XML shapes, text, and arrows as appropriate.
 - Asset needs must serve the page's `key_message` and `visual_focus`. Do not add decorative assets that do not clarify the page.
-- Prefer a few high-value asset plans over one asset on every page. For a 6-page technical or business deck, plan assets on at least 3 pages when the content allows.
+- Prefer meaningful assets over a page-count quota. Use `asset_type: "none"` when typography alone serves the page.
 - If a real local asset already exists or the user provides one, it can be used through the normal media-upload workflow. Still keep `fallback_if_missing` in the plan.
 - Do not leave blank image boxes in final XML. If the asset is missing, render the fallback visual.
 
@@ -71,7 +71,7 @@ For `asset_type: "chart"`:
 - Choose the data source explicitly:
   - `user_provided`: when the user provides concrete values, tables, CSV, or metric lists, use those values and do not replace them with mock data.
   - `mock_placeholder`: when the user asks for a placeholder, template, example, or chart position to replace later, use mock data in a native `<chart>`.
-  - `mock_required_by_intent`: when the user does not provide concrete values but asks for data expression, charts, trends, comparisons, or distributions, use mock data in a native `<chart>`.
+  - `sourced`: use verifiable values retrieved within the task and retain their source. A factual chart request without data requires data retrieval, clarification, or an explicit gap, not invented values.
 - Mock data must be labeled as `模拟数据，仅占位，待替换真实数据` or equivalent. Do not present mock values as facts.
 - Manual drawing fallbacks are allowed only for unsupported chart types such as scatter, funnel, waterfall-like custom visuals, or decorative non-data visuals.
 
@@ -130,7 +130,7 @@ Business comparison page:
 When generating XML:
 
 1. If an asset exists and the workflow supports it, place it in the planned visual region.
-2. If no asset exists, immediately render `fallback_if_missing` with the planned generated close-enough image. Supported standard data visuals still use native `<chart>`; other fallbacks may use the image generation tool to create an approximate image.
+2. If no asset exists, follow `fallback_if_missing` using typography, native diagrams, or optional generated illustrations as appropriate. Do not fabricate logos, screenshots, paper figures, or factual chart data. Supported standard charts use native `<chart>` when their data is available.
 3. Size the fallback to satisfy `visual_focus`; it should be a real page element, not a tiny decoration.
 4. Keep text-density limits. Do not compensate for missing assets by adding long bullet text.
 5. After creation, fetch the presentation and verify asset pages are not blank and that each planned fallback is visible when no real asset was used.
