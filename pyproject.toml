@@ -1,0 +1,16 @@
+[project]
+name = "lark-skill"
+version = "0.1.0"
+description = "A progressive-disclosure Lark CLI skill bundle"
+requires-python = ">=3.11"
+license = "MIT"
+dependencies = []
+
+[project.optional-dependencies]
+dataframe = ["pandas>=2.2,<4"]
+
+[dependency-groups]
+dev = ["pyyaml>=6,<7"]
+
+[tool.uv]
+package = false
