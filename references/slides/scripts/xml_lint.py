@@ -2982,6 +2982,8 @@ def run_cli(argv: list[str] | None = None) -> None:
 
 
 if __name__ == "__main__":
+    sys.stdout.reconfigure(encoding="utf-8")
+    sys.stderr.reconfigure(encoding="utf-8")
     try:
         run_cli()
     except XmlLayoutLintError as error:

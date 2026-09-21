@@ -355,6 +355,9 @@ def run_cli(argv: list[str] | None = None) -> None:
 
 
 if __name__ == "__main__":
+    # CLI output is UTF-8 even when Windows pipes default to a legacy code page.
+    sys.stdout.reconfigure(encoding="utf-8")
+    sys.stderr.reconfigure(encoding="utf-8")
     try:
         run_cli()
     except IconParkToolError as error:

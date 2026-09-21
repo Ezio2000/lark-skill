@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import os
 import subprocess
 import sys
 import unittest
@@ -117,13 +118,24 @@ class IconParkToolTest(unittest.TestCase):
 
 
 class IconParkToolCLITest(unittest.TestCase):
-    def run_tool(self, *args: str) -> subprocess.CompletedProcess[str]:
+    def run_tool(self, *args: str, env: dict[str, str] | None = None) -> subprocess.CompletedProcess[str]:
         return subprocess.run(
             [sys.executable, str(SCRIPT_PATH), *args],
             capture_output=True,
             check=False,
             text=True,
+            encoding="utf-8",
+            env=env,
         )
+
+    def test_cli_unicode_survives_a_legacy_pipe_encoding(self) -> None:
+        env = {**os.environ, "PYTHONIOENCODING": "cp1252", "PYTHONUTF8": "0"}
+        result = self.run_tool("search", "--query", "增长趋势", "--limit", "1", env=env)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertTrue(json.loads(result.stdout))
+        result = self.run_tool("search", "增长趋势", env=env)
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("增长趋势", result.stderr)
 
     def test_cli_search_writes_json_to_stdout(self) -> None:
         result = self.run_tool("search", "--query", "增长趋势", "--limit", "5")
