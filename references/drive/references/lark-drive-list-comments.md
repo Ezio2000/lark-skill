@@ -1,67 +1,75 @@
 # drive +list-comments
 
 
-列出 doc/docx/sheet/file/slides/base(bitable)/apps 的评论卡片。优先传用户给出的完整 URL，shortcut 会自动识别类型；apps 为妙搭类型，支持 `/page/<token>` URL；如果传 wiki URL 或 `--token <wiki_token> --type wiki`，会先解析到真实文档。
+List comment cards for doc/docx/sheet/file/slides/base(bitable)/apps. Prefer passing the complete URL given by the user; the shortcut automatically identifies the type; apps is the Miaoda type and supports `/page/<token>` URLs; if a wiki URL or `--token <wiki_token> --type wiki` is passed, it is first resolved to the real document.
 
-## 重要默认口径
+<a id="重要默认口径"></a>
+## Important default behavior
 
-- 默认只查未解决评论，即不额外传 `--solved-status` 或显式传 `--solved-status false`。即使用户说“所有评论”“全部评论”“把评论都列出来”，只要没有明确提到包含已解决评论，仍然按默认口径查询未解决评论。
-- 仅当用户明确要求“包含已解决评论”“已解决和未解决都要”“全部历史评论”这类语义时，才传 `--solved-status all`。
-- 是否还有下一页以输出里的 `has_more` 为准；`page_token` 只作为 `has_more=true` 时续跑下一页的游标。
+- By default, only unresolved comments are queried, i.e., without additionally passing `--solved-status` or by explicitly passing `--solved-status false`. Even if the user says "all comments", "every comment", or "list all the comments", as long as they do not explicitly mention including resolved comments, still query unresolved comments according to the default behavior.
+- Only when the user explicitly requests semantics such as "include resolved comments", "both resolved and unresolved", or "all historical comments" should `--solved-status all` be passed.
+- Whether there is a next page is determined by `has_more` in the output; `page_token` is only used as the cursor to continue to the next page when `has_more=true`.
 
-## 命令
+<a id="命令"></a>
+## Command
 
 ```bash
-# 推荐：直接传用户给出的完整 URL。默认只查未解决评论。
+# Recommended: pass the complete URL given by the user directly. By default, only unresolved comments are queried.
 lark-cli drive +list-comments --url "<DOCUMENT_URL>"
 
-# 只有用户明确要求包含已解决评论时，才传 --solved-status all。
+# Only when the user explicitly requests including resolved comments should --solved-status all be passed.
 lark-cli drive +list-comments --url "<DOCUMENT_URL>" --solved-status all
 ```
 
-## 参数
+<a id="参数"></a>
+## Parameters
 
-| 参数 | 必填 | 说明 |
+| Parameter | Required | Description |
 |------|------|------|
-| `--url` | 与 `--token` 二选一 | 推荐入口。支持 doc/docx/sheet/file/slides/base/bitable/apps/wiki URL；apps 妙搭 URL 使用 `/page/<token>`；wiki URL 会自动解析到真实文档。 |
-| `--token` | 与 `--url` 二选一 | 裸 token 或 URL。裸 token 必须搭配 `--type`；wiki token 使用 `--type wiki`。 |
-| `--type` | 裸 token 时必填 | 传 token 对应类型：`doc`、`docx`、`sheet`、`file`、`slides`、`bitable`、`base`、`apps`、`wiki`。wiki token 使用 `wiki`；传 `base` 时，CLI 会按 `bitable` 类型处理。 |
-| `--solved-status` | 否 | `false` / `true` / `all`，默认 `false`。`false` 查未解决评论；`true` 查已解决评论；`all` 查全部评论。 |
-| `--comment-scope` | 否 | `all` / `whole` / `partial`，默认 `all`。`all` 查全部范围；`whole` 查全文评论；`partial` 查局部评论。 |
-| `--need-reaction` | 否 | 是否返回评论卡片上的 reaction 数据；只有用户明确需要 reaction 时才带。 |
-| `--need-relation` | 否 | docx 评论定位关系字段；仅 docx 生效，非 docx 静默忽略。需要定位正文时先读 [`lark-drive-comment-location.md`](lark-drive-comment-location.md)。 |
-| `--page-size` | 否 | 默认 50，最大 100。 |
-| `--page-token` | 否 | 分页游标；本 shortcut 不自动翻页，按返回的 `page_token` 继续请求下一页。 |
+| `--url` | Choose one of `--token` | Recommended entry point. Supports doc/docx/sheet/file/slides/base/bitable/apps/wiki URLs; apps Miaoda URLs use `/page/<token>`; wiki URLs are automatically resolved to the real document. |
+| `--token` | Choose one of `--url` | Bare token or URL. A bare token must be paired with `--type`; wiki tokens use `--type wiki`. |
+| `--type` | Required when using a bare token | Pass the type corresponding to the token: `doc`, `docx`, `sheet`, `file`, `slides`, `bitable`, `base`, `apps`, `wiki`. Wiki tokens use `wiki`; when `base` is passed, the CLI processes it as the `bitable` type. |
+| `--solved-status` | No | `false` / `true` / `all`, default `false`. `false` queries unresolved comments; `true` queries resolved comments; `all` queries all comments. |
+| `--comment-scope` | No | `all` / `whole` / `partial`, default `all`. `all` queries the full scope; `whole` queries full-text comments; `partial` queries local comments. |
+| `--need-reaction` | No | Whether to return reaction data on comment cards; include it only when the user explicitly needs reactions. |
+| `--need-relation` | No | docx comment location relation field; effective only for docx, silently ignored for non-docx. To locate body text, first read [`lark-drive-comment-location.md`](lark-drive-comment-location.md). |
+| `--page-size` | No | Default 50, maximum 100. |
+| `--page-token` | No | Pagination cursor; this shortcut does not automatically paginate, continue requesting the next page according to the returned `page_token`. |
 
-## 行为说明
+<a id="行为说明"></a>
+## Behavior notes
 
-- `--comment-scope all` 查全部范围；`whole` 查全文评论；`partial` 查局部/选区评论。
-- 当用户已经给出完整 URL 时，原样传给 `--url`；不要先提取 token 再重组成其他类型 URL。比如 sheet 保留 `/sheets/<token>`，wiki 保留 `/wiki/<token>`，妙搭 apps 保留 `/page/<token>`。
-- URL 输入时不需要传 `--type`；如果 URL 类型和显式 `--type` 冲突，shortcut 会返回 validation error，建议移除 `--type`。
-- wiki 输入会自动解析到真实文档，再查询评论列表。JSON 输出不额外返回 wiki token 或 wiki node。
-- 输出中的 `items` 保留评论卡片字段，外层补充 `file_token`、`file_type`、`has_more`、`page_token`、`count`；`count` 是当前页返回的评论卡片数。是否继续分页以 `has_more` 为准，而不是只看 `page_token` 是否存在。
+- `--comment-scope all` queries the full scope; `whole` queries full-text comments; `partial` queries local/selection comments.
+- When the user has already provided a complete URL, pass it as-is to `--url`; do not first extract the token and then reassemble it into another type of URL. For example, keep `/sheets/<token>` for sheets, keep `/wiki/<token>` for wiki, and keep `/page/<token>` for Miaoda apps.
+- When inputting a URL, there is no need to pass `--type`; if the URL type conflicts with an explicit `--type`, the shortcut returns a validation error, and it is recommended to remove `--type`.
+- Wiki input is automatically resolved to the real document, and then the comment list is queried. The JSON output does not additionally return a wiki token or wiki node.
+- `items` in the output preserves the comment card fields, and the outer layer supplements `file_token`, `file_type`, `has_more`, `page_token`, `count`; `count` is the number of comment cards returned on the current page. Whether to continue pagination is determined by `has_more`, not merely by whether `page_token` exists.
 
-## 评论卡片模型
+<a id="评论卡片模型"></a>
+## Comment card model
 
-- 返回的 `items` 是评论卡片列表，每个 `item` 对应用户界面中的一张评论卡片，不是平铺的互动消息列表。
-- 创建评论时会同时创建该卡片里的第一条 reply；真正承载正文的是 `item.reply_list.replies`，其中第一条 reply（根回复）在用户视角下就是这张卡片里的“评论本身”。更新根回复即改写评论正文（见 [`lark-drive-update-reply.md`](lark-drive-update-reply.md)）；删除按 reply 逐条生效，卡片在最后一条回复被删时才消失（见 [`lark-drive-delete-reply.md`](lark-drive-delete-reply.md)）。
-- `item.has_more=true` 表示该评论卡片下还有回复未包含在本次返回中；这与外层 `has_more`（是否还有下一页评论卡片）是两个不同字段。需要完整回复时继续用 `drive +list-replies --comment-id <id>` 分页拉全。
+- The returned `items` is a list of comment cards; each `item` corresponds to one comment card in the user interface, not a flattened list of interaction messages.
+- When a comment is created, the first reply in that card is also created at the same time; what truly carries the body text is `item.reply_list.replies`, in which the first reply (root reply) is, from the user's perspective, the "comment itself" in this card. Updating the root reply rewrites the comment body text (see [`lark-drive-update-reply.md`](lark-drive-update-reply.md)); deletion takes effect reply by reply, and the card disappears only when the last reply is deleted (see [`lark-drive-delete-reply.md`](lark-drive-delete-reply.md)).
+- `item.has_more=true` indicates that there are still replies under this comment card not included in this return; this is a different field from the outer `has_more` (whether there is a next page of comment cards). When complete replies are needed, continue using `drive +list-replies --comment-id <id>` pagination to fetch them all.
 
-## 统计口径
+<a id="统计口径"></a>
+## Counting rules
 
-- 统计“评论数”或“评论卡片数”：统计 `items` 长度；全量统计时对所有分页返回的 `items` 长度累加。
-- 统计“回复数”：统计所有 `item.reply_list.replies` 长度之和，再减去 `items` 长度。
-- 统计“总互动数”：统计所有 `item.reply_list.replies` 长度之和，包含每张评论卡片里的首条评论。
-- 任一 `item.has_more=true` 时，先用 `drive +list-replies --comment-id <id>` 把该卡片的回复拉全，再做回复数或总互动数统计，否则会少算。
+- To count the "number of comments" or "number of comment cards": count the length of `items`; for full counting, add up the lengths of `items` returned across all pages.
+- To count the "number of replies": count the sum of the lengths of all `item.reply_list.replies`, then subtract the length of `items`.
+- To count the "total number of interactions": count the sum of the lengths of all `item.reply_list.replies`, including the first comment in each comment card.
+- When any `item.has_more=true`, first use `drive +list-replies --comment-id <id>` to fetch all replies for that card, then count replies or total interactions; otherwise the count will be too low.
 
-## 排序
+<a id="排序"></a>
+## Sorting
 
-- 只有当用户明确提到“最新评论”“最后评论”“最早评论”时，才需要按 `create_time` 排序。
-- 排序前必须拉完所有评论分页，不能只取第一页。
-- “最新评论”/“最后评论”：按 `create_time` 降序取第一条。“最早评论”：按 `create_time` 升序取第一条。
-- 用户只说“第一条评论”时，直接使用返回的第一条，不需要额外排序。
+- Only when the user explicitly mentions "latest comment", "last comment", or "earliest comment" is it necessary to sort by `create_time`.
+- Before sorting, all comment pages must be fully fetched; do not take only the first page.
+- "Latest comment"/"last comment": sort by `create_time` in descending order and take the first one. "Earliest comment": sort by `create_time` in ascending order and take the first one.
+- When the user only says "first comment", directly use the first one returned; no additional sorting is needed.
 
-## 输出
+<a id="输出"></a>
+## Output
 
 ```json
 {
@@ -74,8 +82,9 @@ lark-cli drive +list-comments --url "<DOCUMENT_URL>" --solved-status all
 }
 ```
 
-## 参考
+<a id="参考"></a>
+## References
 
-- [lark-drive](../index.md) -- 云空间（云盘/云存储）全部命令
-- [lark-drive-list-replies](lark-drive-list-replies.md) -- 拉全某张卡片下的回复（统计与 `item.has_more` 补全）
-- [lark-drive-comment-location](lark-drive-comment-location.md) -- 使用 `need_relation` 定位 docx 正文
+- [lark-drive](../index.md) -- all commands for cloud space (Drive/cloud storage)
+- [lark-drive-list-replies](lark-drive-list-replies.md) -- fetch all replies under a certain card (counting and `item.has_more` completion)
+- [lark-drive-comment-location](lark-drive-comment-location.md) -- use `need_relation` to locate docx body text

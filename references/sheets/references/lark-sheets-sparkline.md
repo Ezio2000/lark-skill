@@ -1,109 +1,111 @@
 # Lark Sheet Sparkline
 
-## 真对象硬约束
+<a id="真对象硬约束"></a>
+## Real Object Hard Constraints
 
-当用户要求"迷你图 / 趋势线 / 单元格内图表"时，**必须**通过 `+sparkline-{create|update|delete}` 创建真实的迷你图对象。**禁止**用文本字符（如 `▁▂▃▅▇`）拼接在单元格里、或用 `SPARKLINE()` 公式函数（已禁用）代替。判断标准：交付后 `+sparkline-list` 必须能返回该对象。
+When the user requests "sparkline / trend line / in-cell chart", you **must** create a real sparkline object via `+sparkline-{create|update|delete}`. **Do not** substitute by concatenating text characters (such as `▁▂▃▅▇`) in a cell, or by using the `SPARKLINE()` formula function (which is disabled). The criterion: after delivery, `+sparkline-list` must be able to return that object.
 
-## 使用场景
+<a id="使用场景"></a>
+## Use Cases
 
-读写迷你图对象。本 reference 覆盖 4 个 shortcut：
+Read and write sparkline objects. This reference covers 4 shortcuts:
 
-| 操作需求 | 使用工具 | 说明 |
+| Operation need | Tool to use | Description |
 |---------|---------|------|
-| 查看已有迷你图 | `+sparkline-list` | 获取迷你图的类型、数据源和样式配置 |
-| 创建/更新/删除迷你图 | `+sparkline-{create|update|delete}` | 对迷你图执行写入操作 |
+| View existing sparklines | `+sparkline-list` | Get the sparkline's type, data source, and style configuration |
+| Create/update/delete sparklines | `+sparkline-{create|update|delete}` | Perform write operations on sparklines |
 
-典型工作流：先读取现有迷你图了解配置 → 执行创建/更新/删除 → **必须再次读取验证结果**。
+Typical workflow: first read existing sparklines to understand the configuration → perform create/update/delete → **must read again to verify the result**.
 
-**常见配置错误（必须注意）**：
-- **数据源范围要精确**：迷你图的数据源范围必须与实际数据行列精确对应，范围偏移会导致图形展示错误
-- **不要与 SPARKLINE() 公式混淆**：飞书表格的 `SPARKLINE()` 公式函数已被禁用，迷你图只能通过 `+sparkline-{create|update|delete}` 的对象方式创建
-- **胜负 / count 迷你图原生支持**：`config.type="win_loss"`——别因速查表没列就判"不支持"绕路
-- **创建后必须验证**：调用 `+sparkline-list` 确认迷你图配置正确
+**Common configuration mistakes (must pay attention)**:
+- **Data source range must be precise**: The sparkline's data source range must correspond exactly to the actual data rows and columns; a range offset will cause incorrect chart display
+- **Do not confuse with the SPARKLINE() formula**: Lark Sheets' `SPARKLINE()` formula function has been disabled; sparklines can only be created via the `+sparkline-{create|update|delete}` object approach
+- **Win/loss / count sparklines are natively supported**: `config.type="win_loss"`—do not judge them as "unsupported" and take a detour just because the quick reference table does not list them
+- **Must verify after creation**: Call `+sparkline-list` to confirm the sparkline configuration is correct
 
 ## Shortcuts
 
-| Shortcut | Risk | 分组 |
+| Shortcut | Risk | Group |
 | --- | --- | --- |
-| `+sparkline-list` | read | 对象 |
-| `+sparkline-create` | write | 对象 |
-| `+sparkline-update` | write | 对象 |
-| `+sparkline-delete` | high-risk-write | 对象 |
+| `+sparkline-list` | read | Object |
+| `+sparkline-create` | write | Object |
+| `+sparkline-update` | write | Object |
+| `+sparkline-delete` | high-risk-write | Object |
 
 ## Flags
 
 ### `+sparkline-list`
 
-_公共四件套 · 系统：`--dry-run`_
+_Common four-piece set · System: `--dry-run`_
 
-| Flag | Type | 必填 | 说明 |
+| Flag | Type | Required | Description |
 | --- | --- | --- | --- |
-| `--group-id` | string | optional | 按 group_id 过滤 |
+| `--group-id` | string | optional | Filter by group_id |
 
 ### `+sparkline-create`
 
-_公共四件套 · 系统：`--dry-run`_
+_Common four-piece set · System: `--dry-run`_
 
-| Flag | Type | 必填 | 说明 |
+| Flag | Type | Required | Description |
 | --- | --- | --- | --- |
-| `--properties` | string + File + Stdin（复合 JSON） | required | JSON：`{config（共享样式配置）, sparklines（迷你图数组）}`；完整字段结构跑 `--print-schema` |
+| `--properties` | string + File + Stdin (composite JSON) | required | JSON: `{config（共享样式配置）, sparklines（迷你图数组）}`; run `--print-schema` for the complete field structure |
 
 ### `+sparkline-update`
 
-_公共四件套 · 系统：`--dry-run`_
+_Common four-piece set · System: `--dry-run`_
 
-| Flag | Type | 必填 | 说明 |
+| Flag | Type | Required | Description |
 | --- | --- | --- | --- |
-| `--group-id` | string | required | 目标组 id |
-| `--properties` | string + File + Stdin（复合 JSON） | required | JSON：`{config, sparklines}`；先 `+sparkline-list --group-id <id>` 回读再 patch；完整字段结构跑 `--print-schema` |
+| `--group-id` | string | required | Target group id |
+| `--properties` | string + File + Stdin (composite JSON) | required | JSON: `{config, sparklines}`; first read back with `+sparkline-list --group-id <id>` then patch; run `--print-schema` for the complete field structure |
 
 ### `+sparkline-delete`
 
-_公共四件套 · 系统：`--yes`、`--dry-run`_
+_Common four-piece set · System: `--yes`, `--dry-run`_
 
-| Flag | Type | 必填 | 说明 |
+| Flag | Type | Required | Description |
 | --- | --- | --- | --- |
-| `--group-id` | string | required | 目标组 id |
+| `--group-id` | string | required | Target group id |
 
 ## Schemas
 
-> 复合 JSON flag 字段速查（只列顶层 + 一层嵌套）。深层结构看下方 `## Examples`，或用 `--print-schema` 读完整 JSON Schema（用法见 index.md「公共 flag 速查」与「Agent 使用提示」）。
+> Composite JSON flag field quick reference (only top level + one level of nesting listed). For deeper structures, see `## Examples` below, or use `--print-schema` to read the complete JSON Schema (usage see index.md "Common flag quick reference" and "Agent usage tips").
 
 ### `+sparkline-create` `--properties` / `+sparkline-update` `--properties`
 
-_创建/更新/部分删除的迷你图属性_
+_Sparkline properties for create/update/partial delete_
 
-**顶层字段**：
-- `config` (object?) — 迷你图样式配置, 相同 groupId 的迷你图共享相同的样式 { theme_type?: enum, non_num_show_as?: enum, empty_show_as?: enum, contain_hidden_cells?: boolean, series_color?: string, …共 13 项 }
-- `sparklines` (array<object>?) — 迷你图项列表 each: { sparkline_id?: string, position?: object, source?: string, source_range?: object }
+**Top-level fields**:
+- `config` (object?) — Sparkline style configuration; sparklines with the same groupId share the same style { theme_type?: enum, non_num_show_as?: enum, empty_show_as?: enum, contain_hidden_cells?: boolean, series_color?: string, …13 items in total }
+- `sparklines` (array<object>?) — Sparkline item list each: { sparkline_id?: string, position?: object, source?: string, source_range?: object }
 
 ## Examples
 
-公共四件套：所有 shortcut 顶部排列 `--url` / `--spreadsheet-token` / `--sheet-id` / `--sheet-name`（XOR）。迷你图用 **两层 id** 管理——`group_id` 选组（一组同形态的迷你图共享类型 / 样式 / 数据源映射），`sparkline_id` 在组内选具体某一项。注意：不等同于已禁用的 `SPARKLINE()` 公式函数。
+Common four-piece set: all shortcuts have `--url` / `--spreadsheet-token` / `--sheet-id` / `--sheet-name` (XOR) arranged at the top. Sparklines are managed with **two levels of id**—`group_id` selects the group (a group of sparklines of the same form shares type / style / data source mapping), and `sparkline_id` selects a specific item within the group. Note: this is not the same as the disabled `SPARKLINE()` formula function.
 
-> **何时需要先 `+sparkline-list`：**
-> - `+sparkline-update`：**总是**需要——拿到组内每一项的 `sparkline_id`，回填到 `properties.sparklines[i]`，server 用它做映射。
-> - `+sparkline-delete`：**不需要** `sparkline_id`——CLI 仅支持按 `--group-id` 整组删除（该 shortcut 没有 `--properties`）。
+> **When you need to `+sparkline-list` first:**
+> - `+sparkline-update`: **always** needed—get the `sparkline_id` of each item in the group, and fill it back into `properties.sparklines[i]`; the server uses it for mapping.
+> - `+sparkline-delete`: `sparkline_id` **not** needed—the CLI only supports deleting the entire group by `--group-id` (this shortcut has no `--properties`).
 
 ### `+sparkline-list`
 
 ```bash
-# 列出整张子表的所有迷你图组
+# List all sparkline groups in the entire sub-sheet
 lark-cli sheets +sparkline-list --url "..." --sheet-id "$SID"
 
-# 钉到单组：返回该组每一项的 sparkline_id（update 必需）
+# Pin to a single group: return the sparkline_id of each item in that group (required for update)
 lark-cli sheets +sparkline-list --url "..." --sheet-id "$SID" --group-id "grpA"
 ```
 
 ### `+sparkline-create`
 
-> `--properties` 顶层只有 `config`（同组共享样式，如 `line_width` / `points` / `extremum_max` / `extremum_min`）和 `sparklines`（迷你图项数组）两个字段。`sparklines[i]` 每项必须含 `position`（落点 cell，`row` + `col`）+ `source`（数据 A1 范围，与 `source_range` 二选一）；create 时 `sparkline_id` 可省略，由系统生成。
+> `--properties` has only two top-level fields: `config` (style shared within the group, such as `line_width` / `points` / `extremum_max` / `extremum_min`) and `sparklines` (sparkline item array). Each `sparklines[i]` item must contain `position` (target cell, `row` + `col`) + `source` (data A1 range, choose one of the two with `source_range`); at create time `sparkline_id` may be omitted and is generated by the system.
 
 ```bash
 lark-cli sheets +sparkline-create --url "..." --sheet-id "$SID" --properties @sparkline.json
 ```
 
-`sparkline.json` 示例（在 F 列嵌入两行折线迷你图，数据分别来自 A2:E2 和 A3:E3）：
+`sparkline.json` example (embed two rows of line sparklines in column F, with data from A2:E2 and A3:E3 respectively):
 
 ```jsonc
 {
@@ -117,10 +119,10 @@ lark-cli sheets +sparkline-create --url "..." --sheet-id "$SID" --properties @sp
 
 ### `+sparkline-update`
 
-> 两步式：先 `+sparkline-list --group-id <id>` 拿当前组的 `sparkline_id` 列表，再构造 `properties.sparklines[]`——**每项必须带 `sparkline_id`**。只改样式可只传 `properties.config`（不带 `sparklines`，整组样式覆盖式更新）。
+> Two-step approach: first `+sparkline-list --group-id <id>` to get the current group's `sparkline_id` list, then construct `properties.sparklines[]`—**each item must carry `sparkline_id`**. To change only the style, you may pass only `properties.config` (without `sparklines`; the entire group's style is updated in overwrite mode).
 
 ```bash
-# 假设 +sparkline-list 已返回 group_id=grpA，组内 sparkline_id=sl_1 / sl_2
+# Assume +sparkline-list has returned group_id=grpA, with sparkline_id=sl_1 / sl_2 in the group
 lark-cli sheets +sparkline-update --url "..." --sheet-id "$SID" --group-id "grpA" --properties '{
   "sparklines": [
     {"sparkline_id":"sl_1","source":"'Sheet1'!A2:A20"},
@@ -131,20 +133,21 @@ lark-cli sheets +sparkline-update --url "..." --sheet-id "$SID" --group-id "grpA
 
 ### `+sparkline-delete`
 
-> CLI 仅支持**整组删除**：传 `--group-id` 删掉该组全部迷你图。该 shortcut **没有** `--properties`，无法只删组内单项（需求上要"留一部分"时，改用 `+sparkline-update` 重写该组的 `sparklines` 列表，而不是 delete）。强制 `--yes` 或 `--dry-run`；先 `--dry-run` 确认要删的目标组。
+> The CLI only supports **deleting the entire group**: pass `--group-id` to delete all sparklines in that group. This shortcut has **no** `--properties`, so it cannot delete only a single item within a group (when the requirement is to "keep part of them", instead use `+sparkline-update` to rewrite that group's `sparklines` list, rather than delete). `--yes` or `--dry-run` is mandatory; first `--dry-run` to confirm the target group to delete.
 
 ```bash
-# 删整组
+# Delete the entire group
 lark-cli sheets +sparkline-delete --url "..." --sheet-id "$SID" --group-id "grpA" --yes
 ```
 
-### Validate / DryRun / Execute 约束
+<a id="validate--dryrun--execute-约束"></a>
+### Validate / DryRun / Execute Constraints
 
-- `Validate`：
-  - XOR 公共四件套；`+sparkline-{update,delete}` 必须 `--group-id`。
-  - **`+sparkline-update`**：当 `properties.sparklines` 非空时，每一项必须含 `sparkline_id`（CLI 预检，错误信息会指回 `+sparkline-list`，避免命中服务端的不可读拒绝）；只传 `properties.config`（config-only update）合法、不触发 sparkline_id 检查。
-  - **`+sparkline-delete`**：只接 `--group-id`（整组删除），**没有** `--properties`，无法删组内单项。
-  - `--properties`（仅 `+sparkline-create` / `+sparkline-update`）顶层只接 `config`（同组共享样式）和 `sparklines`（迷你图项数组）；`+sparkline-create` 要求每个 `sparklines[i]` 含 `position` 与 `source`（或 `source_range`，二选一）。
-  - `+sparkline-delete` 强制 `--yes` 或 `--dry-run`。
-- `DryRun`：写操作输出"将要 POST/PATCH/DELETE 的 sparkline group 请求模板"。
-- `Execute`：create/update 后必须调用 `+sparkline-list --group-id <id>` 核对 config、项目数量、source 与 position；delete 后 list 确认目标组不存在。
+- `Validate`:
+  - XOR common four-piece set; `+sparkline-{update,delete}` must `--group-id`.
+  - **`+sparkline-update`**: When `properties.sparklines` is non-empty, each item must contain `sparkline_id` (CLI pre-check; the error message will point back to `+sparkline-list`, avoiding an unreadable rejection from the server); passing only `properties.config` (config-only update) is valid and does not trigger the sparkline_id check.
+  - **`+sparkline-delete`**: Only accepts `--group-id` (delete the entire group); there is **no** `--properties`, so a single item within a group cannot be deleted.
+  - `--properties` (only `+sparkline-create` / `+sparkline-update`) top level only accepts `config` (style shared within the group) and `sparklines` (sparkline item array); `+sparkline-create` requires each `sparklines[i]` to contain `position` and `source` (or `source_range`, choose one of the two).
+  - `+sparkline-delete` mandates `--yes` or `--dry-run`.
+- `DryRun`: Write operations output the "sparkline group request template about to be POST/PATCH/DELETE".
+- `Execute`: After create/update, you must call `+sparkline-list --group-id <id>` to verify the config, item count, source, and position; after delete, list to confirm the target group no longer exists.

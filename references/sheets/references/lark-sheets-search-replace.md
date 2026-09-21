@@ -1,111 +1,114 @@
 # Lark Sheet Search & Replace
 
-## 替换前 dry-run + 范围明确（替换前建议）
+<a id="替换前-dry-run--范围明确替换前建议"></a>
+## Dry-run before replacement + clear scope (recommended before replacement)
 
-`+cells-replace` 的副作用是不可逆的（除非另写代码回滚）。执行前必须：
+The side effects of `+cells-replace` are irreversible (unless you write separate code to roll back). Before executing, you must:
 
-1. **明确替换范围**：建议显式说明"只替换 X 列 / X 区域，还是全表替换"。避免默认全表替换——容易误改无关列。范围应由用户指令决定，模糊时主动询问。
-2. **dry-run 命中数量**：先用 `+cells-search` 在同一范围、同一关键词、同一匹配选项（大小写 / 精确 / 正则）下统计命中数量。把数量和**期望命中数**（用户明示的或基于业务理解推断的）对照；不一致先排查（关键词太宽？范围太大？）。
-3. **替换后全量校验**：执行后再次 `+cells-search` 旧关键词，预期为 0；指定了完整 range 与旧值枚举时逐项搜索，随机抽样不能替代。**例外**：新值本身包含旧值时（如 `v1`→`v1.1`，或子串替换后新值仍含关键词），子串搜索仍会命中，此时零命中判据不成立——改用整格精确匹配（`--match-entire-cell` 类选项）核对，或直接回读代表性单元格确认已是新值，别据非零命中判未替换而重复执行（会得到 `v1.1.1`）。只有用户明确要求本地 xlsx / 下载 / 打印，或正在验证导入前的本地 Excel 文件时，才运行本地产物检查脚本。
+1. **Clarify the replacement scope**: It is recommended to explicitly state "only replace column X / range X, or replace the entire sheet". Avoid defaulting to whole-sheet replacement—it is easy to mistakenly modify unrelated columns. The scope should be determined by the user's instruction; when ambiguous, proactively ask.
+2. **Dry-run hit count**: First use `+cells-search` with the same scope, same keyword, and same matching options (case / exact / regex) to count the number of hits. Compare the count against the **expected hit count** (explicitly stated by the user or inferred from business understanding); if they do not match, investigate first (is the keyword too broad? is the scope too large?).
+3. **Full verification after replacement**: After executing, use `+cells-search` again with the old keyword; the expected result is 0. When a complete range and an enumeration of old values are specified, search item by item; random sampling cannot substitute for this. **Exception**: When the new value itself contains the old value (such as `v1`→`v1.1`, or when the new value still contains the keyword after substring replacement), substring search will still hit, so the zero-hit criterion does not hold—instead use whole-cell exact matching (`--match-entire-cell`-type options) to verify, or directly read back representative cells to confirm they are already the new value. Do not judge that replacement did not occur based on non-zero hits and execute repeatedly (which would produce `v1.1.1`). Only when the user explicitly requests local xlsx / download / print, or when verifying a local Excel file before import, should you run the local artifact check script.
 
-## 使用场景
+<a id="使用场景"></a>
+## Use cases
 
-读写。在飞书表格中搜索和替换文本。本 reference 覆盖 2 个 shortcut：
+Read and write. Search and replace text in Lark Sheets. This reference covers 2 shortcuts:
 
-| 操作需求 | 使用工具 | 说明 |
+| Operation need | Tool to use | Description |
 |---------|---------|------|
-| 搜索/定位文本 | `+cells-search` | 返回匹配的单元格位置，支持正则、精确匹配等 |
-| 查找并替换文本 | `+cells-replace` | 批量替换文本；`--regex` 模式下 `--replacement` 可用 `$1`、`$2` 引用 `--find` 的捕获组 |
+| Search/locate text | `+cells-search` | Returns the positions of matching cells; supports regex, exact matching, etc. |
+| Find and replace text | `+cells-replace` | Batch replace text; in `--regex` mode, `--replacement` can use `$1` and `$2` to reference capture groups of `--find` |
 
-**常见配置错误（注意）**：
-- **不要把操作动词当搜索词**：用户说"汇总金额"是一个操作动作（求和），不是要搜索"汇总金额"这个文本。只有当确实需要定位某个文本值的位置时才用 `+cells-search`
-- **不要用搜索来了解表格结构**：要了解表头和数据结构时，应使用 `+csv-get` 读取前几行，而不是用 `+cells-search` 逐个猜测字段名
-- **注意正则特殊字符**：使用正则匹配时，`.`、`*`、`(`、`)` 等特殊字符需要转义
+**Common configuration mistakes (note)**:
+- **Do not treat operation verbs as search terms**: When the user says "sum the amount", it is an operation action (summation), not a request to search for the text "sum the amount". Only use `+cells-search` when you actually need to locate the position of a text value.
+- **Do not use search to understand sheet structure**: To understand headers and data structure, use `+csv-get` to read the first few rows, rather than using `+cells-search` to guess field names one by one.
+- **Watch out for regex special characters**: When using regex matching, special characters such as `.`, `*`, `(`, and `)` need to be escaped.
 
 ## Shortcuts
 
-| Shortcut | Risk | 分组 |
+| Shortcut | Risk | Group |
 | --- | --- | --- |
-| `+cells-search` | read | 单元格 |
-| `+cells-replace` | write | 单元格 |
+| `+cells-search` | read | Cell |
+| `+cells-replace` | write | Cell |
 
 ## Flags
 
 ### `+cells-search`
 
-_公共四件套 · 系统：`--dry-run`_
+_Common four-piece set · System: `--dry-run`_
 
-| Flag | Type | 必填 | 说明 |
+| Flag | Type | Required | Description |
 | --- | --- | --- | --- |
-| `--find` | string | required | 待查找文本（与 `--regex` 配合时按正则解释） |
-| `--range` | string | optional | 查找范围（A1 格式）；省略时整表 |
-| `--match-case` | bool | optional | 大小写敏感 |
-| `--match-entire-cell` | bool | optional | 完全匹配整个单元格 |
-| `--regex` | bool | optional | 把 `--find` 按正则解释 |
-| `--include-formulas` | bool | optional | 也在公式文本中搜索 |
-| `--max-matches` | int | optional | 防爆，默认 5000（隐藏 flag：不在 `--help` 列出，但可正常传入） |
-| `--offset` | int | optional | 跳过前 N 个匹配（分页用），默认 0 |
+| `--find` | string | required | Text to find (interpreted as regex when used with `--regex`) |
+| `--range` | string | optional | Search range (A1 format); whole sheet when omitted |
+| `--match-case` | bool | optional | Case sensitive |
+| `--match-entire-cell` | bool | optional | Match the entire cell exactly |
+| `--regex` | bool | optional | Interpret `--find` as regex |
+| `--include-formulas` | bool | optional | Also search within formula text |
+| `--max-matches` | int | optional | Blast protection, default 5000 (hidden flag: not listed in `--help`, but can be passed normally) |
+| `--offset` | int | optional | Skip the first N matches (for pagination), default 0 |
 
 ### `+cells-replace`
 
-_公共四件套 · 系统：`--dry-run`_
+_Common four-piece set · System: `--dry-run`_
 
-| Flag | Type | 必填 | 说明 |
+| Flag | Type | Required | Description |
 | --- | --- | --- | --- |
-| `--find` | string | required | 待替换文本 |
-| `--replacement` | string | required | 替换为；传空字符串 `""` 等价于「删除内容」 |
-| `--range` | string | optional | 替换范围（A1 格式）；省略时整表 |
-| `--match-case` | bool | optional | 大小写敏感 |
-| `--match-entire-cell` | bool | optional | 完全匹配整个单元格 |
-| `--regex` | bool | optional | 把 `--find` 按正则解释 |
-| `--include-formulas` | bool | optional | 也在公式文本中替换 |
+| `--find` | string | required | Text to replace |
+| `--replacement` | string | required | Replace with; passing an empty string `""` is equivalent to "delete content" |
+| `--range` | string | optional | Replacement range (A1 format); whole sheet when omitted |
+| `--match-case` | bool | optional | Case sensitive |
+| `--match-entire-cell` | bool | optional | Match the entire cell exactly |
+| `--regex` | bool | optional | Interpret `--find` as regex |
+| `--include-formulas` | bool | optional | Also replace within formula text |
 
 ## Examples
 
-公共四件套：所有 shortcut 顶部排列 `--url` / `--spreadsheet-token` / `--sheet-id` / `--sheet-name`（XOR 规则）。
+Common four-piece set: all shortcuts have `--url` / `--spreadsheet-token` / `--sheet-id` / `--sheet-name` arranged at the top (XOR rule).
 
 ### `+cells-search`
 
-示例：
+Example:
 
 ```bash
-# 普通查找
+# Plain search
 lark-cli sheets +cells-search --url "https://example.feishu.cn/sheets/shtXXX" \
   --sheet-name "Sheet1" --find "张三"
 
-# 正则 + 范围限定
+# Regex + range restriction
 lark-cli sheets +cells-search --spreadsheet-token shtXXX --sheet-id "$SID" \
   --find "^[A-Z]{2}-\\d{4}$" --regex --range "A2:A1000"
 ```
 
-输出契约（envelope.data）：
+Output contract (envelope.data):
 
-- `matches` — 命中 cell 列表，每条含 `address`（A1）+ `value` + `sheet_id`
-- `total_matches` — 匹配总数
-- `has_more` / `next_offset` — 分页游标（命中数超过单页上限时用于继续读取）
+- `matches` — list of hit cells, each containing `address` (A1) + `value` + `sheet_id`
+- `total_matches` — total number of matches
+- `has_more` / `next_offset` — pagination cursors (used to continue reading when the number of hits exceeds the single-page limit)
 
 ### `+cells-replace`
 
-示例：
+Example:
 
 ```bash
-# 先 dry-run 预览
+# Dry-run preview first
 lark-cli sheets +cells-replace --url "https://example.feishu.cn/sheets/shtXXX" \
   --sheet-name "Sheet1" --find "v1" --replacement "v2" --dry-run
 
-# 确认后执行
+# Execute after confirmation
 lark-cli sheets +cells-replace --url "https://example.feishu.cn/sheets/shtXXX" \
   --sheet-name "Sheet1" --find "v1" --replacement "v2"
 
-# 正则捕获组：把 "2026-03" 重排成 "03/2026"（$1/$2 引用 --find 的捕获组）
+# Regex capture groups: rearrange "2026-03" into "03/2026" ($1/$2 reference the capture groups of --find)
 lark-cli sheets +cells-replace --url "https://example.feishu.cn/sheets/shtXXX" \
   --sheet-name "Sheet1" --regex --find "(\\d{4})-(\\d{2})" --replacement "$2/$1" --dry-run
 ```
 
-> `+cells-replace` 虽然 Risk = write，但范围大或正则写错可能批量修改大量非目标单元格。**建议工作流**：先 `+cells-search` 看匹配数，再 `+cells-replace --dry-run` 预览，最后真正执行。
+> Although `+cells-replace` has Risk = write, a large scope or an incorrect regex may batch-modify a large number of non-target cells. **Recommended workflow**: first use `+cells-search` to check the match count, then use `+cells-replace --dry-run` to preview, and finally actually execute.
 
-### Validate / DryRun / Execute 约束
+<a id="validate--dryrun--execute-约束"></a>
+### Validate / DryRun / Execute constraints
 
-- `Validate`：XOR 公共四件套；`--find` 非空；正则模式下 `--find` 必须是合法正则。
-- `DryRun`：`+cells-search` 输出请求模板；`+cells-replace` 额外返回预估替换数（`would_replace_count`）。
-- `Execute`：替换后必须用 `+cells-search` 复查旧值剩余命中，并回读首、中、末代表性单元格；目标是旧值命中归零或明确列出未替换项。
+- `Validate`: XOR common four-piece set; `--find` is non-empty; in regex mode, `--find` must be a valid regex.
+- `DryRun`: `+cells-search` outputs the request template; `+cells-replace` additionally returns the estimated replacement count (`would_replace_count`).
+- `Execute`: After replacement, you must use `+cells-search` to recheck the remaining hits of the old value, and read back representative cells at the beginning, middle, and end; the goal is for old-value hits to be zero or for unreplaced items to be explicitly listed.

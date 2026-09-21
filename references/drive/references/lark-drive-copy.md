@@ -2,48 +2,54 @@
 # drive +copy
 
 
-复制一个 Drive 文件（在线文档、表格、多维表格、幻灯片、思维笔记或普通文件）到目标文件夹，生成一个内容相同的新副本。
+Copy a Drive file (online document, spreadsheet, Base, Slides, mind note, or regular file) to a target folder, generating a new copy with the same content.
 
-## 命令
+<a id="命令"></a>
+## Command
 
 ```bash
-# 源文档传 URL（自动识别类型和 token）
+# Source document passed as URL (type and token automatically detected)
 lark-cli drive +copy --url "https://example.larksuite.com/docx/<DOCX_TOKEN>" --name '副本名称' --folder-token <TARGET_FOLDER_TOKEN>
 
-# Wiki URL（自动解包底层资源后复制到 Drive）
+# Wiki URL (automatically unwraps the underlying resource, then copies to Drive)
 lark-cli drive +copy --url "https://example.larksuite.com/wiki/<WIKI_TOKEN>" --name '副本名称' --folder-token <TARGET_FOLDER_TOKEN>
 
 # Wiki token
 lark-cli drive +copy --token <WIKI_TOKEN> --type wiki --name '副本名称' --folder-token my_space
 ```
 
-## 参数
+<a id="参数"></a>
+## Parameters
 
-| 参数 | 必填 | 说明 |
+| Parameter | Required | Description |
 |------|------|------|
-| `--url` | 与 `--token` 二选一 | 源文档 URL，支持 `doc` / `docx` / `sheet` / `file` / `mindnote` / `slides` / `base` / `bitable` / `wiki` 路径；wiki 会自动解包底层资源 |
-| `--token` | 与 `--url` 二选一 | 源文档 token 或 URL；裸 token 必须配合 `--type` |
-| `--type` | 裸 token 时必填 | 源文件类型：`doc`、`docx`、`sheet`、`file`、`mindnote`、`slides`、`bitable`（`base` 为兼容别名）或 `wiki`；传 URL 时可省略，显式传入时必须与 URL 类型一致 |
-| `--name` | 是 | 副本名称，最长 256 字节 |
-| `--folder-token` | 是 | 目标文件夹 token、文件夹 URL，或常量 `my_space`（复制到当前身份"我的空间"根目录，内部自动解析根 token） |
-| `--extra` | 否 | 可重复的 `key=value` 对，原样透传给 API 的 `extra` 自定义复制参数；典型用法 `--extra target_type=docx`（复制旧版 doc 时转换为 docx 副本） |
+| `--url` | Choose one of `--token` | Source document URL, supports `doc` / `docx` / `sheet` / `file` / `mindnote` / `slides` / `base` / `bitable` / `wiki` paths; wiki automatically unwraps the underlying resource |
+| `--token` | Choose one of `--url` | Source document token or URL; a bare token must be used together with `--type` |
+| `--type` | Required when using a bare token | Source file type: `doc`, `docx`, `sheet`, `file`, `mindnote`, `slides`, `bitable` (`base` is a compatibility alias) or `wiki`; can be omitted when passing a URL, but if explicitly passed it must match the URL type |
+| `--name` | Yes | Copy name, maximum 256 bytes |
+| `--folder-token` | Yes | Target folder token, folder URL, or the constant `my_space` (copy to the root directory of the current identity's "My Space", the root token is automatically resolved internally) |
+| `--extra` | No | Repeatable `key=value` pair, passed through as-is to the API's `extra` custom copy parameters; typical usage `--extra target_type=docx` (convert to a docx copy when copying a legacy doc) |
 
-## 输入规则
+<a id="输入规则"></a>
+## Input Rules
 
-- `--url` 与 `--token` 互斥，只传一个
-- `--type` 必须与源文件真实类型一致，类型不匹配时服务端会返回失败
-- `base` 与 `bitable` 是同一概念，CLI 会把 `base` 归一化为 `bitable` 后发给服务端
-- 目标文件夹必须是云空间（云盘/云存储）文件夹 token，不能传 wiki 节点 token
+- `--url` and `--token` are mutually exclusive, pass only one
+- `--type` must match the source file's actual type; if the type does not match, the server will return a failure
+- `base` and `bitable` are the same concept; the CLI normalizes `base` to `bitable` before sending it to the server
+- The target folder must be a cloud space (Drive/cloud storage) folder token; a wiki node token cannot be passed
 
-## Wiki 场景
+<a id="wiki-场景"></a>
+## Wiki Scenarios
 
-`drive +copy` 接受 wiki URL，也接受 `--token <WIKI_TOKEN> --type wiki`。目标仅支持云盘（Drive）文件夹或 `my_space` 根目录；要把副本留在知识库中，使用 `wiki +node-copy`。
+`drive +copy` accepts a wiki URL, and also accepts `--token <WIKI_TOKEN> --type wiki`. The target only supports a Drive folder or the `my_space` root directory; to keep the copy in the Wiki, use `wiki +node-copy`.
 
-## 行为说明
+<a id="行为说明"></a>
+## Behavior Notes
 
-- bot 身份复制成功后，CLI 会自动尝试给当前 CLI 用户授予新副本的 `full_access`，结果在输出的 `data.permission_grant` 字段中；授权失败不影响复制本身的成功状态
+- After a successful copy under bot identity, the CLI automatically attempts to grant the current CLI user `full_access` on the new copy; the result is in the `data.permission_grant` field of the output; a failed grant does not affect the success status of the copy itself
 
-## 输出
+<a id="输出"></a>
+## Output
 
 ```json
 {
@@ -70,17 +76,19 @@ lark-cli drive +copy --token <WIKI_TOKEN> --type wiki --name '副本名称' --fo
 }
 ```
 
-`source_wiki_token` 仅 wiki 输入出现；`permission_grant` 仅 bot 身份出现，user 身份复制时 `data` 下没有该字段。
+`source_wiki_token` appears only for wiki input; `permission_grant` appears only under bot identity, and when copying under user identity there is no such field under `data`.
 
-## 常见错误
+<a id="常见错误"></a>
+## Common Errors
 
-| 错误码 | 含义 | 处理 |
+| Error Code | Meaning | Handling |
 |---|---|---|
-| `99991672` / `99991679` | 缺失 scope | 按错误里的 `missing_scopes`、`hint` 申请/授权所需 scope 后重试 |
-| `99991400` | 命中接口限频 | 等待一段时间后重试；批量复制时保持串行并降低频率 |
+| `99991672` / `99991679` | Missing scope | Request/authorize the required scope according to `missing_scopes` and `hint` in the error, then retry |
+| `99991400` | API rate limit hit | Wait a while and retry; when copying in bulk, keep it serial and reduce the frequency |
 
-## 参考
+<a id="参考"></a>
+## References
 
-- [lark-drive](../index.md) -- 云空间（云盘/云存储）全部命令
-- [lark-wiki](../../wiki/index.md) -- 知识库节点复制（`wiki +node-copy`）
-- [lark-shared](../../shared/index.md) -- 认证和全局参数
+- [lark-drive](../index.md) -- all cloud space (Drive/cloud storage) commands
+- [lark-wiki](../../wiki/index.md) -- Wiki node copy (`wiki +node-copy`)
+- [lark-shared](../../shared/index.md) -- authentication and global parameters

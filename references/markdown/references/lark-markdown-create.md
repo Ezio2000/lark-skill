@@ -1,79 +1,83 @@
 # markdown +create
 
 
-在 Drive 中创建一个原生 Markdown 文件（`.md`），支持创建到普通 Drive 文件夹或 Wiki 节点下。
+Create a native Markdown file (`.md`) in Drive, supporting creation into a regular Drive folder or under a Wiki node.
 
-## 命令
+<a id="命令"></a>
+## Command
 
 ```bash
-# 直接用行内内容创建
+# Create directly with inline content
 lark-cli markdown +create \
   --name README.md \
   --content '# Hello'
 
-# 从本地 .md 文件创建
+# Create from a local .md file
 lark-cli markdown +create \
   --file ./README.md
 
-# 从本地文件读取内容，但仍走 --content
+# Read content from a local file, but still go through --content
 lark-cli markdown +create \
   --name README.md \
   --content @./README.md
 
-# 从 stdin 读取内容
+# Read content from stdin
 printf '# Hello\n\nfrom stdin\n' | \
   lark-cli markdown +create \
     --name README.md \
     --content -
 
-# 创建到指定文件夹
+# Create into a specified folder
 lark-cli markdown +create \
   --folder-token fldcn_xxx \
   --file ./README.md
 
-# 创建到指定文件夹（可直接传 Drive folder URL）
+# Create into a specified folder (can pass a Drive folder URL directly)
 lark-cli markdown +create \
   --folder-token "https://feishu.cn/drive/folder/fldcn_xxx" \
   --file ./README.md
 
-# 创建到指定 wiki 节点
+# Create into a specified wiki node
 lark-cli markdown +create \
   --wiki-token wikcn_xxx \
   --file ./README.md
 
-# 创建到指定 wiki 节点（可直接传 wiki URL）
+# Create into a specified wiki node (can pass a wiki URL directly)
 lark-cli markdown +create \
   --wiki-token "https://feishu.cn/wiki/wikcn_xxx" \
   --file ./README.md
 
-# 预览底层请求
+# Preview the underlying request
 lark-cli markdown +create \
   --name README.md \
   --content '# Hello' \
   --dry-run
 ```
 
-## 参数
+<a id="参数"></a>
+## Parameters
 
-| 参数 | 必填 | 说明 |
+| Parameter | Required | Description |
 |------|------|------|
-| `--folder-token` | 否 | 目标 Drive 文件夹 token 或 Drive folder URL；与 `--wiki-token` 互斥；省略时创建到根目录 |
-| `--wiki-token` | 否 | 目标 wiki 节点 token 或 wiki URL；与 `--folder-token` 互斥；传入后自动映射为 `parent_type=wiki` |
-| `--name` | 条件必填 | 文件名，**必须显式带 `.md` 后缀**；使用 `--content` 时必填；使用 `--file` 时可省略，默认取本地文件名 |
-| `--content` | 条件必填 | Markdown 内容；与 `--file` 互斥；支持直接传字符串、`@file`、`-`（stdin） |
-| `--file` | 条件必填 | 本地 `.md` 文件路径；与 `--content` 互斥 |
+| `--folder-token` | No | Target Drive folder token or Drive folder URL; mutually exclusive with `--wiki-token`; when omitted, creates into the root directory |
+| `--wiki-token` | No | Target wiki node token or wiki URL; mutually exclusive with `--folder-token`; when passed, automatically mapped to `parent_type=wiki` |
+| `--name` | Conditionally required | File name, **must explicitly carry the `.md` suffix**; required when using `--content`; can be omitted when using `--file`, in which case the local file name is used by default |
+| `--content` | Conditionally required | Markdown content; mutually exclusive with `--file`; supports passing a string directly, `@file`, `-` (stdin) |
+| `--file` | Conditionally required | Local `.md` file path; mutually exclusive with `--content` |
 
-## 关键约束
+<a id="关键约束"></a>
+## Key Constraints
 
-- `--content` 与 `--file` 必须二选一
-- `--folder-token` 与 `--wiki-token` 互斥
-- `--folder-token` 只能是 Drive 文件夹；不要传 wiki/doc/sheet/base/file token 或 URL
-- `--wiki-token` 只能是 Wiki 节点；如果只有 docx/sheet/base 等文档 URL，先用 `lark-cli wiki +node-get --node-token <url>` 解析出 `node_token`
-- `--name` 必须带 `.md` 后缀
-- `--file` 指向的本地文件名也必须带 `.md` 后缀
-- 传 `--wiki-token` 时，返回值中不会附带 `/file/<token>` URL，因为 wiki 承载文件没有稳定的独立 file URL
+- Exactly one of `--content` and `--file` must be chosen
+- `--folder-token` and `--wiki-token` are mutually exclusive
+- `--folder-token` can only be a Drive folder; do not pass a wiki/doc/sheet/base/file token or URL
+- `--wiki-token` can only be a Wiki node; if you only have a document URL such as docx/sheet/base, first use `lark-cli wiki +node-get --node-token <url>` to resolve the `node_token`
+- `--name` must carry the `.md` suffix
+- The local file name pointed to by `--file` must also carry the `.md` suffix
+- When `--wiki-token` is passed, the return value will not include a `/file/<token>` URL, because a wiki-hosted file has no stable independent file URL
 
-## 返回值
+<a id="返回值"></a>
+## Return Value
 
 ```json
 {
@@ -88,26 +92,28 @@ lark-cli markdown +create \
 ```
 
 > [!IMPORTANT]
-> 如果 Markdown 文件是**以应用身份（bot）创建**的，如 `lark-cli markdown +create --as bot`，在创建成功后，CLI 会**尝试为当前 CLI 用户自动授予该文件的 `full_access`（可管理权限）**。
+> If the Markdown file is **created with an app identity (bot)**, such as `lark-cli markdown +create --as bot`, after successful creation, the CLI will **attempt to automatically grant the current CLI user `full_access` (manageable permission) for that file**.
 >
-> 以应用身份创建时，结果里会额外返回 `permission_grant` 字段，明确说明授权结果：
-> - `status = granted`：当前 CLI 用户已获得该文件的可管理权限
-> - `status = skipped`：本地没有可用的当前用户 `open_id`，因此不会自动授权；可提示用户先完成 `lark-cli auth login`，再让 AI / agent 继续使用应用身份（bot）授予当前用户权限
-> - `status = failed`：Markdown 文件已创建成功，但自动授权用户失败；会带上失败原因，并提示稍后重试或继续使用 bot 身份处理该文件
+> When created with an app identity, the result will additionally return a `permission_grant` field that explicitly states the authorization result:
+> - `status = granted`: the current CLI user has obtained manageable permission for the file
+> - `status = skipped`: there is no available current user `open_id` locally, so no automatic authorization will be performed; you may prompt the user to complete `lark-cli auth login` first, then let the AI / agent continue to use the app identity (bot) to grant the current user permission
+> - `status = failed`: the Markdown file was created successfully, but automatically authorizing the user failed; the failure reason will be included, and it will prompt to retry later or continue handling the file using the bot identity
 >
-> `permission_grant.perm = full_access` 表示该资源已授予“可管理权限”。
+> `permission_grant.perm = full_access` indicates that the resource has been granted "manageable permission".
 >
-> **不要擅自执行 owner 转移。** 创建或导入不隐含 owner 转移；用户已明确要求转移且目标已确定时沿用授权执行。
+> **Do not perform owner transfer on your own initiative.** Creation or import does not imply owner transfer; when the user has explicitly requested a transfer and the target has been determined, proceed with the authorization execution.
 
-## 失败处理
+<a id="失败处理"></a>
+## Failure Handling
 
-- `not_found` / `1061044`：父目录或 wiki 节点不存在，或 token 类型放错参数。修正 `--folder-token` / `--wiki-token` 后再试，不要重复提交同一参数。
-- `quota_exceeded` / `1061101`：目标存储空间配额已满。释放空间、换父目录/节点或请管理员扩容后再试。
-- `permission_denied` / `missing_scope`：区分身份处理。`--as user` 看用户授权和目标 ACL；`--as bot` 看应用 scope 与目标目录/节点 ACL。
-- `rate_limit`：停止立即重试，使用退避。
-- `server_error` / `233523001`：可以稍后有限重试；若重复出现，保留 `log_id` / request id 给服务端排查。
+- `not_found` / `1061044`: the parent directory or wiki node does not exist, or the token type was placed in the wrong parameter. Correct `--folder-token` / `--wiki-token` and retry; do not repeatedly submit the same parameters.
+- `quota_exceeded` / `1061101`: the target storage quota is full. Free up space, switch the parent directory/node, or ask an administrator to expand capacity before retrying.
+- `permission_denied` / `missing_scope`: handle by distinguishing identity. `--as user` depends on user authorization and the target ACL; `--as bot` depends on the app scope and the target directory/node ACL.
+- `rate_limit`: stop retrying immediately and use backoff.
+- `server_error` / `233523001`: limited retries later are acceptable; if they recur, keep the `log_id` / request id for server-side troubleshooting.
 
-## 参考
+<a id="参考"></a>
+## References
 
-- [lark-markdown](../index.md) — Markdown 域总览
-- [lark-shared](../../shared/index.md) — 认证和全局参数
+- [lark-markdown](../index.md) — Markdown domain overview
+- [lark-shared](../../shared/index.md) — authentication and global parameters

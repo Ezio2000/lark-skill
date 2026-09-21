@@ -1,73 +1,80 @@
-# Genre Contract: Official Document / 公文内容稿 (`workplace.official_redhead`)
+<a id="genre-contract-official-document--公文内容稿-workplaceofficial_redhead"></a>
+# Genre Contract: Official Document / Official Document Content Draft (`workplace.official_redhead`)
 
-## 体裁规则表（硬约束）
+<a id="体裁规则表硬约束"></a>
+## Genre Rules Table (Hard Constraints)
 
-| 规则项 | 规则 |
+| Rule Item | Rule |
 |-|-|
-| 写作风格 | 庄重、准确、简洁、直接；禁网感、营销话术、情绪化评价、空话和机械编号 |
-| 视觉策略 | 固定 `formal`；禁止高亮块、emoji 和装饰性组件 |
-| 允许 block | `title`（完整文稿最多 1 个）、`p`、`h1`、`h2`、`h3`、`h4`；标题层级连续且不超过四级 |
-| 少用 block | `ul`、`ol`容器及`li`子块仅用于真实并列项，不替代公文层级序号；`table`容器及`thead`、`tbody`、`tfoot`、`tr`子块仅用于非表格难以清楚表达的多对象同字段信息 |
-| 禁止 block | 禁止未列入允许 / 少用清单的类型，包括`callout`、`grid`容器及`column`子块、`checkbox`、`whiteboard`、`blockquote`、`pre`、根级`code`、`hr`、`img`、`figure`；禁装饰色、伪红头和伪印章 |
-| 内容逻辑 | 按行文目的、机关关系和受众确定唯一文种，再按“必要依据 / 缘由 → 核心事项 / 决定 → 可执行要求 → 必要结语”推进 |
-| 事实 / 边界 | 只写已给定或已核验的事实、依据、权限和决定；未知项具体占位，关键缺口未关闭时不得创建；飞书只交付内容审校稿，不宣称已签发或生效 |
-| 错误 | 禁止文种或行文关系错误、报告夹请示、请示一文多事 / 多头主送、批复无对应请示、引用 / 文号 / 序号 / 附件不规范，以及编造事实、依据、权限或制发要素 |
+| Writing Style | Solemn, accurate, concise, direct; no internet slang, marketing talk, emotional evaluation, empty talk, or mechanical numbering |
+| Visual Strategy | Fixed `formal`; no highlight blocks, emoji, or decorative components |
+| Allowed blocks | `title` (at most 1 for a complete document), `p`, `h1`, `h2`, `h3`, `h4`; heading levels must be continuous and no more than four levels |
+| Use sparingly | `ul`, `ol` containers and `li` sub-blocks are only for genuine parallel items, not as a substitute for official document hierarchy numbering; `table` containers and `thead`, `tbody`, `tfoot`, `tr` sub-blocks are only for multi-object same-field information that is difficult to express clearly in a non-table format |
+| Prohibited blocks | Types not listed in the allowed / use-sparingly lists are prohibited, including `callout`, `grid` containers and `column` sub-blocks, `checkbox`, `whiteboard`, `blockquote`, `pre`, root-level `code`, `hr`, `img`, `figure`; decorative colors, fake redheads, and fake seals are prohibited |
+| Content Logic | Determine the single document genre based on the purpose of the communication, the relationship between agencies, and the audience, then proceed in the order of "necessary basis / reason → core matters / decisions → executable requirements → necessary closing" |
+| Facts / Boundaries | Only write facts, bases, authority, and decisions that have been given or verified; use specific placeholders for unknown items; do not create when key gaps remain unclosed; Feishu only delivers a content review draft, and does not claim that it has been issued or taken effect |
+| Errors | Prohibited: incorrect document genre or communication relationship, reports containing requests for instructions, requests for instructions covering multiple matters / multiple recipients, replies without a corresponding request for instructions, non-standard citations / document numbers / sequence numbers / attachments, and fabrication of facts, bases, authority, or issuance elements |
 
-## 适用
+<a id="适用"></a>
+## Applicability
 
-仅在明确要求公文、红头 / 套红、正式发文，或法定文种与机关行文关系、发文字号、签发人、主送机关等制发要素共同出现时使用。“红头文件”是制发信号，不是文种；普通公司通知、制度、检查 / 整改材料走 `formal-doc.md`，普通会议记录走 `meeting-minutes.md`。
+Use only when an official document, redhead / red-seal format, or formal issuance is explicitly required, or when a statutory document genre appears together with agency communication relationships, document numbers, signatories, principal recipients, and other issuance elements. "Redhead document" is an issuance signal, not a document genre; ordinary company notices, policies, inspection / rectification materials go to `formal-doc.md`, and ordinary meeting records go to `meeting-minutes.md`.
 
-## 文种选择
+<a id="文种选择"></a>
+## Document Genre Selection
 
-按“行文目的 → 发文与受文机关关系 → 受众范围”判断，不按单个关键词判断。
+Judge by "purpose of communication → relationship between issuing and receiving agencies → audience scope", not by a single keyword.
 
-| 文种 | 适用意图 |
+| Document Genre | Applicable Intent |
 |-|-|
-| 决议 | 会议讨论通过重大决策 |
-| 决定 | 对重要事项作出决策部署、奖惩或变更 / 撤销决定 |
-| 命令（令） | 公布法规规章、施行重大强制措施、授予衔级或嘉奖 |
-| 公报 | 权威公布重要决定或重大事项 |
-| 公告 | 向国内外宣布重要或法定事项 |
-| 通告 | 在一定范围公布应遵守或周知的事项 |
-| 意见 | 对重要问题提出见解和处理办法 |
-| 通知 | 要求下级 / 有关单位执行或周知，批转、转发公文 |
-| 通报 | 表彰、批评、传达重要精神或告知重要情况 |
-| 报告 | 向上级汇报工作、反映情况或答复询问，不请求决定 |
-| 请示 | 向上级请求指示或批准；一文一事，原则上只主送一个上级机关 |
-| 批复 | 答复下级机关请示，必须有对应来文 |
-| 议案 | 政府依法向同级人大或其常委会提请审议 |
-| 函 | 不相隶属机关间商洽、询答、请求批准或答复审批 |
-| 纪要 | 记载正式会议主要情况和议定事项，不写逐字过程 |
+| Resolution | Major decisions adopted through meeting discussion |
+| Decision | Making deployment decisions, rewards or punishments, or changes / revocations regarding important matters |
+| Order (Command) | Promulgating laws and regulations, implementing major coercive measures, conferring ranks, or issuing commendations |
+| Communiqué | Authoritative publication of important decisions or major matters |
+| Announcement | Announcing important or statutory matters to domestic and international audiences |
+| Notice (Public) | Publishing matters that must be complied with or made known within a certain scope |
+| Opinion | Offering views and handling methods on important issues |
+| Notice | Requiring subordinates / relevant units to execute or be informed, or transmitting official documents with comments |
+| Bulletin | Commending, criticizing, conveying important spirit, or informing of important situations |
+| Report | Reporting work to superiors, reflecting situations, or answering inquiries, without requesting a decision |
+| Request for Instructions | Requesting instructions or approval from superiors; one document for one matter, in principle sent to only one superior agency |
+| Reply | Replying to a subordinate agency's request for instructions; there must be a corresponding incoming document |
+| Proposal | The government submits to the people's congress at the same level or its standing committee for deliberation in accordance with the law |
+| Letter | Negotiation, inquiry and reply, requesting approval, or replying to approval between agencies without a subordinate relationship |
+| Minutes | Recording the main situations and decided matters of a formal meeting, without writing the verbatim process |
 
-优先消歧：汇报且不求决定用报告，求上级决定用请示，不相隶属机关商洽用函；面向明确单位执行用通知，面向一定范围不特定对象遵守用通告，向国内外宣布重要 / 法定事项用公告，传达情况或评价用通报。
+Priority disambiguation: for reporting without requesting a decision, use a report; for requesting a superior's decision, use a request for instructions; for negotiation between agencies without a subordinate relationship, use a letter; for execution by a clearly identified unit, use a notice; for compliance by unspecified recipients within a certain scope, use a public notice; for announcing important / statutory matters to domestic and international audiences, use an announcement; for conveying situations or evaluations, use a bulletin.
 
-## 行文与事实
+<a id="行文与事实"></a>
+## Communication and Facts
 
-- 按隶属关系、职权和授权行文；一般不越级，特殊越级时同时抄送被越过机关。
-- 上行文原则上主送一个上级机关，不抄送下级；报告不得夹带请示。除直接交办外，不主送上级负责人个人。
-- 一份主文保持一个行文方向和授权状态；同一事项若既需向上请求批准又需向下要求执行，应拆分文稿或待批准后另行制发，附件不得偷渡尚未授权的执行要求。
-- 下行要求不得超出发文机关权限；涉及其他地区 / 部门职权时先协商。联合行文仅限必要且主体关系适当的情形。
-- 只把已确认的决定写成指令。措施按需写明主体、动作、对象、期限、标准和反馈去向；对不相隶属机关使用`商请`、`请予`、`函复`等匹配关系的措辞。
-- 缺少授权、关键依据、核心事实、适用范围或审批决定时不得发布；不得猜测文号、签发人、密级或紧急程度。
+- Communicate according to subordinate relationships, authority, and authorization; generally do not skip levels, and when skipping levels in special circumstances, simultaneously copy the skipped agency.
+- Upward documents in principle are sent to one superior agency and are not copied to subordinates; reports must not carry requests for instructions. Except when directly assigned, do not address an individual superior as the principal recipient.
+- One main document maintains one communication direction and authorization status; if the same matter requires both upward approval and downward execution requirements, split the document or issue it separately after approval; attachments must not smuggle in execution requirements that have not yet been authorized.
+- Downward requirements must not exceed the authority of the issuing agency; when other regions' / departments' authority is involved, consult first. Joint issuance is limited to necessary situations with an appropriate subject relationship.
+- Only write confirmed decisions as directives. Measures should specify, as needed, the subject, action, object, deadline, standard, and feedback destination; use wording matching the relationship, such as `商请`, `请予`, `函复`, for agencies without a subordinate relationship.
+- Do not issue when authorization, key basis, core facts, scope of application, or approval decisions are lacking; do not guess document numbers, signatories, classification levels, or urgency levels.
 
-## 内容结构
+<a id="内容结构"></a>
+## Content Structure
 
-- 标题一般使用“发文机关 + 事由 + 文种”，内含法规、规章或被印发文件名称时使用书名号。
-- 主送机关使用全称、规范简称或同类机关统称。附件说明与附件顺序、名称逐字一致；多个附件用阿拉伯数字编号，名称末尾不加标点。
+- Titles generally use "issuing agency + subject matter + document genre"; when they contain the names of laws, regulations, or documents being issued, use title marks.
+- Principal recipients use full names, standard abbreviations, or collective names for similar agencies. The attachment description must match the attachment order and names word for word; multiple attachments are numbered with Arabic numerals, and no punctuation is added at the end of names.
 
-| 文种 | 常用结构 |
+| Document Genre | Common Structure |
 |-|-|
-| 通知 | 缘由 / 依据 → 事项 → 对象 / 时间 → 已确认要求 |
-| 请示 | 缘由 / 依据 → 单一请示事项与倾向意见 → `妥否，请批示` |
-| 批复 | 准确引用来文 → 明确意见 → 执行要求 → `此复` |
-| 函 | 事项 / 依据 → 商请或答复 → `请予函复` / `特此函复` |
-| 报告 | 情况 → 事实 / 成效 → 问题 → 后续安排 → `特此报告` |
-| 纪要 | 会议基本信息 → 主要情况 → 议定事项 / 责任 / 时限 |
+| Notice | Reason / basis → matters → object / time → confirmed requirements |
+| Request for Instructions | Reason / basis → single requested matter and preferred opinion → `妥否，请批示` |
+| Reply | Accurately cite the incoming document → clear opinion → execution requirements → `此复` |
+| Letter | Matter / basis → negotiation request or reply → `请予函复` / `特此函复` |
+| Report | Situation → facts / results → problems → follow-up arrangements → `特此报告` |
+| Minutes | Basic meeting information → main situations → decided matters / responsibilities / time limits |
 
-## 文号、引用与序号
+<a id="文号引用与序号"></a>
+## Document Numbers, Citations, and Sequence Numbers
 
-- 普通发文字号采用“机关代字 + 完整年份 + 顺序号”，如 `×政发〔2026〕8号`；年份用六角括号，顺序号不加“第”、不编虚位。命令（令）的令号可用 `第×号`。
-- 首次引用其他公文时写完整标题和文号：`《××机关关于印发〈××办法〉的通知》（×发〔2026〕8号）`。不只写文号，不用论文式参考文献编号。
-- 文件、法律法规名称使用书名号；直接引文使用中文双引号，内层用单引号。引文须核对原文、效力、制定机关和适用范围；无法核实则标记 `[引文待核]`。
-- 正文层级依次使用 `一、`、`（一）`、`1.`、`（1）`，不得写成 `1、`、`（一）、`，不得跳级；超过四级时重组内容。
-- 成文日期写为 `2026年7月13日`，月日不补零。标点和数字按 GB/T 15834、GB/T 15835 使用；全称及规范简称前后一致。
+- Ordinary document numbers use "agency code + complete year + sequence number", such as `×政发〔2026〕8号`; the year uses hexagonal brackets, and the sequence number does not add "No." or pad with zeros. Order (Command) numbers may use `第×号`.
+- When citing another official document for the first time, write the complete title and document number: `《××机关关于印发〈××办法〉的通知》（×发〔2026〕8号）`. Do not write only the document number, and do not use academic-style reference numbering.
+- Use title marks for the names of documents, laws, and regulations; use Chinese double quotation marks for direct quotations, with single quotation marks for the inner layer. Quotations must be checked against the original text, validity, enacting agency, and scope of application; if they cannot be verified, mark `[引文待核]`.
+- The body hierarchy uses `一、`, `（一）`, `1.`, `（1）` in order, and must not be written as `1、`, `（一）、`, and must not skip levels; when exceeding four levels, reorganize the content.
+- The date of formation is written as `2026年7月13日`, with no zero padding for month and day. Punctuation and numerals follow GB/T 15834 and GB/T 15835; full names and standard abbreviations are consistent throughout.

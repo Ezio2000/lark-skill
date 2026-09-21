@@ -1,9 +1,10 @@
 # drive +version-delete
 
 
-删除指定的历史版本。该 shortcut 同时支持 `--as user` 和 `--as bot`；自动化场景推荐使用 `--as bot`。
+Delete a specified historical version. This shortcut supports both `--as user` and `--as bot`; for automation scenarios, `--as bot` is recommended.
 
-## 命令
+<a id="命令"></a>
+## Command
 
 ```bash
 lark-cli drive +version-delete \
@@ -19,19 +20,22 @@ lark-cli drive +version-delete \
   --as user
 ```
 
-## 参数
+<a id="参数"></a>
+## Parameters
 
-| 参数 | 必填 | 说明 |
+| Parameter | Required | Description |
 |------|------|------|
-| `--file-token` | 是 | 目标文件 token |
-| `--version` | 是 | `drive +version-history` 返回的长数字 `version` 字段，不是 `tag` |
-| `--yes` | 是 | 确认执行高风险删除操作 |
+| `--file-token` | Yes | Target file token |
+| `--version` | Yes | The long numeric `version` field returned by `drive +version-history`, not `tag` |
+| `--yes` | Yes | Confirm execution of the high-risk delete operation |
 
-## 返回值
+<a id="返回值"></a>
+## Return Value
 
-无额外业务字段，以命令成功 / 失败为准。
+No additional business fields; success or failure is determined by the command result.
 
-## 参考
+<a id="参考"></a>
+## References
 
-- [lark-drive](../index.md) -- 云空间（云盘/云存储）全部命令
-- [lark-shared](../../shared/index.md) -- 认证和全局参数
+- [lark-drive](../index.md) -- All commands for Drive (cloud drive/cloud storage)
+- [lark-shared](../../shared/index.md) -- Authentication and global parameters

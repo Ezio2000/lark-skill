@@ -2,102 +2,103 @@
 # drive +add-comment
 
 
-给文档、受支持的 Drive 普通文件、电子表格、飞书幻灯片或 Base 添加评论。未指定位置时创建全文评论，但仅适用于 doc/docx、白名单 Drive file，以及解析为这些类型的 wiki；sheet、slides、Base(bitable) 必须指定 `--block-id`。不同类型的 `--block-id` 格式见下文。支持直接传 docx URL/token、旧版 doc URL（仅全文评论）、Drive file URL/token（**仅支持白名单扩展名，且只支持全文评论**）、sheet URL、slides URL、base/bitable URL，也支持传最终可解析为 doc/docx/file/sheet/slides/base(bitable) 的 wiki URL。
+Add a comment to a document, a supported Drive regular file, a spreadsheet, Feishu Slides, or Base. When no location is specified, a full-text comment is created, but this only applies to doc/docx, whitelisted Drive files, and wikis that resolve to these types; sheet, slides, and Base (bitable) must specify `--block-id`. The `--block-id` formats for different types are described below. Supports passing a docx URL/token, legacy doc URL (full-text comments only), Drive file URL/token (**only whitelisted extensions are supported, and only full-text comments are supported**), sheet URL, slides URL, base/bitable URL, and also supports passing a wiki URL that ultimately resolves to doc/docx/file/sheet/slides/base(bitable).
 
-## 命令
+<a id="命令"></a>
+## Command
 
 ```bash
-# 默认：未指定位置时添加全文评论
+# Default: add a full-text comment when no location is specified
 lark-cli drive +add-comment \
   --doc "https://example.larksuite.com/docx/<DOC_ID>" \
   --content '[{"type":"text","text":"请补充发布说明"}]'
 
-# 也可以显式指定为全文评论；旧版 doc URL 仅支持全文评论
+# It can also be explicitly specified as a full-text comment; legacy doc URLs only support full-text comments
 lark-cli drive +add-comment \
   --doc "https://example.larksuite.com/doc/<DOC_ID>" \
   --full-comment \
   --content '[{"type":"text","text":"请补充旧版文档的背景信息"}]'
 
-# wiki 链接也可以，shortcut 会先解析到真实 doc/docx token
+# Wiki links also work; the shortcut first resolves to the real doc/docx token
 lark-cli drive +add-comment \
   --doc "https://example.larksuite.com/wiki/<WIKI_TOKEN>" \
   --content '[{"type":"text","text":"这里需要一段全文评论"}]'
 
-# 给受支持的 Drive 普通文件添加全文评论
-# 注意：CLI 会先查询 drive metas，只有白名单扩展名才允许评论
+# Add a full-text comment to a supported Drive regular file
+# Note: the CLI first queries drive metas; only whitelisted extensions are allowed to be commented on
 lark-cli drive +add-comment \
   --doc "https://example.larksuite.com/file/<FILE_TOKEN>" \
   --content '[{"type":"text","text":"请补充文件说明"}]'
 
-# 裸 token 也支持，但必须显式声明 --type file
+# Bare tokens are also supported, but --type file must be explicitly declared
 lark-cli drive +add-comment \
   --doc "<FILE_TOKEN>" --type file \
   --content '[{"type":"text","text":"请补充目录说明"}]'
 
-# 给 docx 文档的指定 block 添加局部评论（block_id 可通过 docs +fetch --detail with-ids 获取）
+# Add a local comment to a specified block of a docx document (block_id can be obtained via docs +fetch --detail with-ids)
 lark-cli drive +add-comment \
   --doc "https://example.larksuite.com/docx/<DOC_ID>" \
   --block-id "<BLOCK_ID>" \
   --content '[{"type":"text","text":"请补充流程说明"}]'
 
-# wiki 链接也支持局部评论；解析结果可以是 docx/sheet/slides，block-id 格式按目标类型传
+# Wiki links also support local comments; the resolution result can be docx/sheet/slides, and the block-id format is passed according to the target type
 lark-cli drive +add-comment \
   --doc "https://example.larksuite.com/wiki/<WIKI_TOKEN>" \
   --block-id "<BLOCK_ID>" \
   --content '[{"type":"text","text":"请补充更细的开发步骤"}]'
 
-# 组合文本、@用户、链接元素
+# Combine text, @user, and link elements
 lark-cli drive +add-comment \
   --doc "https://example.larksuite.com/docx/<DOC_ID>" \
   --block-id "<BLOCK_ID>" \
   --content '[{"type":"text","text":"请 "},{"type":"mention_user","text":"ou_xxx"},{"type":"text","text":" 处理，参考 "},{"type":"link","text":"https://example.com"}]'
 
-# 给电子表格单元格添加评论（--block-id 格式为 <sheetId>!<cell>）
+# Add a comment to a spreadsheet cell (--block-id format is <sheetId>!<cell>)
 lark-cli drive +add-comment \
   --doc "https://example.larksuite.com/sheets/<SHEET_TOKEN>" \
   --block-id "<SHEET_ID>!D6" \
   --content '[{"type":"text","text":"请检查此单元格数据"}]'
 
-# wiki 链接指向的 sheet 也支持
+# Sheets pointed to by wiki links are also supported
 lark-cli drive +add-comment \
   --doc "https://example.larksuite.com/wiki/<WIKI_TOKEN>" \
   --block-id "<SHEET_ID>!A1" \
   --content '[{"type":"text","text":"请 "},{"type":"mention_user","text":"ou_xxx"},{"type":"text","text":" 确认"}]'
 
-# 给幻灯片元素添加评论（--block-id 格式为 <slide-block-type>!<xml-id>）
+# Add a comment to a slide element (--block-id format is <slide-block-type>!<xml-id>)
 lark-cli drive +add-comment \
   --doc "https://example.larksuite.com/slides/<PRESENTATION_ID>" \
   --block-id "<SLIDE_BLOCK_TYPE>!<XML_ELEMENT_ID>" \
   --content '[{"type":"text","text":"请调整这个元素的位置"}]'
 
-# 例如：给整页 slide 添加评论
+# For example: add a comment to an entire slide page
 # <slide id="pkk"> ... </slide>  =>  --block-id slide!pkk
 lark-cli drive +add-comment \
   --doc "https://example.larksuite.com/slides/<PRESENTATION_ID>" \
   --block-id "slide!pkk" \
   --content '[{"type":"text","text":"这一页需要补充过渡说明"}]'
 
-# 例如：给图片元素添加评论
+# For example: add a comment to an image element
 # <img id="bPk" ... />  =>  --block-id img!bPk
 lark-cli drive +add-comment \
   --doc "https://example.larksuite.com/slides/<PRESENTATION_ID>" \
   --block-id "img!bPk" \
   --content '[{"type":"text","text":"这张图片建议换成更清晰的版本"}]'
 
-# 例如：给文本 shape 添加评论
+# For example: add a comment to a text shape
 # <shape type="text" id="bPq"> ... </shape>  =>  --block-id shape!bPq
 lark-cli drive +add-comment \
   --doc "https://example.larksuite.com/slides/<PRESENTATION_ID>" \
   --block-id "shape!bPq" \
   --content '[{"type":"text","text":"这段文案可以再精简"}]'
 
-# wiki 链接指向的 slides 也支持
+# Slides pointed to by wiki links are also supported
 lark-cli drive +add-comment \
   --doc "https://example.larksuite.com/wiki/<WIKI_TOKEN>" \
   --block-id "<SLIDE_BLOCK_TYPE>!<XML_ELEMENT_ID>" \
   --content '[{"type":"text","text":"这里需要补充说明"}]'
 
-# 传裸 token 时需要 --type 指定文档类型
+# When passing a bare token, --type is required to specify the document type
 lark-cli drive +add-comment \
   --doc "<SHEET_TOKEN>" --type sheet \
   --block-id "<SHEET_ID>!D6" \
@@ -107,38 +108,38 @@ lark-cli drive +add-comment \
   --doc "<DOCX_TOKEN>" --type docx \
   --content '[{"type":"text","text":"全文评论"}]'
 
-# 裸 token + 已知 block_id 的局部评论
+# Bare token + local comment with a known block_id
 lark-cli drive +add-comment \
   --doc "<PRESENTATION_ID>" --type slides \
   --block-id "<SLIDE_BLOCK_TYPE>!<XML_ELEMENT_ID>" \
   --content '[{"type":"text","text":"slide block comment"}]'
 
-# 裸 token + 已知 block_id 的局部评论
+# Bare token + local comment with a known block_id
 lark-cli drive +add-comment \
   --doc "<DOCX_TOKEN>" --type docx \
   --block-id "<BLOCK_ID>" \
   --content '[{"type":"text","text":"请 "},{"type":"mention_user","text":"ou_xxx"},{"type":"text","text":" 处理，参考 "},{"type":"link","text":"https://example.com"}]'
 
-# 如果需要更底层的原生 API，也可以直接调用 V2 协议
+# If you need the lower-level native API, you can also call the V2 protocol directly
 lark-cli schema drive.file.comments.create_v2
 
 lark-cli drive file.comments create_v2 \
   --params '{"file_token":"<DOC_TOKEN>"}' \
   --data '{"file_type":"docx","reply_elements":[{"type":"text","text":"全文评论内容"}]}'
 
-# Base 记录局部评论；原生 file_type 传 bitable。
+# Local comment on a Base record; pass bitable for the native file_type.
 lark-cli drive +add-comment \
   --doc "<BASE_TOKEN>" --type bitable \
   --block-id "<TABLE_ID>!<RECORD_ID>!<VIEW_ID>" \
   --content '[{"type":"text","text":"Base record-local comment"}]'
 
-# `base` 也可作为裸 token 类型别名；/base/ 与 /bitable/ URL 都会自动识别为 Base。
+# `base` can also be used as a bare token type alias; both /base/ and /bitable/ URLs are automatically recognized as Base.
 lark-cli drive +add-comment \
   --doc "<BASE_TOKEN>" --type base \
   --block-id "<TABLE_ID>!<RECORD_ID>!<VIEW_ID>" \
   --content '[{"type":"text","text":"Base alias comment"}]'
 
-# 预览底层调用链
+# Preview the underlying call chain
 lark-cli drive +add-comment \
   --doc "https://example.larksuite.com/docx/<DOC_ID>" \
   --block-id "<BLOCK_ID>" \
@@ -146,45 +147,48 @@ lark-cli drive +add-comment \
   --dry-run
 ```
 
-## 参数
+<a id="参数"></a>
+## Parameters
 
-| 参数 | 必填 | 说明 |
+| Parameter | Required | Description |
 |------|------|------|
-| `--doc` | 是 | 文档 URL / token、file / sheet / slides / base / bitable URL，或可解析到 `doc`/`docx`/`file`/`sheet`/`slides`/`base(bitable)` 的 wiki URL |
-| `--type` | 裸 token 时必填 | 文档类型：`doc`、`docx`、`file`、`sheet`、`slides`、`bitable`、`base`；评论 Base 文档推荐传 `bitable`，`base` 仅作为兼容别名兜底。URL 输入时自动识别，无需传 |
-| `--content` | 是 | `reply_elements` JSON 数组字符串。示例：`'[{"type":"text","text":"文本"},{"type":"mention_user","text":"ou_xxx"},{"type":"link","text":"https://example.com"}]'` |
-| `--full-comment` | 否 | 显式指定创建全文评论；未传 `--block-id` 时也会默认走全文评论（仅适用于 doc/docx、白名单 Drive file，以及解析为这些类型的 wiki；不适用于 sheet、slides、Base / bitable） |
-| `--block-id` | 局部评论时必填 | 目标块 ID，可通过 `docs +fetch --detail with-ids` 获取；sheet 用 `<sheetId>!<cell>`，slides 用 `<slide-block-type>!<xml-id>`，Base 用 `<table-id>!<record-id>!<view-id>` |
+| `--doc` | Yes | Document URL / token, file / sheet / slides / base / bitable URL, or a wiki URL that can resolve to `doc`/`docx`/`file`/`sheet`/`slides`/`base(bitable)` |
+| `--type` | Required for bare tokens | Document type: `doc`, `docx`, `file`, `sheet`, `slides`, `bitable`, `base`; for commenting on Base documents, passing `bitable` is recommended, and `base` is only used as a compatibility alias fallback. Automatically recognized for URL input, no need to pass |
+| `--content` | Yes | `reply_elements` JSON array string. Example: `'[{"type":"text","text":"文本"},{"type":"mention_user","text":"ou_xxx"},{"type":"link","text":"https://example.com"}]'` |
+| `--full-comment` | No | Explicitly specify creating a full-text comment; when `--block-id` is not passed, it also defaults to a full-text comment (only applies to doc/docx, whitelisted Drive files, and wikis that resolve to these types; does not apply to sheet, slides, Base / bitable) |
+| `--block-id` | Required for local comments | Target block ID, obtainable via `docs +fetch --detail with-ids`; for sheet use `<sheetId>!<cell>`, for slides use `<slide-block-type>!<xml-id>`, for Base use `<table-id>!<record-id>!<view-id>` |
 
-## 行为说明
+<a id="行为说明"></a>
+## Behavior Notes
 
-- **不支持妙搭 apps**：妙搭不支持新增评论，`--doc` 传 `/page/<token>` URL 或 `--type apps` 都不可用。其余评论管理命令（列表、批量查询、回复、解决/恢复、reaction）都支持 apps。
-- **局部评论需要先获取 block ID**：先调用 `docs +fetch --doc <TOKEN> --detail with-ids` 获取带有 block ID 的文档内容，然后使用 `--block-id` 指定目标块。
-- **Review 场景优先局部评论**：审阅、校对、逐条指出问题时，必须先尝试定位到具体 block / 单元格 / slide 元素，并逐问题创建局部评论；不要把所有问题合并成一条全文评论。
-- 未传 `--block-id` 时，shortcut 默认创建**全文评论**；也可以显式传 `--full-comment`。全文评论支持 `docx`、旧版 `doc` URL、白名单扩展名的 Drive file，以及最终可解析为 `doc`/`docx`/`file` 的 wiki URL。
-- **Drive file 评论**：仅支持白名单扩展名的普通文件。当前支持：`.md`、`.txt`、`.json`、`.csv`、`.go`、`.js`、`.py`、`.pptx`、`.png`、`.jpg`、`.jpeg`、`.zip`、`.mp3`、`.mp4`。
-- **Drive file 暂不支持**：`.pdf`、`.docx`、`.xlsx` 等未在白名单内的普通文件会被 CLI 拒绝，并提示“当前还不支持这种类型的评论”。这些类型虽然可能接受 OpenAPI 请求，但在页面评论展示上存在问题。
-- **Drive file 只支持全文评论**：file 目标不支持局部评论，不允许传 `--block-id`。
-- 传 `--block-id` 时，shortcut 创建**局部评论（划词评论）**；该模式支持 `docx`、`sheet`、`slides`、Base / bitable，以及最终可解析为这些类型的 wiki URL。
-- **Sheet 评论**：当 `--doc` 为 sheet URL 或 wiki 解析为 sheet 时，使用 `--block-id "<sheetId>!<cell>"` 指定单元格（如 `a281f9!D6`）；sheet 没有全文评论，`--full-comment` 不可用。
-- **Slide 评论**：当 `--doc` 为 slides URL、`--type slides`，或 wiki 解析为 slides 时，必须传 `--block-id "<SLIDE_BLOCK_TYPE>!<XML_ELEMENT_ID>"`。此时 `--full-comment` 不可用。
-- **Base 记录局部评论**：Base 不支持全局评论，所有评论都挂在记录上；裸 token 可传 `--type bitable` 或 `--type base`，推荐 `bitable`。定位信息必须是 file token（base token）+ `--block-id "<table-id>!<record-id>!<view-id>"`，其中 table/record/view ID 通常分别以 `tbl`/`rec`/`vew` 开头；view_id 只决定被提及时点击通知打开哪个视图，不影响评论挂载点，但必须传。ID 获取参考 [`lark-base`](../../base/index.md)。
-- **Slide 参数映射示例**：`--block-id` 由 PPT XML 元素类型和元素 `id` 组成。例如：
-    - `<slide id="pkk">` 对应 `--block-id slide!pkk`，表示给整页评论。
-    - `<img id="bPk" ... />` 对应 `--block-id img!bPk`，表示给图片元素评论。
-    - `<shape type="text" id="bPq">...</shape>` 对应 `--block-id shape!bPq`，表示给文本 shape 评论。
+- **Miaoda apps are not supported**: Miaoda does not support adding comments; passing a `/page/<token>` URL or `--type apps` to `--doc` will not work. The other comment management commands (list, batch query, reply, resolve/restore, reaction) all support apps.
+- **Local comments require obtaining the block ID first**: first call `docs +fetch --doc <TOKEN> --detail with-ids` to get the document content with block IDs, then use `--block-id` to specify the target block.
+- **For review scenarios, prefer local comments**: when reviewing, proofreading, or pointing out issues one by one, you must first try to locate the specific block / cell / slide element and create a local comment for each issue; do not merge all issues into a single full-text comment.
+- When `--block-id` is not passed, the shortcut creates a **full-text comment** by default; `--full-comment` can also be passed explicitly. Full-text comments support `docx`, legacy `doc` URLs, Drive files with whitelisted extensions, and wiki URLs that ultimately resolve to `doc`/`docx`/`file`.
+- **Drive file comments**: only regular files with whitelisted extensions are supported. Currently supported: `.md`, `.txt`, `.json`, `.csv`, `.go`, `.js`, `.py`, `.pptx`, `.png`, `.jpg`, `.jpeg`, `.zip`, `.mp3`, `.mp4`.
+- **Drive files not yet supported**: regular files not in the whitelist, such as `.pdf`, `.docx`, `.xlsx`, will be rejected by the CLI, with the message "this type of comment is not currently supported". Although these types may accept OpenAPI requests, there are issues with displaying comments on the page.
+- **Drive files only support full-text comments**: file targets do not support local comments, and passing `--block-id` is not allowed.
+- When `--block-id` is passed, the shortcut creates a **local comment (selection comment)**; this mode supports `docx`, `sheet`, `slides`, Base / bitable, and wiki URLs that ultimately resolve to these types.
+- **Sheet comments**: when `--doc` is a sheet URL or a wiki resolves to a sheet, use `--block-id "<sheetId>!<cell>"` to specify the cell (e.g. `a281f9!D6`); sheets have no full-text comments, and `--full-comment` is unavailable.
+- **Slide comments**: when `--doc` is a slides URL, `--type slides`, or a wiki resolves to slides, `--block-id "<SLIDE_BLOCK_TYPE>!<XML_ELEMENT_ID>"` must be passed. In this case `--full-comment` is unavailable.
+- **Base record local comments**: Base does not support global comments; all comments are attached to records; bare tokens can pass `--type bitable` or `--type base`, with `bitable` recommended. The location information must be the file token (base token) + `--block-id "<table-id>!<record-id>!<view-id>"`, where table/record/view IDs usually start with `tbl`/`rec`/`vew` respectively; view_id only determines which view is opened when clicking the notification upon being mentioned, and does not affect the comment attachment point, but it must be passed. For obtaining IDs, refer to [`lark-base`](../../base/index.md).
+- **Slide parameter mapping example**: `--block-id` consists of the PPT XML element type and the element `id`. For example:
+    - `<slide id="pkk">` corresponds to `--block-id slide!pkk`, indicating a comment on the entire page.
+    - `<img id="bPk" ... />` corresponds to `--block-id img!bPk`, indicating a comment on an image element.
+    - `<shape type="text" id="bPq">...</shape>` corresponds to `--block-id shape!bPq`, indicating a comment on a text shape.
 
-- `--content` 是结构化评论元素数组（`text` / `mention_user` / `link`），完整格式见 [`lark-drive-comment-content.md`](lark-drive-comment-content.md)；上方示例已覆盖常见写法。
-- 写入评论前会自动生成符合 OpenAPI 定义的请求体；shortcut 用户只需要传 `--doc`、`--content`，局部评论再传对应格式的 `--block-id`。
-- `--dry-run` 仅预览调用链和请求体，不会实际写入。
-- 如果需要更底层的控制，仍可改用 `lark-cli schema drive.file.comments.create_v2` + `lark-cli drive file.comments create_v2`。
-- 直接调用原生 `drive.file.comments.create_v2` 时，全文评论省略 `anchor`；docx/sheet/slides 局部评论传 `anchor.block_id`，Base 记录局部评论传 `anchor.block_id`（table_id）、`anchor.base_record_id`、`anchor.base_view_id`。
-- 直接调用原生 `drive.file.comments.*` / `drive.file.comment.replys.*` 评论 Base 文档时，`file_type` 填 `bitable`，不要填 `base`。
+- `--content` is a structured array of comment elements (`text` / `mention_user` / `link`); for the complete format see [`lark-drive-comment-content.md`](lark-drive-comment-content.md); the examples above already cover common usages.
+- Before writing a comment, a request body conforming to the OpenAPI definition is automatically generated; shortcut users only need to pass `--doc` and `--content`, and for local comments also pass `--block-id` in the corresponding format.
+- `--dry-run` only previews the call chain and request body, and does not actually write.
+- If you need lower-level control, you can still switch to `lark-cli schema drive.file.comments.create_v2` + `lark-cli drive file.comments create_v2`.
+- When calling the native `drive.file.comments.create_v2` directly, omit `anchor` for full-text comments; for docx/sheet/slides local comments pass `anchor.block_id`, and for Base record local comments pass `anchor.block_id` (table_id), `anchor.base_record_id`, `anchor.base_view_id`.
+- When calling the native `drive.file.comments.*` / `drive.file.comment.replys.*` directly to comment on Base documents, fill `file_type` with `bitable`, not `base`.
 
 > [!CAUTION]
-> 这是**写入操作** —— 执行前必须确认用户意图。
+> This is a **write operation** -- you must confirm the user's intent before executing.
 
-## 参考
+<a id="参考"></a>
+## References
 
-- [lark-drive](../index.md) -- 云空间（云盘/云存储）全部命令
-- [lark-shared](../../shared/index.md) -- 认证和全局参数
+- [lark-drive](../index.md) -- all commands for Drive (cloud drive/cloud storage)
+- [lark-shared](../../shared/index.md) -- authentication and global parameters

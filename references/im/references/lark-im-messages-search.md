@@ -158,7 +158,7 @@ Use `im +messages-resources-download` if you need to fetch the underlying image 
 
 ### Query boundary for activity review
 
-Use `--query` only for real message keywords. If the user asks for activity review such as "最近一周我和哪些 Bot 有过交互" or "整理我和某人的聊天记录", and the useful constraints are sender type, chat, person, or time range, keep `--query ""` and rely on those filters. Do not put generic instruction words such as "看看", "总结", "交互内容", or "聊天记录" into `--query`; those words often over-constrain message search and hide the relevant messages.
+Use `--query` only for real message keywords. If the user asks for activity review such as "which Bots have I interacted with in the past week" or "organize my chat history with someone", and the useful constraints are sender type, chat, person, or time range, keep `--query ""` and rely on those filters. Do not put generic instruction words such as "take a look", "summarize", "interaction content", or "chat history" into `--query`; those words often over-constrain message search and hide the relevant messages.
 
 This guidance applies to both user and bot identity. If the user explicitly asks for application/bot identity, run `im +messages-search --as bot`; for named-group history/listing intents where search is not needed, resolving the group with `im +chat-search --as bot` and listing messages with `im +chat-messages-list --as bot --chat-id <chat_id>` is still a good narrower path.
 
@@ -167,7 +167,7 @@ This guidance applies to both user and bot identity. If the user explicitly asks
 lark-cli im +messages-search --query "" --sender-type bot --start "<YYYY-MM-DDT00:00:00+08:00>" --end "<YYYY-MM-DDT23:59:59+08:00>" --page-all --format json
 ```
 
-Replace the time placeholders at execution time. For example, "最近一周" means computing the start date and end date from the current day before running the command; do not copy date literals from this reference into answers for relative requests.
+Replace the time placeholders at execution time. For example, "the past week" means computing the start date and end date from the current day before running the command; do not copy date literals from this reference into answers for relative requests.
 
 For activity summaries, validate evidence by message IDs and chat context. The final answer should cite or retain the `message_id`, sender, chat, and create time for each important item. If the row's source data contains concrete `om_...` message IDs or `ou_...` user IDs, treat those IDs as strong recall targets during verification; do not rely only on a high-level keyword match.
 

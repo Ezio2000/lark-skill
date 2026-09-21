@@ -1,76 +1,80 @@
 # mail +draft-create
 
 
-从零创建一封全新的邮件草稿。适用于已知收件人、主题和正文的场景。
+Create a brand-new mail draft from scratch. Suitable for scenarios where the recipients, subject, and body are already known.
 
-不要用此命令处理回复或转发场景。回复和转发应使用对应的专用 shortcut（它们默认也是创建草稿而不发送）。
+Do not use this command for reply or forward scenarios. Replies and forwards should use the corresponding dedicated shortcuts (they also create a draft by default rather than sending).
 
-如需修改已有草稿，不要使用此命令，请使用 `lark-cli mail +draft-edit`。
+To modify an existing draft, do not use this command; use `lark-cli mail +draft-edit` instead.
 
-**CRITICAL - 编辑邮件内容前 MUST 先用 Read 工具读取 [lark-mail-html.md](lark-mail-html.md)，其中包含邮件书写规范**
+**CRITICAL - Before editing mail content you MUST first use the Read tool to read [lark-mail-html.md](lark-mail-html.md), which contains the mail writing guidelines**
 
-## 安全约束
+<a id="安全约束"></a>
+## Security Constraints
 
-此命令创建草稿——**不会**发送邮件。用户可以在飞书邮件 UI 中打开草稿查看详情，确认后再进入后续操作。因此：
+This command creates a draft — it does **not** send mail. The user can open the draft in the Feishu Mail UI to view the details and confirm before proceeding to subsequent operations. Therefore:
 
-- **不要把邮件内容以文本形式输出再请求确认。** 当用户要求"起草"/"草拟"邮件时，直接调用 `+draft-create` 在飞书邮箱中创建草稿，并引导用户去飞书邮件里打开草稿。
-- **收件人未指定时省略 `--to`** — 草稿将不带收件人创建，用户之后可自行添加。
-- **仅在用户请求确实有歧义时才需确认**（例如内容有多种可能的理解方式）。
-- **发送**草稿是单独的操作，需要用户明确确认。
-- **产出草稿时要返回打开链接** — 只要当前结果是草稿而不是直接发信，就要给用户展示草稿打开链接。当前应以创建、编辑、发送链路返回的链接信息为准，不要指望 `user_mailbox.drafts get` 返回打开链接。如果当前命令输出里有草稿链接，一并返回；如果没有链接，则静默处理，也不要伪造 URL。
+- **Do not output the mail content as text and then request confirmation.** When the user asks to "draft"/"compose" a mail, directly call `+draft-create` to create a draft in Feishu Mail, and guide the user to open the draft in Feishu Mail.
+- **Omit `--to` when no recipient is specified** — the draft will be created without recipients, and the user can add them later.
+- **Only confirm when the user's request is genuinely ambiguous** (for example, when the content could be understood in multiple ways).
+- **Sending** a draft is a separate operation and requires explicit user confirmation.
+- **Return the open link when producing a draft** — whenever the current result is a draft rather than a direct send, show the user the draft open link. Currently, the link information returned by the create, edit, and send chain should be authoritative; do not expect `user_mailbox.drafts get` to return an open link. If the current command output contains a draft link, return it as well; if there is no link, handle it silently and do not fabricate a URL.
 
-## 命令
+<a id="命令"></a>
+## Command
 
 ```bash
-# 创建 HTML 草稿（推荐）
+# Create an HTML draft (recommended)
 lark-cli mail +draft-create --to 'alice@example.com' --subject '周报' \
   --body '<p>本周进展：</p><ul><li>完成 A 模块</li></ul>'
 
-# 不带收件人的 HTML 草稿（用户之后可自行添加）
+# HTML draft without recipients (the user can add them later)
 lark-cli mail +draft-create --subject '周报' --body '<p>草稿内容</p>'
 
-# 带附件和内嵌图片的 HTML 草稿（推荐：直接用相对路径，自动解析）
+# HTML draft with attachments and inline images (recommended: use relative paths directly, resolved automatically)
 lark-cli mail +draft-create --to 'alice@example.com' --subject '预览图' --body '<p>见附件和图：<img src="./logo.png" /></p>' --attach './report.pdf'
 
-# 纯文本草稿（仅在内容极简时使用）
+# Plain-text draft (use only when the content is extremely simple)
 lark-cli mail +draft-create --to 'alice@example.com' --subject '简短通知' --body '收到，谢谢'
 
-# Dry Run（仅打印请求，不执行）
+# Dry Run (only print the request, do not execute)
 lark-cli mail +draft-create --to 'alice@example.com' --subject '测试' --body 'test' --dry-run
 ```
 
-## 参数
+<a id="参数"></a>
+## Parameters
 
-| 参数 | 必填 | 说明 |
+| Parameter | Required | Description |
 |------|------|------|
-| `--to '<email>'` | 否 | 完整收件人列表。多个收件人请重复传 `--to`，每次只放一个地址，参数值用单引号包住。支持 `Alice <alice@example.com>` 格式。省略时草稿不带收件人（之后可通过 `+draft-edit` 添加） |
-| `--subject <text>` | 是 | 草稿主题 |
-| `--body <text>` | 二选一 | 邮件正文。推荐使用 HTML 获得富文本排版；也支持纯文本（自动检测）。使用 `--plain-text` 可强制纯文本模式。支持 `<img src="./local.png" />` 相对路径自动解析为内嵌图片（仅支持相对路径，不支持绝对路径）。与 `--body-file` 互斥 |
-| `--body-file <path>` | 二选一 | 从文件读取邮件正文 HTML（相对路径，仅限 cwd 子树）。与 `--body` 互斥。文件大小上限 32 MB |
-| `--from <email>` | 否 | 发件人邮箱地址（EML From 头）。使用别名（send_as）发信时，设为别名地址并配合 `--mailbox` 指定所属邮箱。省略时使用邮箱主地址 |
-| `--mailbox <email>` | 否 | 邮箱地址，指定草稿所属的邮箱（默认回退到 `--from`，再回退到 `me`）。当发件人（`--from`）与邮箱不同时使用，如通过别名或 send_as 地址发信。可通过 `accessible_mailboxes` 查询可用邮箱 |
-| `--cc '<email>'` | 否 | 完整抄送列表。多个抄送请重复传 `--cc`，每次只放一个地址，参数值用单引号包住 |
-| `--bcc '<email>'` | 否 | 完整密送列表。多个密送请重复传 `--bcc`，每次只放一个地址，参数值用单引号包住。与 `--event-*` 不兼容（见 `+send` 日程邀请约束） |
-| `--plain-text` | 否 | 强制纯文本模式，忽略 HTML 自动检测。不可与 `--inline` 同时使用。纯文本模式下也会自动追加纯文本签名（HTML 签名经 `PlainTextFromHTML` 转换，内联图片丢弃） |
-| `--attach '<path>'` | 否 | 附件文件路径。多个附件请重复传 `--attach`，每次只放一个相对路径，参数值用单引号包住；按传入顺序追加。当附件导致 EML 总大小超过 25 MB 时，超出部分自动上传为超大附件（HTML 邮件插入下载卡片，纯文本邮件追加下载链接），单个文件上限 3 GB |
-| `--inline '<json>'` | 否 | 高级用法：手动指定内嵌图片 CID 映射。多个 inline 图片请重复传 `--inline`，每次只放一个 JSON object，并用单引号包住：`'{"cid":"mycid","file_path":"./logo.png"}'`。`file_path` 必须是相对路径；CID 应唯一，例如随机十六进制字符串；在 body 中用 `<img src="cid:mycid">` 引用。推荐直接在 `--body` 中使用 `<img src="./path" />`（自动解析）。不可与 `--plain-text` 同时使用 |
-| `--signature-id <id>` | 否 | 签名 ID。附加邮箱签名到正文末尾。运行 `mail +signature` 查看可用签名。与 `--no-signature` 互斥 |
-| `--no-signature` | 否 | 跳过默认签名自动追加。与 `--signature-id` 互斥，同时使用时返回参数校验错误（退出码 2） |
-| `--priority <level>` | 否 | 邮件优先级：`high`、`normal`、`low`。省略或 `normal` 时不设置优先级 |
-| `--request-receipt` | 否 | 请求已读回执（RFC 3798 Message Disposition Notification）。在草稿 EML 里写 `Disposition-Notification-To: <sender>` 头，发送时生效。收件人的邮件客户端可能弹出提示、自动发送或忽略——送达不保证 |
-| `--event-summary <text>` | 否 | 日程标题。设置此参数即在邮件中嵌入日程邀请。需同时设置 `--event-start` 和 `--event-end` |
-| `--event-start <time>` | 条件必填 | 日程开始时间（ISO 8601） |
-| `--event-end <time>` | 条件必填 | 日程结束时间（ISO 8601） |
-| `--event-location <text>` | 否 | 日程地点 |
+| `--to '<email>'` | No | Full recipient list. For multiple recipients, pass `--to` repeatedly, with only one address each time, and wrap the parameter value in single quotes. Supports the `Alice <alice@example.com>` format. When omitted, the draft has no recipients (they can be added later via `+draft-edit`) |
+| `--subject <text>` | Yes | Draft subject |
+| `--body <text>` | Choose one | Mail body. HTML is recommended for rich-text formatting; plain text is also supported (auto-detected). Use `--plain-text` to force plain-text mode. Supports `<img src="./local.png" />` relative paths being automatically resolved to inline images (only relative paths are supported, not absolute paths). Mutually exclusive with `--body-file` |
+| `--body-file <path>` | Choose one | Read the mail body HTML from a file (relative path, limited to the cwd subtree). Mutually exclusive with `--body`. File size limit 32 MB |
+| `--from <email>` | No | Sender email address (EML From header). When sending with an alias (send_as), set this to the alias address and use `--mailbox` to specify the owning mailbox. When omitted, the mailbox's primary address is used |
+| `--mailbox <email>` | No | Mailbox address, specifying the mailbox the draft belongs to (defaults back to `--from`, then back to `me`). Use when the sender (`--from`) differs from the mailbox, such as when sending via an alias or send_as address. Available mailboxes can be queried via `accessible_mailboxes` |
+| `--cc '<email>'` | No | Full CC list. For multiple CCs, pass `--cc` repeatedly, with only one address each time, and wrap the parameter value in single quotes |
+| `--bcc '<email>'` | No | Full BCC list. For multiple BCCs, pass `--bcc` repeatedly, with only one address each time, and wrap the parameter value in single quotes. Incompatible with `--event-*` (see the `+send` calendar invitation constraint) |
+| `--plain-text` | No | Force plain-text mode, ignoring HTML auto-detection. Cannot be used together with `--inline`. In plain-text mode, a plain-text signature is also automatically appended (the HTML signature is converted via `PlainTextFromHTML`, and inline images are discarded) |
+| `--attach '<path>'` | No | Attachment file path. For multiple attachments, pass `--attach` repeatedly, with only one relative path each time, and wrap the parameter value in single quotes; they are appended in the order passed. When attachments cause the total EML size to exceed 25 MB, the excess is automatically uploaded as large attachments (an HTML mail inserts a download card, and a plain-text mail appends a download link), with a per-file limit of 3 GB |
+| `--inline '<json>'` | No | Advanced usage: manually specify the inline image CID mapping. For multiple inline images, pass `--inline` repeatedly, with only one JSON object each time, wrapped in single quotes: `'{"cid":"mycid","file_path":"./logo.png"}'`. `file_path` must be a relative path; the CID should be unique, for example a random hexadecimal string; reference it in the body with `<img src="cid:mycid">`. It is recommended to use `<img src="./path" />` directly in `--body` (resolved automatically). Cannot be used together with `--plain-text` |
+| `--signature-id <id>` | No | Signature ID. Appends the mailbox signature to the end of the body. Run `mail +signature` to view available signatures. Mutually exclusive with `--no-signature` |
+| `--no-signature` | No | Skip automatic appending of the default signature. Mutually exclusive with `--signature-id`; when used together, a parameter validation error is returned (exit code 2) |
+| `--priority <level>` | No | Mail priority: `high`, `normal`, `low`. When omitted or set to `normal`, no priority is set |
+| `--request-receipt` | No | Request a read receipt (RFC 3798 Message Disposition Notification). Writes the `Disposition-Notification-To: <sender>` header in the draft EML, taking effect when sent. The recipient's mail client may show a prompt, send automatically, or ignore it — delivery is not guaranteed |
+| `--event-summary <text>` | No | Calendar title. Setting this parameter embeds a calendar invitation in the mail. `--event-start` and `--event-end` must also be set |
+| `--event-start <time>` | Conditionally required | Calendar start time (ISO 8601) |
+| `--event-end <time>` | Conditionally required | Calendar end time (ISO 8601) |
+| `--event-location <text>` | No | Calendar location |
 
-> **日程约束**：`--event-*` 与 `--send-time` 不可同时使用；`--to` 和 `--cc` 收件人自动成为日程参与者（ATTENDEE），`--bcc` 收件人不计入参与者。
+> **Calendar constraints**: `--event-*` and `--send-time` cannot be used at the same time; `--to` and `--cc` recipients automatically become calendar participants (ATTENDEE), while `--bcc` recipients are not counted as participants.
 
-| `--format <mode>` | 否 | 输出格式：`json`（默认）/ `pretty` / `table` / `ndjson` / `csv` |
-| `--dry-run` | 否 | 仅打印请求，不执行 |
+| `--format <mode>` | No | Output format: `json` (default) / `pretty` / `table` / `ndjson` / `csv` |
+| `--dry-run` | No | Only print the request, do not execute |
 
-## 返回值
+<a id="返回值"></a>
+## Return Value
 
-成功时：
+On success:
 
 ```json
 {
@@ -81,36 +85,39 @@ lark-cli mail +draft-create --to 'alice@example.com' --subject '测试' --body '
 }
 ```
 
-可选字段：
+Optional fields:
 
-- `reference`：草稿打开链接。**仅在当前创建链路实际返回时才会出现**。
+- `reference`: Draft open link. **Only appears when the current creation chain actually returns it.**
 
-如果创建结果里带有 `reference`，应把草稿打开链接与 `draft_id` 一起返回给用户；如果当前没有链接，则静默处理。
+If the creation result includes `reference`, return the draft open link to the user together with `draft_id`; if there is currently no link, handle it silently.
 
-## 典型场景
+<a id="典型场景"></a>
+## Typical Scenarios
 
-### 撰写新邮件 → 创建草稿 → 预览 → 发送
+<a id="撰写新邮件--创建草稿--预览--发送"></a>
+### Compose a new mail → create a draft → preview → send
 
 ```bash
-# 1. 创建草稿
+# 1. Create a draft
 lark-cli mail +draft-create --to 'alice@example.com' --subject 'Q1 报告' --body '请查收附件中的报告。' --attach './q1-report.pdf' --format json
 
-# 2. 发送草稿
+# 2. Send the draft
 lark-cli mail user_mailbox.drafts send --params '{"user_mailbox_id":"me","draft_id":"<draft_id>"}'
 ```
 
-### 创建带内嵌图片的 HTML 草稿
+<a id="创建带内嵌图片的-html-草稿"></a>
+### Create an HTML draft with inline images
 
-> **推荐方式：** 直接在 `--body` HTML 中使用 `<img src="./logo.png" />`（相对路径），系统会自动创建内嵌 MIME 部分并替换为 `cid:` 引用。仅支持相对路径（如 `./logo.png`），不支持绝对路径（如 `/tmp/logo.png`）。
+> **Recommended approach:** Use `<img src="./logo.png" />` (relative path) directly in the `--body` HTML, and the system will automatically create the inline MIME part and replace it with a `cid:` reference. Only relative paths are supported (such as `./logo.png`), not absolute paths (such as `/tmp/logo.png`).
 
 ```bash
-# 推荐：直接使用相对路径，自动解析为内嵌图片
+# Recommended: use relative paths directly, resolved automatically to inline images
 lark-cli mail +draft-create \
   --to 'alice@example.com' \
   --subject '通讯稿' \
   --body '<h1>你好</h1><img src="./banner.png" />'
 
-# 高级用法：手动指定 CID（CID 为唯一标识符，可用随机十六进制字符串）
+# Advanced usage: manually specify the CID (the CID is a unique identifier; a random hexadecimal string can be used)
 lark-cli mail +draft-create \
   --to 'alice@example.com' \
   --subject '通讯稿' \
@@ -118,9 +125,10 @@ lark-cli mail +draft-create \
   --inline '[{"cid":"c7d8e9f0a1b2c3d4e5f6","file_path":"./banner.png"}]'
 ```
 
-## 相关命令
+<a id="相关命令"></a>
+## Related Commands
 
-- `lark-cli mail +draft-edit` — 编辑已有草稿
-- `lark-cli mail user_mailbox.drafts send` — 发送已有草稿
-- `lark-cli mail user_mailbox.drafts get` — 获取草稿内容
-- `lark-cli mail +reply` / `+reply-all` / `+forward` — 创建回复/转发草稿（默认），或加 `--confirm-send` 发送
+- `lark-cli mail +draft-edit` — Edit an existing draft
+- `lark-cli mail user_mailbox.drafts send` — Send an existing draft
+- `lark-cli mail user_mailbox.drafts get` — Get draft content
+- `lark-cli mail +reply` / `+reply-all` / `+forward` — Create reply/forward drafts (default), or add `--confirm-send` to send

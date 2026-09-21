@@ -1,22 +1,23 @@
 # +search-bot
 
-按关键词搜索当前用户可见的机器人。仅支持 user 身份,需要 `search:bot` 权限。
+Search for bots visible to the current user by keyword. Only the user identity is supported, and the `search:bot` permission is required.
 
-- ✅ 用关键词搜索机器人并获取 open_id
-- ✅ 一次搜索多个关键词(`--queries`)
-- ✅ 在指定群范围内搜索机器人(`--chat-ids`)
+- ✅ Search for bots by keyword and get the open_id
+- ✅ Search multiple keywords at once (`--queries`)
+- ✅ Search for bots within a specified chat scope (`--chat-ids`)
 
-## 参数
+<a id="参数"></a>
+## Parameters
 
-必须传 `--query` 或 `--queries`。`--chat-ids` 指定搜索范围,`--has-chatted` 筛选已聊过的机器人;两者都不能单独使用。
+You must pass either `--query` or `--queries`. `--chat-ids` specifies the search scope, and `--has-chatted` filters for bots you have already chatted with; neither can be used on its own.
 
-| Flag | 说明 |
+| Flag | Description |
 |---|---|
-| `--query <text>` | 搜索一个关键词,最多 50 个字符 |
-| `--queries <csv>` | 并行搜索多个关键词,最多 20 个;每个最多 50 个字符。不能和 `--query` 一起使用 |
-| `--chat-ids <csv>` | 只在指定群内搜索,最多 100 个群;支持群 ID 或群链接 |
-| `--has-chatted` | 只返回聊过天的机器人;不需要时不要传此参数 |
-| `--page-size <n>` | 返回条数,1–30,默认 20 |
+| `--query <text>` | Search a single keyword, up to 50 characters |
+| `--queries <csv>` | Search multiple keywords in parallel, up to 20; each up to 50 characters. Cannot be used together with `--query` |
+| `--chat-ids <csv>` | Search only within specified chats, up to 100 chats; supports chat IDs or chat links |
+| `--has-chatted` | Return only bots you have chatted with; do not pass this parameter when not needed |
+| `--page-size <n>` | Number of results to return, 1–30, default 20 |
 
 ```bash
 lark-cli contact +search-bot --query '会议助手' --as user
@@ -24,26 +25,29 @@ lark-cli contact +search-bot --query '助手' --has-chatted --as user
 lark-cli contact +search-bot --queries '会议助手,日报助手,审批助手' --as user
 ```
 
-## 输出
+<a id="输出"></a>
+## Output
 
-| 字段 | 类型 | 说明 | 空值时 |
+| Field | Type | Description | When empty |
 |---|---|---|---|
-| `open_id` | string | 机器人 ID | 始终非空 |
-| `name` | string | 机器人名称 | 空字符串 |
-| `description` | string | 机器人简介 | 字段省略 |
-| `chat_id` | string | 与机器人的单聊 ID | 空字符串 |
-| `enable_join_group` | bool | 是否允许加入群聊 | — |
-| `is_agent` | bool | 是否是智能体 | — |
-| `tenant_id` | string | 租户标识 | 字段省略 |
-| `match_segments` | string[] | 命中的文本片段 | 无命中时为 `[]` |
+| `open_id` | string | Bot ID | Always non-empty |
+| `name` | string | Bot name | Empty string |
+| `description` | string | Bot description | Field omitted |
+| `chat_id` | string | Direct chat ID with the bot | Empty string |
+| `enable_join_group` | bool | Whether it can be added to group chats | — |
+| `is_agent` | bool | Whether it is an agent | — |
+| `tenant_id` | string | Tenant identifier | Field omitted |
+| `match_segments` | string[] | Matched text fragments | `[]` when there are no matches |
 
-### 没有分页
+<a id="没有分页"></a>
+### No pagination
 
-不支持分页。`has_more=true` 时改用更具体的关键词,或调整搜索范围。
+Pagination is not supported. When `has_more=true`, use a more specific keyword instead, or adjust the search scope.
 
-### 多条命中怎么选
+<a id="多条命中怎么选"></a>
+### How to choose among multiple matches
 
-命中多个机器人时,结合 `description` 和 `is_agent` 判断。后续要发消息或拉群时,让用户确认目标,不要直接选择第一条。
+When multiple bots match, use `description` and `is_agent` to decide. If you will later send a message or create a group, have the user confirm the target; do not simply pick the first one.
 
 ```bash
 lark-cli contact +search-bot --query '会议助手' \
@@ -52,9 +56,9 @@ lark-cli contact +search-bot --query '会议助手' \
 
 ## fanout(`--queries`)
 
-输出为 `{bots[], queries[], notice?}`。`has_more` 只出现在每个关键词的结果中。
+Output is `{bots[], queries[], notice?}`. `has_more` appears only in the results for each keyword.
 
-- `bots[].matched_query`:该结果对应的关键词
-- `queries[]`:每个关键词的执行结果,格式为 `{query, error?, has_more, notice?}`
-- 部分关键词失败时保留其他结果;全部失败时命令报错
-- `--chat-ids` 和 `--has-chatted` 对所有关键词生效
+- `bots[].matched_query`: the keyword corresponding to that result
+- `queries[]`: the execution result for each keyword, in the format `{query, error?, has_more, notice?}`
+- If some keywords fail, the other results are retained; if all fail, the command reports an error
+- `--chat-ids` and `--has-chatted` apply to all keywords

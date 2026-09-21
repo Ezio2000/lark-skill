@@ -1,37 +1,43 @@
-# 里程碑时间线 (Milestone)
+<a id="里程碑时间线-milestone"></a>
+# Milestone Timeline (Milestone)
 
-## Content 约束
+<a id="content-约束"></a>
+## Content Constraints
 
-- 节点 4-8 个
-- 每节点：标题 + 日期 + 可选描述
-- 时间从左到右递增
+- 4-8 nodes
+- Each node: title + date + optional description
+- Time increases from left to right
 
-## Layout 选型
+<a id="layout-选型"></a>
+## Layout Selection
 
-两种方案按需选择：
+Choose between two approaches as needed:
 
-1. **横向时间线**：horizontal frame，节点等分
-2. **交替上下**：绝对定位，节点交替在时间轴上下方（节点多时更紧凑）
+1. **Horizontal timeline**: horizontal frame, nodes evenly divided
+2. **Alternating above and below**: absolute positioning, nodes alternate above and below the timeline (more compact when there are many nodes)
 
-## 结构特征
+<a id="结构特征"></a>
+## Structural Features
 
-- **标题居中**：顶部放置图表标题
-- **年份/时间轴条**：箭头形色块承载年份，按时间从左到右递增
-- **里程碑卡片**：下方虚线圆角卡片承载标题与描述
-- **严格对齐**：年份条与对应卡片等宽，左右对齐
-- **文字层级**：标题加粗在上，描述文字更小更浅在下，居中对齐
+- **Centered title**: place the chart title at the top
+- **Year/time axis bars**: arrow-shaped color blocks carry the years, increasing from left to right over time
+- **Milestone cards**: dashed rounded cards below carry the title and description
+- **Strict alignment**: year bars are the same width as their corresponding cards, aligned left and right
+- **Text hierarchy**: bold title on top, smaller and lighter description text below, center-aligned
 
-## Layout 规则
+<a id="layout-规则"></a>
+## Layout Rules
 
-- 绝对定位为主（`layout: "none"`），节点位置承载时间序列含义
-- 先确定里程碑数量，计算等距的 x 坐标序列
-- 时间轴用 connector 贯穿所有节点
-- 节点与时间轴用短竖线连接
-- 节点间水平间距一致
-- 年份条宽度 = 卡片宽度，垂直间距统一
-- 标题与年份区域保留足够留白
+- Primarily absolute positioning (`layout: "none"`), node positions carry the meaning of the time sequence
+- First determine the number of milestones, then calculate an evenly spaced sequence of x coordinates
+- Use a connector to run the timeline through all nodes
+- Connect nodes to the timeline with short vertical lines
+- Horizontal spacing between nodes is consistent
+- Year bar width = card width, vertical spacing is uniform
+- Reserve enough whitespace between the title and the year area
 
-## 骨架示例
+<a id="骨架示例"></a>
+## Skeleton Example
 
 ```json
 {
@@ -132,8 +138,9 @@
 }
 ```
 
-## 陷阱
+<a id="陷阱"></a>
+## Pitfalls
 
-- **节点太多时太拥挤**：超过 6 个节点时考虑交替上下布局或增大画布宽度
-- **右侧节点与时间轴末端重叠**：最后一个节点的 x + width 不要超出画布边界
-- **年份条与卡片不对齐**：年份条和卡片的 x、width 必须完全一致
+- **Too crowded when there are too many nodes**: when there are more than 6 nodes, consider an alternating above-and-below layout or increasing the canvas width
+- **Right-side nodes overlap the end of the timeline**: the last node's x + width must not exceed the canvas boundary
+- **Year bars not aligned with cards**: the x and width of the year bars and cards must be exactly the same

@@ -1,9 +1,10 @@
 # base +field-update
 
 
-更新一个已有字段。
+Update an existing field.
 
-## 推荐命令
+<a id="推荐命令"></a>
+## Recommended command
 
 ```bash
 lark-cli base +field-update \
@@ -15,39 +16,42 @@ lark-cli base +field-update \
 
 ```
 
-## 参数
+<a id="参数"></a>
+## Parameters
 
-| 参数 | 必填 | 说明 |
+| Parameter | Required | Description |
 |------|------|------|
-| `--base-token <token>` | 是 | Base Token |
-| `--table-id <id_or_name>` | 是 | 表 ID 或表名 |
-| `--field-id <id_or_name>` | 是 | 字段 ID 或字段名 |
-| `--json <body>` | 是 | 字段属性 JSON 对象 |
-| `--yes` | 是 | 确认执行高风险字段更新 |
+| `--base-token <token>` | Yes | Base Token |
+| `--table-id <id_or_name>` | Yes | Table ID or table name |
+| `--field-id <id_or_name>` | Yes | Field ID or field name |
+| `--json <body>` | Yes | Field property JSON object |
+| `--yes` | Yes | Confirm execution of a high-risk field update |
 
-> 这是**高风险写入操作**。`+field-update` 使用 `PUT` 全量字段定义语义；改变字段类型或关键配置可能影响整列已有数据的解释、展示或可用性。CLI 层要求显式传 `--yes`；如果用户已经明确目标和期望更新，可直接执行并带上 `--yes`。
+> This is a **high-risk write operation**. `+field-update` uses `PUT` full field definition semantics; changing the field type or key configuration may affect the interpretation, display, or availability of existing data in the entire column. The CLI layer requires explicitly passing `--yes`; if the user has already clearly specified the target and expected update, you can execute directly and include `--yes`.
 
-## API 入参详情
+<a id="api-入参详情"></a>
+## API input details
 
-**HTTP 方法和路径：**
+**HTTP method and path:**
 
 ```
 PUT /open-apis/base/v3/bases/:base_token/tables/:table_id/fields/:field_id
 ```
 
-## JSON 值规范
+<a id="json-值规范"></a>
+## JSON value specification
 
-- `--json` 必须是 **JSON 对象**，顶层直接传字段定义。
-- 更新语义是 override 式的完整覆盖 `PUT`，不是 partial update；先读取当前定义，再提交整个字段需要保留的可写配置，不要只传零散片段。
-- 所有字段类型都支持可选 `description`；支持纯文本，也支持 Markdown 链接。
-- 需要字段默认值时传 `default_value`，直接使用字段对应 CellValue；传 `null` 清空。完整规则见 [Field Schema](lark-base-field-schema.md)。
-- `select` 更新时：`options` 仍按对象数组传，避免混入无效字段。
-- `link` 更新限制：
-  - 不能把非 `link` 字段改成 `link`，也不能把 `link` 改成非 `link`。
-  - 现有 `link` 字段的 `bidirectional` 不能改。
-- 更新 `auto_number.style.rules` 会按新规则更新已有记录的编号；规则结构见 [Field Schema](lark-base-field-schema.md)。
+- `--json` must be a **JSON object**, with the field definition passed directly at the top level.
+- The update semantics are an override-style full replacement of `PUT`, not a partial update; first read the current definition, then submit the entire writable configuration that the field needs to retain. Do not pass only scattered fragments.
+- All field types support the optional `description`; plain text is supported, as are Markdown links.
+- When a field default value is needed, pass `default_value`, using the CellValue corresponding to the field directly; pass `null` to clear it. For complete rules, see [Field Schema](lark-base-field-schema.md).
+- When updating `select`: `options` is still passed as an array of objects, to avoid mixing in invalid fields.
+- `link` update restrictions:
+  - You cannot change a non-`link` field into `link`, nor can you change `link` into non-`link`.
+  - The `bidirectional` of an existing `link` field cannot be changed.
+- Updating `auto_number.style.rules` updates the numbering of existing records according to the new rule; for the rule structure, see [Field Schema](lark-base-field-schema.md).
 
-**推荐更新示例**
+**Recommended update example**
 
 ```json
 {
@@ -63,88 +67,100 @@ PUT /open-apis/base/v3/bases/:base_token/tables/:table_id/fields/:field_id
 }
 ```
 
-## 返回重点
+<a id="返回重点"></a>
+## Return highlights
 
-- 返回 `field` 和 `updated: true`。
-- 按返回的 `next_step` 和 `verification_hint` 继续；类型转换涉及已有值时抽样读取记录。
+- Returns `field` and `updated: true`.
+- Continue based on the returned `next_step` and `verification_hint`; when type conversion involves existing values, sample-read records.
 
-## 工作流
+<a id="工作流"></a>
+## Workflow
 
 
-1. 先用 `+field-get` 读取当前定义，只改变目标属性，并把需要保留的其他可写配置完整写回。
-2. `formula/lookup` 类型更新前先阅读对应指南。
-3. 如果这次更新会改变字段 `type`，先按下方“字段类型变更规则”判断能否执行。如果不修改 `type`，大多数场景都相对安全。
+1. First use `+field-get` to read the current definition, change only the target property, and write back completely all other writable configuration that needs to be retained.
+2. Before updating the `formula/lookup` type, read the corresponding guide first.
+3. If this update will change the field `type`, first determine whether it can be executed according to the "Field type change rules" below. If `type` is not modified, most scenarios are relatively safe.
 
-## 字段类型变更规则
+<a id="字段类型变更规则"></a>
+## Field type change rules
 
-字段类型变更采用白名单机制：**只允许白名单转换**；未命中白名单时，**不建议用 CLI 转换字段类型** 除非用户明确知道风险并同意。
+Field type changes use a whitelist mechanism: **only whitelist conversions are allowed**; when the whitelist is not matched, **it is not recommended to use the CLI to convert the field type** unless the user clearly knows the risk and agrees.
 
-### 允许直接转换 type
+<a id="允许直接转换-type"></a>
+### Allowed direct type conversion
 
-先 `+field-get` / `+field-list` 看结构，再抽样读值；只有命中以下规则时，转换才是比较安全的。
+First use `+field-get` / `+field-list` to inspect the structure, then sample-read values; only when the following rules are matched is the conversion relatively safe.
 
-#### 相对安全
+<a id="相对安全"></a>
+#### Relatively safe
 
-| 目标类型 | 允许的源类型 | 说明 |
+| Target type | Allowed source types | Description |
 |------|------|------|
-| `text` | `number`、`select`、`datetime`、`created_at`、`updated_at`、`location`（只保留 `full_address`）、`auto_number`、`checkbox` | 保留字符串表示；丢失原类型语义和结构化能力 |
-| `number` | `text`、`number`、`datetime`、`created_at`、`updated_at`、`checkbox` | 保留可解析的数字值；无法解析的值会变空，原文本格式会丢失 |
-| `datetime` | `text`、`number`、`datetime`、`created_at`、`updated_at` | 保留可解析的时间字符串和时间戳；无法解析的值会变空，原文本格式会丢失 |
-| `select` | `text -> select`、`number -> select`、`single select -> multi select` | 只有完全匹配目标选项名的值会转成对应选项；没匹配上的值会被丢弃 |
+| `text` | `number`, `select`, `datetime`, `created_at`, `updated_at`, `location` (only `full_address` is retained), `auto_number`, `checkbox` | Retains the string representation; loses the original type semantics and structured capabilities |
+| `number` | `text`, `number`, `datetime`, `created_at`, `updated_at`, `checkbox` | Retains parseable numeric values; values that cannot be parsed become empty, and the original text format is lost |
+| `datetime` | `text`, `number`, `datetime`, `created_at`, `updated_at` | Retains parseable time strings and timestamps; values that cannot be parsed become empty, and the original text format is lost |
+| `select` | `text -> select`, `number -> select`, `single select -> multi select` | Only values that exactly match the target option name are converted to the corresponding option; values that do not match are discarded |
 
-#### 可执行但会截断 / 重算
+<a id="可执行但会截断--重算"></a>
+#### Executable but will truncate / recalculate
 
-- `select(multi) -> select(single)`: 只保留第一个值，其余值会被丢弃。
-- `user(multi) -> user(single)`: 只保留第一个人员，其余值会被丢弃。
-- `group_chat(multi) -> group_chat(single)`: 只保留第一个群，其余值会被丢弃。
+- `select(multi) -> select(single)`: only the first value is retained; the remaining values are discarded.
+- `user(multi) -> user(single)`: only the first person is retained; the remaining values are discarded.
+- `group_chat(multi) -> group_chat(single)`: only the first group is retained; the remaining values are discarded.
 
-#### 无状态字段可直接转换
+<a id="无状态字段可直接转换"></a>
+#### Stateless fields can be converted directly
 
-- `created_at`、`created_by`、`updated_at`、`updated_by`、`formula`、`lookup`: 这类字段值由系统或计算逻辑生成，不承载独立存储数据；可以执行类型转换，不必担心破坏原始记录值，但仍要做下游读回验证。
+- `created_at`, `created_by`, `updated_at`, `updated_by`, `formula`, `lookup`: values of these fields are generated by the system or calculation logic and do not carry independently stored data; type conversion can be performed without worrying about destroying the original record values, but downstream read-back verification is still required.
 
-### 一律不要用 CLI 转换
+<a id="一律不要用-cli-转换"></a>
+### Never use the CLI to convert
 
-以下场景全部视为黑名单；默认要求用户改到 Web 页面手动完成，或改走“新建字段 + 数据迁移”。
+The following scenarios are all treated as blacklisted; by default, require the user to change them manually on the Web page, or switch to "create a new field + data migration".
 
 - `any -> checkbox`
 - `any -> user`
 - `any -> group_chat`
 - `any -> attachment`
 - `any -> location`
-- `link` 类型变更
-- 任意涉及动态 / 静态选项来源切换的 `select` 类型变更
+- `link` type changes
+- Any `select` type change involving switching between dynamic / static option sources
 
-### 可例外继续执行的场景
+<a id="可例外继续执行的场景"></a>
+### Scenarios where execution may continue as an exception
 
-只有在**整列数据丢失可接受**时，才允许对黑名单场景例外执行。
+Only when **loss of the entire column's data is acceptable** is it allowed to execute blacklisted scenarios as an exception.
 
-1. 该列为空。
-2. 正在初始化新建的空表。
-3. 主字段不能删除，需要通过更新完成初始化。
-4. 用户明确接受整列数据丢失。
+1. The column is empty.
+2. A newly created empty table is being initialized.
+3. The primary field cannot be deleted and needs to be initialized through an update.
+4. The user explicitly accepts the loss of the entire column's data.
 
-不满足以上条件时，不要转换。
+If the above conditions are not met, do not convert.
 
-### 非白名单场景如何处理
+<a id="非白名单场景如何处理"></a>
+### How to handle non-whitelist scenarios
 
-- 命中白名单时：建议直接原地转换，再做读回验证。
-- 未命中白名单时：先询问用户是否仍要执行转换，并明确说明风险：
-  - 无状态字段除外；这类字段可以直接转换
-  - 可能整列变空
-  - 可能只保留第一个值
-  - 可能只保留字符串表示，丢失原类型语义和结构化能力
-  - 可能影响视图 / 筛选 / 排序 / 公式 / lookup / 写入引用
-- 如果用户不接受风险：不要执行转换。
+- When the whitelist is matched: it is recommended to convert in place directly, then perform read-back verification.
+- When the whitelist is not matched: first ask the user whether they still want to perform the conversion, and clearly explain the risks:
+  - Except for stateless fields; such fields can be converted directly
+  - The entire column may become empty
+  - Only the first value may be retained
+  - Only the string representation may be retained, losing the original type semantics and structured capabilities
+  - Views / filters / sorting / formulas / lookup / write references may be affected
+- If the user does not accept the risk: do not perform the conversion.
 
-## 坑点
+<a id="坑点"></a>
+## Pitfalls
 
-- ⚠️ 这是全量字段属性更新语义，不是 patch。
-- ⚠️ 这是高风险写入操作，执行时必须带 `--yes`。
-- ⚠️ 当 `type` 是 `formula` 或 `lookup` 时，先阅读对应指南再执行。
+- ⚠️ This is full field property update semantics, not a patch.
+- ⚠️ This is a high-risk write operation, and `--yes` must be included when executing.
+- ⚠️ When `type` is `formula` or `lookup`, read the corresponding guide before executing.
 
-## 参考
+<a id="参考"></a>
+## References
 
-- 更新前读取当前字段，确认现有 `type` 和具体配置细节，再决定是原地更新还是新建字段迁移。
-- [Field Schema](lark-base-field-schema.md) — 字段 JSON 规范（推荐）
-- [Formula Field](lark-base-field-formula.md) — 更新公式前必读
-- [Lookup Field](lark-base-field-lookup.md) — 更新查找引用前必读
+- Before updating, read the current field to confirm the existing `type` and specific configuration details, then decide whether to update in place or create a new field and migrate.
+- [Field Schema](lark-base-field-schema.md) — field JSON specification (recommended)
+- [Formula Field](lark-base-field-formula.md) — required reading before updating a formula
+- [Lookup Field](lark-base-field-lookup.md) — required reading before updating a lookup reference

@@ -1,33 +1,36 @@
 # mail +signature
 
 
-查看邮箱签名列表或详情。返回签名的类型、默认使用情况、内容预览等信息。TENANT（企业）签名的模板变量会被自动替换为实际值。
+View the mailbox signature list or details. Returns information such as the signature type, default usage, and content preview. Template variables in TENANT (enterprise) signatures are automatically replaced with actual values.
 
-本模块 对应 shortcut：`lark-cli mail +signature`。
+This module corresponds to the shortcut: `lark-cli mail +signature`.
 
-## 命令
+<a id="命令"></a>
+## Commands
 
 ```bash
-# 列出所有签名
+# List all signatures
 lark-cli mail +signature
 
-# 查看某个签名的详情（渲染后的内容预览、模板变量值、图片信息）
+# View the details of a signature (rendered content preview, template variable values, image information)
 lark-cli mail +signature --detail <signature_id>
 
-# 指定邮箱
+# Specify the mailbox
 lark-cli mail +signature --from shared@example.com
 ```
 
-## 参数
+<a id="参数"></a>
+## Parameters
 
-| 参数 | 必填 | 说明 |
+| Parameter | Required | Description |
 |------|------|------|
-| `--from <email>` | 否 | 邮箱地址（默认 `me`） |
-| `--detail <id>` | 否 | 签名 ID，查看详情。省略则列出所有签名 |
+| `--from <email>` | No | Mailbox address (default `me`) |
+| `--detail <id>` | No | Signature ID, to view details. If omitted, lists all signatures |
 
-## 返回值
+<a id="返回值"></a>
+## Return Values
 
-**列表模式：**
+**List mode:**
 
 ```json
 {
@@ -53,7 +56,7 @@ lark-cli mail +signature --from shared@example.com
 }
 ```
 
-**详情模式（`--detail`）：**
+**Detail mode (`--detail`):**
 
 ```json
 {
@@ -73,25 +76,27 @@ lark-cli mail +signature --from shared@example.com
 }
 ```
 
-## 字段说明
+<a id="字段说明"></a>
+## Field Descriptions
 
-| 字段 | 说明 |
+| Field | Description |
 |------|------|
-| `type` | `USER`（用户签名，可编辑）或 `TENANT`（企业签名，管理员模板控制） |
-| `is_send_default` | 是否为新邮件的默认签名 |
-| `is_reply_default` | 是否为回复/转发的默认签名 |
-| `images` | 签名内联图片元数据（仅详情模式） |
-| `template_vars` | TENANT 签名的模板变量已替换值（仅详情模式） |
-| `content_preview` | 签名内容的纯文本预览（`<img>` 显示为 `[image]`，最长 200 字符） |
+| `type` | `USER` (user signature, editable) or `TENANT` (enterprise signature, controlled by administrator template) |
+| `is_send_default` | Whether it is the default signature for new emails |
+| `is_reply_default` | Whether it is the default signature for replies/forwards |
+| `images` | Inline image metadata in the signature (detail mode only) |
+| `template_vars` | Replaced values of template variables for TENANT signatures (detail mode only) |
+| `content_preview` | Plain text preview of the signature content (`<img>` displayed as `[image]`, up to 200 characters) |
 
-## 与 compose shortcut 配合
+<a id="与-compose-shortcut-配合"></a>
+## Working with the compose shortcut
 
-获取签名 ID 后，可在发送/回复/转发时附加签名：
+After obtaining the signature ID, you can attach the signature when sending/replying/forwarding:
 
 ```bash
-# 查看签名列表获取 ID
+# View the signature list to get the ID
 lark-cli mail +signature
 
-# 在发送邮件时附加签名
+# Attach the signature when sending an email
 lark-cli mail +send --to alice@example.com --subject '你好' --body '<p>内容</p>' --signature-id <签名ID>
 ```

@@ -1,5 +1,6 @@
-# slides +delete-slide（兼容入口）
+<a id="slides-delete-slide兼容入口"></a>
+# slides +delete-slide (compatibility entry point)
 
-本文档已迁移至 [`cli/lark-slides-delete-slide.md`](cli/lark-slides-delete-slide.md)。
+This document has been migrated to [`cli/lark-slides-delete-slide.md`](cli/lark-slides-delete-slide.md).
 
-此文件仅保留旧路径兼容性；后续引用请使用新路径。
+This file is retained only for old-path compatibility; use the new path for future references.

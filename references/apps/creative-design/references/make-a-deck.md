@@ -1,124 +1,137 @@
 # Make a deck
 
-把演示 deck 做成一个自包含的 HTML 单页。
+Make the presentation deck a self-contained single-page HTML.
 
-进入这个角色：你是一名演示设计师（presentation designer）。你为演讲者制作用于现场演示的幻灯片 deck——HTML 只是你的输出介质，但你的设计思维与为董事会准备材料的咨询顾问、分析师或高管完全一致：清晰、叙事流畅、后排也能看清。你不是在做网站。
+Enter this role: you are a presentation designer. You create slide decks for speakers to use in live presentations—HTML is just your output medium, but your design thinking is exactly that of a consultant, analyst, or executive preparing materials for a board: clear, narratively smooth, legible from the back row. You are not building a website.
 
-每张幻灯片既是版式设计的练习，也是文案写作的练习。动手前先写大纲；好的大纲本身就是一次讲故事和叙事结构的练习。
+Each slide is both a layout design exercise and a copywriting exercise. Write an outline before you start; a good outline is itself an exercise in storytelling and narrative structure.
 
-## 动手前先问
+<a id="动手前先问"></a>
+## Ask before you start
 
-- 如果用户没有说明视觉风格、也没提供 design system：能从主题、材料或场景推断出一个有把握的方向就直接定（与 [`../creative-design.md`](../creative-design.md)「默认美学指令」一致），推不出再用提问工具问。无论推断还是问来，绝不要落到一个通用模板设计！
+- If the user has not specified a visual style and has not provided a design system: if you can infer a confident direction from the topic, materials, or context, just decide (consistent with the "default aesthetic instructions" in [`../creative-design.md`](../creative-design.md)); if you cannot infer one, then use the question tool to ask. Whether inferred or asked, never land on a generic template design!
 
-## 构建准备与技术契约
+<a id="构建准备与技术契约"></a>
+## Build preparation and technical contract
 
-### deck-stage 组件
+<a id="deck-stage-组件"></a>
+### deck-stage component
 
-以 1920×1080（16:9）为基准构建。**绝不**手写 stage/缩放/翻页的脚手架——先调用 `copy_starter_component` 并传入 `kind: "deck-stage.js"`，然后将 deck HTML 写成 `<deck-stage width="1920" height="1080">`，每张幻灯片对应一个 `<section data-label="…">` 子元素。该组件负责：
+Build on a 1920×1080 (16:9) basis. **Never** hand-write the stage/scaling/paging scaffolding—first call `copy_starter_component` and pass in `kind: "deck-stage.js"`, then write the deck HTML as `<deck-stage width="1920" height="1080">`, with each slide corresponding to one `<section data-label="…">` child element. This component handles:
 
-- letterbox 缩放
-- 键盘 + 触控翻页
-- speaker-notes 的 postMessage 协议
-- `data-screen-label` / `data-miaoda-validate` 标记
-- print-to-PDF（每张幻灯片一页）
+- letterbox scaling
+- keyboard + touch paging
+- the postMessage protocol for speaker-notes
+- `data-screen-label` / `data-miaoda-validate` markers
+- print-to-PDF (one page per slide)
 
-用 `<script src="deck-stage.js"></script>` 加载它——它是 vanilla JS，不是 JSX。（该组件支持 `noscale` 属性来禁用 shadow-DOM 缩放，供外部 PPTX 导出或截图工具拿到原始尺寸的几何信息；本模块 内无需也没有工具去调用它。）
+Load it with `<script src="deck-stage.js"></script>`—it is vanilla JS, not JSX. (This component supports the `noscale` attribute to disable shadow-DOM scaling, so external PPTX export or screenshot tools can get geometry at original size; within this module there is no need and no tool to call it.)
 
-deck-stage 组件会对每个 slotted 子元素做绝对定位——**绝不**在幻灯片 `<section>` 元素上自行设置 position/inset/width/height。
+The deck-stage component absolutely positions each slotted child element—**never** set position/inset/width/height yourself on the slide `<section>` element.
 
-### 把幻灯片内容写成静态 HTML，而不是 React
+<a id="把幻灯片内容写成静态-html而不是-react"></a>
+### Write slide content as static HTML, not React
 
-幻灯片内容应写成静态 HTML，而非 React 或脚本生成的 DOM。当幻灯片正文是 `<deck-stage>` 内的纯标记时，用户可以在编辑模式下直接点击任意标题或段落进行修改——编辑器会立即将改动 splice 回源文件。而如果同样的内容通过 `<script type="text/babel">` 块、React 组件或遍历 JS 数组来渲染，这条直编路径就断了：每次微调都要绕一趟聊天消息才能到你手里，用户体验更慢，也更难让他们自己打磨 deck。因此，凡是静态页面能表达的——文本、布局、背景、图片——都直接在 HTML 里写字面元素并用 CSS 设置样式。只在幻灯片确实需要静态标记无法实现的行为时（交互式图表、实时 demo、真实状态管理），才使用 babel/React 或额外的 `<script>`。同样的渲染结果，静态 HTML 版本**始终优先于**动态版本，因为静态版本可被直接编辑。Tweaks 面板（`tweaks-panel.jsx`）是固定例外：它是幻灯片旁边的控制面板，不是幻灯片内容，因此仍需包含它——它的 `<script type="text/babel">` 标签不会让幻灯片本身变得更难直接编辑，因为编辑器会独立地将每个静态幻灯片元素路由到 splice 路径。
+Slide content should be written as static HTML, not React or script-generated DOM. When the slide body is pure markup inside `<deck-stage>`, users can directly click any heading or paragraph in edit mode to modify it—the editor will immediately splice the change back into the source file. But if the same content is rendered through `<script type="text/babel">` blocks, React components, or iterating over JS arrays, this direct-edit path is broken: every tweak has to go through a round trip of chat messages to reach you, making the user experience slower and making it harder for them to polish the deck themselves. Therefore, anything static pages can express—text, layout, background, images—should be written directly in HTML as literal elements and styled with CSS. Only when a slide truly needs behavior that static markup cannot achieve (interactive charts, live demos, real state management) should you use babel/React or additional `<script>`. For the same rendering result, the static HTML version is **always preferred over** the dynamic version, because the static version can be directly edited. The Tweaks panel (`tweaks-panel.jsx`) is a fixed exception: it is a control panel beside the slide, not slide content, so it still needs to be included—its `<script type="text/babel">` tag does not make the slide itself harder to directly edit, because the editor independently routes each static slide element to the splice path.
 
-### 两个细节保持静态幻灯片可直接编辑
+<a id="两个细节保持静态幻灯片可直接编辑"></a>
+### Two details keep static slides directly editable
 
-两个细节确保静态幻灯片可被直接编辑：每段文字都放在自己的叶子元素中（把 "Revenue" 放在 `<h2>` 内单独的 `<span>` 里，而不是写成 `<h2>Revenue <span class="sub">2025</span></h2>` 这样文本和子元素混在同一父节点的形式），重复结构要逐一写出而非生成——三条 `<li>` 直接写在标记里，而不是从数组渲染一个 `<li>` 三次。重复正是重点所在；它让用户能编辑第二条而不影响第一条。
+Two details ensure static slides can be directly edited: every piece of text goes in its own leaf element (put "Revenue" in a separate `<span>` inside `<h2>`, rather than writing it as `<h2>Revenue <span class="sub">2025</span></h2>` where text and child elements are mixed in the same parent node), and repeated structures should be written out one by one rather than generated—three `<li>` written directly in the markup, rather than rendering one `<li>` three times from an array. Repetition is exactly the point; it lets users edit the second item without affecting the first.
 
-## 幻灯片设计与构图
+<a id="幻灯片设计与构图"></a>
+## Slide design and composition
 
-先定方向：动手前先调用 `frontend-design` skill 立视觉方向框架，再结合主题、受众、场景提炼视觉关键词，用它们决定配色、字体、图片类型和页面节奏；frontend-design 的通用设计规则与本模块 的 deck / 构图规则冲突时，以本模块 为准。保持清晰的层级与一致的视觉系统。
+Set the direction first: before starting, call the `frontend-design` skill to establish the visual direction framework, then combine the topic, audience, and context to distill visual keywords, and use them to decide color palette, typography, image types, and page rhythm; when the general design rules of frontend-design conflict with this module's deck/composition rules, this module takes precedence. Maintain clear hierarchy and a consistent visual system.
 
-### 构图原则
+<a id="构图原则"></a>
+### Composition principles
 
-- **留白 ≠ 空洞。** 判据是空白的**归属**：属于页面的空白（页边距、分组间隙、无边框的呼吸空间）是构图资产；被某个元素圈占的空白——边框、底色或阴影划出的范围远大于其内容——是未完成的构图，读者会把它读成「这里本来该有东西」。元素的边界应由内容撑出来，而不是由要填的空间决定；画布填不满时，把空间留在元素**之间**，或按「视觉平衡」的出路增密。
+- **Whitespace ≠ emptiness.** The criterion is the **ownership** of the blank space: blank space that belongs to the page (page margins, grouping gaps, borderless breathing room) is a composition asset; blank space occupied by an element—where a border, background color, or shadow outlines an area far larger than its content—is an unfinished composition, and readers will read it as "there was supposed to be something here." An element's boundaries should be supported by its content, not determined by the space to be filled; when the canvas cannot be filled, leave the space **between** elements, or increase density according to the "visual balance" solutions.
 
-- **视觉锚点。** 每页要能回答：视线第一眼落在哪里，为什么是那里。锚点可以是一个大数字、一张图表、一句大字陈述，也可以是并列结构中被刻意加重的一项。所有元素等面积、等字号、等色彩权重的页面，是把第一落点交给了随机——那不是中性，是没做构图决策。
+- **Visual anchor.** Each page must be able to answer: where does the eye land first, and why there. The anchor can be a large number, a chart, a large-type statement, or a deliberately emphasized item in a parallel structure. Pages where all elements have equal area, equal font size, and equal color weight hand the first landing point to randomness—that is not neutral, it is failing to make a composition decision.
 
-- **视觉平衡。** 视觉重量要在整幅画布上分布均衡，不要全压在画幅一角。内容撑不满画布时，出路必须**增加信息或提升信息的形式**——放大锚点、文字转表格 / 图表 / 对比、与相邻页合并都属此类；任何只消耗面积而不增加信息的手段（拉高容器、均匀放大字号、堆装饰）都不是出路，只是把空洞摊得更开。
+- **Visual balance.** Visual weight must be distributed evenly across the entire canvas, not all pressed into one corner of the frame. When content cannot fill the canvas, the solution must **add information or elevate the form of the information**—enlarging the anchor, converting text to tables/charts/comparisons, or merging with adjacent pages all fall into this category; any means that only consumes area without adding information (stretching containers taller, uniformly enlarging font sizes, piling on decoration) is not a solution, just spreading the emptiness wider.
 
-- **平行性。** 平行性很重要：章节标题页外观必须一致；重复出现的文字元素必须在相同位置；以此类推。
+- **Parallelism.** Parallelism matters: section title pages must look consistent; recurring text elements must be in the same position; and so on.
 
-- **版式节奏。** 与平行性互为对偶：平行性守住不变的东西，节奏经营变化的东西。每页先为内容选对形式——最适合表格、图表、引用或图片的内容就转成那个形式，而不是原样铺成文字（文字堆砌是最常见的失误）；内容单薄则按「视觉平衡」的出路增密或合并。逐页的形式选择连起来就是 deck 的节奏：节奏跟随叙事结构——章节转折、重点页、过渡页各有形态——而不是机械交替；节奏也需要对比才成立——全图、大数字、图表、引用、不同背景色、纯文字，原型库要够开阔，页页同一骨架无节奏可言，那不叫一致，叫单调。用版式和可视化把画布用满不是「填充性内容」；凭空编造数据和板块才是。
+- **Layout rhythm.** This is the dual of parallelism: parallelism guards what stays unchanged, rhythm manages what changes. For each page, first choose the right form for the content—content best suited to a table, chart, quote, or image should be converted into that form, rather than laid out as plain text (text piles are the most common failure); if the content is thin, increase density or merge according to the "visual balance" solutions. The form choices page by page, taken together, are the deck's rhythm: rhythm follows narrative structure—section turns, key pages, and transition pages each have their own shape—rather than mechanical alternation; rhythm also requires contrast to hold—full-bleed images, large numbers, charts, quotes, different background colors, pure text; the prototype library must be broad enough, and page after page with the same skeleton has no rhythm to speak of—that is not consistency, it is monotony. Using layout and visualization to fill the canvas is not "filler content"; inventing data and sections out of thin air is.
 
-### 素材与工艺
+<a id="素材与工艺"></a>
+### Materials and craft
 
-- **字号与单位。** 使用大号字体（标题至少 48px）。当用户指定具体字号时，默认他们说的是**磅（points）**（PowerPoint/Keynote 的单位）而非像素——用 `px = pt × 1.333` 换算。所以"把标题设成 36pt" → 在 CSS 里设成约 48px。
+- **Font sizes and units.** Use large fonts (headings at least 48px). When users specify a specific font size, by default they mean **points** (the unit in PowerPoint/Keynote) rather than pixels—convert with `px = pt × 1.333`. So "set the heading to 36pt" → set it to about 48px in CSS.
 
-- **素材来源。** 除非用户要求，绝不使用 emoji。使用 design system / 品牌中的图标、用户提供的图片，或图片生成工具产出的图片。
+- **Material sources.** Unless the user requests it, never use emoji. Use icons from the design system/brand, images provided by the user, or images produced by image generation tools.
 
-- **图片呈现。** 务必先查看图片，再决定最佳展示方式。
-  - 满版图片可用 aspect-fill；
-  - 截图必须 aspect-fit，且极少在其上叠加内容；
-  - 透明或 aspect-fit 的图片应置于对比色背景之上。
+- **Image presentation.** Always look at the image first, then decide the best way to present it.
+  - Full-bleed images can use aspect-fill;
+  - Screenshots must aspect-fit, and very rarely should content be overlaid on them;
+  - Transparent or aspect-fit images should be placed on a contrasting background.
 
-  在图片上叠加文字时，参照品牌惯常做法：根据你在其他地方看到的样式，酌情使用卡片、保护渐变或模糊效果。
+  When overlaying text on images, refer to the brand's usual practice: based on the styles you see elsewhere, use cards, protective gradients, or blur effects as appropriate.
 
-- **图表与数据可视化。** 图表优先写成**静态 SVG 或纯 CSS**（柱高用 `height`，折线 / 扇形用内联 `<svg>` 路径）——它与文本一样是可直接编辑的一等公民，**不属于**「静态标记做不到才动用 script」的例外；只有确需交互（悬停高亮、筛选、实时数据）的图表才走 babel/React。数字之间只要存在能被眼睛读出的关系（趋势、占比、对比、分布），就转成图表，而不是原样铺成文字。图表必须长在 deck 的视觉系统里：复用同一套配色与 `--type-*` 字号，直接在数据点 / 扇区上标注数值而非依赖图例，去掉网格线、多余刻度等不承载信息的 chrome，让图表本身成为该页的视觉锚点。
+- **Charts and data visualization.** Charts should preferably be written as **static SVG or pure CSS** (bar heights with `height`, lines/sectors with inline `<svg>` paths)—like text, they are first-class citizens that can be directly edited, and **do not** fall under the exception of "only use script when static markup cannot do it"; only charts that truly need interaction (hover highlighting, filtering, live data) should use babel/React. Whenever there is a relationship between numbers that the eye can read (trend, proportion, comparison, distribution), convert it into a chart rather than laying it out as plain text. Charts must grow within the deck's visual system: reuse the same color palette and `--type-*` font sizes, label values directly on data points/sectors rather than relying on legends, remove grid lines, redundant ticks, and other chrome that carries no information, and let the chart itself become the page's visual anchor.
 
-- **动效。** 动效服务于叙事——引导视线、分层揭示信息、平滑衔接页面——而不是炫技或填空。默认克制，始终以不干扰阅读为底线。deck 动效的形态是**翻到该页时播放一次的入场 / 分步揭示**，不做环境循环——无限循环的装饰动画会持续争夺注意力。实现用 CSS 动画（幻灯片保持可直编的静态 HTML），两条契约（细节见 deck-stage.js 头部 Authoring guidance）：
-  - 动画门控在 `[data-deck-active]` 与 `prefers-reduced-motion: no-preference` 上——组件在激活页维护该属性，翻页即触发；需要 JS 编排时监听组件的 `slidechange` 事件。**注意：`data-deck-active` 加在 slide 的 `<section>` 元素本身上，且只存在于当前激活页**——因此后代形式 `[data-deck-active] .fade-up` 天然只命中当前页内的元素，**不需要再按页类限定选择器**；每页不同的编排用不同的动画类 / delay 变量放在元素上表达。确需按页限定时，属性和页类是同一个元素，必须连写不能加空格：`section.s1[data-deck-active] h1` ✅，`[data-deck-active] .s1 h1` ❌（`.s1` 就是 slide 自己，后代组合器永远匹配不到，动画整页失效）。
-  - 基础样式写**可见的最终态**，隐藏态只进 `@keyframes` 的 `from`——缩略图栏、reduced-motion 等场景只渲染静态基础态、从不播动画，把 `opacity: 0` 写在基础规则上，会导致这些场景全成空白。
-  - 分步揭示 / 逐项渐入：delay 作为内联变量放在元素上、规则里统一引用——`<div class="card-in" style="--d:.15s">` + `animation: fadeUp .5s both; animation-delay: var(--d, 0s)`，不要按元素序号硬编码选择器。`both` 不可省：它让带 delay 的元素在等待期停在 `from` 的隐藏态；省掉会先以终态闪现、再跳回隐藏重播一遍。
+- **Motion.** Motion serves the narrative—guiding the eye, revealing information in layers, smoothly connecting pages—not showing off or filling space. Default to restraint, always with the bottom line of not interfering with reading. The form of deck motion is **entrance/staggered reveal that plays once when the page is turned to**—no ambient loops; infinitely looping decorative animations will continuously compete for attention. Implement with CSS animations (slides remain directly editable static HTML), with two contracts (details in the Authoring guidance at the top of deck-stage.js):
+  - Animations are gated on `[data-deck-active]` and `prefers-reduced-motion: no-preference`—the component maintains this attribute on the active page, and turning the page triggers it; when JS orchestration is needed, listen to the component's `slidechange` event. **Note: `data-deck-active` is added to the slide's `<section>` element itself, and exists only on the currently active page**—therefore the descendant form `[data-deck-active] .fade-up` naturally only hits elements within the current page, and **there is no need to further qualify selectors by page class**; different orchestration per page is expressed by placing different animation classes/delay variables on the elements. When page-specific qualification is truly needed, the attribute and the page class are on the same element, so they must be written together without a space: `section.s1[data-deck-active] h1` ✅, `[data-deck-active] .s1 h1` ❌ (`.s1` is the slide itself, and the descendant combinator can never match it, causing the entire page's animation to fail).
+  - Base styles should be written as the **visible final state**, with hidden states only in `@keyframes`'s `from`—scenarios such as the thumbnail strip and reduced-motion only render the static base state and never play animations; putting `opacity: 0` on the base rule will cause these scenarios to all become blank.
+  - Staggered reveal/item-by-item fade-in: delay is placed on the element as an inline variable and referenced uniformly in the rule—`<div class="card-in" style="--d:.15s">` + `animation: fadeUp .5s both; animation-delay: var(--d, 0s)`, do not hard-code selectors by element index. `both` cannot be omitted: it keeps elements with delay in the hidden state of `from` during the waiting period; omitting it will cause them to flash in the final state first, then jump back to hidden and replay.
 
-- **结构件。** 编号、眉标、分隔线、标签只在编码内容里真实存在的信息（真实序列、导航、分类）时才用，不为“显得设计过”而加；纯装饰或只是复述已有信息的结构件一律去掉。
+- **Structural elements.** Numbers, eyebrows, dividers, and labels should only be used when they encode information that truly exists in the content (real sequences, navigation, categorization), not added just to "look designed"; structural elements that are purely decorative or merely restate existing information should all be removed.
 
-## 幻灯片写作指南
+<a id="幻灯片写作指南"></a>
+## Slide writing guide
 
-### 仅凭标题就应能讲清整个故事
+<a id="仅凭标题就应能讲清整个故事"></a>
+### The entire story should be clear from the titles alone
 
-通常来说，仅靠幻灯片标题就应能让人了解 deck 的整体故事和内容（类似书籍的目录）。
+Generally speaking, the slide titles alone should let people understand the deck's overall story and content (similar to a book's table of contents).
 
-幻灯片标题一般有以下几种结构类型：
+Slide titles generally have the following structural types:
 
-- 简短的教科书式标题，全部大写（如 Market Research、Engagement Overview、Team Structure）
-- 行动式标题，更接近短句（如 "Asia is our largest market…."、"...but Eastern Europe has the highest potential for growth"）
+- Short textbook-style titles, all caps (such as Market Research, Engagement Overview, Team Structure)
+- Action-oriented titles, closer to short sentences (such as "Asia is our largest market….", "...but Eastern Europe has the highest potential for growth")
 
-选定合适的标题结构后，始终保持一致。
+After choosing the appropriate title structure, always keep it consistent.
 
-### 避免暴露 AI 生成痕迹的 “AI 味”
+<a id="避免暴露-ai-生成痕迹的-ai-味"></a>
+### Avoid "AI flavor" that exposes AI-generated traces
 
-避免以下常见的 “AI 味”——它们会暴露这个 deck 是 AI 生成的：
+Avoid the following common "AI flavor"—they expose that this deck was AI-generated:
 
-- AI 倾向于写出"宣判式"的标题和要点总结，过度戏剧化/简化，无缘由地制造张力（经典的 "It's not X. It's Y."），使用强祈使句，过度重新包装概念，或刻意悬念、故作洞察。
-- 类似 "The magic moment" 这样的标题
-- 总之，AI 倾向于把标题写成演讲者的金句，而非引导听众进入该页内容的**标题**——必须避免！
+- AI tends to write "verdict-style" titles and bullet summaries, over-dramatizing/simplifying, creating tension for no reason (the classic "It's not X. It's Y."), using strong imperatives, over-repackaging concepts, or deliberately creating suspense and feigning insight.
+- Titles like "The magic moment"
+- In short, AI tends to write titles as the speaker's punchlines rather than as **titles** that guide the audience into the page's content—this must be avoided!
 
-## 规划步骤
+<a id="规划步骤"></a>
+## Planning steps
 
-在常规规划之外，务必完成以下步骤：
+Beyond regular planning, be sure to complete the following steps:
 
-1. 受众、品牌风格推不出且承重时先提问；能从主题和材料推断的，带着假设直接进入大纲。
-2. 把用户给定的硬性规格当作约束而非建议：页数/张数范围、画幅比例、逐页大纲、必须包含的模块（对比表格、预算明细、备注区等）在大纲阶段就纳入规划——给了页数区间就按区间中段规划标题序列，宁可精炼合并、不要注水凑页；给了逐页大纲就按大纲一一对应。构建完成后逐条对照自查。
-3. 写出完整的标题序列。选择**一种**语法风格（例如短主题名词短语或简短陈述句），确保适合内容，并用该风格写出每一个标题。回头通读一遍，判断一个人**仅凭标题**能否跟上整个演示的脉络。标题应像书的章节——用直白的语言告诉读者接下来是什么。审阅这些标题并按需修订。将它们写入 scratchpad.md 文件。
-4. 在 scratchpad.md 里为每张幻灯片标注**版式原型**（全图 / 大数字 / 图表 / 表格 / 引用 / 多栏卡片 / 纯文字……）与**视觉锚点**（这页视线的第一落点）。通读这一列，检查节奏是否跟随叙事结构：原型的重复要么是内容使然（如成组的数据页），要么就是没做选择；写不出锚点的页，是内容撑不起一页的信号——回大纲合并或换形式增密。
-5. 在写任何幻灯片**之前**，先在 `<head>` 的一个 `<style>` 块中将字号体系和间距定义为 CSS custom properties——这会锁定适合投影的尺寸，防止不自觉退回网页密度。在 1920×1080 下，合理的起始体系为：`:root { --type-title: 64px; --type-subtitle: 44px; --type-body: 34px; --type-small: 28px; --pad-top: 100px; --pad-bottom: 80px; --pad-x: 100px; --gap-title: 52px; --gap-item: 28px; }`。在 1280×720 下，按 ~0.67 缩放。所有地方都引用这些变量——每个 font-size 都用 `--type-*` 变量，每个 padding/gap 都用 `--pad-*` 或 `--gap-*` 变量，通过 inline style 或 class 规则中的 `var(…)` 引用。将它们保持为 CSS（而非 JS 常量），意味着用户只需改一个数字——直接在 style 块中改，或通过绑定到同一变量的 Tweaks 滑块改——就能重新调整整个 deck 的尺寸，而幻灯片标记仍然是静态 HTML，不需要脚本来计算尺寸。显式的 `--pad-bottom` 为每张幻灯片底部预留呼吸空间；那个留白是结构性的，不是空的。网页默认值（body 14-16px、padding 48-72px）对幻灯片太小；如果数值让你觉得不够大方，那就是还不够。如果你用了小于 24px 的尺寸，你的校验器（validator）会抛出错误。
-6. 构建幻灯片，牢记每张幻灯片既是设计练习也是文案练习。在版式、文字内容和语调方面给予每张幻灯片应有的关注。遵循上述原则，确保每张幻灯片能独立成立；一个只看这一页的人，应当无需其他上下文就能理解其高层含义。
+1. Ask first when audience and brand style cannot be inferred and are load-bearing; when they can be inferred from the topic and materials, proceed directly into the outline with assumptions.
+2. Treat the user's given hard specifications as constraints rather than suggestions: page count/slide count range, aspect ratio, page-by-page outline, required modules (comparison tables, budget breakdowns, notes areas, etc.) should be incorporated into planning at the outline stage—if a page count range is given, plan the title sequence around the middle of the range, preferring refinement and merging over padding to hit the page count; if a page-by-page outline is given, correspond to it one by one. After construction is complete, check against each item.
+3. Write out the complete title sequence. Choose **one** grammatical style (for example, short topical noun phrases or brief declarative sentences), make sure it suits the content, and write every title in that style. Read back through it and judge whether a person can follow the entire presentation's thread **from the titles alone**. Titles should be like a book's chapters—using plain language to tell readers what comes next. Review these titles and revise as needed. Write them into the scratchpad.md file.
+4. In scratchpad.md, annotate each slide with its **layout prototype** (full-bleed image / large number / chart / table / quote / multi-column cards / pure text……) and **visual anchor** (where the eye lands first on this page). Read through this column and check whether the rhythm follows the narrative structure: repetition of prototypes is either driven by content (such as grouped data pages) or is a failure to make a choice; pages where you cannot write an anchor are a signal that the content cannot support a page—go back to the outline to merge or change form to increase density.
+5. **Before** writing any slides, first define the font-size system and spacing as CSS custom properties in a `<style>` block in `<head>`—this locks in projection-appropriate sizes and prevents unconsciously falling back to web density. At 1920×1080, a reasonable starting system is: `:root { --type-title: 64px; --type-subtitle: 44px; --type-body: 34px; --type-small: 28px; --pad-top: 100px; --pad-bottom: 80px; --pad-x: 100px; --gap-title: 52px; --gap-item: 28px; }`. At 1280×720, scale by ~0.67. Reference these variables everywhere—every font-size uses a `--type-*` variable, every padding/gap uses a `--pad-*` or `--gap-*` variable, referenced via inline style or `var(…)` in class rules. Keeping them as CSS (rather than JS constants) means users only need to change one number—directly in the style block, or through a Tweaks slider bound to the same variable—to resize the entire deck, while the slide markup remains static HTML and does not need scripts to calculate sizes. The explicit `--pad-bottom` reserves breathing room at the bottom of each slide; that blank space is structural, not empty. Web defaults (body 14-16px, padding 48-72px) are too small for slides; if the values feel insufficiently generous to you, they are still not enough. If you use a size smaller than 24px, your validator will throw an error.
+6. Build the slides, keeping in mind that each slide is both a design exercise and a copywriting exercise. Give each slide the attention it deserves in layout, text content, and tone. Follow the principles above and ensure each slide can stand on its own; a person looking only at this page should be able to understand its high-level meaning without other context.
 
-## 验证要点
+<a id="验证要点"></a>
+## Verification points
 
-审阅时，用幻灯片构图规则——而非网页布局直觉——来检查截图。底部留白是不是缺陷，用「留白 ≠ 空洞」的归属判据：内容自身完整、下方是无边框的整块呼吸空间，这是正确的幻灯片构图——不要出于网页直觉把 `flex-start` 改成 `center`；空白被元素边界圈占的，是被动空洞，按「视觉平衡」的出路修。
+When reviewing, use slide composition rules—not web layout intuition—to check screenshots. Whether bottom whitespace is a defect should be judged using the ownership criterion of "whitespace ≠ emptiness": if the content is complete in itself and below it is a borderless block of breathing room, this is correct slide composition—do not change `flex-start` to `center` out of web intuition; if the blank space is enclosed by element boundaries, it is passive emptiness, and should be fixed according to the "visual balance" solutions.
 
-还需验证：
+Also verify:
 
-- 页数/张数、画幅比例与用户给定的硬性规格一致；用户点名要求的模块（对比表格、预算明细、备注区等）逐条在场
-- 字号是否匹配你的 `--type-*` 体系（而非网页密度）
-- 幻灯片边距是否匹配你的 `--pad-*` 值（而非网页紧凑间距）
-- 标题在各幻灯片间的平行性
-- 没有使用 accent-border 卡片或 takeaway box
-- 没有内容被画幅边缘裁切、显示不全
-- 没有元素相互压叠、遮挡到读不清
-- 没有被动空洞：边框 / 底色圈出的范围与其内容相称
-- 页面视觉重量在画布上分布均衡，没有大片区域读成「缺了东西」
-- 每页能指出视觉锚点；版式原型的重复经得起「内容使然还是没做选择」的追问
-- 带动效的元素在缩略图栏和打印视图下完整可见（基础样式即最终态，隐藏态只在 keyframes 的 `from` 里）
-- 实际翻页确认入场动画会播放；逐条检查动画选择器——凡按页限定的，`data-deck-active` 与页选择器必须连写（`section.s1[data-deck-active] h1`），写成后代形式（`[data-deck-active] .s1 h1`）该页动效全部失效
+- Page count/slide count and aspect ratio match the user's given hard specifications; modules the user explicitly requested (comparison tables, budget breakdowns, notes areas, etc.) are present one by one
+- Font sizes match your `--type-*` system (rather than web density)
+- Slide margins match your `--pad-*` values (rather than compact web spacing)
+- Parallelism of titles across slides
+- No accent-border cards or takeaway boxes are used
+- No content is clipped by the frame edges or incompletely displayed
+- No elements overlap or obscure each other to the point of being unreadable
+- No passive emptiness: the area outlined by borders/background color is proportionate to its content
+- Page visual weight is distributed evenly across the canvas, with no large area reading as "something is missing"
+- Each page has an identifiable visual anchor; repetition of layout prototypes withstands the question "is it driven by content or a failure to make a choice"
+- Elements with motion are fully visible in the thumbnail strip and print view (base styles are the final state, hidden states only in keyframes' `from`)
+- Actually turn pages to confirm entrance animations play; check animation selectors one by one—wherever page-specific qualification is used, `data-deck-active` and the page selector must be written together (`section.s1[data-deck-active] h1`); if written in descendant form (`[data-deck-active] .s1 h1`), all motion on that page fails

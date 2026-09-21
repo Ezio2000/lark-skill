@@ -1,248 +1,250 @@
 # Lark Sheet Workbook
 
-## Sheet 结构变更保守化（编辑类任务必做）
+<a id="sheet-结构变更保守化编辑类任务必做"></a>
+## Conservative Sheet Structure Changes (Mandatory for Editing Tasks)
 
-`+sheet-{create|delete|rename|move|copy|hide|unhide|set-tab-color}` 会改变原表的物理结构，是高副作用动作。执行前必须遵守：
+`+sheet-{create|delete|rename|move|copy|hide|unhide|set-tab-color}` changes the physical structure of the original sheet and is a high-side-effect action. Before executing, you must comply with the following:
 
-1. **删除 / 重命名 / 隐藏 / 移动原 Sheet 需用户明示**：除非用户明示要这些操作，**禁止**擅自对**已存在**的 Sheet 执行 delete / rename / hide / move。新建 Sheet 是允许的（用于承载中间结果或透视表 / 图表对象），但应优先在原表右侧加列；只有当中间结果数量较大或会与原数据混淆时，才新建空白 Sheet（同 R1）。
-2. **Sheet 级操作前先列清单**：调用 `+sheet-{create|delete|rename|move|copy|hide|unhide|set-tab-color}` 之前，必须先调用 `+workbook-info`，把"当前所有 Sheet 名 + 可见性 + 行列数"列出来，再决定是否操作。禁止跳过列清单直接 create / delete / rename。
-3. **删除 / 重命名前向用户确认**：删除是不可逆的，重命名会让其他公式 / 透视表 / 图表的数据源失效——执行前必须在回复里确认"将删除 / 改名 X，影响 Y 个引用"。
+1. **Deleting / renaming / hiding / moving original Sheets requires explicit user instruction**: Unless the user explicitly requests these operations, it is **forbidden** to perform delete / rename / hide / move on **already existing** Sheets without authorization. Creating new Sheets is allowed (to carry intermediate results or pivot table / chart objects), but you should prioritize adding columns to the right of the original sheet; only when the volume of intermediate results is large or would be confused with the original data should you create a new blank Sheet (same as R1).
+2. **List the inventory before Sheet-level operations**: Before calling `+sheet-{create|delete|rename|move|copy|hide|unhide|set-tab-color}`, you must first call `+workbook-info` to list "all current Sheet names + visibility + row/column counts", then decide whether to operate. It is forbidden to skip listing the inventory and directly create / delete / rename.
+3. **Confirm with the user before deleting / renaming**: Deletion is irreversible, and renaming will invalidate the data sources of other formulas / pivot tables / charts—before executing, you must confirm in your reply that "X will be deleted / renamed, affecting Y references".
 
-## 使用场景
+<a id="使用场景"></a>
+## Use Cases
 
-读写。管理工作簿结构。本 reference 覆盖 14 个 shortcut：
+Read and write. Manage workbook structure. This reference covers 14 shortcuts:
 
-| 操作需求 | 使用工具 | 说明 |
+| Operation need | Tool to use | Description |
 |---------|---------|------|
-| 查看工作簿结构 | `+workbook-info` | 获取子表列表、名称、行列数、冻结位置等元数据 |
-| 获取当前 revision | `+revision-get` | 获取当前文档 revision（版本号），可作为 recover / undo / changeset 复核的版本锚点 |
-| 新建工作簿（可预填数据） | `+workbook-create` | 从内存数据建一张新表（`--values` / `--sheets` typed） |
-| 导入本地文件为新表 | `+workbook-import` | 把本地 `.xlsx` / `.xls` / `.csv` 导入为新的飞书电子表格 |
-| 导出工作簿到本地 | `+workbook-export` | 导出为本地 `.xlsx`（整簿）或单子表 `.csv` |
-| 变更工作簿结构 | `+sheet-{create|delete|rename|move|copy|hide|unhide|set-tab-color}` | 新建/删除/移动/重命名/复制/隐藏子表、修改标签颜色 |
-| 切换子表网格线显隐 | `+sheet-show-gridline` / `+sheet-hide-gridline` | 显示 / 隐藏单个子表的网格线 |
+| View workbook structure | `+workbook-info` | Get metadata such as sub-sheet list, names, row/column counts, freeze positions |
+| Get current revision | `+revision-get` | Get the current document revision (version number), usable as a version anchor for recover / undo / changeset review |
+| Create new workbook (can prefill data) | `+workbook-create` | Create a new sheet from in-memory data (`--values` / `--sheets` typed) |
+| Import local file as new sheet | `+workbook-import` | Import local `.xlsx` / `.xls` / `.csv` as a new Feishu spreadsheet |
+| Export workbook to local | `+workbook-export` | Export as local `.xlsx` (whole workbook) or single sub-sheet `.csv` |
+| Change workbook structure | `+sheet-{create|delete|rename|move|copy|hide|unhide|set-tab-color}` | Create/delete/move/rename/copy/hide sub-sheets, modify tab colors |
+| Toggle sub-sheet gridline visibility | `+sheet-show-gridline` / `+sheet-hide-gridline` | Show / hide gridlines of a single sub-sheet |
 
-注意：
+Note:
 
-- 如果用户请求包含多个动作，例如"先重命名，再新建工作表"，请按顺序发起多次调用，覆盖全部动作
-- `create` 时若用户指定了工作表名称，应显式传入 `sheet_name`；不要省略后依赖默认命名
-- 若 `+workbook-info` 返回包含 `warning_message`，说明部分 `sheet_id` 已失效（被删除/改名或输入错误），应停止复用这些 id，重新不带 `sheet_ids` 全量获取结构后再继续操作
+- If the user request contains multiple actions, for example "first rename, then create a new worksheet", issue multiple calls in order to cover all actions
+- When using `create`, if the user specifies a worksheet name, you should explicitly pass `sheet_name`; do not omit it and rely on default naming
+- If `+workbook-info` returns `warning_message`, it means some `sheet_id` are no longer valid (deleted/renamed or input incorrectly); you should stop reusing these ids, and re-fetch the full structure without `sheet_ids` before continuing operations
 
-**常见配置错误（必须注意）**：
-- **获取结构是第一步**：任何表格操作前必须先调用 `+workbook-info`，不要跳过直接操作。返回的行列数、子表列表是后续所有操作的基础
-- **sheet_id 不要写错**：从 `+workbook-info` 返回值中精确获取 `sheet_id`，不要手动拼写或从 URL 中猜测
-- **未点名网格目标**：默认候选仅 `resource_type=sheet && is_hidden=false` 的可见普通网格；唯一候选才自动选，多候选按用户给的表名/表头/内容匹配，仍不唯一则询问。禁止按 `index` 或猜 `Sheet1`；用户显式点名 hidden sheet 可操作，bitable / `#UNSUPPORTED_TYPE` 改走对应产品 API。
-- **xlsx 验收触发边界**：普通在线交付不导出。只有用户明确要求本地 xlsx / 下载 / 打印时，才在 `--output-path` 导出后验收；本地 Excel 输入则直接验证导入前已有的本地文件，导入在线后不再导出回验。允许触发时确认文件存在、可重开，并核对公式错误值、样式和对象。
+**Common configuration errors (must pay attention)**:
+- **Getting the structure is the first step**: Before any spreadsheet operation, you must first call `+workbook-info`; do not skip it and operate directly. The returned row/column counts and sub-sheet list are the basis for all subsequent operations
+- **Do not write sheet_id incorrectly**: Obtain `sheet_id` precisely from the return value of `+workbook-info`; do not manually spell it or guess it from the URL
+- **Unnamed grid target**: The default candidates are only the visible normal grids of `resource_type=sheet && is_hidden=false`; only a unique candidate is auto-selected, multiple candidates are matched by the table name/header/content given by the user, and if still not unique, ask. It is forbidden to use `index` or guess `Sheet1`; if the user explicitly names a hidden sheet, it can be operated, and bitable / `#UNSUPPORTED_TYPE` should switch to the corresponding product API.
+- **xlsx acceptance trigger boundary**: Normal online delivery does not export. Only when the user explicitly requests local xlsx / download / print should you perform acceptance after exporting via `--output-path`; for local Excel input, directly verify the existing local file before import, and after importing online do not export back for verification. When triggering is allowed, confirm the file exists, can be reopened, and check formula error values, styles, and objects.
 
 ## Shortcuts
 
-| Shortcut | Risk | 分组 |
+| Shortcut | Risk | Group |
 | --- | --- | --- |
-| `+workbook-info` | read | 工作簿 |
-| `+sheet-list` | read | 工作簿 |
-| `+revision-get` | read | 工作簿 |
-| `+sheet-create` | write | 工作簿 |
-| `+sheet-delete` | high-risk-write | 工作簿 |
-| `+sheet-rename` | write | 工作簿 |
-| `+sheet-move` | write | 工作簿 |
-| `+sheet-copy` | write | 工作簿 |
-| `+sheet-hide` | write | 工作簿 |
-| `+sheet-unhide` | write | 工作簿 |
-| `+sheet-set-tab-color` | write | 工作簿 |
-| `+sheet-hide-gridline` | write | 工作簿 |
-| `+sheet-show-gridline` | write | 工作簿 |
-| `+workbook-create` | write | 工作簿 |
-| `+workbook-export` | read | 工作簿 |
-| `+workbook-import` | write | 工作簿 |
+| `+workbook-info` | read | Workbook |
+| `+sheet-list` | read | Workbook |
+| `+revision-get` | read | Workbook |
+| `+sheet-create` | write | Workbook |
+| `+sheet-delete` | high-risk-write | Workbook |
+| `+sheet-rename` | write | Workbook |
+| `+sheet-move` | write | Workbook |
+| `+sheet-copy` | write | Workbook |
+| `+sheet-hide` | write | Workbook |
+| `+sheet-unhide` | write | Workbook |
+| `+sheet-set-tab-color` | write | Workbook |
+| `+sheet-hide-gridline` | write | Workbook |
+| `+sheet-show-gridline` | write | Workbook |
+| `+workbook-create` | write | Workbook |
+| `+workbook-export` | read | Workbook |
+| `+workbook-import` | write | Workbook |
 
 ## Flags
 
 ### `+workbook-info`
 
-_公共：URL/token（无 sheet 定位） · 系统：`--dry-run`_
+_Common: URL/token (no sheet targeting) · System: `--dry-run`_
 
-_仅含公共 / 系统 flag。_
+_Contains only common / system flags._
 
 ### `+sheet-list`
 
-_公共：URL/token（无 sheet 定位） · 系统：`--dry-run`_
+_Common: URL/token (no sheet targeting) · System: `--dry-run`_
 
-_仅含公共 / 系统 flag。_
+_Contains only common / system flags._
 
 ### `+revision-get`
 
-_公共：URL/token（无 sheet 定位） · 系统：`--dry-run`_
+_Common: URL/token (no sheet targeting) · System: `--dry-run`_
 
-_仅含公共 / 系统 flag。_
+_Contains only common / system flags._
 
 ### `+sheet-create`
 
-_公共：URL/token（无 sheet 定位） · 系统：`--dry-run`_
+_Common: URL/token (no sheet targeting) · System: `--dry-run`_
 
-| Flag | Type | 必填 | 说明 |
+| Flag | Type | Required | Description |
 | --- | --- | --- | --- |
-| `--title` | string | required | 新工作表名称 |
-| `--index` | int | optional | 插入位置（0-based）；省略时附加到末尾 |
-| `--row-count` | int | optional | 初始行数（默认 200，上限 50000） |
-| `--col-count` | int | optional | 初始列数（默认 20，上限 200） |
-| `--type` | string | optional | 新子表类型：sheet（电子表格）；默认 sheet（可选值：`sheet`） |
+| `--title` | string | required | New worksheet name |
+| `--index` | int | optional | Insert position (0-based); when omitted, appended to the end |
+| `--row-count` | int | optional | Initial row count (default 200, upper limit 50000) |
+| `--col-count` | int | optional | Initial column count (default 20, upper limit 200) |
+| `--type` | string | optional | New sub-sheet type: sheet (spreadsheet); default sheet (possible values: `sheet`) |
 
 ### `+sheet-delete`
 
-_公共四件套 · 系统：`--yes`、`--dry-run`_
+_Common four-piece set · System: `--yes`, `--dry-run`_
 
-_仅含公共 / 系统 flag。_
+_Contains only common / system flags._
 
 ### `+sheet-rename`
 
-_公共四件套 · 系统：`--dry-run`_
+_Common four-piece set · System: `--dry-run`_
 
-| Flag | Type | 必填 | 说明 |
+| Flag | Type | Required | Description |
 | --- | --- | --- | --- |
-| `--title` | string | required | 新名称 |
+| `--title` | string | required | New name |
 
 ### `+sheet-move`
 
-_公共四件套 · 系统：`--dry-run`_
+_Common four-piece set · System: `--dry-run`_
 
-| Flag | Type | 必填 | 说明 |
+| Flag | Type | Required | Description |
 | --- | --- | --- | --- |
-| `--index` | int | required | 目标位置（0-based） |
-| `--source-index` | int | optional | 源位置（0-based）；standalone 调用时可选，未传时由 CLI runtime 根据 `--sheet-id` / `--sheet-name` 当前在工作簿中的 index 自动派生。但在 `+batch-update` 内不可省（须显式传）——batch 中途无法发起结构查询自动派生 |
+| `--index` | int | required | Target position (0-based) |
+| `--source-index` | int | optional | Source position (0-based); optional for standalone calls, when not passed the CLI runtime automatically derives it from the current index of `--sheet-id` / `--sheet-name` in the workbook. However, it cannot be omitted within `+batch-update` (must be passed explicitly)—mid-batch, a structure query cannot be initiated to auto-derive it |
 
 ### `+sheet-copy`
 
-_公共四件套 · 系统：`--dry-run`_
+_Common four-piece set · System: `--dry-run`_
 
-| Flag | Type | 必填 | 说明 |
+| Flag | Type | Required | Description |
 | --- | --- | --- | --- |
-| `--title` | string | optional | 副本名称；省略时由服务端生成 |
-| `--index` | int | optional | 副本插入位置（0-based）；省略时附加到末尾 |
+| `--title` | string | optional | Copy name; when omitted, generated by the server |
+| `--index` | int | optional | Copy insert position (0-based); when omitted, appended to the end |
 
 ### `+sheet-hide`
 
-_公共四件套 · 系统：`--dry-run`_
+_Common four-piece set · System: `--dry-run`_
 
-_仅含公共 / 系统 flag。_
+_Contains only common / system flags._
 
 ### `+sheet-unhide`
 
-_公共四件套 · 系统：`--dry-run`_
+_Common four-piece set · System: `--dry-run`_
 
-_仅含公共 / 系统 flag。_
+_Contains only common / system flags._
 
 ### `+sheet-set-tab-color`
 
-_公共四件套 · 系统：`--dry-run`_
+_Common four-piece set · System: `--dry-run`_
 
-| Flag | Type | 必填 | 说明 |
+| Flag | Type | Required | Description |
 | --- | --- | --- | --- |
-| `--color` | string | required | Hex 色值如 `#FF0000`，传空 `""` 清除 |
+| `--color` | string | required | Hex color value such as `#FF0000`; pass empty `""` to clear |
 
 ### `+sheet-hide-gridline`
 
-_公共四件套 · 系统：`--dry-run`_
+_Common four-piece set · System: `--dry-run`_
 
-_仅含公共 / 系统 flag。_
+_Contains only common / system flags._
 
 ### `+sheet-show-gridline`
 
-_公共四件套 · 系统：`--dry-run`_
+_Common four-piece set · System: `--dry-run`_
 
-_仅含公共 / 系统 flag。_
+_Contains only common / system flags._
 
 ### `+workbook-create`
 
-_系统：`--dry-run`_
+_System: `--dry-run`_
 
-| Flag | Type | 必填 | 说明 |
+| Flag | Type | Required | Description |
 | --- | --- | --- | --- |
-| `--title` | string | required | 新 spreadsheet 标题 |
-| `--folder-token` | string | optional | 目标文件夹 token；省略时放在云空间根目录 |
-| `--values` | string + File + Stdin（简单 JSON） | optional | untyped 初始数据，一个 JSON 二维数组（表头并入第一行）：`[["列A","列B"],["alice",95]]`；值原样写入、类型由飞书自动识别（日期 / 数字会落成文本，需类型保真改用 --sheets），走与 --sheets 相同的分批 `+cells-set`；配 --styles 控制格式/颜色/合并/行列尺寸 |
-| `--sheets` | string + File + Stdin（复合 JSON） | optional | 建表后写入的 typed 表格协议 JSON（同 +table-put）：顶层 `{"sheets":[...]}`，每个数组项是一张子表 `{name, start_cell?, mode?, header?, allow_overwrite?, columns:["colA","colB",...], data:[[...]], dtypes?:{colA:pandasDtype, ...}, formats?:{colA:numberFormat, ...}}` —— `name` 与外层 `sheets` 数组都不可省。Agents 用 `scripts/lark_sheets_df.py` 的 `df_to_sheet(df, name)` 把 DataFrame 转成一项再包 `{"sheets":[...]}`。与 --values 互斥；新表默认子表复用为第一个子表，日期/数字类型保真。 |
-| `--styles` | string + File + Stdin（复合 JSON） | optional | 建表时同时写入的视觉处理操作 JSON：顶层 `{styles:[...]}`，每项对应一个目标子表、含 `name`，并至少给 `cell_styles` / `row_sizes` / `col_sizes` / `cell_merges` 之一。`cell_styles` 用 A1 单元格 range + 扁平样式字段（字段同 +cells-set-style，含 number_format / 颜色 / 对齐 / border_styles）；row/col sizes 用行/列范围 + type/size；merges 用单元格 range + 可选 merge_type。与 --sheets 搭配时 styles 数组长度/顺序/name 必须与 --sheets.sheets 对应；与 --values 搭配时只给一个 styles 项（其 name 忽略）。完整 cell_styles 字段结构跑 `+workbook-create --print-schema --flag-name styles`。 |
+| `--title` | string | required | New spreadsheet title |
+| `--folder-token` | string | optional | Target folder token; when omitted, placed in the cloud space root directory |
+| `--values` | string + File + Stdin (simple JSON) | optional | untyped initial data, a JSON two-dimensional array (header merged into the first row): `[["列A","列B"],["alice",95]]`; values are written as-is, types are automatically recognized by Feishu (dates / numbers will land as text; to preserve types, switch to --sheets), using the same batched `+cells-set` as --sheets; pair with --styles to control formatting/color/merges/row-column sizes |
+| `--sheets` | string + File + Stdin (composite JSON) | optional | typed table protocol JSON written after creating the sheet (same as +table-put): top-level `{"sheets":[...]}`, each array item is a sub-sheet `{name, start_cell?, mode?, header?, allow_overwrite?, columns:["colA","colB",...], data:[[...]], dtypes?:{colA:pandasDtype, ...}, formats?:{colA:numberFormat, ...}}` — `name` and the outer `sheets` array are both mandatory. Agents use `df_to_sheet(df, name)` of `scripts/lark_sheets_df.py` to convert a DataFrame into one item and then wrap it in `{"sheets":[...]}`. Mutually exclusive with --values; the new sheet's default sub-sheet is reused as the first sub-sheet, preserving date/number types. |
+| `--styles` | string + File + Stdin (composite JSON) | optional | Visual processing operation JSON written at the same time as creating the sheet: top-level `{styles:[...]}`, each item corresponds to a target sub-sheet, contains `name`, and provides at least one of `cell_styles` / `row_sizes` / `col_sizes` / `cell_merges`. `cell_styles` uses A1 cell range + flat style fields (fields same as +cells-set-style, including number_format / color / alignment / border_styles); row/col sizes use row/column ranges + type/size; merges use cell range + optional merge_type. When paired with --sheets, the styles array length/order/name must correspond to --sheets.sheets; when paired with --values, provide only one styles item (its name is ignored). For the complete cell_styles field structure, run `+workbook-create --print-schema --flag-name styles`. |
 
 ### `+workbook-export`
 
-_公共：URL/token（无 sheet 定位） · 系统：`--dry-run`_
+_Common: URL/token (no sheet targeting) · System: `--dry-run`_
 
-| Flag | Type | 必填 | 说明 |
+| Flag | Type | Required | Description |
 | --- | --- | --- | --- |
-| `--file-extension` | string | optional | 导出文件格式；`csv` 模式必须配 `--sheet-id`（可选值：`xlsx` / `csv`）（默认 `xlsx`） |
-| `--sheet-id` | string | optional | 仅 csv 模式必填：指定要导出哪张 sheet 为 CSV。这是 `+workbook-export` 专有 flag，与公共四件套的 sheet 定位无关（本 shortcut 不接受公共 sheet 定位） |
-| `--output-path` | string | optional | 本地保存路径；省略时**只触发并轮询导出任务、不下载文件**（返回 file_token / status，便于稍后续传）。要落盘传具体路径（如 `./out.xlsx`）或目录（如 `.`，服务端给的文件名落在该目录下）。注意：对应的 `lark-cli drive +export --doc-type sheet` 走 `--output-dir` / `--file-name` / `--overwrite` 三 flag 且默认下载到当前目录——本 wrapper 把它们合成单一 `--output-path` 简化常见用例，但默认不下载，需要的话也可改用 `drive +export`。 |
+| `--file-extension` | string | optional | Export file format; `csv` mode must be paired with `--sheet-id` (possible values: `xlsx` / `csv`) (default `xlsx`) |
+| `--sheet-id` | string | optional | Required only in csv mode: specifies which sheet to export as CSV. This is a flag specific to `+workbook-export` and is unrelated to the sheet targeting of the common four-piece set (this shortcut does not accept common sheet targeting) |
+| `--output-path` | string | optional | Local save path; when omitted, **only triggers and polls the export task, does not download the file** (returns file_token / status, convenient for later resumption). To write to disk, pass a specific path (such as `./out.xlsx`) or directory (such as `.`; the filename given by the server lands under that directory). Note: the corresponding `lark-cli drive +export --doc-type sheet` uses the three flags `--output-dir` / `--file-name` / `--overwrite` and downloads to the current directory by default—this wrapper combines them into a single `--output-path` to simplify common use cases, but does not download by default; if needed, you can also switch to `drive +export`. |
 
 ### `+workbook-import`
 
-| Flag | Type | 必填 | 说明 |
+| Flag | Type | Required | Description |
 | --- | --- | --- | --- |
-| `--file` | string | required | 本地文件路径（.xlsx / .xls / .csv） |
-| `--folder-token` | string | optional | 目标文件夹 token；省略则导入到云空间根目录 |
-| `--name` | string | optional | 导入后表格名称；省略则用本地文件名（去掉扩展名） |
+| `--file` | string | required | Local file path (.xlsx / .xls / .csv) |
+| `--folder-token` | string | optional | Target folder token; when omitted, imports to the cloud space root directory |
+| `--name` | string | optional | Table name after import; when omitted, uses the local filename (without extension) |
 
 ## Schemas
 
-> 复合 JSON flag 字段速查（只列顶层 + 一层嵌套）。深层结构看下方 `## Examples`，或用 `--print-schema` 读完整 JSON Schema（用法见 index.md「公共 flag 速查」与「Agent 使用提示」）。
+> Composite JSON flag field quick reference (only lists top level + one level of nesting). For deeper structures, see `## Examples` below, or use `--print-schema` to read the complete JSON Schema (usage see index.md "Common flag quick reference" and "Agent usage tips").
 
 ### `+workbook-create` `--sheets`
 
-_一个或多个子表的 typed 数据，每个数组元素写入一张子表；支持多 DataFrame → 多子表一次写入_
+_typed data for one or more sub-sheets, each array element is written to one sub-sheet; supports multiple DataFrames → multiple sub-sheets written at once_
 
-**数组项**（类型 object）：
-- `name` (string) — 目标子表名
-- `start_cell` (string?) — 写入起点单元格（A1 记法，如 "B2"），默认 "A1"
-- `mode` (enum?) — overwrite（默认）：从 start_cell 起写「表头 + 数据」块；append：把数据追加到子表已有数据下方（默认不重复表头） [overwrite / append]
-- `header` (boolean?) — 是否写一行列名表头
-- `allow_overwrite` (boolean?) — 为 false 时，若写入会落在非空单元格则拒写以保护原数据（返回 partial_success）
-- `columns` (array<string>) — 列名字符串数组，顺序与 `data` 中每行取值一一对应
-- `data` (array<array<string|number|boolean|null>>) — 数据行；每行是一个数组，长度必须等于 `columns` 数
-- `dtypes` (object?) — 可选
-- `formats` (object?) — 可选
+**Array items** (type object):
+- `name` (string) — Target sub-sheet name
+- `start_cell` (string?) — Write start cell (A1 notation, such as "B2"), default "A1"
+- `mode` (enum?) — overwrite (default): write the "header + data" block starting from start_cell; append: append data below the existing data of the sub-sheet (by default does not repeat the header) [overwrite / append]
+- `header` (boolean?) — Whether to write a row of column name headers
+- `allow_overwrite` (boolean?) — When false, if the write would land on non-empty cells, refuse to write to protect the original data (returns partial_success)
+- `columns` (array<string>) — Array of column name strings, order corresponds one-to-one with the value of each row in `data`
+- `data` (array<array<string|number|boolean|null>>) — Data rows; each row is an array, length must equal the number of `columns`
+- `dtypes` (object?) — optional
+- `formats` (object?) — optional
 
 ### `+workbook-create` `--styles`
 
 
-**数组项**（类型 object）：
-- `cell_merges` (array<object>?) — 单元格合并操作数组；range 使用 A1 单元格范围，merge_type 默认 all each: { merge_type?: enum, range: string }
-- `cell_styles` (array<object>?) — 单元格样式操作数组；每项用 A1 单元格 range 指定范围，字段名与 +cells-set-style 对齐 each: { background_color?: string, border?: object, border_styles?: object, font_color?: string, font_family?: string, …共 14 项 }
-- `col_sizes` (array<object>?) — 列宽操作数组；range 使用列范围如 A:C，给 size（px）即像素列宽（type 可省略）；type 为 standard 时不带 size each: { range: string, size?: number, type?: enum }
-- `freeze` (object?) — 冻结行列：rows = 冻结前 N 行，cols = 冻结前 N 列（0 或省略 = 该维度不冻结） { cols?: integer, rows?: integer }
-- `name` (string) — 子表名
-- `row_sizes` (array<object>?) — 行高操作数组；range 使用行范围如 1:3，给 size（px）即像素行高（type 可省略）；type 为 standard/auto 时不带 size each: { range: string, size?: number, type?: enum }
+**Array items** (type object):
+- `cell_merges` (array<object>?) — Array of cell merge operations; range uses A1 cell range, merge_type defaults to all each: { merge_type?: enum, range: string }
+- `cell_styles` (array<object>?) — Array of cell style operations; each item uses A1 cell range to specify the range, field names align with +cells-set-style each: { background_color?: string, border?: object, border_styles?: object, font_color?: string, font_family?: string, …14 items in total }
+- `col_sizes` (array<object>?) — Array of column width operations; range uses column ranges such as A:C, giving size (px) means pixel column width (type can be omitted); when type is standard, no size is included each: { range: string, size?: number, type?: enum }
+- `freeze` (object?) — Freeze rows and columns: rows = freeze the first N rows, cols = freeze the first N columns (0 or omitted = that dimension is not frozen) { cols?: integer, rows?: integer }
+- `name` (string) — Sub-sheet name
+- `row_sizes` (array<object>?) — Array of row height operations; range uses row ranges such as 1:3, giving size (px) means pixel row height (type can be omitted); when type is standard/auto, no size is included each: { range: string, size?: number, type?: enum }
 
 ## Examples
 
-公共四件套：所有 shortcut 顶部排列 `--url` / `--spreadsheet-token` / `--sheet-id` / `--sheet-name`（XOR）。`+workbook-info` 只用前两者；`+sheet-*` 系列对单个工作表操作，需 `--sheet-id` 或 `--sheet-name`。
+Common four-piece set: all shortcuts have `--url` / `--spreadsheet-token` / `--sheet-id` / `--sheet-name` (XOR) arranged at the top. `+workbook-info` uses only the first two; the `+sheet-*` series operates on a single worksheet and requires `--sheet-id` or `--sheet-name`.
 
 ### `+workbook-info`
 
-输出契约：返回 `sheets[]`，每个含 `sheet_id` / `title`（工作表显示名；旧 payload 用 `sheet_name`，读取时优先取 `title`、缺失再回退 `sheet_name`）/ `index` / `resource_type` / `row_count` / `column_count` / `is_hidden`，以及计数字段 `merged_cells_count` / `chart_count` / `pivot_table_count` / `float_image_count`（无 `frozen_*` 字段，冻结信息请用 `+sheet-info` 读取）。是操作飞书表格的第一步——任何后续 sheet 级动作都需要先拿这里的 sheet_id。
+Output contract: returns `sheets[]`, each containing `sheet_id` / `title` (worksheet display name; old payloads use `sheet_name`, when reading prefer `title`, and fall back to `sheet_name` if missing) / `index` / `resource_type` / `row_count` / `column_count` / `is_hidden`, as well as count fields `merged_cells_count` / `chart_count` / `pivot_table_count` / `float_image_count` (there is no `frozen_*` field; for freeze information, use `+sheet-info` to read). This is the first step in operating a Feishu spreadsheet—any subsequent sheet-level action requires first obtaining the sheet_id from here.
 
-> **子表类型 `resource_type`**：`sheet`（普通网格子表）/ `bitable`（内嵌的多维表格子表）/ `#UNSUPPORTED_TYPE`（其它暂不支持的嵌入子表）。
-> - 网格类操作（读写单元格 / 区域 / 样式 / CSV / 筛选 / 透视 / 图表等）**仅适用于 `sheet`**。对 `bitable` / `#UNSUPPORTED_TYPE` 子表执行网格操作会被直接拒绝并返回明确报错，不再静默出错。
-> - 要操作 `bitable` 子表里的数据：该子表条目会附带 `bitable_app_token` + `bitable_table_id` 两个字段，直接用多维表格命令操作，例如 `lark-cli base +record-list --base-token <bitable_app_token> --table-id <bitable_table_id>`（记录增删改查、字段、视图等整套 `lark-cli base` 命令均可用）。不要走 sheets 网格命令。
-> - `bitable` / `#UNSUPPORTED_TYPE` 子表条目**只含** `sheet_id` / `sheet_name` / `index` / `resource_type`（bitable 另加上述两个 token）以及 `is_hidden` / `tab_color`；**不输出** `row_count` / `column_count` / `merged_cells_count` / `chart_count` / `pivot_table_count` / `float_image_count` / `frozen_*` 等网格指标（对非网格子表无意义）。
-> - tab 管理类操作（`+sheet-rename` / `+sheet-move` / `+sheet-delete` / `+sheet-hide` 等）对任意 `resource_type` 的子表都合法，不受此限制。
+> **Sub-sheet type `resource_type`**: `sheet` (normal grid sub-sheet) / `bitable` (embedded Base sub-sheet) / `#UNSUPPORTED_TYPE` (other embedded sub-sheets not yet supported).
+> - Grid-type operations (reading/writing cells / ranges / styles / CSV / filters / pivot / charts, etc.) **apply only to `sheet`**. Performing grid operations on `bitable` / `#UNSUPPORTED_TYPE` sub-sheets will be directly rejected with a clear error, no longer failing silently.
+> - To operate on data in a `bitable` sub-sheet: that sub-sheet entry will carry two fields, `bitable_app_token` + `bitable_table_id`; directly use Base commands to operate, for example `lark-cli base +record-list --base-token <bitable_app_token> --table-id <bitable_table_id>` (the entire set of `lark-cli base` commands for record CRUD, fields, views, etc. are all available). Do not use sheets grid commands.
+> - `bitable` / `#UNSUPPORTED_TYPE` sub-sheet entries **only contain** `sheet_id` / `sheet_name` / `index` / `resource_type` (bitable additionally adds the above two tokens) as well as `is_hidden` / `tab_color`; they **do not output** grid metrics such as `row_count` / `column_count` / `merged_cells_count` / `chart_count` / `pivot_table_count` / `float_image_count` / `frozen_*` (meaningless for non-grid sub-sheets).
+> - tab management operations (`+sheet-rename` / `+sheet-move` / `+sheet-delete` / `+sheet-hide`, etc.) are legal for sub-sheets of any `resource_type` and are not subject to this restriction.
 
 ### `+revision-get`
 
-输出契约：返回单个 `revision` 字段，即当前文档版本号。它是 recover / undo / `+changeset-get` 的版本锚点：如果刚执行过一次读写操作，也可以直接复用那次响应里的 `revision`；当只想单独取当前版本号、且不需要其它结构信息时，用 `+revision-get` 最直接。
+Output contract: returns a single `revision` field, i.e. the current document version number. It is the version anchor for recover / undo / `+changeset-get`: if a read/write operation was just performed, you can also directly reuse the `revision` from that response; when you only want to fetch the current version number on its own and don't need other structural information, `+revision-get` is the most direct.
 
 ### `+workbook-create`
 
-新建电子表格，可选预填数据。两种数据入口（untyped `--values` / typed `--sheets` JSON）**互斥**，按需选一——两者都走同一条分批写入：
+Create a new spreadsheet, optionally pre-filling data. Two data entry points (untyped `--values` / typed `--sheets` JSON) are **mutually exclusive**; choose one as needed—both go through the same batched write:
 
-> ⚠️ **`--title` 必填，且不会从数据里推断**：它是这张表在云空间里的名字，漏了会在建表之前就失败（`required flag(s) "title" not set`），数据一行都不会写。子表名写在 `--sheets` 的 `name` 字段里，两者是两码事——`--title "2026年Q3销售分析"` 配 `--sheets` 里的 `"name": "明细"`。
+> ⚠️ **`--title` is required and will not be inferred from the data**: it is the name of this sheet in the cloud space; if omitted, it will fail before the sheet is created (`required flag(s) "title" not set`), and not a single row of data will be written. The sub-sheet name is written in the `name` field of `--sheets`; the two are entirely different things—`--title "2026年Q3销售分析"` pairs with `"name": "明细"` in `--sheets`.
 
 ```bash
-# 1) untyped：--values（一个二维数组，表头并入第一行；值原样写、类型由飞书自动识别，
-#    日期会落成文本，配 --styles 控制格式）
+# 1) untyped: --values (a two-dimensional array, with the header merged into the first row; values are written as-is and types are automatically recognized by Feishu,
+#    dates will land as text; pair with --styles to control formatting)
 lark-cli sheets +workbook-create --title "销售" \
   --values '[["门店","销售额"],["北京",259874]]'
 
-# 2) typed JSON：--sheets（一步建表 + 类型保真）。date 列落成真日期（可排序/透视）、
-#    number 不丢精度、string 列保前导零（如订单号 00123）；多子表一次建。
+# 2) typed JSON: --sheets (create the sheet + preserve types in one step). date columns land as real dates (sortable/pivotable),
+#    number does not lose precision, string columns preserve leading zeros (e.g. order number 00123); multiple sub-sheets are created in one go.
 lark-cli sheets +workbook-create --title "交易" --sheets '{
   "sheets":[
     {"name":"明细",
@@ -253,11 +255,11 @@ lark-cli sheets +workbook-create --title "交易" --sheets '{
   ]}'
 ```
 
-`--sheets` 协议与 `+table-put` 完全同构（字段含义见 lark-sheets-write-cells 的 `+table-put`，大 payload 走 stdin / `@file`）。关键差异：**新建工作簿的默认子表会被复用为第一个子表**（重命名后承载数据），不会残留空 `Sheet1`；其余子表按需新建。它把 `+table-put` 单独做不到的"建表 + typed 写入"合到一条命令，是「pandas 算完直接落地一张带真日期的新表」的首选。回读校验用 `+table-get`（与 `--sheets` 同构、可 round-trip）。
+The `--sheets` protocol is completely isomorphic to `+table-put` (for field meanings see `+table-put` in lark-sheets-write-cells; large payloads go through stdin / `@file`). Key difference: **the default sub-sheet of a newly created workbook will be reused as the first sub-sheet** (renamed and then carrying the data), with no leftover empty `Sheet1`; the remaining sub-sheets are created as needed. It combines "create sheet + typed write", which `+table-put` cannot do on its own, into a single command, making it the first choice for "land a new sheet with real dates directly after pandas finishes computing". Use `+table-get` for read-back verification (isomorphic to `--sheets`, round-trippable).
 
-> 💡 pandas DataFrame 走 `--sheets` 时直接 `from lark_sheets_df import df_to_sheet`（[`scripts/lark_sheets_df.py`](../scripts/lark_sheets_df.py)，与 `+table-put` 共用同一份 helper），多子表场景 helper 优势更明显：
+> 💡 When a pandas DataFrame goes through `--sheets`, directly `from lark_sheets_df import df_to_sheet` ([`scripts/lark_sheets_df.py`](../scripts/lark_sheets_df.py), sharing the same helper as `+table-put`); the helper's advantage is even more obvious in multi-sub-sheet scenarios:
 > ```python
-> import sys; sys.path.insert(0, "scripts")  # cwd 不在 skill 根时改成 scripts/ 的实际路径
+> import sys; sys.path.insert(0, "scripts")  # when cwd is not at the skill root, change to the actual path of scripts/
 > from lark_sheets_df import df_to_sheet
 >
 > payload = {"sheets": [df_to_sheet(income, "Income Statement"),
@@ -265,17 +267,17 @@ lark-cli sheets +workbook-create --title "交易" --sheets '{
 >                       df_to_sheet(cashflow, "Cash Flow")]}
 > ```
 
-`--styles` 可在建表写入时同时写视觉处理。它和 `--sheets` 一样只有一种外层写法：顶层对象里放 `styles` 数组；数组每项对应一个子表，含 `name`，并按能力拆成四类可选数组：
+`--styles` can write visual treatments at the same time as creating the sheet and writing data. Like `--sheets`, it has only one outer form: a `styles` array in the top-level object; each item in the array corresponds to a sub-sheet, contains `name`, and is split by capability into four optional arrays:
 
-- `cell_styles`：像 `+cells-set-style`，用 A1 单元格 `range` 加扁平样式字段（`font_weight` / `background_color` / `horizontal_alignment` / `vertical_alignment` / `number_format` 等）和可选 `border_styles`；这些样式会随内容在同一次写入里一并应用。完整字段跑 `+workbook-create --print-schema --flag-name styles`。
-- `cell_merges`：用 A1 单元格 `range` 设置合并，`merge_type` 默认为 `all`，可选 `rows` / `columns`。
-- `row_sizes`：用行范围（如 `1:3`）设置行高，`type` 为 `pixel` / `standard` / `auto`；`pixel` 需要 `size`。
-- `col_sizes`：用列范围（如 `A:C`）设置列宽，`type` 为 `pixel` / `standard`；`pixel` 需要 `size`。
+- `cell_styles`: like `+cells-set-style`, using an A1 cell `range` plus flat style fields (`font_weight` / `background_color` / `horizontal_alignment` / `vertical_alignment` / `number_format`, etc.) and an optional `border_styles`; these styles are applied together with the content in the same write. Run `+workbook-create --print-schema --flag-name styles` for the complete fields.
+- `cell_merges`: use an A1 cell `range` to set merging; `merge_type` defaults to `all`, with optional `rows` / `columns`.
+- `row_sizes`: use a row range (e.g. `1:3`) to set row height; `type` is `pixel` / `standard` / `auto`; `pixel` requires `size`.
+- `col_sizes`: use a column range (e.g. `A:C`) to set column width; `type` is `pixel` / `standard`; `pixel` requires `size`.
 
-同一单元格命中多个 `cell_styles` 项时，后面的操作继续合并覆盖已传字段。`cell_merges` / `row_sizes` / `col_sizes` 在内容写入后顺序执行。
+When the same cell matches multiple `cell_styles` items, later operations continue to merge and overwrite already-passed fields. `cell_merges` / `row_sizes` / `col_sizes` are executed in order after the content write.
 
 ```bash
-# 3) untyped：仍用 {"styles":[...]}，只有一个子表样式项（name 忽略）；range 覆盖 --values 初始区域
+# 3) untyped: still use {"styles":[...]}, with only one sub-sheet style item (name ignored); range covers the initial --values area
 lark-cli sheets +workbook-create --title "销售" \
   --values '[["门店","销售额"],["北京",259874],["上海",198320]]' \
   --styles '{
@@ -287,7 +289,7 @@ lark-cli sheets +workbook-create --title "销售" \
     ]
   }'
 
-# 4) typed 单子表：--styles.styles[0].name 必须对应 --sheets.sheets[0].name
+# 4) typed single sub-sheet: --styles.styles[0].name must correspond to --sheets.sheets[0].name
 lark-cli sheets +workbook-create --title "交易" --sheets '{
   "sheets":[
     {"name":"明细",
@@ -310,7 +312,7 @@ lark-cli sheets +workbook-create --title "交易" --sheets '{
     ]
   }'
 
-# 5) typed 多子表：styles 数组和 sheets 数组长度、顺序、name 都必须一致
+# 5) typed multiple sub-sheets: the styles array and sheets array must match in length, order, and name
 lark-cli sheets +workbook-create --title "经营看板" --sheets '{
   "sheets":[
     {"name":"收入","columns":["月份","收入"],"dtypes":{"收入":"int64"},"formats":{"收入":"#,##0"},"data":[["2026-05",1200000]]},
@@ -329,64 +331,64 @@ lark-cli sheets +workbook-create --title "经营看板" --sheets '{
   }'
 ```
 
-> ⚠️ **`+workbook-create` 是把内存里的数据写成新表；要把已有的本地 Excel/CSV 文件原样导入成新表，用 `+workbook-import`**（见下），不要先在本地读出文件再 `+workbook-create` 重灌。
+> ⚠️ **`+workbook-create` writes in-memory data as a new sheet; to import an existing local Excel/CSV file as-is into a new sheet, use `+workbook-import`** (see below), do not first read the file locally and then `+workbook-create` to reload it.
 
 ### `+workbook-import`
 
-把已有的本地 `.xlsx` / `.xls` / `.csv` 文件导入为一个**新的**飞书电子表格（异步任务 + 内置轮询），与 `+workbook-export`（导出）对称，固定导入为电子表格类型。
+Import an existing local `.xlsx` / `.xls` / `.csv` file as a **new** Feishu spreadsheet (async task + built-in polling), symmetric with `+workbook-export` (export), always importing as the spreadsheet type.
 
 ```bash
-# 导入到云空间根目录；表格名默认取本地文件名（去掉扩展名）
+# Import to the cloud space root directory; the sheet name defaults to the local file name (with the extension removed)
 lark-cli sheets +workbook-import --file ./data.xlsx
 
-# 指定目标文件夹与导入后表格名
+# Specify the target folder and the sheet name after import
 lark-cli sheets +workbook-import --file ./report.csv --folder-token <FOLDER_TOKEN> --name "月度报表"
 ```
 
-- **不接受任何 spreadsheet / sheet 定位 flag**（它是新建，不操作已有表）：只有 `--file`（必填）/ `--folder-token` / `--name`。
-- **`--file` 只接受当前工作目录内的相对路径**：先 `cd` 到文件所在目录（或 workspace），再传 `./file.xlsx` / `data/file.xlsx`；传 `/home/.../file.xlsx`、`C:\...\file.xlsx` 这类绝对路径会被判定 `unsafe file path` 拒绝。
-- 导入成功后把新表链接通过宿主的产物交付工具交出去，并确认这次调用返回成功；只写进回复正文不算交付。
-- 本地表格文件 → 飞书电子表格一律用本命令，**不要**用 `drive +import` 导电子表格——它是 sheets 之外的通用导入、还需额外指定 `--type`，绕路且更易错。只有要把本地表格导入成**多维表格**（bitable）时，才改用 `lark-cli drive +import --type bitable`。
-- 返回 `token` / `url` / `ticket` / `ready` / `job_status`。只有 `ready=true` 且 `job_status=0` 才算导入完成；随后用新 URL 调 `+workbook-info`，有点名内容契约时再回读关键 sheet/range。`timed_out=true` 时按 `next_command` 续查，不能交付为成功。
-- **值与公式保真，版式不保真**：走一圈后值、公式、数字格式、合并区、冻结、下拉校验都原样保留；行高列宽、边框、主题色填充（`fgColor theme=N`）、以及**跟随工作簿默认字体的格**（源表默认字体是中文字体时，这类格会回落到系统默认）则会变，与本轮做了什么无关。要求保留原版式时，导入后按源文件的值用 `+rows-resize` / `+cols-resize` 回写尺寸（飞书用像素、Excel 行高用磅，换算约 `px ≈ pt × 4/3`），其余版式差异回写不了，在交付说明里写明。
-- 轮询是命令自己做的：本命令与其它异步 shortcut 都内置轮询，返回时状态已是最新，`next_command` 直接重跑即可，不必也不要加 `sleep` 等待。
+- **Does not accept any spreadsheet / sheet locating flag** (it creates new, does not operate on an existing sheet): only `--file` (required) / `--folder-token` / `--name`.
+- **`--file` only accepts relative paths within the current working directory**: first `cd` to the directory containing the file (or the workspace), then pass `./file.xlsx` / `data/file.xlsx`; passing absolute paths like `/home/.../file.xlsx`, `C:\...\file.xlsx` will be judged `unsafe file path` and rejected.
+- After a successful import, hand off the new sheet link through the host's artifact delivery tool, and confirm that this call returned success; merely writing it into the reply body does not count as delivery.
+- For local spreadsheet files → Feishu spreadsheets, always use this command; **do not** use `drive +import` to import spreadsheets—it is a general import outside of sheets and additionally requires specifying `--type`, which is a detour and more error-prone. Only when you want to import a local spreadsheet as a **bitable** should you switch to `lark-cli drive +import --type bitable`.
+- Returns `token` / `url` / `ticket` / `ready` / `job_status`. Only `ready=true` and `job_status=0` count as import complete; then use the new URL to call `+workbook-info`, and if there is a named content contract, read back the key sheet/range. When `timed_out=true`, continue checking per `next_command`; it must not be delivered as success.
+- **Values and formulas are preserved; layout is not**: after a round trip, values, formulas, number formats, merged areas, frozen panes, and dropdown validations are all preserved as-is; row heights and column widths, borders, theme-color fills (`fgColor theme=N`), and **cells that follow the workbook default font** (when the source sheet's default font is a Chinese font, such cells will fall back to the system default) will change, regardless of what was done this round. When the original layout must be preserved, after import write back the dimensions using `+rows-resize` / `+cols-resize` based on the source file's values (Feishu uses pixels, Excel row height uses points, conversion is about `px ≈ pt × 4/3`); other layout differences cannot be written back, so state them clearly in the delivery notes.
+- Polling is done by the command itself: this command and other async shortcuts have built-in polling, and the status is already up to date when it returns; just rerun `next_command` directly, and there is no need and no reason to add `sleep` to wait.
 
 ### `+workbook-export`
 
-把飞书电子表格导出为本地 `.xlsx`（整工作簿）或单子表 `.csv`（异步任务 + 内置轮询 + 可选下载）。
+Export a Feishu spreadsheet as a local `.xlsx` (entire workbook) or a single sub-sheet `.csv` (async task + built-in polling + optional download).
 
 ```bash
-# 1) 只创建并轮询导出任务，不下载（默认）：返回 file_token / status 便于稍后续传
+# 1) Only create and poll the export task, do not download (default): returns file_token / status for later resumption
 lark-cli sheets +workbook-export --url "https://example.feishu.cn/sheets/shtXXX"
 
-# 2) 下载到具体文件名
+# 2) Download to a specific file name
 lark-cli sheets +workbook-export --url "..." --output-path ./report.xlsx
 
-# 3) 下载到目录（保留服务端给的文件名）
+# 3) Download to a directory (preserving the file name given by the server)
 lark-cli sheets +workbook-export --url "..." --output-path ./downloads/
 
-# 4) csv 模式必须传 --sheet-id（API 一次只导一张子表）
+# 4) csv mode must pass --sheet-id (the API exports only one sub-sheet at a time)
 lark-cli sheets +workbook-export --url "..." --file-extension csv --sheet-id "$SID" --output-path ./sheet.csv
 ```
 
-> ⚠️ **默认不下载**：省略 `--output-path` 时只创建并轮询导出任务。普通在线交付不得为了内部验证主动导出；只有用户明确要求本地 xlsx / 下载 / 打印时才给 `--output-path` 并验收。验收时确认文件存在、可重开，并核对公式错误值、样式和对象。
+> ⚠️ **Does not download by default**: when `--output-path` is omitted, only the export task is created and polled. Ordinary online delivery must not proactively export for internal verification; only when the user explicitly requests a local xlsx / download / print should you provide `--output-path` and accept it. During acceptance, confirm the file exists and can be reopened, and check formula error values, styles, and objects.
 >
-> **与 `drive +export --doc-type sheet` 的关系**：本 wrapper 是它的特化封装，固定 `--doc-type sheet`，并把 drive 的 `--output-dir` / `--file-name` / `--overwrite` 三 flag 折叠成单一 `--output-path` 简化常见用例。代价是默认值不同：`drive +export` 默认下载到当前目录、本 wrapper 默认不下载。需要细控目录/文件名/是否覆盖的，回退到 `drive +export --doc-type sheet`。
+> **Relationship with `drive +export --doc-type sheet`**: this wrapper is a specialized encapsulation of it, fixing `--doc-type sheet`, and folding drive's three flags `--output-dir` / `--file-name` / `--overwrite` into a single `--output-path` to simplify common use cases. The cost is different defaults: `drive +export` downloads to the current directory by default, while this wrapper does not download by default. If you need fine control over directory/file name/whether to overwrite, fall back to `drive +export --doc-type sheet`.
 
 ### `+sheet-create`
 
-示例：
+Example:
 
 ```bash
 lark-cli sheets +sheet-create --url "https://example.feishu.cn/sheets/shtXXX" \
   --title "汇总" --index 0
 ```
 
-> 💡 `+sheet-create` 只建一张**空子表**。要在已有工作簿里建子表并一步写入 typed 数据和/或样式，用 `+table-put`（payload 里命名的子表缺则自动新建）配合它的 `--sheets` / `--styles`，省掉先建表再 `+cells-set` / `+cells-set-style` 的二次往返。
+> 💡 `+sheet-create` only creates an **empty sub-sheet**. To create a sub-sheet in an existing workbook and write typed data and/or styles in one step, use `+table-put` (a sub-sheet named in the payload is automatically created if missing) together with its `--sheets` / `--styles`, saving the second round trip of first creating the sheet and then `+cells-set` / `+cells-set-style`.
 
 ### `+sheet-delete`
 
-> ⚠️ 工作表删除不可逆；先 `--dry-run` 看输出 sheet_id + title 确认是要删的那张。
+> ⚠️ Worksheet deletion is irreversible; first `--dry-run` to see the output sheet_id + title and confirm it is the one to delete.
 
 ### `+sheet-rename`
 
@@ -396,18 +398,18 @@ lark-cli sheets +sheet-rename --url "..." --sheet-id "$SID" --title "汇总"
 
 ### `+sheet-move`
 
-standalone 路径在缺 `--source-index` / 只给 `--sheet-name` 时会自动发起一次 `+workbook-info` 读把它们解出来。
+The standalone path, when `--source-index` is missing / only `--sheet-name` is given, will automatically initiate a `+workbook-info` read to resolve them.
 
-> ⚠️ **在 `+batch-update` 内调用 `+sheet-move`**：必须同时显式传 `--sheet-id`、`--source-index` 和 `--index`（目标位置）。batch 中途无法发起结构查询，且 `--index` 不显式给会静默落到默认位置 0，所以 batch translator 强制要求三者都显式。
+> ⚠️ **Calling `+sheet-move` within `+batch-update`**: you must explicitly pass `--sheet-id`, `--source-index`, and `--index` (the target position) at the same time. Structural queries cannot be initiated mid-batch, and `--index` will silently fall back to the default position 0 if not explicitly given, so the batch translator enforces that all three be explicit.
 
 ### `+sheet-copy`
 
 ```bash
-# --title 省略时由服务端生成副本名
+# When --title is omitted, the server generates the copy name
 lark-cli sheets +sheet-copy --url "..." --sheet-id "$SID" --title "副本"
 ```
 
-> 💡 `+sheet-copy` 连**公式 / 合并 / 分组底色 / 列宽 / 条件格式**一起整表复制。"照一张现成子表批量造结构相同的新子表"（如参考模板给每份数据各建一张同构子表）时，先 `+sheet-copy` 复制模板再用 `+cells-*` 只改数据，比从零 `+sheet-create` + 重建公式 / 样式省一大截，也天然满足"公式 / 分组 / 颜色照搬"。要把本地文件 / 数据并入**已有工作簿**当子表时走它（或 `+sheet-create`），别用 `+workbook-import` / `+workbook-create`——那两条只会新建独立表。
+> 💡 `+sheet-copy` copies the entire sheet including **formulas / merges / group background colors / column widths / conditional formatting**. When "batch-creating new sub-sheets with the same structure from an existing sub-sheet" (e.g. creating one isomorphic sub-sheet for each dataset based on a template), first `+sheet-copy` to copy the template and then use `+cells-*` to change only the data, which saves a great deal compared with `+sheet-create` from scratch + rebuilding formulas / styles, and naturally satisfies "formulas / groups / colors copied over". To merge local files / data into an **existing workbook** as a sub-sheet, go through it (or `+sheet-create`), and do not use `+workbook-import` / `+workbook-create`—those two only create independent sheets.
 
 ### `+sheet-hide` / `+sheet-unhide`
 
@@ -419,20 +421,21 @@ lark-cli sheets +sheet-unhide --url "..." --sheet-id "$SID"
 ### `+sheet-set-tab-color`
 
 ```bash
-# Hex 色值；传空字符串 "" 清除标签色
+# Hex color value; pass an empty string "" to clear the tab color
 lark-cli sheets +sheet-set-tab-color --url "..." --sheet-id "$SID" --color "#FF0000"
 ```
 
 ### `+sheet-show-gridline` / `+sheet-hide-gridline`
 
 ```bash
-# 切换子表网格线显隐；二态语义在命令名里，无需额外参数（同 +sheet-hide/+sheet-unhide）
+# Toggle sub-sheet gridline visibility; the two-state semantics are in the command name, no extra parameter needed (same as +sheet-hide/+sheet-unhide)
 lark-cli sheets +sheet-show-gridline --url "..." --sheet-id "$SID"
 lark-cli sheets +sheet-hide-gridline --url "..." --sheet-id "$SID"
 ```
 
-### Validate / DryRun / Execute 约束
+<a id="validate--dryrun--execute-约束"></a>
+### Validate / DryRun / Execute constraints
 
-- `Validate`：XOR 公共四件套；`+sheet-create` 校验 `--title` 非空、`--row-count` ≤ 50000、`--col-count` ≤ 200；`+sheet-delete` 必须 `--yes` 或 `--dry-run`；`+workbook-create` 的 `--sheets` 与 `--values` **互斥**，给了 `--sheets` 则按 typed 协议校验 payload（其余约束同 `+table-put`）。
-- `DryRun`：`+sheet-*` 写操作输出"将要 PATCH 的 sheet metadata"；`--sheet-name` 在 dry-run 输出里生成为 `<resolve:Sheet1>` 占位符，不实际解析为 sheet-id。
-- `Execute`：sheet create/rename/move/copy/hide/unhide/delete 后必须调用 `+workbook-info`，按稳定的 sheet_id 核对名称、顺序、可见性与数量；import 按上方 ready/job_status + workbook-info 闭环；需要本地文件的 export 按 output-path + 文件存在/可重开闭环。
+- `Validate`: XOR the common four-piece set; `+sheet-create` validates that `--title` is non-empty, `--row-count` ≤ 50000, `--col-count` ≤ 200; `+sheet-delete` must be `--yes` or `--dry-run`; `--sheets` and `--values` of `+workbook-create` are **mutually exclusive**; if `--sheets` is given, validate the payload per the typed protocol (other constraints same as `+table-put`).
+- `DryRun`: `+sheet-*` write operations output "the sheet metadata about to be PATCHed"; `--sheet-name` is generated in the dry-run output as the `<resolve:Sheet1>` placeholder, and is not actually resolved to a sheet-id.
+- `Execute`: after sheet create/rename/move/copy/hide/unhide/delete, you must call `+workbook-info` to verify the name, order, visibility, and count by the stable sheet_id; import closes the loop per the ready/job_status + workbook-info above; export that requires a local file closes the loop per output-path + file existence/reopenability.

@@ -1,15 +1,18 @@
-# XML Schema 快速参考
+<a id="xml-schema-快速参考"></a>
+# XML Schema Quick Reference
 
-本文档是 [slides_xml_schema_definition.xml](slides_xml_schema_definition.xml) 的精简版摘要，并合并了常用 XML 格式写法；如果两者不一致，以 XSD 原文为准。
+This document is a condensed summary of [slides_xml_schema_definition.xml](slides_xml_schema_definition.xml), merged with commonly used XML format conventions; if the two are inconsistent, the original XSD text prevails.
 
-## 最重要的规则
+<a id="最重要的规则"></a>
+## Most Important Rules
 
-1. 协议标准写法应使用 `<presentation xmlns="https://www.larkoffice.com/sml/2.0">`；当前服务端实现可能兼容不带 `xmlns` 的输入，但不作为协议保证
-2. `<presentation>` 直接子元素只有 `<title>`、`<theme>`、`<slide>`
-3. `<slide>` 直接子元素只有 `<style>`、`<data>`、`<note>`
-4. 页面中的文本通常通过 `<content>` 表达，而不是把 `<title>`、`<body>` 直接挂在 `<slide>` 下
+1. The protocol-standard form should use `<presentation xmlns="https://www.larkoffice.com/sml/2.0">`; the current server-side implementation may be compatible with input that does not include `xmlns`, but this is not a protocol guarantee
+2. The only direct child elements of `<presentation>` are `<title>`, `<theme>`, `<slide>`
+3. The only direct child elements of `<slide>` are `<style>`, `<data>`, `<note>`
+4. Text on a page is usually expressed through `<content>`, rather than attaching `<title>`, `<body>` directly under `<slide>`
 
-## 最小可用示例
+<a id="最小可用示例"></a>
+## Minimal Working Example
 
 ```xml
 <presentation xmlns="https://www.larkoffice.com/sml/2.0" width="960" height="540">
@@ -25,43 +28,45 @@
 </presentation>
 ```
 
-## presentation 根元素
+<a id="presentation-根元素"></a>
+## presentation Root Element
 
-| 属性 | 必需 | 说明 |
+| Attribute | Required | Description |
 |------|------|------|
-| `width` | 是 | 演示文稿宽度，正整数，标准 16:9 页面建议使用 `960` |
-| `height` | 是 | 演示文稿高度，正整数，标准 16:9 页面建议使用 `540` |
-| `id` | 否 | 演示文稿标识 |
+| `width` | Yes | Presentation width, positive integer; for a standard 16:9 page, `960` is recommended |
+| `height` | Yes | Presentation height, positive integer; for a standard 16:9 page, `540` is recommended |
+| `id` | No | Presentation identifier |
 
-**子元素：** `<title>?`, `<theme>?`, `<slide>+`
+**Child elements:** `<title>?`, `<theme>?`, `<slide>+`
 
-`<slide>` 至少 1 页，最多 100 页。
+`<slide>` must have at least 1 page and at most 100 pages.
 
-## theme 与文本类型
+<a id="theme-与文本类型"></a>
+## theme and Text Types
 
-`<theme>` 当前包含两部分：
+`<theme>` currently contains two parts:
 
-- `<background>`：演示文稿级背景填充
-- `<textStyles>`：主题文本样式集合
+- `<background>`: presentation-level background fill
+- `<textStyles>`: collection of theme text styles
 
-`<textStyles>` 下可选子元素包括 `<title>`、`<headline>`、`<sub-headline>`、`<body>`、`<caption>`。这些元素定义的是主题默认样式，不是页面结构。
+Optional child elements under `<textStyles>` include `<title>`, `<headline>`, `<sub-headline>`, `<body>`, `<caption>`. These elements define theme default styles, not page structure.
 
-常用属性：
+Common attributes:
 
-| 属性 | 说明 |
+| Attribute | Description |
 |------|------|
-| `fontFamily` | 字体 |
-| `fontSize` | 字号 |
-| `fontColor` | 字体颜色 |
+| `fontFamily` | Font |
+| `fontSize` | Font size |
+| `fontColor` | Font color |
 
-XSD 中的 `title`、`headline`、`sub-headline`、`body`、`caption` 主要出现在：
+In the XSD, `title`, `headline`, `sub-headline`, `body`, `caption` mainly appear in:
 
-- `<theme><textStyles>...</textStyles></theme>` 中，作为主题文本样式
-- `<content textType="...">` 中，作为内容的文本类型
+- `<theme><textStyles>...</textStyles></theme>`, as theme text styles
+- `<content textType="...">`, as text types for content
 
-`textStyles` 的 schema 默认值如下：
+The schema default values for `textStyles` are as follows:
 
-| textType | 默认字号 |
+| textType | Default font size |
 |----------|----------|
 | `title` | 54 |
 | `headline` | 38 |
@@ -69,55 +74,58 @@ XSD 中的 `title`、`headline`、`sub-headline`、`body`、`caption` 主要出�
 | `body` | 16 |
 | `caption` | 12 |
 
-默认字号是省略 `fontSize` 时的兜底字号，不是推荐值。字号必须显式设置 `<content>` 的 `fontSize` 属性，不要依赖 `textType` 的默认字号兜底，这些兜底值明显偏大。
+The default font size is the fallback font size when `fontSize` is omitted, not a recommended value. The font size must be explicitly set via the `fontSize` attribute of `<content>`; do not rely on the default font size fallback of `textType`, as these fallback values are noticeably too large.
 
-## slide 元素
+<a id="slide-元素"></a>
+## slide Element
 
-| 属性 | 必需 | 说明 |
+| Attribute | Required | Description |
 |------|------|------|
-| `id` | 否 | 幻灯片标识 |
+| `id` | No | Slide identifier |
 
-**子元素：**
+**Child elements:**
 
-- `<style>?` - 页面样式，目前可放 `<fill>`
-- `<data>?` - 页面元素容器，可放 `shape`、`line`、`polyline`、`img`、`table`、`icon`、`embed`、`chart`、`undefined`
-- `<note>?` - 演讲者备注，内部可放 `<content>`
+- `<style>?` - Page style; currently can contain `<fill>`
+- `<data>?` - Page element container; can contain `shape`, `line`, `polyline`, `img`, `table`, `icon`, `embed`, `chart`, `undefined`
+- `<note>?` - Speaker notes; can contain `<content>` inside
 
-这意味着 `<title>`、`<headline>`、`<body>`、`<caption>` 不能直接放在 `<slide>` 下。
+This means that `<title>`, `<headline>`, `<body>`, `<caption>` cannot be placed directly under `<slide>`.
 
-## content 内容模型
+<a id="content-内容模型"></a>
+## content Content Model
 
-`<content>` 可出现在 `shape`、`table/td`、`note` 中，常用属性包括：
+`<content>` can appear in `shape`, `table/td`, `note`; common attributes include:
 
-| 属性 | 说明 |
+| Attribute | Description |
 |------|------|
 | `textType` | `title` / `headline` / `sub-headline` / `body` / `caption` |
-| `verticalAlign` | 垂直对齐 |
-| `textAlign` | 文本对齐方式 |
-| `lineSpacing` | 行间距，schema 默认 `multiple:1.5` |
-| `fontSize` | 字号 |
-| `fontFamily` | 字体 |
-| `color` | 字体颜色 |
-| `bold` / `italic` / `underline` / `strikethrough` | 内容级样式 |
-| `wrap` | 是否自动换行 |
-| `autoFit` | 是否自动缩排 |
+| `verticalAlign` | Vertical alignment |
+| `textAlign` | Text alignment |
+| `lineSpacing` | Line spacing; schema default `multiple:1.5` |
+| `fontSize` | Font size |
+| `fontFamily` | Font |
+| `color` | Font color |
+| `bold` / `italic` / `underline` / `strikethrough` | Content-level styles |
+| `wrap` | Whether to wrap text automatically |
+| `autoFit` | Whether to indent automatically |
 
-注意事项：
+Notes:
 
-- 字号必须显式设置 `<content>` 的 `fontSize` 属性，不要依赖 `textType` 的默认字号兜底，这些兜底值明显偏大。
-- 大数字、字号大或字数多的 `<content>` 必须设置 `wrap="true" autoFit="normal-auto-fit"` 属性自动换行和缩排，避免文字溢出。
-- 文字颜色必须用 `<content>` 的 `color` 属性而不是 `fontColor` 属性。
-- 文字行间距必须设置 `<content>` 的 `lineSpacing="multiple:xx"` 或 `lineSpacing="fixed:xx"` 而不是 `lineSpacing="xx"`。
+- The font size must be explicitly set via the `fontSize` attribute of `<content>`; do not rely on the default font size fallback of `textType`, as these fallback values are noticeably too large.
+- For `<content>` with large numbers, large font sizes, or a lot of text, the `wrap="true" autoFit="normal-auto-fit"` attribute must be set to enable automatic wrapping and indentation, to avoid text overflow.
+- Text color must use the `color` attribute of `<content>`, not the `fontColor` attribute.
+- Text line spacing must set `lineSpacing="multiple:xx"` or `lineSpacing="fixed:xx"` of `<content>`, not `lineSpacing="xx"`.
 
-`<content>` 直接子元素只有：
+The only direct child elements of `<content>` are:
 
 - `<p>`
 - `<ul>`
 - `<ol>`
 
-### p 段落与内联标签
+<a id="p-段落与内联标签"></a>
+### p Paragraph and Inline Tags
 
-`<p>` 是段落元素，可混排纯文本和内联标签：
+`<p>` is a paragraph element and can mix plain text and inline tags:
 
 - `<br/>`
 - `<strong>`
@@ -130,15 +138,15 @@ XSD 中的 `title`、`headline`、`sub-headline`、`body`、`caption` 主要出�
 - `<outline>`
 - `<formula>`
 
-公式写法：
+Formula syntax:
 
 ```xml
 <p>公式：<formula><latex><![CDATA[ E = mc^2 ]]></latex></formula></p>
 ```
 
-`<formula>` 是内联元素；当前只支持一个 `<latex>` 子元素。LaTeX 内容必须放在 `CDATA` 中，且 `CDATA` 内不要写 XML 转义；宏只使用服务端支持范围内的写法，优先用基础运算符、`\frac`、`\sqrt`、`matrix`。
+`<formula>` is an inline element; currently only one `<latex>` child element is supported. LaTeX content must be placed in `CDATA`, and do not write XML escapes inside `CDATA`; for macros, only use syntax within the range supported by the server, preferring basic operators, `\frac`, `\sqrt`, `matrix`.
 
-示例：
+Example:
 
 ```xml
 <content autoFit="normal-auto-fit" textType="body" textAlign="left">
@@ -150,13 +158,14 @@ XSD 中的 `title`、`headline`、`sub-headline`、`body`、`caption` 主要出�
 </content>
 ```
 
-## data 常用元素
+<a id="data-常用元素"></a>
+## Common data Elements
 
-所有页面元素都放在 `<data>` 中。
+All page elements are placed in `<data>`.
 
 ### shape
 
-`shape` 可表示普通形状，也可表示文本框。文本框推荐使用 `type="text"`。
+`shape` can represent a regular shape or a text box. For text boxes, `type="text"` is recommended.
 
 ```xml
 <shape type="text" topLeftX="80" topLeftY="80" width="800" height="120">
@@ -174,21 +183,21 @@ XSD 中的 `title`、`headline`、`sub-headline`、`body`、`caption` 主要出�
   <border color="rgb(0, 0, 0)" width="2"/>
 </shape>
 ```
-`<shape type="rect">` 只是形状不是容器，`<icon>`、`<img>`、`<shape type="text">` 和其他 `<shape>` 必须与它平级靠坐标叠放。
+`<shape type="rect">` is only a shape, not a container; `<icon>`, `<img>`, `<shape type="text">`, and other `<shape>` must be placed at the same level as it and stacked by coordinates.
 
 
-| 属性 | 必需 | 说明 |
+| Attribute | Required | Description |
 |------|------|------|
-| `type` | 是 | 形状类型，`text` 表示文本框 |
-| `topLeftX` | 是 | 左上角 X 坐标 |
-| `topLeftY` | 是 | 左上角 Y 坐标 |
-| `width` | 是 | 宽度 |
-| `height` | 是 | 高度 |
-| `rotation` | 否 | 旋转角度 |
-| `flipX` / `flipY` | 否 | 翻转 |
-| `alpha` | 否 | 透明度 |
+| `type` | Yes | Shape type; `text` indicates a text box |
+| `topLeftX` | Yes | X coordinate of the top-left corner |
+| `topLeftY` | Yes | Y coordinate of the top-left corner |
+| `width` | Yes | Width |
+| `height` | Yes | Height |
+| `rotation` | No | Rotation angle |
+| `flipX` / `flipY` | No | Flip |
+| `alpha` | No | Opacity |
 
-可选子元素：
+Optional child elements:
 
 - `<fill>`
 - `<border>`
@@ -196,12 +205,12 @@ XSD 中的 `title`、`headline`、`sub-headline`、`body`、`caption` 主要出�
 - `<shadow>`
 - `<content>`
 
-`type` 常用取值：`text`（文本框）、`rect`、`round-rect`（圆角矩形）、`ellipse`（椭圆/圆）、`triangle`、`diamond`、`parallelogram`、`trapezoid`、`custom`（配合 `path` 属性写 SVG 路径串）。箭头、星形、标注气泡、`chevron`、`flow-chart-*` 等更多形状见 XSD `ShapeType` 枚举。
+Common values for `type`: `text` (text box), `rect`, `round-rect` (rounded rectangle), `ellipse` (ellipse/circle), `triangle`, `diamond`, `parallelogram`, `trapezoid`, `custom` (used with the `path` attribute to write an SVG path string). For more shapes such as arrows, stars, callout bubbles, `chevron`, `flow-chart-*`, see the XSD `ShapeType` enumeration.
 
-其它可选属性：
+Other optional attributes:
 
-- `presetHandlers`：控制点，用于圆角等。例如 `<shape type="rect" presetHandlers="60">` = 圆角半径 60px 的圆角矩形；多个控制点用逗号分隔。
-- `path`：仅 `type="custom"` 时使用，SVG 路径串。
+- `presetHandlers`: control points, used for rounded corners, etc. For example, `<shape type="rect" presetHandlers="60">` = a rounded rectangle with a corner radius of 60px; separate multiple control points with commas.
+- `path`: used only when `type="custom"`, an SVG path string.
 
 ### line
 
@@ -211,11 +220,11 @@ XSD 中的 `title`、`headline`、`sub-headline`、`body`、`caption` 主要出�
 </line>
 ```
 
-`line` 使用的是 `startX` / `startY` / `endX` / `endY`，不是 `x1` / `y1` / `x2` / `y2`。
+`line` uses `startX` / `startY` / `endX` / `endY`, not `x1` / `y1` / `x2` / `y2`.
 
 ### polyline
 
-折线 / 曲线连接线，用外接矩形定位（`topLeftX` / `topLeftY` / `width` / `height`），不是端点坐标；`<border>` 必填（无 border 不可见）。`type` 默认 `bent-connector2`（可选 `bent-connector2-5` 折线 / `curved-connector2-5` 曲线）。
+Polyline / curve connector, positioned using its bounding rectangle (`topLeftX` / `topLeftY` / `width` / `height`), not endpoint coordinates; `<border>` is required (invisible without a border). `type` defaults to `bent-connector2` (optional `bent-connector2-5` polyline / `curved-connector2-5` curve).
 
 ```xml
 <polyline topLeftX="120" topLeftY="120" width="200" height="100">
@@ -229,16 +238,16 @@ XSD 中的 `title`、`headline`、`sub-headline`、`body`、`caption` 主要出�
 <img src="file_token_或_@本地路径" topLeftX="80" topLeftY="120" width="320" height="180"/>
 ```
 
-`img` 使用 `topLeftX` / `topLeftY`，不是 `x` / `y`。
+`img` uses `topLeftX` / `topLeftY`, not `x` / `y`.
 
-`src` 只支持：`slides +media-upload` 返回的 `file_token`，或 `@<本地路径>` 占位符（`+create --slides` 和 `+add-slide` 会自动上传并替换）。**禁止使用 http(s) 外链 URL**——飞书 slides 渲染端不会代理外链图，外链 src 在 PPT 里通常不显示。本地图片详见 [lark-slides-create.md](../cli/lark-slides-create.md#本地图片path-占位符) / [lark-slides-media-upload.md](../cli/lark-slides-media-upload.md)。
+`src` only supports: the `file_token` returned by `slides +media-upload`, or the `@<本地路径>` placeholder (`+create --slides` and `+add-slide` will be automatically uploaded and replaced). **Using http(s) external link URLs is prohibited**—the Feishu slides rendering side will not proxy external images, and external src usually does not display in the PPT. For local images, see [lark-slides-create.md](../cli/lark-slides-create.md#本地图片path-占位符) / [lark-slides-media-upload.md](../cli/lark-slides-media-upload.md).
 
-本地图片的两种姿势：
+Two approaches for local images:
 
-- 新建带图 PPT：`+create --slides` 里直接写 `src="@./pic.png"`，CLI 在创空白 PPT 后、加 slides 前自动上传并替换 token
-- 给已有 PPT 加带图新页：`+add-slide --slide` 的 XML 里直接写 `src="@./pic.png"`，CLI 上传后替换 token 再提交页面
+- Creating a new PPT with images: write `src="@./pic.png"` directly in `+create --slides`; the CLI automatically uploads and replaces the token after creating a blank PPT and before adding slides
+- Adding a new page with images to an existing PPT: write `src="@./pic.png"` directly in the XML of `+add-slide --slide`; the CLI uploads, replaces the token, and then submits the page
 
-> **注意**：`width`/`height` 是**裁剪后**的显示尺寸。比例和原图不一致时会自动裁剪（无法靠属性关闭），想避免裁剪就让 `width:height` 对齐原图比例。
+> **Note**: `width`/`height` are the **cropped** display dimensions. When the aspect ratio does not match the original image, it will be automatically cropped (this cannot be disabled via attributes); to avoid cropping, make `width:height` match the original image's aspect ratio.
 
 ### icon
 
@@ -250,40 +259,40 @@ XSD 中的 `title`、`headline`、`sub-headline`、`body`、`caption` 主要出�
 </icon>
 ```
 
-图标必须填充颜色并和背景有足够对比。
+Icons must be filled with color and have sufficient contrast with the background.
 
-禁止盲猜 iconType，必须先检索 IconPark，再写 `<icon iconType="...">`。检索方式和更多规则见 [iconpark.md](iconpark.md)。
+Do not blindly guess iconType; you must first search IconPark, then write `<icon iconType="...">`. For search methods and more rules, see [iconpark.md](iconpark.md).
 
 
 ### table
 
-表格结构为：
+The table structure is:
 
-- `<table>` 直接子元素只有 `<colgroup>` 和 `<tr>`，`width` 和 `height` 分别表示表格的目标总宽度和总高度。
-- `<colgroup>` 直接子元素只有 `<col width="...">`，width 定义列宽，默认 110。
-- `<tr height="...">` 直接子元素只有 `<td>`，height 定义行高，默认 37。
-- `<td>` 直接子元素只有 `<fill>`（背景）、`<content>`（文字）和边框配置（一般不用），不能嵌套 `<shape>`、`<img>`、`<icon>`。
-- 合并单元格：`<td>` 上用 `colspan`（跨列，默认 1）和 `rowspan`（跨行，默认 1）；被合并覆盖的单元格不再写对应 `<td>`。
+- The only direct child elements of `<table>` are `<colgroup>` and `<tr>`; `width` and `height` represent the table's target total width and total height, respectively.
+- The only direct child element of `<colgroup>` is `<col width="...">`; width defines the column width, default 110.
+- The only direct child element of `<tr height="...">` is `<td>`; height defines the row height, default 37.
+- The only direct child elements of `<td>` are `<fill>` (background), `<content>` (text), and border configuration (generally not used); `<shape>`, `<img>`, `<icon>` cannot be nested.
+- Merged cells: use `colspan` (column span, default 1) and `rowspan` (row span, default 1) on `<td>`; cells covered by a merge no longer write the corresponding `<td>`.
 
-表头默认的白底白字视觉效果极差，必须设置背景和文字颜色，需在首行每个 `<td>` 上加 `<fill>`（配合 `bold` 与对比文字色）与正文行区分。
+The default white background with white text for table headers has an extremely poor visual effect; background and text colors must be set, and `<fill>` must be added to each `<td>` in the first row (together with `bold` and a contrasting text color) to distinguish it from body rows.
 
-表格里的文字默认是居中对齐，可以设置 `textAlign` 调整对齐方式。
+Text in tables is center-aligned by default; `textAlign` can be set to adjust the alignment.
 
-表格宽高设置：
+Table width and height settings:
 
-- 已设置的列宽和行高优先保留，未设置的列宽、行高会使用表格的目标总宽度、总高度分配剩余空间
-- **必须设置 `<table>` 的 `width` 和 `height` 固定表格大小，同时设置需要保留列宽或行高的 `<col>` 的 `width` 和 `<tr>` 的 `height`，其余自动分配。**
+- Explicitly set column widths and row heights are retained with priority; unset column widths and row heights will use the table's target total width and total height to allocate the remaining space
+- **You must set `width` and `height` of `<table>` to fix the table size, and at the same time set `width` of `<col>` and `height` of `<tr>` for the columns or rows whose widths or heights need to be retained; the rest are allocated automatically.**
 
-不同字号的行高参考：
+Row height reference for different font sizes:
 
-| `fontSize` | 内容行数 | 紧凑 `height` | 适中 `height` | 宽松 `height` |
+| `fontSize` | Number of content lines | Compact `height` | Moderate `height` | Loose `height` |
 |------|------|------|------|------|
-| 10 | 单行 | 16 | 20 | 24 |
-| 12 | 单行 | 20 | 24 | 28 |
-| 10 | 双行 | 32 | 36 | 42 |
-| 12 | 双行 | 36 | 42 | 48 |
+| 10 | Single line | 16 | 20 | 24 |
+| 12 | Single line | 20 | 24 | 28 |
+| 10 | Double line | 32 | 36 | 42 |
+| 12 | Double line | 36 | 42 | 48 |
 
-示例：
+Example:
 
 ```xml
 <table topLeftX="80" topLeftY="140" width="520" height="52">
@@ -316,26 +325,27 @@ XSD 中的 `title`、`headline`、`sub-headline`、`body`、`caption` 主要出�
 
 ### chart
 
-图表语法十分复杂，必须阅读 [slides_chart_demo.xml](slides_chart_demo.xml)，直接照抄其中的柱状、条形、折线、面积、饼（环）、雷达、组合图。
+Chart syntax is very complex; you must read [slides_chart_demo.xml](slides_chart_demo.xml) and directly copy the bar, horizontal bar, line, area, pie (donut), radar, and combination charts in it.
 
-`<chart>` 直接子元素必须有 `<chartPlotArea>`（绘图区）和 `<chartData>`（数据）；`<chartTitle>`、`<chartSubTitle>`、`<chartStyle>`、`<chartLegend>`、`<chartTooltip>` 可选，如果想不展示标题、副标题、图例或悬浮提示，省略相应元素标签即可。
+The direct child elements of `<chart>` must include `<chartPlotArea>` (plot area) and `<chartData>` (data); `<chartTitle>`, `<chartSubTitle>`, `<chartStyle>`, `<chartLegend>`, `<chartTooltip>` are optional; if you do not want to display the title, subtitle, legend, or tooltip, simply omit the corresponding element tags.
 
-`<chartStyle>` 常用子元素：
+Common child elements of `<chartStyle>`:
 
-- `<chartBackground>`：`color` 省略时由渲染端决定默认背景；需要完全透明请显式写 `color="rgba(0, 0, 0, 0)"`
-- `<chartBorder>`：无边框可写 `width="0"`，或直接不写 `<chartBorder>` 元素
+- `<chartBackground>`: when `color` is omitted, the rendering side decides the default background; for fully transparent, explicitly write `color="rgba(0, 0, 0, 0)"`
+- `<chartBorder>`: for no border, write `width="0"`, or simply do not write the `<chartBorder>` element
 
-#### 图表渐变 `<fillGradient>` / `<strokeGradient>`
+<a id="图表渐变---"></a>
+#### Chart Gradients `<fillGradient>` / `<strokeGradient>`
 
-图表支持渐变填充/描边，`<fillGradient>` 用于面积、柱子、数据点、扇区填充，`<strokeGradient>` 用于线条、数据点边框、柱子边框。渐变只能挂在系列级或单元素级，不要挂在 `<chartPlot>` 全局层。
+Charts support gradient fills/strokes; `<fillGradient>` is used for area, bar, data point, and sector fills, and `<strokeGradient>` is used for lines, data point borders, and bar borders. Gradients can only be attached at the series level or single-element level, not at the `<chartPlot>` global level.
 
-可挂载位置：
+Attachable locations:
 
-- 系列级：`<chartBars>` / `<chartPoints>` 支持 `<fillGradient>` 与 `<strokeGradient>`；`<chartLine>` 只支持 `<strokeGradient>`；`<chartArea>` / `<chartSectors>` 只支持 `<fillGradient>`
-- 单元素级：`<chartBar index="...">` / `<chartPoint index="...">` / `<chartSector index="...">` 只支持 `<fillGradient>`
-- 全局级：`<chartPlot>` 下的 `<chartLines>` / `<chartAreas>` / `<chartBars>` / `<chartPoints>` 不支持渐变
+- Series level: `<chartBars>` / `<chartPoints>` support `<fillGradient>` and `<strokeGradient>`; `<chartLine>` only supports `<strokeGradient>`; `<chartArea>` / `<chartSectors>` only support `<fillGradient>`
+- Single-element level: `<chartBar index="...">` / `<chartPoint index="...">` / `<chartSector index="...">` only support `<fillGradient>`
+- Global level: `<chartLines>` / `<chartAreas>` / `<chartBars>` / `<chartPoints>` under `<chartPlot>` do not support gradients
 
-结构要点：`type` 必填，可为 `linear` 或 `radial`；`linear` 用 `x0` / `y0` / `x1` / `y1`，`radial` 用 `r0` / `r1`；`<stops>` 至少包含 2 个 `<stop>`，`offset` 与 `opacity` 取值均为 `[0, 1]`。
+Structural points: `type` is required and can be `linear` or `radial`; `linear` uses `x0` / `y0` / `x1` / `y1`, and `radial` uses `r0` / `r1`; `<stops>` must contain at least 2 `<stop>`, and the values of `offset` and `opacity` are both `[0, 1]`.
 
 ```xml
 <chartSeries index="1">
@@ -350,13 +360,13 @@ XSD 中的 `title`、`headline`、`sub-headline`、`body`、`caption` 主要出�
 </chartSeries>
 ```
 
-隐藏 `<chart>` 的图例只能通过不写或删除 `<chartLegend>` 实现，`<chartLegend>` 不支持 `position="none"`。
+Hiding the legend of `<chart>` can only be achieved by not writing or deleting `<chartLegend>`; `<chartLegend>` does not support `position="none"`.
 
-详细用法见 [slides_xml_schema_definition.xml](slides_xml_schema_definition.xml)。
+For detailed usage, see [slides_xml_schema_definition.xml](slides_xml_schema_definition.xml).
 
 ### embed
 
-嵌入内容容器：外层 `<embed>` 承载 Slides 的摆放和效果属性（`topLeftX`/`topLeftY`/`width`/`height` 必填，`rotation`/`flipX`/`flipY`/`alpha` 可选），内层承载外部标准内容。当前内层内容为标准 SVG，`<svg>` 必须使用 `http://www.w3.org/2000/svg` 命名空间，且仅描述嵌入内容本身，不承载 Slides 布局属性。
+Embedded content container: the outer `<embed>` carries the Slides placement and effect attributes (`topLeftX`/`topLeftY`/`width`/`height` are required, `rotation`/`flipX`/`flipY`/`alpha` are optional), and the inner layer carries external standard content. Currently the inner content is standard SVG; `<svg>` must use the `http://www.w3.org/2000/svg` namespace, and only describes the embedded content itself, not carrying Slides layout attributes.
 
 ```xml
 <embed topLeftX="80" topLeftY="120" width="200" height="120">
@@ -366,9 +376,10 @@ XSD 中的 `title`、`headline`、`sub-headline`、`body`、`caption` 主要出�
 </embed>
 ```
 
-`<embed>` 直接子元素为一个 `<svg>`（必需），以及可选的 `<reflection>`（倒影）与 `<shadow>`（阴影）。
+The direct child elements of `<embed>` are one `<svg>` (required), plus optional `<reflection>` (reflection) and `<shadow>` (shadow).
 
-## 颜色与样式
+<a id="颜色与样式"></a>
+## Colors and Styles
 
 ### fill
 
@@ -384,7 +395,8 @@ XSD 中的 `title`、`headline`、`sub-headline`、`body`、`caption` 主要出�
 <border color="rgb(43, 47, 54)" width="2" dashArray="solid"/>
 ```
 
-### 颜色格式
+<a id="颜色格式"></a>
+### Color Format
 
 ```xml
 <fillColor color="rgb(255, 0, 0)"/>
@@ -393,12 +405,13 @@ XSD 中的 `title`、`headline`、`sub-headline`、`body`、`caption` 主要出�
 <fillColor color="radial-gradient(circle at 50% 50%, rgb(255,0,0) 0%, rgb(0,0,255) 100%)"/>
 ```
 
-> **注意**：渐变色必须使用 `rgba()` 格式并带百分比停靠点，例如 `linear-gradient(135deg,rgba(30,60,114,1) 0%,rgba(59,130,246,1) 100%)`。使用 `rgb()` 或省略停靠点会导致服务端将其回退为白色。此规则对页面背景和 shape fill 均适用。
+> **Note**: Gradient colors must use the `rgba()` format with percentage stops, for example `linear-gradient(135deg,rgba(30,60,114,1) 0%,rgba(59,130,246,1) 100%)`. Using `rgb()` or omitting stops will cause the server to fall back to white. This rule applies to both page backgrounds and shape fills.
 
-### 页面背景
+<a id="页面背景"></a>
+### Page Background
 
 ```xml
-<!-- 纯色背景 -->
+<!-- Solid background -->
 <slide>
   <style>
     <fill>
@@ -407,7 +420,7 @@ XSD 中的 `title`、`headline`、`sub-headline`、`body`、`caption` 主要出�
   </style>
 </slide>
 
-<!-- 渐变背景（必须用 rgba + 百分比停靠点） -->
+<!-- Gradient background (must use rgba + percentage stops) -->
 <slide>
   <style>
     <fill>
@@ -417,7 +430,8 @@ XSD 中的 `title`、`headline`、`sub-headline`、`body`、`caption` 主要出�
 </slide>
 ```
 
-## 备注示例
+<a id="备注示例"></a>
+## Notes Example
 
 ```xml
 <note>
@@ -427,7 +441,8 @@ XSD 中的 `title`、`headline`、`sub-headline`、`body`、`caption` 主要出�
 </note>
 ```
 
-## 完整示例
+<a id="完整示例"></a>
+## Complete Example
 
 ```xml
 <presentation xmlns="https://www.larkoffice.com/sml/2.0" width="960" height="540">
@@ -476,22 +491,25 @@ XSD 中的 `title`、`headline`、`sub-headline`、`body`、`caption` 主要出�
 </presentation>
 ```
 
-## 最佳实践
+<a id="最佳实践"></a>
+## Best Practices
 
-1. 始终带上命名空间 `xmlns="https://www.larkoffice.com/sml/2.0"`
-2. 用 `shape type="text"` + `content` 表达页面文本
-3. 用 `topLeftX` / `topLeftY`、`startX` / `startY` 等 schema 中定义的属性名
-4. 优先使用 `rgb` / `rgba` 颜色格式；渐变必须使用 `rgba()` 且带百分比停靠点
-5. 特殊字符按 XML 规则转义
-6. 标准 16:9 页面建议使用 `width="960"` 和 `height="540"`
+1. Always include the namespace `xmlns="https://www.larkoffice.com/sml/2.0"`
+2. Use `shape type="text"` + `content` to express page text
+3. Use attribute names defined in the schema, such as `topLeftX` / `topLeftY`, `startX` / `startY`
+4. Prefer the `rgb` / `rgba` color format; gradients must use `rgba()` with percentage stops
+5. Escape special characters according to XML rules
+6. For standard 16:9 pages, it is recommended to use `width="960"` and `height="540"`
 
-## 详细参考
+<a id="详细参考"></a>
+## Detailed Reference
 
 - [slides_xml_schema_definition.xml](slides_xml_schema_definition.xml)
 - [slides_chart_demo.xml](slides_chart_demo.xml)
 
-## Schema 版本信息
+<a id="schema-版本信息"></a>
+## Schema Version Information
 
-- **版本**: 2.0.0
-- **命名空间**: https://www.larkoffice.com/sml/2.0
-- **发布日期**: 2025-11-03
+- **Version**: 2.0.0
+- **Namespace**: https://www.larkoffice.com/sml/2.0
+- **Release Date**: 2025-11-03

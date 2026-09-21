@@ -4,8 +4,8 @@
 """DataFrame ↔ Feishu Sheet typed-JSON helpers.
 
 This is the same 7-line snippet the skill docs already inline (see
-`lark-sheets-write-cells` "DataFrame → 协议（5 行 helper）" and
-`lark-sheets-read-data` "输出 → DataFrame（2 行 helper）"), pulled out
+`lark-sheets-write-cells` "DataFrame → protocol (5-line helper)" and
+`lark-sheets-read-data` "output → DataFrame (2-line helper)"), pulled out
 so callers can `import` it instead of copy-pasting:
 
     from lark_sheets_df import df_to_sheet, sheet_to_df

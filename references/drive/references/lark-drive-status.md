@@ -2,56 +2,60 @@
 # drive +status
 
 
-按 **精确 SHA-256**（默认）或 **快速 modified_time**（`--quick`）比较本地目录与飞书云空间（云盘/云存储）文件夹，输出四类差异：
+Compare a local directory with a Feishu Drive (cloud drive/cloud storage) folder by **exact SHA-256** (default) or **fast modified_time** (`--quick`), and output four categories of differences:
 
-| 字段 | 含义 |
+| Field | Meaning |
 |------|------|
-| `new_local` | 仅本地存在 |
-| `new_remote` | 仅云端存在 |
-| `modified` | 双端都存在且本次检测判定为已变更：`detection=exact` 时表示 hash 不一致；`detection=quick` 时表示本地 mtime 与远端 `modified_time` 不一致，或远端时间戳不可可信 |
-| `unchanged` | 双端都存在且本次检测判定为未变更：`detection=exact` 时表示 hash 一致；`detection=quick` 时表示本地 mtime 与远端 `modified_time` 相等 |
+| `new_local` | Exists only locally |
+| `new_remote` | Exists only in the cloud |
+| `modified` | Exists on both sides and is judged as changed by this check: with `detection=exact`, it means the hashes differ; with `detection=quick`, it means the local mtime differs from the remote `modified_time`, or the remote timestamp is not trustworthy |
+| `unchanged` | Exists on both sides and is judged as unchanged by this check: with `detection=exact`, it means the hashes match; with `detection=quick`, it means the local mtime equals the remote `modified_time` |
 
-只读命令：
+Read-only command:
 
-- 默认 `detection=exact`：双端都有的文件会从云端拉一份字节流过来在内存里算 hash，不下载落盘，但大目录 / 大文件会有可观的网络流量。
-- 传 `--quick` 后 `detection=quick`：只比较本地 mtime 与远端 `modified_time`，**不下载远端文件内容**，适合先做快速预检查；它是 best-effort，不等同于严格内容一致性判断。
+- Default `detection=exact`: for files present on both sides, a byte stream is pulled from the cloud and hashed in memory; nothing is downloaded to disk, but large directories / large files will generate considerable network traffic.
+- With `--quick`, `detection=quick`: only compares the local mtime with the remote `modified_time`, **without downloading remote file contents**; suitable for a quick pre-check first; it is best-effort and is not equivalent to a strict content consistency judgment.
 
-## 远端同名文件冲突
+<a id="远端同名文件冲突"></a>
+## Remote files with the same name conflict
 
-如果 Drive 中多个条目映射到同一个 `rel_path`，`+status` 会在下载/hash 前直接失败，在 stderr 返回类型化错误信封（`error.type=validation`、`error.subtype=failed_precondition`）；`error.params[]` 每条的 `name` 是冲突的 `rel_path`，`reason` 枚举该路径下所有碰撞条目（`type` + `file_token`）。不要把这种情况当成普通 `modified`；它表示同步域本身有歧义，需要先整理云端结构，或在 `+pull` / `+push` 中仅对“duplicate file”场景显式选择冲突策略。
+If multiple entries in Drive map to the same `rel_path`, `+status` fails directly before download/hash, returning a typed error envelope on stderr (`error.type=validation`, `error.subtype=failed_precondition`); the `name` of each `error.params[]` is the conflicting `rel_path`, and `reason` enumerates all colliding entries under that path (`type` + `file_token`). Do not treat this situation as an ordinary `modified`; it means the sync domain itself is ambiguous, and you need to first clean up the cloud structure, or explicitly choose a conflict strategy only for the "duplicate file" scenario in `+pull` / `+push`.
 
-## 命令
+<a id="命令"></a>
+## Command
 
 ```bash
-# 基础用法 —— 两个必填参数
+# Basic usage — two required parameters
 lark-cli drive +status \
   --local-dir ./repo \
   --folder-token fldcnxxxxxxxxx
 
-# 快速模式 —— 只比较 modified_time，不下载远端文件内容
+# Quick mode — only compares modified_time, does not download remote file contents
 lark-cli drive +status \
   --local-dir ./repo \
   --folder-token fldcnxxxxxxxxx \
   --quick
 
-# 只看判定为 modified 的项（exact=hash 不一致；quick=mtime 不一致）（结合 --jq 过滤）
+# Only show items judged as modified (exact=hash mismatch; quick=mtime mismatch) (combined with --jq filtering)
 lark-cli drive +status \
   --local-dir ./repo \
   --folder-token fldcnxxxxxxxxx \
   --jq '.modified'
 ```
 
-## 参数
+<a id="参数"></a>
+## Parameters
 
-| 标志 | 必填 | 类型 | 说明 |
+| Flag | Required | Type | Description |
 |------|------|------|------|
-| `--local-dir` | 是 | path | 本地根目录（**必须是 cwd 的相对路径**；绝对路径或逃逸到 cwd 外的相对路径会被 CLI 直接拒绝） |
-| `--folder-token` | 是 | string | Drive 文件夹 token |
-| `--quick` | 否 | bool | 快速模式：只比较本地 mtime 与远端 `modified_time`，跳过远端下载和 SHA-256 计算；输出里的 `detection` 会变成 `quick` |
+| `--local-dir` | Yes | path | Local root directory (**must be a relative path to cwd**; absolute paths or relative paths that escape outside cwd are rejected directly by the CLI) |
+| `--folder-token` | Yes | string | Drive folder token |
+| `--quick` | No | bool | Quick mode: only compares the local mtime with the remote `modified_time`, skipping remote download and SHA-256 computation; `detection` in the output becomes `quick` |
 
-## 输出 schema
+<a id="输出-schema"></a>
+## Output schema
 
-成功时：
+On success:
 
 ```json
 {
@@ -63,14 +67,14 @@ lark-cli drive +status \
 }
 ```
 
-其中：
+Where:
 
-- `detection=exact`：默认模式，双端都有的文件会下载远端字节流并做 SHA-256 比较。
-- `detection=quick`：`--quick` 模式，只按本地 mtime 与远端 `modified_time` 做 best-effort 判断。
+- `detection=exact`: default mode; files present on both sides have their remote byte stream downloaded and compared via SHA-256.
+- `detection=quick`: `--quick` mode; only makes a best-effort judgment based on the local mtime and the remote `modified_time`.
 
-`rel_path` 始终用 `/` 作为分隔符（跨平台一致），相对于 `--local-dir` 或 `--folder-token` 的根。仅本地存在时没有 `file_token` 字段。
+`rel_path` always uses `/` as the separator (consistent across platforms), relative to the root of `--local-dir` or `--folder-token`. When a file exists only locally, there is no `file_token` field.
 
-远端同名文件冲突时：
+When remote files with the same name conflict:
 
 ```json
 {
@@ -91,44 +95,50 @@ lark-cli drive +status \
 }
 ```
 
-## 比较范围
+<a id="比较范围"></a>
+## Comparison scope
 
-- **只比对 Drive `type=file` 的二进制文件**。在线文档（`docx` / `sheet` / `bitable` / `mindnote` / `slides`）和快捷方式（`shortcut`）都被跳过 —— 它们没有等价的本地二进制可对齐，否则会在 `new_remote` 里产生大量误报。
-- 子文件夹会递归遍历；rel_path 形如 `sub1/sub2/file.txt`。
-- 多个远端条目映射到同一个 rel_path 时不做隐式选择，默认失败。
-- 本地侧只比对常规文件（regular file）；符号链接、设备文件等被忽略。
-- `--quick` 模式下，双端都有的文件只在 **远端时间精度** 下比较 `modified_time` / 本地 mtime：相等才记为 `unchanged`，否则记为 `modified`；远端时间戳缺失或非法时，走保守路径记为 `modified`，不会盲判 `unchanged`。
+- **Only compares binary files in Drive `type=file`**. Online documents (`docx` / `sheet` / `bitable` / `mindnote` / `slides`) and shortcuts (`shortcut`) are all skipped — they have no equivalent local binary to align with, otherwise they would produce a large number of false positives in `new_remote`.
+- Subfolders are traversed recursively; rel_path looks like `sub1/sub2/file.txt`.
+- When multiple remote entries map to the same rel_path, no implicit choice is made; it fails by default.
+- On the local side, only regular files are compared; symbolic links, device files, etc. are ignored.
+- In `--quick` mode, files present on both sides are compared only at **remote time precision** for `modified_time` / local mtime: only if equal is it recorded as `unchanged`, otherwise it is recorded as `modified`; when the remote timestamp is missing or invalid, the conservative path is taken and it is recorded as `modified`, and it will not blindly judge `unchanged`.
 
-## 范围限制
+<a id="范围限制"></a>
+## Scope limits
 
-`+status` 的本地侧只接受 cwd 下的相对路径。如果用户想比对的目录在 cwd 之外，**不要 agent 自己 `cd` 绕过**；让用户在合适的祖先目录重新启动 agent 后再跑。注意：把目标软链接到 cwd 内**也不行**——路径校验会先 `EvalSymlinks` 再判定是否越界，链接最终指向的真实目录如果在 cwd 之外，仍然会被 `unsafe file path` 拒掉。CLI 会在路径越界时直接报错，无需在 skill 这一层提前手动校验。
+The local side of `+status` only accepts relative paths under cwd. If the directory the user wants to compare is outside cwd, **do not have the agent `cd` on its own to bypass this**; have the user restart the agent in a suitable ancestor directory and then run it. Note: symlinking the target into cwd **also does not work** — path validation first `EvalSymlinks` and then determines whether it is out of bounds; if the real directory the link ultimately points to is outside cwd, it will still be rejected by `unsafe file path`. The CLI will report an error directly when the path is out of bounds; there is no need to manually validate in advance at the skill layer.
 
-## 典型用法
+<a id="典型用法"></a>
+## Typical usage
 
-把 +status 当作"先看差异、再决定怎么同步"的只读探针。常见接驳场景：
+Treat +status as a read-only probe to "first look at the differences, then decide how to sync." Common connection scenarios:
 
-- 想知道云端有什么本地没有的内容 → 看 `new_remote`，按需选择性拉取（`drive +download --file-token <token>`）。
-- 想把本地新增的内容推到云端 → 看 `new_local`，再 `drive +upload --file <path> --folder-token <parent>`（注意 +upload 不接受 0 字节文件）。
-- 想知道哪些文件在云端被同事改过 → 看 `modified`，逐个 `drive +download` 查内容差异。
+- Want to know what content exists in the cloud but not locally → look at `new_remote`, and selectively pull as needed (`drive +download --file-token <token>`).
+- Want to push newly added local content to the cloud → look at `new_local`, then `drive +upload --file <path> --folder-token <parent>` (note that +upload does not accept 0-byte files).
+- Want to know which files were modified in the cloud by colleagues → look at `modified`, and check content differences one by one with `drive +download`.
 
-## 性能注意
+<a id="性能注意"></a>
+## Performance notes
 
-- 默认 `detection=exact` 下，`unchanged` + `modified` 的总字节数 = 本次需从云端下载的流量。100GB 的双端共享内容意味着 100GB 网络往返。
-- `--quick` / `detection=quick` 下，不会下载双端共有文件的远端内容，执行时间更接近 `O(文件数量)`，而不是 `O(总文件大小)`。
-- 仅一侧存在的文件不会被下载。
-- 默认模式的 hash 计算在内存里流式做（io.Copy → sha256.New），不会把云端文件落到磁盘。
+- Under the default `detection=exact`, the total bytes of `unchanged` + `modified` = the traffic that needs to be downloaded from the cloud this time. 100GB of content shared on both sides means 100GB of network round trips.
+- Under `--quick` / `detection=quick`, the remote contents of files present on both sides are not downloaded, and execution time is closer to `O(文件数量)` rather than `O(总文件大小)`.
+- Files present on only one side are not downloaded.
+- In default mode, hash computation is streamed in memory (io.Copy → sha256.New), and cloud files are not written to disk.
 
-## 所需 scope
+<a id="所需-scope"></a>
+## Required scopes
 
-| 操作 | scope |
+| Operation | scope |
 |------|-------|
-| 列出文件夹 / 子目录 | `drive:drive.metadata:readonly` |
-| 下载并 hash 文件 | `drive:file:download` |
+| List folders / subdirectories | `drive:drive.metadata:readonly` |
+| Download and hash files | `drive:file:download` |
 
-默认会先要求 `drive:drive.metadata:readonly`。在 `detection=exact` 路径（默认，不传 `--quick`）下，CLI 还会额外要求 `drive:file:download`；传 `--quick` 时不会要求下载 scope。如果当前 token 缺本次执行路径需要的 scope，命令会报 `missing_scope` 并提示重新登录。`drive:drive` 在部分企业被策略禁用，所以 +status 故意只依赖上面这些细粒度 scope。
+By default, `drive:drive.metadata:readonly` is required first. Under the `detection=exact` path (default, without passing `--quick`), the CLI additionally requires `drive:file:download`; when `--quick` is passed, the download scope is not required. If the current token lacks the scope required for this execution path, the command reports `missing_scope` and prompts to log in again. `drive:drive` is disabled by policy in some enterprises, so +status deliberately depends only on the fine-grained scopes above.
 
-## 参考
+<a id="参考"></a>
+## References
 
-- [lark-drive](../index.md) —— 云空间（云盘/云存储）全部命令
-- [lark-shared](../../shared/index.md) —— 认证和全局参数
-- [lark-drive-upload](lark-drive-upload.md) / [lark-drive-download](lark-drive-download.md) —— 把 +status 输出接到推/拉动作上
+- [lark-drive](../index.md) — all commands for Drive (cloud drive/cloud storage)
+- [lark-shared](../../shared/index.md) — authentication and global parameters
+- [lark-drive-upload](lark-drive-upload.md) / [lark-drive-download](lark-drive-download.md) — connect +status output to push/pull actions

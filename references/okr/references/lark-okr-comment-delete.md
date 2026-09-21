@@ -1,40 +1,45 @@
 # okr +comment-delete
 
-永久删除一条评论。删除划词评论时只删除指定评论，不会删除同一 selection.id 下的其他评论。
+Permanently delete a comment. When deleting a text-selection comment, only the specified comment is deleted; other comments under the same selection.id are not deleted.
 
-## 功能简介
+<a id="功能简介"></a>
+## Feature Overview
 
-删除一条特定评论。本 shortcut 为高风险接口，删除的评论不可找回，如果只是暂时结束讨论，可使用 +comment-solve。只支持 user 身份。
+Delete a specific comment. This shortcut is a high-risk interface; deleted comments cannot be recovered. If you only want to temporarily end a discussion, use +comment-solve. Only the user identity is supported.
 
-## 推荐命令
+<a id="推荐命令"></a>
+## Recommended Commands
 ```bash
-# 预览删除请求，不实际执行永久删除。
+# Preview the delete request without actually performing the permanent deletion.
 lark-cli okr +comment-delete --comment-id 7000000000000000004 --dry-run
-# 确认删除目标后，执行不可恢复的删除操作。
+# After confirming the deletion target, perform the irreversible deletion operation.
 lark-cli okr +comment-delete --comment-id 7000000000000000004 --yes
 ```
 
 
-## 参数
+<a id="参数"></a>
+## Parameters
 
-| 参数         | 必填         | 默认值 | 说明                                                        |
-|--------------|--------------|--------|-------------------------------------------------------------|
-| --comment-id | 是           | —      | 要删除的评论 ID，int64 正整数。建议先由 +comment-get 核对。 |
-| --yes        | 真实执行时是 | —      | 确认 high-risk-write 操作。--dry-run 时不需要。             |
-| --dry-run    | 否           | —      | 预览 API 调用而不实际执行。                                 |
-| --format     | 否           | json   | 输出格式。                                                  |
+| Parameter    | Required              | Default | Description                                                                 |
+|--------------|-----------------------|---------|-----------------------------------------------------------------------------|
+| --comment-id | Yes                   | —       | The ID of the comment to delete, an int64 positive integer. It is recommended to verify it first with +comment-get. |
+| --yes        | Yes for actual execution | —     | Confirm the high-risk-write operation. Not required with --dry-run.          |
+| --dry-run    | No                    | —       | Preview the API call without actually executing it.                          |
+| --format     | No                    | json    | Output format.                                                               |
 
-## 工作流程
+<a id="工作流程"></a>
+## Workflow
 
-1. 使用 [+comment-list](lark-okr-comment-list.md)、[+comment-detail](lark-okr-comment-detail.md) 或 [+comment-get](lark-okr-comment-get.md) 定位并确认 comment-id。
-2. 判断是否真的需要删除：解决评论使用 [+comment-solve](lark-okr-comment-solve-reopen.md)，删除只用于永久移除内容。
-3. 先执行带 --dry-run 的命令检查 URL 和 comment-id。
-4. 向用户明确说明删除不可恢复；得到确认后，在原始命令末尾追加 --yes 执行。
-5. 根据 deleted=true 和返回的 comment_id 确认结果。
+1. Use [+comment-list](lark-okr-comment-list.md), [+comment-detail](lark-okr-comment-detail.md), or [+comment-get](lark-okr-comment-get.md) to locate and confirm the comment-id.
+2. Determine whether deletion is truly needed: use [+comment-solve](lark-okr-comment-solve-reopen.md) to resolve a comment; deletion is only for permanently removing content.
+3. First run the command with --dry-run to check the URL and comment-id.
+4. Clearly explain to the user that deletion is irreversible; after obtaining confirmation, append --yes to the end of the original command and execute it.
+5. Confirm the result based on deleted=true and the returned comment_id.
 
-## 输出
+<a id="输出"></a>
+## Output
 
-删除成功返回 JSON：
+On successful deletion, returns JSON:
 ```json
 {
   "deleted": true,
@@ -43,16 +48,18 @@ lark-cli okr +comment-delete --comment-id 7000000000000000004 --yes
 ```
 
 
-## 注意事项
+<a id="注意事项"></a>
+## Notes
 
-- 删除是单条评论级操作，即使评论属于划词评论串，也不会连带删除其他评论。
-- 删除后不能使用 +comment-reopen 恢复；暂时关闭讨论应使用 +comment-solve。
-- 该命令不需要 style，因为接口没有返回 Comment 正文。
+- Deletion is a single-comment-level operation; even if the comment belongs to a text-selection comment thread, other comments are not deleted along with it.
+- After deletion, +comment-reopen cannot be used to restore it; to temporarily close a discussion, use +comment-solve.
+- This command does not require style, because the interface does not return the Comment body.
 
-## 参考
+<a id="参考"></a>
+## References
 
-- [lark-okr](../index.md) — OKR 命令、路由和通用约定
-- [OKR 实体定义](lark-okr-entities.md) — Comment、评论串和状态规则
-- [okr +comment-get](lark-okr-comment-get.md) — 删除前核对评论
-- [okr +comment-solve / +comment-reopen](lark-okr-comment-solve-reopen.md) — 暂时解决和恢复评论
-- [lark-shared](../../shared/index.md) — 高风险操作确认协议
+- [lark-okr](../index.md) — OKR commands, routing, and general conventions
+- [OKR entity definitions](lark-okr-entities.md) — Comment, comment thread, and status rules
+- [okr +comment-get](lark-okr-comment-get.md) — Verify a comment before deletion
+- [okr +comment-solve / +comment-reopen](lark-okr-comment-solve-reopen.md) — Temporarily resolve and restore comments
+- [lark-shared](../../shared/index.md) — High-risk operation confirmation protocol

@@ -1,112 +1,117 @@
 # Lark Sheet Write Cells
 
-## 写入边界 + 回读诊断（编辑类任务建议）
+<a id="写入边界--回读诊断编辑类任务建议"></a>
+## Write Boundaries + Read-Back Diagnostics (Recommended for Editing Tasks)
 
-1. **明确写入边界**：写入前建议能回答"目标 range 的起止行列号是多少？是否落在用户授权范围内？"。除用户明示要修改的区域外，避免扩张到原数据列以外或新建 Sheet。
-2. **完整性断言**：批量写入前建议把"预期写入条数"硬编码到代码里（如要填 106 条翻译 → `expected = 106`），写完后回读比较 `actual == expected`。少于预期时优先补齐，补不齐则在交付说明里列出缺口。
-3. **回读抽样校验**：写完关键值 / 普通公式后，用 `+csv-get` 或 `+cells-get` 重新读取写入区域，至少抽样 3-5 个代表性单元格（首 / 中 / 末），核对值与预期一致（与本地脚本计算的预期值对照）。AI 公式的计算状态不要先用 `+cells-get` 轮询，直接按 `references/lark-sheets-formula-verify.md` 的 `+formula-verify --ai-only --range` 全区间一次异步状态检查规则处理。公式特定的"先验证模板再 --copy-to-range / 修完再读回"细则见下方相关章节。
-4. **护原表 · 派生产物落点（写排名 / 标记 / 汇总 / 改写列时易丢数据）**：派生结果优先写到**真实末列 +1 的全新空列**或新建子表，避免复用任何已有原数据列——哪怕该列看起来"空"，也要先 `+csv-get` 回读确认整列无原始数据再写。三条准则：① 尽量不把新公式 / 新值写进原数据列（典型反例：把新算的排名公式写进了原本存放另一份原始数据的列，整列原始数据被覆盖丢失）；② 尽量不改写、不合并原表头字段名（典型反例：把几个独立表头字段合并成一列，原字段名丢失）；③ 慎用 `--allow-overwrite`：它一旦让写入区盖到相邻原始列 / 行就是不可逆数据丢失，加它之前建议用 `+sheet-info` / `+csv-get` 核清目标 range 不含任何原始数据。
+1. **Clarify write boundaries**: Before writing, you should be able to answer "What are the start and end row/column numbers of the target range? Does it fall within the user-authorized scope?" Except for areas the user explicitly wants modified, avoid expanding beyond the original data columns or creating new Sheets.
+2. **Completeness assertion**: Before batch writing, hardcode the "expected number of rows to write" into the code (e.g., to fill 106 translations → `expected = 106`), and after writing, read back and compare `actual == expected`. If fewer than expected, prioritize filling the gap; if it cannot be filled, list the shortfall in the delivery notes.
+3. **Read-back sampling verification**: After writing key values / regular formulas, use `+csv-get` or `+cells-get` to re-read the written area, sampling at least 3-5 representative cells (first / middle / last), and verify the values match expectations (compare against expected values calculated by the local script). For AI formula calculation status, do not first poll with `+cells-get`; instead directly follow the `references/lark-sheets-formula-verify.md` rule of performing a single asynchronous status check across the entire `+formula-verify --ai-only --range` range. For formula-specific details on "verify the template first, then --copy-to-range / read back after fixing," see the relevant sections below.
+4. **Protect the original table · Placement of derived outputs (easy to lose data when writing ranking / markers / summaries / rewritten columns)**: Derived results should preferably be written to a **brand-new empty column at the real last column + 1** or a new sub-sheet, avoiding reuse of any existing original data column—even if that column appears "empty," first use `+csv-get` to read back and confirm the entire column has no original data before writing. Three guidelines: ① Try not to write new formulas / new values into original data columns (typical counterexample: writing a newly calculated ranking formula into a column that originally stored another set of raw data, overwriting and losing the entire column of original data); ② Try not to rewrite or merge original header field names (typical counterexample: merging several independent header fields into one column, losing the original field names); ③ Use `--allow-overwrite` with caution: once it causes the write area to cover adjacent original columns / rows, it is irreversible data loss. Before adding it, use `+sheet-info` / `+csv-get` to verify that the target range contains no original data.
 
-## 新增列 / 新增行的样式继承（防止视觉风格不一致）
+<a id="新增列--新增行的样式继承防止视觉风格不一致"></a>
+## Style Inheritance for New Columns / New Rows (Preventing Visual Style Inconsistency)
 
-新增列 / 新增行时，先铺样式再写值，分两步——避免只传 `value` 期望默认样式与原表一致（飞书新单元格默认对齐通常是 `H:right, V:bottom`，与多数原表的 `H:center, V:middle` 不一致）。
+When adding new columns / new rows, apply styles first, then write values, in two steps—avoid passing only `value` and expecting the default style to match the original table (the default alignment for new Feishu cells is usually `H:right, V:bottom`, which is inconsistent with the `H:center, V:middle` of most original tables).
 
-**推荐做法（一步到位）**：用 `+range-copy --paste-type formats` 把相邻原列/原行的样式复制到目标区域，再写值。`--paste-type formats` 只复制样式不动值。目标区域尺寸由**源区域**推断，`--target-range` 只给目标左上角锚点单元格；要铺满整列，源区域就要覆盖整列（如 `C1:C100`）。命令要带完整定位（`--url`/`--spreadsheet-token` 与 `--sheet-id`/`--sheet-name` 各一）：
+**Recommended approach (one step)**: Use `+range-copy --paste-type formats` to copy the style of an adjacent original column/row to the target area, then write values. `--paste-type formats` only copies styles without touching values. The target area size is inferred from the **source area**; `--target-range` only provides the target's top-left anchor cell; to fill an entire column, the source area must cover the entire column (e.g., `C1:C100`). The command must include complete positioning (one each of `--url`/`--spreadsheet-token` and `--sheet-id`/`--sheet-name`):
 
 ```bash
-# 新列 D — 把 C 列的样式铺到 D 列（源 100 行 → 目标从 D1 起 100 行）
+# New column D — copy column C's style to column D (source 100 rows → target starting from D1 for 100 rows)
 lark-cli sheets +range-copy --url "<表格URL>" --sheet-name "<真实表名>" \
   --source-range "C1:C100" --target-range "D1" --paste-type formats
 
-# 新行 20 — 把第 19 行的样式铺到第 20 行
+# New row 20 — copy row 19's style to row 20
 lark-cli sheets +range-copy --url "<表格URL>" --sheet-name "<真实表名>" \
   --source-range "A19:Z19" --target-range "A20" --paste-type formats
 ```
 
-目标锚点 + 源尺寸决定落区，无需在 `--target-range` 里写出完整范围。参数细节见 `references/lark-sheets-range-operations.md`。
+The target anchor + source size determine the landing area; there is no need to write out the full range in `--target-range`. For parameter details, see `references/lark-sheets-range-operations.md`.
 
-**手动做法（需要精确控制时）**：先用 `+cells-get --include style` 读相邻单元格的完整样式作为模板，再在 `+cells-set` 的 `--cells` 里逐格携带 `cell_styles`。需要继承的字段清单：
+**Manual approach (when precise control is needed)**: First use `+cells-get --include style` to read the complete style of an adjacent cell as a template, then carry `cell_styles` cell by cell in `+cells-set`'s `--cells`. Fields that need to be inherited:
 
 1. `cell_styles.font_family` / `cell_styles.font_size` / `cell_styles.font_weight` / `cell_styles.font_color` / `cell_styles.font_style`
-2. `cell_styles.horizontal_alignment` / `cell_styles.vertical_alignment` — 漏继承会导致新列对齐与原列不一致（常见）
-3. `cell_styles.number_format` — 漏继承会导致同列数值格式混乱
+2. `cell_styles.horizontal_alignment` / `cell_styles.vertical_alignment` — failing to inherit these causes new column alignment to be inconsistent with the original column (common)
+3. `cell_styles.number_format` — failing to inherit this causes number formats within the same column to become inconsistent
 4. `cell_styles.background_color`
 5. `border_styles`
-6. **`merged_cells`（合并范围）**——续写场景必查：用 `+sheet-info --include merges` 读原数据区域的合并信息。原行有跨列合并时，新行用 `+cells-{merge|unmerge}` 复制相同合并模式。仅传 cells 数组的样式不够——合并范围要单独靠 `+cells-{merge|unmerge}` 落地。
+6. **`merged_cells` (merge ranges)**—must check in continuation scenarios: use `+sheet-info --include merges` to read the merge information of the original data area. When original rows have cross-column merges, new rows should use `+cells-{merge|unmerge}` to copy the same merge pattern. Passing only the cells array styles is not enough—merge ranges must be applied separately via `+cells-{merge|unmerge}`.
 
-**反模式**（风险）：
-- 只传 `{"value": "四级菜单"}` 给 D1，不传 `cell_styles` → D1 默认非加粗、非居中，与 A1/B1/C1 风格断裂
-- 新列 M5 写入 `=SUM(F5:L5)` 时只传 `formula`，不传样式 → M 列对齐变 `H:right`，数字格式变默认
+**Anti-patterns** (risks):
+- Passing only `{"value": "四级菜单"}` to D1 without `cell_styles` → D1 defaults to non-bold, non-centered, breaking style continuity with A1/B1/C1
+- When writing `=SUM(F5:L5)` to new column M5, passing only `formula` without styles → column M alignment becomes `H:right`, number format becomes default
 
-## 长数字防科学计数法（数值列写入必查）
+<a id="长数字防科学计数法数值列写入必查"></a>
+## Preventing Scientific Notation for Long Numbers (Must-Check for Numeric Column Writes)
 
-写入或计算结果可能产生长数字（≥ 12 位整数 / 高精度小数）的列，建议在 `cell_styles.number_format` 显式设置非通用格式，否则飞书会自动用科学计数法显示，用户看到的就是"内容被截断 / 看不清原值"。
+For columns where writing or calculation results may produce long numbers (≥ 12-digit integers / high-precision decimals), it is recommended to explicitly set a non-general format in `cell_styles.number_format`, otherwise Feishu will automatically display them in scientific notation, and what the user sees is "content truncated / original value unreadable."
 
-| 场景 | 必加的 `number_format` |
+| Scenario | Required `number_format` |
 |---|---|
-| 长整数（订单号 / 身份证 / 单据号） | `"0"` 或 `"@"`（强制文本，避免精度丢失） |
-| 金额 / 千分位 | `"#,##0.00"` |
-| 百分比 | `"0.00%"` |
-| 数量 / 计数 | `"0"`（整数） |
-| 日期 | `"yyyy-mm-dd"` 或 `"yyyy/m/d"` |
+| Long integers (order numbers / ID numbers / document numbers) | `"0"` or `"@"` (force text to avoid precision loss) |
+| Amounts / thousands separator | `"#,##0.00"` |
+| Percentages | `"0.00%"` |
+| Quantities / counts | `"0"` (integer) |
+| Dates | `"yyyy-mm-dd"` or `"yyyy/m/d"` |
 
-**典型反例**：长数字列（如审批单号、流水号）未设 `number_format`，飞书显示为 `1.23E+15`，用户复制出来已经丢失精度。
+**Typical counterexample**: A long-number column (such as approval numbers, serial numbers) without `number_format` set, Feishu displays it as `1.23E+15`, and the user has already lost precision when copying it out.
 
-> **数字还是文本，按"数据本质是量值还是标识符"二选一 —— 不看当下要不要计算**：金额 / 百分比 / 比率 / 计数 / 度量这类**本质是量值**的数据，优先以**数字类型**写入（百分比存小数 `0.54` 配 `number_format:"0%"`），避免设 `@` 文本格式。**这与"用户当下是否要排序 / 求和"无关**——数据类型由数据本质决定、不由当下用途决定：表格数据几乎总会被后续排序 / 图表 / 二次计算复用，`"54%"` 文本与数值列混排本就破坏一致性，且数字 + `number_format` 显示效果与文本**完全相同**，没有任何理由选文本。**最常见的误判就是"这只是 leaderboard / 报表 / 看板展示，又不用算，写成 `54%` 字符串就行"——这是错的，展示用途不改变"百分比是数值"的事实。**（`+table-put` 用 `dtypes` 声明 `int64` / `float64`；版式 `+table-put` 装不下时用 `+cells-set` 传数字 + `number_format`；都别在本地拼成带 `$` / `%` 的字符串走 `+csv-put`。）反过来，编号 `001`、规格 `3-1`、身份证 / 电话 / 单据号等**本质是标识符 / 标签**、要原样保留不被飞书自动解释的内容（否则 `001`→`1`、`3-1`→日期、点分日期 `12.10`→`12.1`（尾零丢失）、长号→科学计数），才以**字符串类型**写入（`dtypes` 设 `object`）并把 `number_format` 设为 `"@"`（文本格式），字面保真。
+> **Number or text: choose based on "is the data essentially a quantity or an identifier" — not based on whether calculation is needed right now**: Data that is **essentially a quantity**, such as amounts / percentages / ratios / counts / measurements, should preferably be written as **numeric types** (percentages stored as decimals `0.54` with `number_format:"0%"`), avoiding `@` text format. **This is unrelated to "whether the user currently wants to sort / sum"**—data type is determined by the nature of the data, not by its current use: spreadsheet data will almost always be reused for subsequent sorting / charts / secondary calculations, `"54%"` text mixed with numeric columns inherently breaks consistency, and numbers + `number_format` display **identically** to text, so there is no reason to choose text. **The most common misjudgment is "this is just a leaderboard / report / dashboard display, no calculation needed, so writing it as a `54%` string is fine"—this is wrong; display purposes do not change the fact that "a percentage is a numeric value."** (`+table-put` uses `dtypes` to declare `int64` / `float64`; when the layout `+table-put` cannot fit, use `+cells-set` to pass numbers + `number_format`; in all cases, do not locally concatenate into strings with `$` / `%` and pass them through `+csv-put`.) Conversely, content that is **essentially an identifier / label** and must be preserved as-is without Feishu automatically interpreting it—such as numbers `001`, specifications `3-1`, ID numbers / phone numbers / document numbers (otherwise `001`→`1`, `3-1`→date, dotted dates `12.10`→`12.1` (trailing zeros lost), long numbers→scientific notation)—should only be written as **string types** (`dtypes` set `object`) with `number_format` set to `"@"` (text format), preserving literal fidelity.
 
-**typed 列必须显式声明类型**：金额、百分比、日期、布尔、计数，以及后续参与排序 / 聚合 / 图表的量值列，在 `+table-put` 的 `dtypes` 中逐列声明类型，并用 `formats` 控制显示；不要依赖字符串外观或自动猜型。纯文本/标识符表可全部声明 `object`。mixed 列先保留原值并新增清洗结果/失败标记，统计总数、成功、失败和空值；均值/比例必须说明分母，禁止静默把失败值丢掉后改变口径。
+**Typed columns must explicitly declare types**: Amounts, percentages, dates, booleans, counts, and quantity columns that will later participate in sorting / aggregation / charts must have their types declared column by column in `+table-put`'s `dtypes`, with `formats` controlling display; do not rely on string appearance or automatic type guessing. Pure text/identifier tables can declare all as `object`. For mixed columns, first preserve original values and add cleaning results/failure markers, and count totals, successes, failures, and nulls; means/ratios must specify the denominator, and it is forbidden to silently drop failed values and change the calculation basis.
 
-**追加数据**：普通表尾追加直接用 `+table-put` 的 `mode:"append"`，它会自动定位末行；只有用户明确要求在中间物理插行、继承模板区块或扩展合并结构时，才先用 `+dim-insert`。
+**Appending data**: For ordinary end-of-table appending, directly use `+table-put`'s `mode:"append"`, which automatically locates the last row; only when the user explicitly requests physically inserting rows in the middle, inheriting template blocks, or extending merge structures, first use `+dim-insert`.
 
-## 使用场景
+<a id="使用场景"></a>
+## Use Cases
 
-写入。向飞书表格的单元格区域写入值、公式、样式、批注、图片或下拉，也可批量写入 CSV / DataFrame。本 reference 覆盖 6 个 shortcut，按数据来源 + 内容形态选：
+Writing. Write values, formulas, styles, comments, images, or dropdowns to a cell range in a Feishu sheet; also supports batch writing of CSV / DataFrame. This reference covers 6 shortcuts; choose based on data source + content form:
 
-> ⚠️ **计算结果默认写公式，不写静态值**：需要计算得出的数字 / 统计量 / 排名 / 占比，默认写公式到单元格，不要用 Python 算好数值再硬编码写入。公式优先原则的例外：外部抓取数据、永不变化的常量、循环引用。
+> ⚠️ **Calculation results default to writing formulas, not static values**: Numbers / statistics / rankings / proportions that need to be calculated should by default be written as formulas to cells, not computed in Python and then hardcoded. Exceptions to the formula-first principle: externally fetched data, constants that never change, circular references.
 
-| 场景 | 用这个 shortcut | 原因 |
+| Scenario | Use this shortcut | Reason |
 |------|----------------|------|
-| 模型手里已经有 CSV 文本（小规模手动构造、从 `+csv-get` 取到后简单加工） | `+csv-put` | 直接传 CSV 文本 + `--start-cell`，不用自己拼二维 cells 数组；必要时自动扩容行列 |
-| 列里有数值语义的数据（数字 / 金额 / 百分比 / 日期 / 计数）→ 飞书，要类型保真（来源不限：DataFrame、Counter、dict、list 都算） | `+table-put` | typed 协议每项必含 `name/columns/data`，可带 `start_cell/mode/header/allow_overwrite/dtypes/formats`；数值语义列显式声明 `dtypes`，`formats` 控制千分位 / 百分比 / 日期。date 落真日期、数值列可排序 / 求和 / 入图表，string 保前导零，多 sheet 一次写 |
-| 写入含样式、批注、图片、数据校验等任意富写入 | `+cells-set` | 唯一支持完整富字段的 shortcut（公式 `+csv-put` 也能写） |
-| 只改已有 cell 的样式，不动 value/formula | `+cells-set-style` | 拍平 10 个样式字段为独立 flag；不触发不必要的值写入 |
-| 单 cell 嵌入图片 | `+cells-set-image` | 比 `+cells-set` 参数更简短 |
-| 在**已有区域**局部补表头样式/边框 | 先用 `+csv-put` 写值，再用 `+cells-set-style` 补样式 | 分工配合，入参最短 |
-| **新建子表 / 整表成套美化**（哪怕全是纯文本） | `+table-put --sheets … --styles …` 一步带值 + 全套样式（区域底色 / 边框 / 列宽 / 行高 / 合并；payload 里不存在的 sheet 名自动建子表） | `--styles` 与列是否 typed 无关，纯文本同样适用；比「写值 + 多次刷样式」少好几次调用 |
+| The model already has CSV text in hand (small-scale manual construction, simple processing after retrieving from `+csv-get`) | `+csv-put` | Directly pass CSV text + `--start-cell`, no need to build a 2D cells array yourself; automatically expands rows/columns when necessary |
+| Columns with numeric-semantic data (numbers / amounts / percentages / dates / counts) → Feishu, requiring type fidelity (source unrestricted: DataFrame, Counter, dict, list all count) | `+table-put` | Each typed protocol item must contain `name/columns/data`, can include `start_cell/mode/header/allow_overwrite/dtypes/formats`; numeric-semantic columns explicitly declare `dtypes`, `formats` controls thousands separator / percentage / date. Dates land as real dates, numeric columns can be sorted / summed / charted, string preserves leading zeros, multiple sheets written in one pass |
+| Writing any rich content including styles, comments, images, data validation, etc. | `+cells-set` | The only shortcut supporting complete rich fields (formulas `+csv-put` can also be written) |
+| Only modifying existing cell styles, without touching value/formula | `+cells-set-style` | Flattens 10 style fields into independent flags; does not trigger unnecessary value writes |
+| Single cell embedded image | `+cells-set-image` | Shorter parameters than `+cells-set` |
+| Locally supplementing header styles/borders in an **existing area** | First use `+csv-put` to write values, then use `+cells-set-style` to supplement styles | Division of labor, shortest input parameters |
+| **Creating a new sub-sheet / full-sheet beautification** (even if all plain text) | `+table-put --sheets … --styles …` one step with values + full styles (area background / borders / column width / row height / merges; sheet names not present in the payload automatically create sub-sheets) | `--styles` is unrelated to whether columns are typed; plain text applies equally; saves several calls compared to "write values + multiple style refreshes" |
 
-**选命令按内容形态分流（不设"默认首选"）**：① 列有数值语义（金额 / 百分比 / 日期 / 计数）→ `+table-put`（`dtypes` 声明类型 + `formats` 设展示格式），版式装不下时 → `+cells-set` 传数字 + `number_format`；② 要样式 / 批注 / 图片 / 富文本 → `+cells-set`；③ **仅**全文本、无数值语义的内容平铺 → `+csv-put`（入参最短）。判据详见上方「数字还是文本」。
+**Choose commands by content form (no "default first choice")**: ① Columns with numeric semantics (amounts / percentages / dates / counts) → `+table-put` (`dtypes` declares types + `formats` sets display format); when the layout cannot fit → `+cells-set` pass numbers + `number_format`; ② Need styles / comments / images / rich text → `+cells-set`; ③ **Only** all-text content with no numeric semantics, flat → `+csv-put` (shortest input parameters). For criteria, see "Number or Text" above.
 
-⚠️ `+csv-put` 可写值或公式：以 `=` 开头的单元格会被当作公式计算（读回时 `formula` 字段保留、`value` 为计算结果）。**公式内部含逗号 / 引号 / 换行时建议按 RFC 4180 转义**——含逗号的字段整格用双引号包裹、字段内部的引号再翻倍：如 `=COUNTIF(D5:D22,"及格")` 建议写成 `"=COUNTIF(D5:D22,""及格"")"`。漏转义会被 CSV 解析器按逗号拆列、整块写入区域错位。**因此含逗号 / 引号 / 换行的公式优先用 `+cells-set`**；`+table-put` 不支持公式字段。
+⚠️ `+csv-put` can write values or formulas: cells starting with `=` are treated as formulas and calculated (when read back, the `formula` field is preserved and `value` is the calculated result). **When formulas contain commas / quotes / newlines, it is recommended to escape according to RFC 4180**—fields containing commas should be wrapped in double quotes, and quotes inside fields should be doubled: e.g., `=COUNTIF(D5:D22,"及格")` should be written as `"=COUNTIF(D5:D22,""及格"")"`. Missing escapes will cause the CSV parser to split columns by commas, misaligning the entire write area. **Therefore, formulas containing commas / quotes / newlines should preferably use `+cells-set`**; `+table-put` does not support formula fields.
 
-⚠️ **`+csv-put` 会把数值落成文本**：把金额 / 百分比 / 计数等在本地拼成带 `$` / `%` / 千分位的字符串（如 `"$1,234.50"` / `"+30.5%"`）再 `+csv-put` 灌进去，单元格就是**文本**——丢失排序 / 求和 / 图表能力，且与数值列混排无法参与计算。数值该怎么写、何时 `+table-put`、版式装不下时何时退 `+cells-set` 传数字 + `number_format`，判据与分流见上方「数字还是文本」；核心一句：**准备把数字 format 成字符串再写时就是走错了路，数值一律以数字写入 + `number_format` 控制显示。**
+⚠️ **`+csv-put` will land numbers as text**: If you locally concatenate amounts / percentages / counts into strings with `$` / `%` / thousands separators (e.g., `"$1,234.50"` / `"+30.5%"`) and then pour them in via `+csv-put`, the cells will be **text**—losing sorting / summing / charting capabilities, and unable to participate in calculations when mixed with numeric columns. For how numbers should be written, when to use `+table-put`, and when to fall back to `+cells-set` passing numbers + `number_format` when the layout cannot fit, see "Number or Text" above for criteria and routing; the core point: **when you are about to format a number into a string before writing, you have taken the wrong path; numbers should always be written as numbers + `number_format` controls display.**
 
-⚠️ **`+csv-put` 也会把「看着像数字」的字段静默数值化**（与上一条相反的另一半坑）：CSV 里语义是**日期标签 / 编号 / 标识符**、内容却全是数字字符的列，会被按数值解析——`12.10`→`12.1`（点分日期尾零丢失）、`3.0`→`3`、`001`→`1`、长号→科学计数。**这类列即使已攒好 CSV 文本也不建议裸走 `+csv-put`**：优先 `+table-put` 把该列 `dtypes` 声明为 `object`（无年份的点分标签如 `12.10` / `3-1` 字面保真）或 `datetime64[ns]`（完整真日期），版式装不下再退 `+cells-set` + `number_format:"@"`。此类失真在「抽样首 / 中 / 末」回读时易被掩盖（`12.10` / `12.20` 等尾零行常不落在抽样窗口），日期 / 编号列回读要专挑带尾零 / 前导零的代表值核对。
+⚠️ **`+csv-put` will also silently numericize fields that "look like numbers"** (the other half of the pitfall, opposite to the previous point): Columns in CSV whose semantics are **date labels / numbers / identifiers** but whose content is entirely numeric characters will be parsed as numbers—`12.10`→`12.1` (dotted date trailing zeros lost), `3.0`→`3`, `001`→`1`, long numbers→scientific notation. **For such columns, even if CSV text is already prepared, it is not recommended to go through `+csv-put` bare**: prefer `+table-put` to declare that column's `dtypes` as `object` (dotted labels without years such as `12.10` / `3-1` preserve literal fidelity) or `datetime64[ns]` (complete real dates); if the layout cannot fit, fall back to `+cells-set` + `number_format:"@"`. Such distortions are easily masked during "sample first / middle / last" read-backs (rows with trailing zeros like `12.10` / `12.20` often do not fall within the sampling window); for date / number column read-backs, specifically pick representative values with trailing zeros / leading zeros to verify.
 
-⚠️ 大数据回写走"`+csv-get` 按 `--range` 行窗口分批读到本地 + 本地脚本处理 + `+csv-put` 分批回写"。
+⚠️ Large data write-backs should follow "`+csv-get` read to local in batches by `--range` row windows + local script processing + `+csv-put` batch write-back."
 
-## `+cells-set` 写入要点（常用模式 / 公式 / 样式）
+<a id="cells-set-写入要点常用模式--公式--样式"></a>
+## `+cells-set` Writing Key Points (Common Patterns / Formulas / Styles)
 
-> 以下是用 `+cells-set`（及 `+cells-set-style`）做富写入时的常用模式与准则；选哪个 shortcut 见上方「使用场景」。
+> The following are common patterns and guidelines for rich writing with `+cells-set` (and `+cells-set-style`); for which shortcut to choose, see "Use Cases" above.
 
-`+cells-set` 为一块区域设置值 / 公式 / 批注 / 样式，也支持 `rich_text` 的 `type: "embed-image"` 嵌入单元格图片。**关键：`--cells` 恒为二维数组（行 × 格），单格也是 `[[{"value":…}]]`；裸 `--range A1`（或 `--start-cell`）是左上角**锚点**，落区由 `--cells` 自身的行列数决定；写成矩形（`A1:B2`）则是**边界**——数组比它小会收窄，比它大会被拒绝，而不是写到范围之外**。
+`+cells-set` sets values / formulas / comments / styles for a range, and also supports `rich_text`'s `type: "embed-image"` for embedding cell images. **Key: `--cells` is always a 2D array (rows × cells); a single cell is also `[[{"value":…}]]`; a bare `--range A1` (or `--start-cell`) is the top-left **anchor**, and the landing area is determined by `--cells`'s own row and column counts; writing it as a rectangle (`A1:B2`) makes it a **boundary**—if the array is smaller it narrows, if larger it is rejected, rather than writing outside the range**.
 
-> **单元格图片 vs 浮动图片**：图若**属于某条记录、要随那行排序 / 筛选 / 增删**（凭证 / 证件照 / 每行配图，话里带「对应 / 每行 / 这列」等绑定词）→ **单元格图片**（本工具）：用 `+cells-set-image`（最短）或 `+cells-set` 的 `rich_text` + `type: "embed-image"`。只是自由摆放的装饰（logo / 水印 / 封面）→ 浮动图片，见 lark-sheets-float-image。别因「浮动图更好控制 / 更熟」默认选浮动图——它承载"对应某记录"的图会随增删行 / 排序错位。
+> **Cell images vs floating images**: If an image **belongs to a record and should sort / filter / add / delete along with that row** (vouchers / ID photos / per-row images, with binding words like "corresponding / per row / this column" in the request) → **cell image** (this tool): use `+cells-set-image` (shortest) or `+cells-set`'s `rich_text` + `type: "embed-image"`. If it is just freely placed decoration (logo / watermark / cover) → floating image, see lark-sheets-float-image. Do not default to floating images because "floating images are easier to control / more familiar"—images that carry "corresponding to a record" will misalign when rows are added/deleted / sorted.
 
-常用模式（推荐，避免逐行写入替代）：
+Common patterns (recommended, avoiding row-by-row writing alternatives):
 
-- 整列公式：先在 `H2` 写一个公式，再用 `--copy-to-range "H2:H100"` 或 `--copy-to-range "H:H"` 向下填充。避免对每一行单独调用 `+cells-set` 写入相同结构的公式
-- 整列样式：使用 `+cells-set-style` 或 `+styles-put` 指定目标 range；不要用 `--copy-to-range` 纯刷样式
-- 首行样式：同上，直接对 `1:1` 或实际表头 range 设置样式
-- 用户说”这列 / 整列 / 这行 / 首行 / 向下复制公式”时，值/公式填充用模板格 + `--copy-to-range`；只改样式用 `+cells-set-style` / `+styles-put`
-- 多区域写入相同值/公式结构时，优先写一个模板，再用 `--copy-to-range` 复制；仅样式相同仍走样式命令
+- Whole-column formulas: First write one formula in `H2`, then use `--copy-to-range "H2:H100"` or `--copy-to-range "H:H"` to fill down. Avoid calling `+cells-set` separately for each row to write formulas with the same structure
+- Whole-column styles: Use `+cells-set-style` or `+styles-put` to specify the target range; do not use `--copy-to-range` purely for style refreshing
+- First-row styles: Same as above, directly set styles on `1:1` or the actual header range
+- When the user says "this column / whole column / this row / first row / copy formula down," use template cell + `--copy-to-range` for value/formula filling; use `+cells-set-style` / `+styles-put` for style-only changes
+- When writing the same value/formula structure to multiple areas, preferably write one template, then copy with `--copy-to-range`; if only styles are the same, still use style commands
 
-⚠️ **`--copy-to-range` 复制的是模板格的全部内容（值 + 公式 + 样式），不是只复制样式**：目标区域**已有值**时不要用它"刷样式"——会把整个区域的值覆盖成模板格的值（65 个格子全变成同一个数的事故就是这么来的）。只改样式、值 / 公式不动，用 `+cells-set-style` / `+cells-batch-set-style`；`--copy-to-range` 只用于目标区为空或本就要写同构公式 / 值的场景。
+⚠️ **`--copy-to-range` copies the template cell's entire content (values + formulas + styles), not just styles**: Do not use it to "refresh styles" when the target area **already has values**—it will overwrite the entire area's values with the template cell's values (this is how the accident of 65 cells all becoming the same number happens). To change only styles without touching values / formulas, use `+cells-set-style` / `+cells-batch-set-style`; `--copy-to-range` is only for scenarios where the target area is empty or you intend to write isomorphic formulas / values.
 
-⚠️ **模板 `--range` 从数据行起算、别把表头圈进去**：`--copy-to-range` 会把 `--range` 模板按目标区尺寸周期性平铺，模板里若含了表头行，表头会每隔几行重复铺进数据区。整列填充时模板只取一格数据样式（如 `H2`），不要取成 `H1:H2`。
+⚠️ **Template `--range` starts from the data row, do not include the header**: `--copy-to-range` will periodically tile the `--range` template according to the target area size; if the template includes a header row, the header will be repeatedly tiled into the data area every few rows. When filling an entire column, the template should take only one data cell's style (e.g., `H2`), not `H1:H2`.
 
-⚠️ **逐行写入公式是常见低效写法**：对每一行单独调用 `+cells-set` 写公式（如 26 次）既慢又易错，且不会自动平移公式引用。正确做法是 1 次模板写入 + 1 次 `--copy-to-range`（公式引用自动平移）。
+⚠️ **Writing formulas row by row is a common inefficient approach**: Calling `+cells-set` separately for each row to write formulas (e.g., 26 times) is both slow and error-prone, and does not automatically shift formula references. The correct approach is 1 template write + 1 `--copy-to-range` (formula references automatically shift).
 
-💡 **多个不连续区域写入（批量修公式的正解）**：散布多处（可跨 sheet）的值 / 公式写入，用 `--writes` 一次批量交付（fail-fast，失败后先回读再补发）——每项 `{sheet_name, range, cells}`（跨 sheet 的项把 sheet 定位写在项里，项内没写则取顶层 `--sheet-name` / `--sheet-id`），不要为此拼 `+batch-update` 的 `--operations`，也不要逐区域多次调用（多次往返、中途失败难恢复）：
+💡 **Writing to multiple non-contiguous areas (the correct way to batch-fix formulas)**: For values / formulas scattered across multiple locations (can span sheets), use `--writes` to deliver in one batch (fail-fast; after failure, read back first then resend)—each item `{sheet_name, range, cells}` (for cross-sheet items, write the sheet positioning within the item; if not written in the item, use the top-level `--sheet-name` / `--sheet-id`); do not concatenate `+batch-update`'s `--operations` for this, and do not call multiple times per area (multiple round trips, difficult to recover from mid-way failures):
 
 ```bash
 lark-cli sheets +cells-set --url "..." --writes - <<'JSON'
@@ -117,131 +122,137 @@ lark-cli sheets +cells-set --url "..." --writes - <<'JSON'
 JSON
 ```
 
-范围级统一样式不在 `--writes` 里做（cells 逐格 `cell_styles` 仅用于逐格差异化），写完接 `+styles-put`。
+Range-level uniform styles are not done in `--writes` (cells' per-cell `cell_styles` is only for per-cell differentiation); after writing, follow up with `+styles-put`.
 
-💡 **写入公式前先按迁移规则改写**：如果公式来自 Excel 或包含数组场景，先读取并遵循 `references/lark-sheets-formula-translation.md` 的规则完成改写，再把最终公式写入 `formula` 字段。
+💡 **Before writing formulas, first rewrite according to migration rules**: If the formula comes from Excel or involves array scenarios, first read and follow the rules in `references/lark-sheets-formula-translation.md` to complete the rewrite, then write the final formula into the `formula` field.
 
-💡 **内容与样式分离写入**：当同一区域样式高度重复时，先按正确类型写内容，再用 `+cells-set-style` 或 `+styles-put` 对目标范围补样式；不要用 `--copy-to-range` 纯刷样式，它会连模板值 / 公式一起复制。只有目标区为空或本就要复制同构公式 / 值时，才使用模板单元格 + `--copy-to-range`。
+💡 **Separate content and style writing**: When styles are highly repetitive within the same area, first write content with the correct types, then use `+cells-set-style` or `+styles-put` to supplement styles for the target range; do not use `--copy-to-range` purely for style refreshing, as it will copy template values / formulas along with it. Only when the target area is empty or you intend to copy isomorphic formulas / values should you use template cells + `--copy-to-range`.
 
-💡 **样式更新是「部分合并」，不是整体覆盖**：`+cells-set-style` / `+styles-put`（以及 `+cells-set` 的 `cell_styles` / `border_styles`）只改你**显式传入**的样式属性，未传的属性保留原值。两个实用推论：
-- **可分层叠加**：对同一区域先刷字体色、再单独刷背景色、再单独刷边框，后一步不会清掉前一步——美化已有区域时无需一次带齐所有字段，可拆成多次窄调用。
-- **`border_styles` 按边合并**：只传 `{"top":{...}}` 只更新上边框，`bottom` / `left` / `right` 保留原状；不必为了「只改一条边」而把四边全部重传。（例外见上方「新增行的边框/样式避免用 `{}` 跳过」：**全新行**底子里没有边框，仍需把要显示的边都显式传出。）
+💡 **Style updates are "partial merges," not full overwrites**: `+cells-set-style` / `+styles-put` (and `+cells-set`'s `cell_styles` / `border_styles`) only modify the style properties you **explicitly pass in**; properties not passed retain their original values. Two practical corollaries:
+- **Can be layered**: Apply font color to the same area first, then background color separately, then borders separately; each subsequent step will not clear the previous one—when beautifying an existing area, there is no need to include all fields at once; it can be split into multiple narrow calls.
+- **`border_styles` merges per edge**: Passing only `{"top":{...}}` updates only the top border; `bottom` / `left` / `right` retain their original state; there is no need to re-pass all four edges just to "change only one edge." (For exceptions, see "Avoid using `{}` to skip borders/styles for new rows" above: **brand-new rows** have no borders underneath, so all edges to be displayed still need to be explicitly passed.)
 
-💡 **大批量数据分批写入（推荐）**：当需要写入大量行（如几十行以上）时，不要试图在一次调用中生成全部 `cells` 数据——`cells` 数组过大会让单次生成的内容过长，容易出错或被截断。应将数据拆分为多批，每批 20-50 行，分多次调用 `+cells-set` 逐批生成并写入（如先写 `A2:D21`，再写 `A22:D41`，依此类推）。每次只生成当前批次的数据，控制单次生成量。
+💡 **Batch writing for large data volumes (recommended)**: When needing to write a large number of rows (e.g., dozens or more), do not attempt to generate all `cells` data in a single call—an overly large `cells` array makes the content generated in a single pass too long, prone to errors or truncation. Data should be split into multiple batches of 20-50 rows each, calling `+cells-set` multiple times to generate and write batch by batch (e.g., write `A2:D21` first, then `A22:D41`, and so on). Only generate the current batch's data each time, controlling the single-pass generation volume.
 
-注意：
+Notes:
 
-- 不要把 `cells` 写成字符串化 JSON
-- `+cells-set` 默认即覆盖非空 cell（`--allow-overwrite` 默认 true）；若要**保护**非空 cell 不被覆盖，显式传 `--allow-overwrite=false`（遇非空 cell 报错）
-- 若目标区域涉及合并单元格，不要向合并区域中的非左上角单元格写入数据；如需写入，应改写合并区域左上角单元格，或先调整/取消合并区域
-- **构造 `range` 时行号建议基于逻辑行号**：如果之前通过 `+csv-get` 读取了数据，CSV 中被双引号包裹的多行字段（如 `"2026年3月2日\n星期一"`）是**一个单元格**，不是两行。写入时的行号建议按逻辑记录计算，不能按物理换行符计数，否则 `range` 会整体偏移导致写入到错误位置
+- Do not write `cells` as stringified JSON
+- `+cells-set` by default overwrites non-empty cells (`--allow-overwrite` defaults to true); to **protect** non-empty cells from being overwritten, explicitly pass `--allow-overwrite=false` (errors on non-empty cells)
+- If the target area involves merged cells, do not write data to non-top-left cells within the merged area; if writing is needed, rewrite the top-left cell of the merged area, or first adjust/cancel the merged area
+- **When constructing `range`, row numbers should be based on logical row numbers**: If data was previously read via `+csv-get`, multi-line fields wrapped in double quotes in the CSV (e.g., `"2026年3月2日\n星期一"`) are **one cell**, not two rows. Row numbers when writing should be calculated by logical records, not by physical newline characters, otherwise `range` will be offset entirely, causing writes to incorrect positions
 
-> 用户说"样式和原表一致 / 保持原表格式 / 边框继承"时同理：`cell_styles` 只覆盖字体和对齐、**不含边框**，边框建议用独立 `border_styles` 字段传——完整继承清单见上方「新增列 / 新增行的样式继承」。
+> The same applies when the user says "styles consistent with the original table / keep the original table format / border inheritance": `cell_styles` only covers fonts and alignment, and **does not include borders**. For borders, it is recommended to pass them via the separate `border_styles` field — see "Style inheritance for new columns / new rows" above for the complete inheritance list.
 
-⚠️ **公式写入后必须完成验证（后端不会报全部语法 / 运行错误）**：`+cells-set` 写公式时，即便公式有括号不配对（如 `=IFERROR(VALUE(MID(D5,3,4))), 0)` 比 IFERROR 多一个 `)`）或用了飞书不支持的函数（如 `GOOGLETRANSLATE` / `CUBEVALUE`），**后端工具也可能返回 `updated_cells_count=N, rc=0` 的"成功"**——错误会静默写进单元格显示为 `#VALUE!` / `#NAME?` / `#REF!`。因此：
-1. **写完立即回读**：`+cells-set` 后紧跟 `+csv-get`（或 `+cells-get`）读目标范围首、中、末及汇总行，检查错误值并核对 `formula`；AI 公式在这一步只做**一次**公式文本核对（`+cells-get --include formula` 看种子格 / 首格，确认引号 / 括号没在 shell / CSV / JSON 层被破坏、落进去的确实是 `=AI(...)`），不要用它轮询计算结果——计算状态走 `+formula-verify --ai-only`
-2. **逐段运行诊断**：对本次新增 / 修改的公式范围调用 `+formula-verify --exit-on-error`；`partial` 拆小续扫，全部分段 `status='success'` 后才完成。AI 公式不套这条：改用 `+formula-verify --ai-only` 按全区间一次异步状态检查规则交付（`failed` / `unsupported` 先修，只剩 pending 可交付并说明后台仍在计算，详见 `references/lark-sheets-formula-verify.md`）
-3. **看到 `#` 开头的错误值**立即修公式：`#NAME?` 多半是函数名拼错或用了飞书不支持的函数（如 `GOOGLETRANSLATE` / CUBE 系列；注意 `UNIQUE` / `FILTER` 飞书是支持的）；`#VALUE!` 多半是类型不匹配或括号错位；`#REF!` 是引用错误；`~CIRCULAR~REF~` 是循环引用（公式引用了自身或会闭环）
-4. **`--copy-to-range` 扩展前先验证模板**：模板单元格公式自己都算错，`--copy-to-range` 复制到 100 行就是 100 个错误
-5. **去重 / 筛选函数**：飞书**支持** `UNIQUE` / `FILTER`（原生数组函数，详见 `references/lark-sheets-formula-translation.md`），可直接用；`DISTINCT` 不是飞书函数，去重用 `UNIQUE`。大数据量去重 / 分组也可用透视表（`+pivot-{create|update|delete}`，值字段聚合方式选 count）
-6. **循环引用预检**：写聚合公式（SUM / AVERAGE / COUNT 等）前建议明确**引用范围不包含目标单元格自身或其传递依赖**。典型反例：在 C3 写 `=SUMIF(B:B,LEFT(B3,9)&"*",C:C)`，B 列匹配 B3 前 9 位时 C3 自己也命中，导致 C3 自引用 → `~CIRCULAR~REF~`。修法：用辅助列 / 显式排除自身（`SUMIFS(C:C, B:B, ..., A:A, "<>"&A3)`）/ 缩小范围避开自己
-7. **文本提取公式的覆盖率验证**：用 `LEFT` / `MID` / `FIND` / `SUBSTITUTE` / `TEXTSPLIT` 等从文本里抠数据前，建议用本地脚本在**整列源数据**上跑一遍命中率统计（`df[col].str.contains(pattern).mean()`）；命中率 < 100% 时优先补分支（IFS / 多个 IFERROR 串联）兜底，或改用本地脚本算好写静态值，**避免**只覆盖样本前 N 行就交付（典型反例：按"长123"这种带前缀的尺寸文本取数，对"宽×高"、"×"、"*"等其它写法直接漏匹配）
-8. **公式范围与用户指令字面对齐**：用户说"对 F 至 L 列求和"优先写 `SUM(F2:L2)` 或 `F2+G2+H2+I2+J2+K2+L2`，**不能漏列、多列、错列**。写完用 `+cells-get` 拿回 `formula` 字符串，与用户原话逐字对照（参与求和的列名一致 / 起止列号一致 / 运算符一致），不一致就是风险
-9. **量纲 / 单位换算 / 数量乘项预检（公式不报错但结果整体偏倍数）**：从文本提取数字做计算前，先核对**单位是否统一、是否漏乘数量、口径是否一致**——这类错误公式能跑通、无 `#` 报错，回读也看不出（值"像对的"）。建议用本地脚本对 3–5 个代表行**离线手算一遍预期值**，与公式结果逐格比对量级：① 单位不一致先统一再算（典型反例：尺寸 `320CM*337CM` 直接取数相乘除以 1e6 得 0.11，正确是 CM→MM 换算后得 10.78，**差 100 倍**）；② 按"单件×数量"的量建议乘数量列（典型反例：侧面板面积漏乘 F 列数量，F=2 的行只算了一半）；③ 标准值口径对齐（典型反例：营养成分 mg/kg 与 g/100g 口径混用，整列放大 100 倍）。**口径 / 单位 / 数量任一项错，整列计算结果就是错的；这类错误公式不报错、回读也不易看出，建议靠离线手算对照。**
+⚠️ **After writing formulas, verification must be completed (the backend will not report all syntax / runtime errors)**: When `+cells-set` writes formulas, even if a formula has mismatched parentheses (e.g., `=IFERROR(VALUE(MID(D5,3,4))), 0)` has one more `)` than IFERROR) or uses a function not supported by Feishu (e.g., `GOOGLETRANSLATE` / `CUBEVALUE`), **the backend tool may still return `updated_cells_count=N, rc=0` "success"** — the error will be silently written into the cell and displayed as `#VALUE!` / `#NAME?` / `#REF!`. Therefore:
+1. **Read back immediately after writing**: After `+cells-set`, immediately follow with `+csv-get` (or `+cells-get`) to read the first, middle, last, and summary rows of the target range, check for error values, and verify `formula`; for AI formulas, at this step only do **one** formula text check (`+cells-get --include formula` to look at the seed cell / first cell, confirming that quotes / parentheses were not broken at the shell / CSV / JSON layer and that what landed is indeed `=AI(...)`). Do not use it to poll calculation results — for calculation status, use `+formula-verify --ai-only`
+2. **Run diagnostics segment by segment**: Call `+formula-verify --exit-on-error` on the formula ranges added / modified this time; `partial` split into smaller chunks and continue scanning, and only complete after all segments are `status='success'`. AI formulas do not follow this rule: instead use `+formula-verify --ai-only` to deliver according to the full-range one-time asynchronous status check rule (fix `failed` / `unsupported` first; if only pending remains, it can be delivered with an explanation that background calculation is still in progress; see `references/lark-sheets-formula-verify.md` for details)
+3. **When you see an error value starting with `#`**, fix the formula immediately: `#NAME?` is most likely a misspelled function name or use of a function not supported by Feishu (e.g., `GOOGLETRANSLATE` / the CUBE series; note that `UNIQUE` / `FILTER` are supported by Feishu); `#VALUE!` is most likely a type mismatch or misplaced parentheses; `#REF!` is a reference error; `~CIRCULAR~REF~` is a circular reference (the formula references itself or forms a closed loop)
+4. **Verify the template before extending with `--copy-to-range`**: If the template cell formula itself calculates incorrectly, copying it with `--copy-to-range` to 100 rows means 100 errors
+5. **Deduplication / filtering functions**: Feishu **supports** `UNIQUE` / `FILTER` (native array functions; see `references/lark-sheets-formula-translation.md` for details), and they can be used directly; `DISTINCT` is not a Feishu function — for deduplication use `UNIQUE`. For large-data deduplication / grouping, you can also use a pivot table (`+pivot-{create|update|delete}`, with the value field aggregation method set to count)
+6. **Circular reference pre-check**: Before writing aggregate formulas (SUM / AVERAGE / COUNT, etc.), it is recommended to make clear that **the reference range does not include the target cell itself or its transitive dependencies**. Typical counterexample: writing `=SUMIF(B:B,LEFT(B3,9)&"*",C:C)` in C3, where column B matches the first 9 characters of B3 and C3 itself also matches, causing C3 to self-reference → `~CIRCULAR~REF~`. Fix: use a helper column / explicitly exclude itself (`SUMIFS(C:C, B:B, ..., A:A, "<>"&A3)`) / narrow the range to avoid itself
+7. **Coverage verification for text extraction formulas**: Before extracting data from text with `LEFT` / `MID` / `FIND` / `SUBSTITUTE` / `TEXTSPLIT`, etc., it is recommended to use a local script to run a hit-rate statistic over the **entire column of source data** (`df[col].str.contains(pattern).mean()`); when the hit rate is < 100%, prioritize adding branches (IFS / multiple chained IFERRORs) as a fallback, or switch to using a local script to calculate and write static values. **Avoid** delivering after covering only the first N sample rows (typical counterexample: extracting values from dimension text with a prefix like "length 123", which directly misses matches for other formats such as "width×height", "×", "*", etc.)
+8. **Formula ranges must align literally with user instructions**: When the user says "sum columns F through L", prioritize writing `SUM(F2:L2)` or `F2+G2+H2+I2+J2+K2+L2`, and **do not omit columns, add columns, or use the wrong columns**. After writing, use `+cells-get` to get back the `formula` string and compare it word by word with the user's original wording (the column names participating in the sum are consistent / the start and end column numbers are consistent / the operators are consistent); any inconsistency is a risk
+9. **Pre-check dimensions / unit conversion / quantity multiplication terms (formulas do not error but results are off by a whole multiple)**: Before extracting numbers from text for calculation, first verify **whether units are unified, whether quantity multiplication was omitted, and whether the basis is consistent** — such errors let formulas run through with no `#` error, and readback cannot reveal them either (the values "look right"). It is recommended to use a local script to **manually calculate the expected values offline** for 3–5 representative rows, and compare the magnitude cell by cell against the formula results: ① If units are inconsistent, unify them before calculating (typical counterexample: dimensions `320CM*337CM` are taken directly, multiplied, and divided by 1e6 to get 0.11, but the correct result after CM→MM conversion is 10.78, **a 100-fold difference**); ② For quantities based on "single item × quantity", it is recommended to multiply by the quantity column (typical counterexample: side panel area omits multiplication by the quantity in column F, so rows with F=2 calculate only half); ③ Align the basis of standard values (typical counterexample: nutrient composition mg/kg and g/100g bases are mixed, magnifying the entire column by 100 times). **If any one of basis / unit / quantity is wrong, the entire column's calculation result is wrong; such errors do not make formulas error and are not easy to spot on readback, so it is recommended to rely on offline manual calculation for comparison.**
 
-**公式写入后的诊断入口是 `+formula-verify`**：`+csv-get` / `+cells-get` 的抽样回读只能快速发现明显错误，覆盖不到整列中段、隐藏行、被条件格式遮蔽的错误，也看不到 `partial` 截断。只要本次 `+cells-set` / `--copy-to-range` / `+csv-put` 实际写入了公式，就按上方流程对目标范围逐段运行 `+formula-verify --exit-on-error`。AI 公式改走 `--ai-only` 的全区间一次异步状态检查，不按 `status='success'` 收敛。
+**The diagnostic entry point after formula writing is `+formula-verify`**: The sampled readback of `+csv-get` / `+cells-get` can only quickly discover obvious errors; it does not cover errors in the middle of a whole column, hidden rows, or errors obscured by conditional formatting, nor can it see `partial` truncation. As long as this operation actually wrote formulas via `+cells-set` / `--copy-to-range` / `+csv-put`, run `+formula-verify --exit-on-error` segment by segment over the target range according to the process above. AI formulas instead use the full-range one-time asynchronous status check of `--ai-only`, and do not converge according to `status='success'`.
 
-⚠️ **收到 `formula_errors` 反馈后不建议只打补丁**：`+cells-set` 返回值里若出现 `formula_errors: [{cell, formula, error_type, detail}]`，说明某些 cell 公式编译失败（`error_type=compile_failed` 通常是函数语法错，如对数组结果直接写 `[1]` 下标取值——飞书不支持这种写法，取第 N 项要用 `INDEX(<数组表达式>, N)`；`non_formula` 是 `=` 开头但解析不通过）。此时**避免只聚焦修报错点的局部语法**（如仅把 `[1]` 换成 `INDEX(..,1)`），建议：
+⚠️ **After receiving `formula_errors` feedback, it is not recommended to only patch it**: If `formula_errors: [{cell, formula, error_type, detail}]` appears in the return value of `+cells-set`, it means some cell formulas failed to compile (`error_type=compile_failed` is usually a function syntax error, such as directly writing `[1]` index access on an array result — Feishu does not support this syntax; to get the Nth item, use `INDEX(<数组表达式>, N)`; `non_formula` starts with `=` but fails to parse). At this point, **avoid focusing only on fixing the local syntax at the reported error point** (e.g., only replacing `[1]` with `INDEX(..,1)`). It is recommended to:
 
-1. **重新审视整条公式的完整性**：被 formula_errors 标出的那一行，公式除了下标语法错，还可能有其他先天缺陷（字符清洗不全、IFERROR 兜底漏条件、引用列写错），修完语法错后立即整体复核
-2. **同步对称修复所有相似列**：如果同一任务涉及多列相似处理（如"算 H 列面积"用 D 列尺寸、"算 I 列面积"用 E 列尺寸），**修完一列建议把同样的清洗/兜底逻辑同步到所有相似列**，避免出现 H 列用 `SUBSTITUTE(长)+SUBSTITUTE(高)+SUBSTITUTE(×)` 而 I 列只用 `SUBSTITUTE(×)` 这种不对称处理——会导致一列编译通过有值、另一列编译通过但 IFERROR 全返回空，用户看到的是"数据为空"而非"公式错"
-3. **修完再读回验证**：不只看 `formula_errors` 为空（这只证明编译通过，不证明运行时有值），建议 `+csv-get` 读目标列前 3-5 行，确认**非空源数据对应的目标列有非空计算结果**
-4. **核心心智**：`formula_errors` 是"帮你暴露编译错"的工具，不是"修掉它就收工"的通行证。编译通过 + 运行时 IFERROR 兜底空 = 用户视角的"没算出来"
+1. **Re-examine the completeness of the entire formula**: For the row marked by formula_errors, besides the index syntax error, the formula may also have other inherent defects (incomplete character cleaning, missing conditions in the IFERROR fallback, wrong referenced column). After fixing the syntax error, immediately review the whole formula
+2. **Symmetrically fix all similar columns at the same time**: If the same task involves similar processing for multiple columns (e.g., "calculate column H area" using column D dimensions, "calculate column I area" using column E dimensions), **after fixing one column, it is recommended to synchronize the same cleaning/fallback logic to all similar columns**, avoiding asymmetric handling such as column H using `SUBSTITUTE(长)+SUBSTITUTE(高)+SUBSTITUTE(×)` while column I only uses `SUBSTITUTE(×)` — this would cause one column to compile and have values, while the other compiles but all IFERRORs return empty, so what the user sees is "empty data" rather than "formula error"
+3. **After fixing, read back to verify**: Do not only check that `formula_errors` is empty (this only proves compilation passed, not that there are runtime values). It is recommended to use `+csv-get` to read the first 3-5 rows of the target column and confirm that **target columns corresponding to non-empty source data have non-empty calculation results**
+4. **Core mindset**: `formula_errors` is a tool that "helps expose compilation errors", not a pass that means "once you fix it, you're done". Compilation passed + runtime IFERROR fallback empty = from the user's perspective, "it didn't calculate"
 
-⚠️ **新增行的边框/样式避免用 `{}` 跳过**：`cells` 数组里 `{}` 的语义是"**此单元格不做任何修改、保留原状态**"。这在写入**已有行**时是安全的（原有边框/样式保持不变），但在写入**新行**（比如表尾追加汇总行、扩展行）时是灾难：新行底子里本来就没边框，`{}` 不修改 = 保留无边框状态，导致该 cell 视觉断裂。
+⚠️ **Avoid using `{}` to skip borders/styles for newly added rows**: In the `cells` array, the semantics of `{}` is "**make no modification to this cell and preserve its original state**". This is safe when writing to **existing rows** (the original borders/styles remain unchanged), but it is disastrous when writing to **new rows** (such as appending a summary row at the end of the table or extending rows): the new row's underlying state originally has no borders, and `{}` not modifying it = preserving the no-border state, causing that cell to visually break.
 
-⚠️ **"汇总行"识别 → 读 `references/lark-sheets-visual-standards.md` 拿完整样式规范**：下述双重条件**同时满足**才是汇总行，避免仅凭"有 AVERAGE"就判定：
-- **语义信号**（二选一）：用户 prompt 含"合计/汇总/总计/统计/各科平均分/最下面加一行算…/底部总计"等意图词；或上下文明确是"表尾追加一行做聚合"
-- **结构信号**：新行全行都在做聚合（含 `=SUM/AVERAGE/COUNT/MAX/MIN/SUBTOTAL(...)`，支持 IFERROR 包裹），**不是**单个 cell 算个参考值或每行都算的派生列
+⚠️ **Identifying a "summary row" → read `references/lark-sheets-visual-standards.md` to get the complete style specification**: Only when the following dual conditions are **both satisfied** is it a summary row; avoid judging solely because "there is an AVERAGE":
+- **Semantic signal** (choose one of two): the user prompt contains intent words such as "total/summary/grand total/statistics/average score for each subject/add a row at the bottom to calculate.../bottom total"; or the context clearly indicates "append a row at the end of the table for aggregation"
+- **Structural signal**: the entire new row is doing aggregation (including `=SUM/AVERAGE/COUNT/MAX/MIN/SUBTOTAL(...)`, supporting IFERROR wrapping), and is **not** a single cell calculating a reference value or a derived column calculated for every row
 
-满足上述时，**不要在本文里猜样式**，直接去读 `references/lark-sheets-visual-standards.md` 的「场景一 → 1A. 添加汇总行 / 表头行」章节，按那里的样式要点配齐 `font.bold / horizontal_alignment / background_color / border_styles`。
+When the above is satisfied, **do not guess the style in this document**; go directly to read the "Scenario 1 → 1A. Add summary row / header row" section of `references/lark-sheets-visual-standards.md`, and configure `font.bold / horizontal_alignment / background_color / border_styles` completely according to the style points there.
 
-反例（**不是**汇总行，避免自动加粗）：
-- 用户说"在 H5 帮我算个 AVERAGE 参考"→ 单 cell 计算
-- 每行都有 `=AVERAGE(本行区间)` 的派生列 → 属数据列
-- 用户明确说"不要加粗/样式和数据行保持一致"→ 遵循用户意图
+Counterexamples (**not** summary rows; avoid automatically bolding):
+- The user says "help me calculate an AVERAGE reference in H5" → single-cell calculation
+- A derived column where every row has `=AVERAGE(本行区间)` → belongs to data columns
+- The user explicitly says "do not bold / keep styles consistent with data rows" → follow the user's intent
 
-**正确做法**（二选一）：
+**Correct approaches** (choose one of two):
 
-- **做法 A（推荐）**：先按正确类型写 value / formula，再用 `+cells-set-style` 或 `+styles-put` 对整行补齐 `cell_styles` + `border_styles`；不要用 `--copy-to-range` 纯刷样式。汇总行的 bold / 背景色 / 上边框见 `references/lark-sheets-visual-standards.md` 的「场景一 → 1A. 添加汇总行 / 表头行」。
-- **做法 B**：一次写入，但每个 cell（含空白格）都显式带 `cell_styles` + `border_styles`，**不能用 `{}`**。
+- **Approach A (recommended)**: First write value / formula according to the correct type, then use `+cells-set-style` or `+styles-put` to fill in `cell_styles` + `border_styles` for the entire row; do not use `--copy-to-range` to purely brush styles. For the summary row's bold / background color / top border, see "Scenario 1 → 1A. Add summary row / header row" in `references/lark-sheets-visual-standards.md`.
+- **Approach B**: Write in one pass, but every cell (including blank cells) explicitly carries `cell_styles` + `border_styles`, and **`{}` cannot be used**.
 
-**判断是不是"新行"**：写入 range 超出 `+csv-get` 返回的 `current_region` 右 / 下边界（如 `current_region=A1:H10`、写 `A11:H11`）即新行，建议按上述做法补边框。
+**Determining whether it is a "new row"**: If the write range exceeds the right / bottom boundary of `current_region` returned by `+csv-get` (e.g., `current_region=A1:H10`, writing `A11:H11`), it is a new row, and it is recommended to add borders according to the approaches above.
 
-## 富文本单元格：超链接 / @人 / @文档（`rich_text`）
+<a id="富文本单元格超链接--人--文档rich_text"></a>
+## Rich text cells: hyperlinks / @mentions / @documents (`rich_text`)
 
-带显示文本的超链接、@人、@文档这类富内容**建议**走 `+cells-set` 的 `rich_text` 字段（`cells[].rich_text` 数组，每段一个对象、带 `type`），**不能**直接传普通字符串——纯字符串只会被当作纯文本存进单元格。完整字段跑 `lark-cli sheets +cells-set --print-schema --flag-name cells`，常用段类型：
+Rich content such as hyperlinks with display text, @mentions, and @documents **is recommended** to go through the `rich_text` field of `+cells-set` (`cells[].rich_text` array, one object per segment, with `type`), and **cannot** be passed directly as an ordinary string — a plain string will only be stored in the cell as plain text. For the complete fields, run `lark-cli sheets +cells-set --print-schema --flag-name cells`. Common segment types:
 
-- **超链接（带显示文本）**：`{"type":"link","text":"飞书","link":"https://www.feishu.cn"}`。纯 URL 不需要 `rich_text`，直接写普通字符串即可。
-- **@人**：`{"type":"mention","mention_token":"<userId>","notify":false}`。**仅支持同租户用户，单次写入最多 50 人。** `notify` **默认 `true`**（会给被 @ 的人发通知），不想发务必显式传 `false`。
-- **@文档**：同样 `"type":"mention"`，`mention_token` 传文档 token（如 `shtXXX`）。
+- **Hyperlink (with display text)**: `{"type":"link","text":"飞书","link":"https://www.feishu.cn"}`. A plain URL does not need `rich_text`; just write an ordinary string directly.
+- **@mention**: `{"type":"mention","mention_token":"<userId>","notify":false}`. **Only same-tenant users are supported, with a maximum of 50 people per write.** `notify` **defaults to `true`** (it will send a notification to the mentioned person); if you do not want to send one, be sure to explicitly pass `false`.
+- **@document**: Also `"type":"mention"`; pass the document token in `mention_token` (e.g., `shtXXX`).
 
-`mention_type`（类型编号）等可选字段以 `--print-schema` 输出为准。
+Optional fields such as `mention_type` (type number) are subject to the output of `--print-schema`.
 
-> ⚠️ `rich_text` 一旦设置会**忽略**同一 cell 的 `value`；它与 `formula` / `multiple_values` 三者只能选其一作为内容字段（可叠加 `cell_styles` / `note` 等）。
+> ⚠️ Once `rich_text` is set, it will **ignore** `value` in the same cell; it, `formula`, and `multiple_values` can only choose one as the content field (they can be combined with `cell_styles` / `note`, etc.).
 
-## Dropdown 选项 + 配色（`+dropdown-set` / `+dropdown-update`）
+<a id="dropdown-选项--配色dropdown-set--dropdown-update"></a>
+## Dropdown options + colors (`+dropdown-set` / `+dropdown-update`)
 
-### 选项怎么来：`--options` 与 `--source-range` 二选一
+<a id="选项怎么来--options-与---source-range-二选一"></a>
+### Where options come from: choose one of `--options` and `--source-range`
 
-| flag | 选项来源 | 适用场景 |
+| flag | Option source | Applicable scenario |
 |---|---|---|
-| `--options '["a","b","c"]'` | 写在命令里的固定列表 | 选项集是常量、不需要事后维护 |
-| `--source-range ''\''Sheet1'\''!T1:T3'` | 已有单元格里的值 | 选项要跟数据动态同步；想维护一张「枚举值」列后多处引用 |
+| `--options '["a","b","c"]'` | Fixed list written in the command | The option set is constant and does not need later maintenance |
+| `--source-range ''\''Sheet1'\''!T1:T3'` | Values in existing cells | Options need to stay dynamically synchronized with data; you want to maintain an "enum values" column and reference it in multiple places |
 
-两个 flag **必须传一个、且只能传一个**——同时传或都不传，CLI 会立刻报错。`--source-range` 用 A1 + sheet 前缀写法（如 `'Sheet1'!T1:T3`，sheet 名按 A1 标准单引号包裹），可以指同 sheet 也可以指其它 sheet（如 `'Refs'!A1:A10`）。
+The two flags **must pass one, and only one** — if both are passed or neither is passed, the CLI will immediately error. `--source-range` uses A1 with a sheet prefix (e.g., `'Sheet1'!T1:T3`; the sheet name is wrapped in single quotes according to the A1 standard). It can refer to the same sheet or another sheet (e.g., `'Refs'!A1:A10`).
 
-### 多选下拉：验证规则与选中值是两层数据
+<a id="多选下拉验证规则与选中值是两层数据"></a>
+### Multi-select dropdown: validation rules and selected values are two layers of data
 
-`+dropdown-set --multiple` 只把目标单元格的验证规则设为“允许多选”，**不会写入当前选中值**。后续用 `+cells-set` 填充多选结果时，必须把每个选项写成 `multiple_values` 数组项；不要把多个选项用逗号拼成一个普通 `value`，否则整串会被当成单值并触发数据验证失败。
+`+dropdown-set --multiple` only sets the target cell's validation rule to "allow multiple selections" and **does not write the currently selected values**. When later using `+cells-set` to fill in multi-select results, each option must be written as an item in the `multiple_values` array; do not join multiple options with commas into a single ordinary `value`, otherwise the whole string will be treated as a single value and trigger data validation failure.
 
 ```bash
-# 先创建允许多选的下拉规则
+# First create a dropdown rule that allows multiple selections
 lark-cli sheets +dropdown-set \
   --spreadsheet-token shtXXX --sheet-id "$SID" \
   --range "E2:E15" \
   --options '["A","B","C","D"]' \
   --multiple
 
-# 再向 E6 写入 3 个选中值
+# Then write 3 selected values to E6
 lark-cli sheets +cells-set \
   --spreadsheet-token shtXXX --sheet-id "$SID" \
   --range "E6" \
   --cells '[[{"multiple_values":[{"value":"A"},{"value":"B"},{"value":"C"}]}]]'
 ```
 
-### 配色：新建默认用内置色板，更新保留已有配色
+<a id="配色新建默认用内置色板更新保留已有配色"></a>
+### Colors: new creation uses the built-in palette by default; updates preserve existing colors
 
-下拉**默认带胶囊高亮**——新建时不传 `--highlight` / `--colors`，所有选项按内置 10 色色板循环上色，跟 UI 手动配下拉的默认行为对齐。只有用户明确指定自定义颜色，或选项具有清晰的语义配色（如状态、风险、优先级，且颜色有助于理解）时才传 `--colors`。
+Dropdowns **have capsule highlighting by default** — when creating, do not pass `--highlight` / `--colors`; all options are colored cyclically according to the built-in 10-color palette, aligning with the default behavior of manually configuring dropdowns in the UI. Pass `--colors` only when the user explicitly specifies custom colors, or when the options have clear semantic coloring (such as status, risk, priority, and the colors help understanding).
 
-下拉胶囊文字默认是黑色。自定义颜色时应使用**浅色、低饱和度背景**，避免鲜艳或偏深的色值影响可读性。
+Dropdown capsule text is black by default. When customizing colors, use **light, low-saturation backgrounds** to avoid vivid or dark color values affecting readability.
 
-`+dropdown-update` 会重写整条验证规则。若用户没有要求重置已有配色，先用 `+dropdown-get` 回读，并把现有 `highlight_colors` 作为 `--colors` 传回；省略会按内置色板重建。
+`+dropdown-update` rewrites the entire validation rule. If the user has not asked to reset existing colors, first use `+dropdown-get` to read back, and pass the existing `highlight_colors` back as `--colors`; omitting it will rebuild according to the built-in palette.
 
-| 想要的效果 | 怎么传 |
+| Desired effect | How to pass |
 |---|---|
-| 新建时使用默认色板 | 都不传 `--highlight` / `--colors` |
-| 更新时保留已有配色 | 先 `+dropdown-get` 回读，再将 `highlight_colors` 作为 `--colors` 传回 |
-| 用户明确要求或选项有语义配色 | 只传浅色、低饱和度的 `--colors '["#hex",...]'`（不需要再传 `--highlight`） |
-| 纯白下拉、不要高亮 | 传 `--highlight=false`（注意 `=false` 不能省，单写 `--highlight` 在 cobra 里等价于 true） |
+| Use the default palette when creating | Pass neither `--highlight` / `--colors` |
+| Preserve existing colors when updating | First read back with `+dropdown-get`, then pass `highlight_colors` back as `--colors` |
+| The user explicitly requests it, or the options have semantic coloring | Pass only light, low-saturation `--colors '["#hex",...]'` (no need to pass `--highlight`) |
+| Pure white dropdown, no highlighting | Pass `--highlight=false` (note that `=false` cannot be omitted; writing only `--highlight` in cobra is equivalent to true) |
 
-`--colors` 长度**可以短于**选项数（list 模式短于 `--options` 长度，listFromRange 模式短于 `--source-range` 的单元格数），未指定的选项按内置色板循环补色；但**不能长于**——CLI 在 Validate 阶段就会拦截，错误形如 `--colors length (4) must not exceed dropdown source size (3)`。
+The length of `--colors` **can be shorter than** the number of options (in list mode, shorter than the length of `--options`; in listFromRange mode, shorter than the number of cells in `--source-range`); unspecified options are filled cyclically according to the built-in palette; but it **cannot be longer than** — the CLI will intercept it at the Validate stage, with an error like `--colors length (4) must not exceed dropdown source size (3)`.
 
-当 `--highlight=false` 显式关闭高亮时，`--colors` 即使传了也会被忽略（语义自相矛盾，但不报错）。
+When `--highlight=false` explicitly disables highlighting, `--colors` will be ignored even if passed (the semantics are self-contradictory, but no error is reported).
 
-### 最小用例
+<a id="最小用例"></a>
+### Minimal use cases
 
-**`--options` 模式 — 默认色板（最常见）**：
+**`--options` mode — default palette (most common)**:
 
 ```bash
 lark-cli sheets +dropdown-set \
@@ -250,7 +261,7 @@ lark-cli sheets +dropdown-set \
   --options '["待开始","进行中","已完成","已取消"]'
 ```
 
-**用户明确要求语义配色时**：
+**When the user explicitly requests semantic coloring**:
 
 ```bash
 lark-cli sheets +dropdown-set \
@@ -260,7 +271,7 @@ lark-cli sheets +dropdown-set \
   --colors '["#E8F3FF","#FFF3D6","#E8F8E8"]'
 ```
 
-**`--source-range` 模式**（先在 `'Sheet1'!T1:T3` 维护「男/女/保密」三行，再让 `B2:B21` 引用它）：
+**`--source-range` mode** (first maintain the three rows "Male/Female/Confidential" in `'Sheet1'!T1:T3`, then have `B2:B21` reference it):
 
 ```bash
 lark-cli sheets +dropdown-set \
@@ -269,7 +280,7 @@ lark-cli sheets +dropdown-set \
   --source-range ''\''Sheet1'\''!T1:T3'
 ```
 
-**纯白下拉**（明确告诉用户"不要彩色"时才用）：
+**Pure white dropdown** (use only when explicitly telling the user "no colors"):
 
 ```bash
 lark-cli sheets +dropdown-set \
@@ -279,135 +290,135 @@ lark-cli sheets +dropdown-set \
   --highlight=false
 ```
 
-> ⚠️ **`--source-range` 必须带 sheet 前缀**（即使跟 `--range` 同 sheet）。注意一个坑：回读这种 listFromRange 下拉单元格时，`data_validation.range` 看起来不带 sheet 前缀（形如 `$T$1:$T$3`），如果要把读出来的 range 反过来写回 `--source-range`，**必须自己重新补上 sheet 前缀**，否则会被拒。
+> ⚠️ **`--source-range` must include the sheet prefix** (even if it is the same sheet as `--range`). Note a pitfall: when reading back such a listFromRange dropdown cell, `data_validation.range` appears not to include the sheet prefix (in the form `$T$1:$T$3`). If you want to write the read-out range back to `--source-range`, **you must re-add the sheet prefix yourself**, otherwise it will be rejected.
 >
-> ⚠️ **`--ranges` 类批量 flag 的 sheet 前缀必须「裸写」**——`+cells-batch-clear` / `+dropdown-update` / `+dropdown-delete` 的 `--ranges` 解析器不接受引号：表名含点或空格（如 `2025.9`、`一月份`）也直接写 `2025.9!A1`，写成 `'2025.9'!A1` 会被当成表名一部分、报 `sheet not found`。**但 `--source-range`、透视表 `--source`、`--range` 走 A1 标准**：sheet 名带单引号（如 `'Sheet1'!A1:B2`）是标准写法、裸写也接受，回读统一返回带引号形式——别把 `--ranges` 的裸写要求套到这些 flag 上。
+> ⚠️ **The sheet prefix for batch flags like `--ranges` must be written "bare"** — the `--ranges` parser for `+cells-batch-clear` / `+dropdown-update` / `+dropdown-delete` does not accept quotes: even if the sheet name contains dots or spaces (e.g., `2025.9`, `一月份`), write `2025.9!A1` directly; writing `'2025.9'!A1` will be treated as part of the sheet name and report `sheet not found`. **But `--source-range`, pivot table `--source`, and `--range` follow the A1 standard**: a sheet name with single quotes (e.g., `'Sheet1'!A1:B2`) is the standard form, and bare writing is also accepted; readback uniformly returns the quoted form — do not apply the bare-writing requirement of `--ranges` to these flags.
 
-`+dropdown-update`（多 range 批量更新）的目标 `--ranges` 是 JSON 数组（每项带 sheet 前缀），同一份选项 + 配色应用到所有 range。它会替换完整验证规则；需要保留现有配色时，按上文先回读并透传 `--colors`。
+`+dropdown-update` (multi-range batch update) targets `--ranges` as a JSON array (each item with a sheet prefix), applying the same options + colors to all ranges. It replaces the complete validation rule; when existing colors need to be preserved, first read back and pass through `--colors` as described above.
 
 ## Shortcuts
 
-| Shortcut | Risk | 分组 |
+| Shortcut | Risk | Group |
 | --- | --- | --- |
-| `+cells-set` | write | 单元格 |
-| `+cells-set-style` | write | 单元格 |
-| `+cells-set-image` | write | 单元格 |
-| `+dropdown-set` | write | 对象 |
-| `+csv-put` | write | 单元格 |
-| `+table-put` | write | 单元格 |
+| `+cells-set` | write | Cell |
+| `+cells-set-style` | write | Cell |
+| `+cells-set-image` | write | Cell |
+| `+dropdown-set` | write | Object |
+| `+csv-put` | write | Cell |
+| `+table-put` | write | Cell |
 
 ## Flags
 
 ### `+cells-set`
 
-_公共四件套 · 系统：`--dry-run`_
+_Common four-piece set · System: `--dry-run`_
 
-| Flag | Type | 必填 | 说明 |
+| Flag | Type | Required | Description |
 | --- | --- | --- | --- |
-| `--range` | string | xor | 写入区域（A1 格式）。与 `--writes` 二选一（单区域用 --range+--cells，多区域用 --writes） |
-| `--start-cell` | string | optional | `--range` 的别名（与 `+csv-put` 一致，用 --start-cell 定左上角锚点）；传区间时按区间左上角起写（隐藏 flag：不在 `--help` 列出，但可正常传入） |
-| `--cells` | string + File + Stdin（复合 JSON） | xor | JSON：2D 数组 `[[{cell},...],...]`；裸 `--range A1`（或 `--start-cell`）是左上角锚点，写入范围按本数组的行列数推断；`--range` 写成矩形（`A1:B2`）则是边界——本数组比它小会收窄，比它大会被拒绝。每个 cell 可含 `value` / `formula` / `multiple_values` / `cell_styles` / `note` / `rich_text`（含 `type="embed-image"` 单元格嵌图）等。向启用多选的下拉单元格写入选中值时，必须用 `multiple_values:[{"value":...}]`，不要把多个选项用逗号拼成一个 `value`；完整字段跑 `--print-schema` |
-| `--writes` | string + File + Stdin（复合 JSON） | xor | 多区域写入 JSON 数组（最多 100 项），每项 `{sheet_name\|sheet_id, range, cells}`——**跨 sheet 的项把 sheet 定位写在项里**（与 +batch-update 子操作、+styles-put 项同惯例），项内没写则取顶层 `--sheet-name` / `--sheet-id`，cells 结构同 `--cells`（二维数组，可逐格带 cell_styles/border_styles）。整批展开为**单次批量提交**（fail-fast，失败后先回读再补发），支持跨 sheet；典型场景：批量修复散布多处的公式、跨表同构写入——不要为此拼 +batch-update 的 --operations。与 `--range`+`--cells` 二选一；范围级统一样式不在此做，写完接 +styles-put |
-| `--allow-overwrite` | bool | optional | 允许覆盖非空 cell（默认 true）；设为 false 时遇非空 cell 报错 |
-| `--max-cells` | int | optional | 防爆，默认 50000（隐藏 flag：不在 `--help` 列出，但可正常传入） |
-| `--copy-to-range` | string | optional | 复制范围（A1 表示法）：把 --range 中 --cells 写入的内容（值/公式/样式，取决于实际传入字段）复制到该区域，公式引用自动平移（如 C2=B2 → C3=B3）。适合先写一行/一块模板再扩展填充整列/整区域（如 --range A1:G1 写模板、--copy-to-range A1:G100 填充 100 行）。支持整行 3:6、整列 C:E、到列尾 D3:D、到行尾 D3:3；支持英文逗号分隔多个目标区域，如 C1:D2,E5:F6 |
+| `--range` | string | xor | Write range (A1 format). Choose one of this and `--writes` (for a single range use --range+--cells; for multiple ranges use --writes) |
+| `--start-cell` | string | optional | Alias of `--range` (consistent with `+csv-put`; use --start-cell to set the top-left anchor); when a range is passed, writing starts from the top-left corner of the range (hidden flag: not listed in `--help`, but can be passed normally) |
+| `--cells` | string + File + Stdin (composite JSON) | xor | JSON: 2D array `[[{cell},...],...]`; a bare `--range A1` (or `--start-cell`) is the top-left anchor, and the write range is inferred from the number of rows and columns in this array; if `--range` is written as a rectangle (`A1:B2`), that is the boundary — if this array is smaller than it, it narrows; if larger, it is rejected. Each cell may contain `value` / `formula` / `multiple_values` / `cell_styles` / `note` / `rich_text` (including `type="embed-image"` embedded cell images), etc. When writing selected values to a multi-select-enabled dropdown cell, you must use `multiple_values:[{"value":...}]`; do not join multiple options with commas into a single `value`; for the complete fields, run `--print-schema` |
+| `--writes` | string + File + Stdin (composite JSON) | xor | Multi-range write JSON array (up to 100 items), each item `{sheet_name\|sheet_id, range, cells}` — **for cross-sheet items, put the sheet location inside the item** (same convention as +batch-update sub-operations and +styles-put items); if not written inside the item, take the top-level `--sheet-name` / `--sheet-id`; the cells structure is the same as `--cells` (2D array, can carry cell_styles/border_styles per cell). The whole batch expands into a **single batch submission** (fail-fast; after failure, read back first and then resend), and supports cross-sheet; typical scenarios: batch-fixing formulas scattered in multiple places, cross-table isomorphic writes — do not assemble +batch-update --operations for this. Choose one of this and `--range`+`--cells`; range-level uniform styles are not done here — after writing, follow with +styles-put |
+| `--allow-overwrite` | bool | optional | Allow overwriting non-empty cells (default true); when set to false, error on encountering a non-empty cell |
+| `--max-cells` | int | optional | Explosion protection, default 50000 (hidden flag: not listed in `--help`, but can be passed normally) |
+| `--copy-to-range` | string | optional | Copy range (A1 notation): copy the content written by --cells in --range (values/formulas/styles, depending on the fields actually passed) to this area, with formula references automatically shifted (e.g., C2=B2 → C3=B3). Suitable for first writing one row/block as a template and then extending to fill the entire column/area (e.g., --range A1:G1 to write the template, --copy-to-range A1:G100 to fill 100 rows). Supports whole rows 3:6, whole columns C:E, to column end D3:D, to row end D3:3; supports multiple target ranges separated by English commas, such as C1:D2,E5:F6 |
 
 ### `+cells-set-style`
 
-_公共四件套 · 系统：`--dry-run`_
+_Common four-piece set · System: `--dry-run`_
 
-| Flag | Type | 必填 | 说明 |
+| Flag | Type | Required | Description |
 | --- | --- | --- | --- |
-| `--range` | string | required | 目标范围（A1 格式，如 `A1:B2`） |
-| `--background-color` | string | optional | 背景颜色（十六进制，如 `#ffffff`） |
-| `--font-color` | string | optional | 字体颜色（十六进制，如 `#000000`） |
-| `--font-family` | string | optional | 字体名称（如 `Arial`、`微软雅黑`） |
-| `--font-size` | float64 | optional | 字体大小（px，例：10、12、14） |
-| `--font-style` | string | optional | 字体样式（可选值：`normal` / `italic`） |
-| `--font-weight` | string | optional | 字重（可选值：`normal` / `bold`） |
-| `--font-line` | string | optional | 字体线条样式（可选值：`none` / `underline` / `line-through`） |
-| `--horizontal-alignment` | string | optional | 水平对齐（可选值：`left` / `center` / `right`） |
-| `--vertical-alignment` | string | optional | 垂直对齐（可选值：`top` / `middle` / `bottom`） |
-| `--word-wrap` | string | optional | 换行策略（可选值：`overflow` / `auto-wrap` / `word-clip`） |
-| `--number-format` | string | optional | 数字格式（例：文本 `@`、数字 `0.00`、货币 `$#,##0.00`、日期 `mm/dd/yyyy`） |
-| `--border-styles` | string + File + Stdin（复合 JSON） | optional | 边框配置 JSON：`{ top: {style,weight,color}, bottom: ..., left: ..., right: ... }`；4 方向结构相同。style = 线型（solid\|dashed\|dotted\|double\|none）；weight = 粗细（thin\|medium\|thick —— 字符串，不是像素数字）；color = 十六进制如 #000000。`{ all: {...} }` 一次设置四边。边框只有这一个 flag：不存在 --border-all / --border-top / --border-color |
+| `--range` | string | required | Target range (A1 format, e.g. `A1:B2`) |
+| `--background-color` | string | optional | Background color (hex, e.g. `#ffffff`) |
+| `--font-color` | string | optional | Font color (hex, e.g. `#000000`) |
+| `--font-family` | string | optional | Font name (e.g. `Arial`, `微软雅黑`) |
+| `--font-size` | float64 | optional | Font size (px, e.g. 10, 12, 14) |
+| `--font-style` | string | optional | Font style (allowed values: `normal` / `italic`) |
+| `--font-weight` | string | optional | Font weight (allowed values: `normal` / `bold`) |
+| `--font-line` | string | optional | Font line style (allowed values: `none` / `underline` / `line-through`) |
+| `--horizontal-alignment` | string | optional | Horizontal alignment (allowed values: `left` / `center` / `right`) |
+| `--vertical-alignment` | string | optional | Vertical alignment (allowed values: `top` / `middle` / `bottom`) |
+| `--word-wrap` | string | optional | Wrap strategy (allowed values: `overflow` / `auto-wrap` / `word-clip`) |
+| `--number-format` | string | optional | Number format (e.g. text `@`, number `0.00`, currency `$#,##0.00`, date `mm/dd/yyyy`) |
+| `--border-styles` | string + File + Stdin (composite JSON) | optional | Border configuration JSON: `{ top: {style,weight,color}, bottom: ..., left: ..., right: ... }`; the 4 directions share the same structure. style = line type (solid\|dashed\|dotted\|double\|none); weight = thickness (thin\|medium\|thick —— a string, not a pixel number); color = hex such as #000000. `{ all: {...} }` sets all four sides at once. Borders have only this one flag: there is no --border-all / --border-top / --border-color |
 
 ### `+cells-set-image`
 
-_公共四件套 · 系统：`--dry-run`_
+_Common four-piece set · System: `--dry-run`_
 
-| Flag | Type | 必填 | 说明 |
+| Flag | Type | Required | Description |
 | --- | --- | --- | --- |
-| `--range` | string | required | 目标单元格（A1 格式，必须单 cell，如 `A1`；起止 cell 须相同） |
-| `--image` | string | required | 本地图片路径（支持 PNG / JPEG / JPG / GIF / BMP / JFIF / EXIF / TIFF / BPG / HEIC） |
-| `--name` | string | optional | 图片文件名（含扩展名）；省略时取 `--image` 的 basename |
+| `--range` | string | required | Target cell (A1 format, must be a single cell, e.g. `A1`; start and end cell must be the same) |
+| `--image` | string | required | Local image path (supports PNG / JPEG / JPG / GIF / BMP / JFIF / EXIF / TIFF / BPG / HEIC) |
+| `--name` | string | optional | Image file name (including extension); when omitted, the basename of `--image` is used |
 
 ### `+dropdown-set`
 
-_公共四件套 · 系统：`--dry-run`_
+_Common four-piece set · System: `--dry-run`_
 
-| Flag | Type | 必填 | 说明 |
+| Flag | Type | Required | Description |
 | --- | --- | --- | --- |
-| `--range` | string | required | 目标范围（A1 格式，如 `A2:A100`） |
-| `--options` | string + File + Stdin（复合 JSON） | xor | 下拉选项 JSON 数组，例如 `["opt1","opt2"]`。服务端不限制选项数量，也不限制单个选项长度；含逗号的选项可以接受（写入时会自动转义）。大量选项建议改用 `--source-range`。 |
-| `--colors` | string + File + Stdin（简单 JSON） | optional | 下拉胶囊背景色，RGB hex 数组。新建时默认不要传：省略即使用内置 10 色色板；仅在用户明确要求或选项有清晰语义配色时传。胶囊文字默认黑色，应选浅色、低饱和度背景。长度可短不可长——超长 Validate 拦截（`--colors length (N) must not exceed dropdown source size (M)`），未指定项按内置色板循环补色。单独传即生效；`--highlight=false` 时被忽略。 |
-| `--multiple` | bool | optional | 启用多选；默认 `false`。本 flag 只设置验证规则，不会写入选中值；后续用 `+cells-set` 写值时必须传 `multiple_values` 数组，不要传逗号拼接的 `value` |
-| `--highlight` | bool | optional | 下拉胶囊背景色高亮开关。**不传 = 开**（按内置 10 色色板循环上色）；`--highlight=false` 关闭得到纯白下拉。配色用 `--colors` 覆盖。 |
-| `--source-range` | string | xor | listFromRange 模式的下拉源 range，A1 表示法 + sheet 前缀（如 `'Sheet1'!T1:T3`）。映射到 server `data_validation.range`，搭配 server `data_validation.type='listFromRange'` 自动生效。跟 `--options` 二选一：传 `--options` 走 inline 列表（type=list），传本 flag 走 range 引用（type=listFromRange）。`--colors` 长度规则不变（≤ 源 range 单元格数），`--highlight` / `--multiple` 行为相同。当 `--highlight` 开启且 source 覆盖单元格数超过 2000 时，服务端会将该下拉判为 option-error（这是不支持的组合）；CLI 会在返回结果的 `data.warnings` 中给出 warning。如需取消，传 `--highlight=false`。 |
+| `--range` | string | required | Target range (A1 format, e.g. `A2:A100`) |
+| `--options` | string + File + Stdin (composite JSON) | xor | Dropdown option JSON array, e.g. `["opt1","opt2"]`. The server does not limit the number of options, nor the length of a single option; options containing commas are acceptable (they are automatically escaped on write). For a large number of options, it is recommended to use `--source-range` instead. |
+| `--colors` | string + File + Stdin (simple JSON) | optional | Dropdown chip background color, an RGB hex array. When creating, do not pass this by default: omitting it uses the built-in 10-color palette; pass it only when the user explicitly requests it or the options have clear semantic coloring. Chip text is black by default, so choose light, low-saturation backgrounds. The length may be shorter but not longer —— overly long values are blocked by Validate (`--colors length (N) must not exceed dropdown source size (M)`); unspecified items are filled by cycling through the built-in palette. Passing it alone takes effect; it is ignored when `--highlight=false`. |
+| `--multiple` | bool | optional | Enable multi-select; default `false`. This flag only sets the validation rule and does not write selected values; when subsequently writing values with `+cells-set`, you must pass a `multiple_values` array, not a comma-joined `value` |
+| `--highlight` | bool | optional | Dropdown chip background color highlight switch. **Not passing = on** (colors cycle through the built-in 10-color palette); `--highlight=false` turns it off to get a pure white dropdown. Override the coloring with `--colors`. |
+| `--source-range` | string | xor | The dropdown source range for listFromRange mode, A1 notation + sheet prefix (e.g. `'Sheet1'!T1:T3`). Maps to server `data_validation.range`, and takes effect automatically together with server `data_validation.type='listFromRange'`. Choose one of this and `--options`: passing `--options` uses an inline list (type=list), passing this flag uses a range reference (type=listFromRange). The `--colors` length rule is unchanged (≤ the number of cells in the source range), and `--highlight` / `--multiple` behave the same. When `--highlight` is enabled and the source covers more than 2000 cells, the server will judge that dropdown as option-error (this is an unsupported combination); the CLI will give a warning in the returned result's `data.warnings`. To cancel, pass `--highlight=false`. |
 
 ### `+csv-put`
 
-_公共四件套 · 系统：`--dry-run`_
+_Common four-piece set · System: `--dry-run`_
 
-| Flag | Type | 必填 | 说明 |
+| Flag | Type | Required | Description |
 | --- | --- | --- | --- |
-| `--start-cell` | string | required | 目标区域起点 A1（如 `A1`、`B5`，不带 sheet 前缀；用 `--sheet-id` / `--sheet-name` 指定 sheet）；必须是单个单元格，不接受范围写法；终点按 CSV 实际行列数自动推断 |
-| `--csv` | string + File + Stdin（非 JSON 文本） | required | RFC 4180 CSV 文本；可写值或公式（以 = 开头的单元格按公式计算）；不带样式 / 批注 / 图片，需要这些用 +cells-set。 |
-| `--allow-overwrite` | bool | optional | 允许覆盖（默认 true）；设为 false 时若目标非空报错 |
-| `--range` | string | optional | --start-cell 的别名（与 +csv-get / +cells-set 一致，用 --range 定位）；传区间（如 A1:H17）时自动取其左上角单元格（隐藏 flag：不在 `--help` 列出，但可正常传入） |
+| `--start-cell` | string | required | Target area start A1 (e.g. `A1`, `B5`, without a sheet prefix; use `--sheet-id` / `--sheet-name` to specify the sheet); must be a single cell, range notation is not accepted; the end point is automatically inferred from the actual number of rows and columns in the CSV |
+| `--csv` | string + File + Stdin (non-JSON text) | required | RFC 4180 CSV text; can write values or formulas (cells starting with = are computed as formulas); no styles / comments / images, use +cells-set for those. |
+| `--allow-overwrite` | bool | optional | Allow overwrite (default true); when set to false, an error is reported if the target is non-empty |
+| `--range` | string | optional | Alias for --start-cell (consistent with +csv-get / +cells-set, locate with --range); when a range is passed (e.g. A1:H17), its top-left cell is automatically taken (hidden flag: not listed in `--help`, but can be passed normally) |
 
 ### `+table-put`
 
-_公共：URL/token（无 sheet 定位） · 系统：`--dry-run`_
+_Common: URL/token (no sheet positioning) · System: `--dry-run`_
 
-| Flag | Type | 必填 | 说明 |
+| Flag | Type | Required | Description |
 | --- | --- | --- | --- |
-| `--sheets` | string + File + Stdin（复合 JSON） | required | Typed 表格协议（pandas-DataFrame-shaped）JSON：顶层 `{"sheets":[...]}`，每个数组项是一张子表 `{name, start_cell?, mode?, header?, allow_overwrite?, columns:["colA","colB",...], data:[[...]], dtypes?:{colA:pandasDtype, ...}, formats?:{colA:numberFormat, ...}}` —— `name` 与外层 `sheets` 数组都不可省。Agents 用 `scripts/lark_sheets_df.py` 的 `df_to_sheet(df, name)` 一行把 DataFrame 转成一项（多子表就 list 拼起来再包 `{"sheets":[...]}`）。`dtypes` 值是 pandas dtype 字符串（`int64`、`float64`、`Int64`、`bool`、`boolean`、`datetime64[ns]`、`object`、...），CLI 端映射成内部 string/number/date/bool —— 省略 `dtypes` 时该列按文本写入（适合原始 CSV-shaped 数据）。`formats[col]` 是 Excel number_format 字符串（如 `#,##0.00`、`0.0%`、`yyyy-mm`）；缺省时 date 列用 `yyyy-mm-dd`，string 列用文本格式 `@`。 |
-| `--styles` | string + File + Stdin（复合 JSON） | optional | 类型保真写入后再应用的视觉处理操作 JSON：顶层 `{styles:[...]}`，每项对应一个被写入的子表、含 `name`，并至少给 `cell_styles` / `row_sizes` / `col_sizes` / `cell_merges` 之一。`cell_styles` 用 A1 单元格 range + 扁平样式字段（字段同 +cells-set-style，含 number_format / 颜色 / 对齐 / border_styles）；row/col sizes 用行/列范围 + type/size；merges 用单元格 range + 可选 merge_type。styles 数组的长度/顺序/name 必须与被写入的子表对应（与 --sheets.sheets 一一对应）。完整 cell_styles 字段结构跑 `+table-put --print-schema --flag-name styles`。 |
+| `--sheets` | string + File + Stdin (composite JSON) | required | Typed table protocol (pandas-DataFrame-shaped) JSON: top-level `{"sheets":[...]}`, each array item is a subtable `{name, start_cell?, mode?, header?, allow_overwrite?, columns:["colA","colB",...], data:[[...]], dtypes?:{colA:pandasDtype, ...}, formats?:{colA:numberFormat, ...}}` —— neither `name` nor the outer `sheets` array may be omitted. Agents can use `scripts/lark_sheets_df.py`'s `df_to_sheet(df, name)` to convert a DataFrame into one item in a single line (for multiple subtables, concatenate them in a list and wrap with `{"sheets":[...]}`). The `dtypes` value is a pandas dtype string (`int64`, `float64`, `Int64`, `bool`, `boolean`, `datetime64[ns]`, `object`, ...), which the CLI maps to internal string/number/date/bool —— when `dtypes` is omitted, that column is written as text (suitable for raw CSV-shaped data). `formats[col]` is an Excel number_format string (e.g. `#,##0.00`, `0.0%`, `yyyy-mm`); when omitted, date columns use `yyyy-mm-dd` and string columns use the text format `@`. |
+| `--styles` | string + File + Stdin (composite JSON) | optional | Visual processing operation JSON applied after type-faithful writing: top-level `{styles:[...]}`, each item corresponds to a written subtable, contains `name`, and provides at least one of `cell_styles` / `row_sizes` / `col_sizes` / `cell_merges`. `cell_styles` uses an A1 cell range + flat style fields (fields are the same as +cells-set-style, including number_format / colors / alignment / border_styles); row/col sizes use row/column ranges + type/size; merges use cell ranges + optional merge_type. The length/order/name of the styles array must correspond to the written subtables (one-to-one with --sheets.sheets). For the complete cell_styles field structure, run `+table-put --print-schema --flag-name styles`. |
 
 ## Schemas
 
-> 复合 JSON flag 字段速查（只列顶层 + 一层嵌套）。深层结构看下方 `## Examples`，或用 `--print-schema` 读完整 JSON Schema（用法见 index.md「公共 flag 速查」与「Agent 使用提示」）。
+> Composite JSON flag field quick reference (only top level + one level of nesting). For deeper structures, see `## Examples` below, or use `--print-schema` to read the complete JSON Schema (usage see index.md "Common flag quick reference" and "Agent usage tips").
 
 ### `+cells-set` `--cells`
 
-_【维度】行列数必须与 range 完全一致：'A1:C2'→[[_,_,_],[_,_,_]]（2行×3列），'B5:B7'→[[_],[_],[_]]（3行×1列），'A1'→[[_]]（1×1）_
+_[Dimension] The number of rows and columns must exactly match the range: 'A1:C2'→[[_,_,_],[_,_,_]] (2 rows × 3 columns), 'B5:B7'→[[_],[_],[_]] (3 rows × 1 column), 'A1'→[[_]] (1×1)_
 
-**二维数组项**（类型 object）：
-- `value` (oneOf?) — 静态单元格值（文本、数字、布尔）
-- `formula` (string?) — 以 '=' 开头的单元格公式（例如：'=SUM(A1:A10)'）
-- `note` (string?) — 单元格批注/备注
-- `cell_styles` (object?) — 单元格样式属性，包括字体、颜色、对齐方式和数字格式 { font_color?: string, font_family?: string, font_size?: number, font_weight?: enum, font_style?: enum, …共 11 项 }
-- `border_styles` (object?) — 单元格边框配置，含 top/bottom/left/right 四个方向，每个方向的结构相同（见 top） { top?: object, bottom?: object, left?: object, right?: object }
-- `rich_text` (array<object>?) — 富文本内容 each: { type: enum, text: string, style?: object, link?: string, mention_token?: string, …共 17 项 }
-- `multiple_values` (array<object>?) — 多值内容，用于支持多选的列表验证单元格 each: { value: oneOf, format?: string }
-- `data_validation` (object?) — 数据验证配置 { type: enum, items?: array<string>, range?: string, operator?: enum, values?: array<oneOf>, …共 9 项 }
+**2D array item** (type object):
+- `value` (oneOf?) — static cell value (text, number, boolean)
+- `formula` (string?) — cell formula starting with '=' (for example: '=SUM(A1:A10)')
+- `note` (string?) — cell comment/note
+- `cell_styles` (object?) — cell style properties, including font, color, alignment, and number format { font_color?: string, font_family?: string, font_size?: number, font_weight?: enum, font_style?: enum, … 11 items in total }
+- `border_styles` (object?) — cell border configuration, containing the four directions top/bottom/left/right, each direction having the same structure (see top) { top?: object, bottom?: object, left?: object, right?: object }
+- `rich_text` (array<object>?) — rich text content each: { type: enum, text: string, style?: object, link?: string, mention_token?: string, … 17 items in total }
+- `multiple_values` (array<object>?) — multi-value content, used for list validation cells that support multi-select each: { value: oneOf, format?: string }
+- `data_validation` (object?) — data validation configuration { type: enum, items?: array<string>, range?: string, operator?: enum, values?: array<oneOf>, … 9 items in total }
 
 ### `+cells-set` `--writes`
 
-_多区域写入项数组（最多 100 项），整批单次批量提交（fail-fast，失败后先回读再补发）；支持跨 sheet_
+_Array of multi-region write items (up to 100 items), the whole batch is submitted in a single batch (fail-fast, after a failure read back first then resend); supports cross-sheet_
 
-**数组项**（类型 object）：
-- `sheet_id` (string?) — 目标子表 reference_id；与 sheet_name 二选一，必须写在每一项里（不认顶层 sheet 定位）
-- `sheet_name` (string?) — 目标子表名；与 sheet_id 二选一，必须写在每一项里
-- `range` (string) — A1 矩形范围，行列维度必须与 cells 严格一致（同 --range）
-- `cells` (array) — 二维单元格数组，结构同 --cells（value / formula / cell_styles / border_styles 等，见 set_cell_…
+**Array item** (type object):
+- `sheet_id` (string?) — target subtable reference_id; choose one of this and sheet_name, must be written in each item (top-level sheet positioning is not recognized)
+- `sheet_name` (string?) — target subtable name; choose one of this and sheet_id, must be written in each item
+- `range` (string) — A1 rectangular range, the row and column dimensions must strictly match cells (same as --range)
+- `cells` (array) — 2D cell array, structure same as --cells (value / formula / cell_styles / border_styles etc., see set_cell_…
 
 ### `+cells-set-style` `--border-styles`
 
-_单元格边框配置，含 top/bottom/left/right 四个方向，每个方向的结构相同（见 top）_
+_Cell border configuration, containing the four directions top/bottom/left/right, each direction having the same structure (see top)_
 
-**顶层字段**：
+**Top-level fields**:
 - `top` (object?) { style?: enum, weight?: enum, color?: string }
 - `bottom` (object?) { style?: enum, weight?: enum, color?: string }
 - `left` (object?) { style?: enum, weight?: enum, color?: string }
@@ -415,83 +426,84 @@ _单元格边框配置，含 top/bottom/left/right 四个方向，每个方向�
 
 ### `+dropdown-set` `--options`
 
-_列表选项_
+_List options_
 
-**数组项**（类型 string）：
-- 标量：string
+**Array item** (type string):
+- scalar: string
 
 ### `+table-put` `--sheets`
 
-_一个或多个子表的 typed 数据，每个数组元素写入一张子表；支持多 DataFrame → 多子表一次写入_
+_Typed data for one or more subtables, each array element writes to one subtable; supports multiple DataFrames → multiple subtables written at once_
 
-**数组项**（类型 object）：
-- `name` (string) — 目标子表名
-- `start_cell` (string?) — 写入起点单元格（A1 记法，如 "B2"），默认 "A1"
-- `mode` (enum?) — overwrite（默认）：从 start_cell 起写「表头 + 数据」块；append：把数据追加到子表已有数据下方（默认不重复表头） [overwrite / append]
-- `header` (boolean?) — 是否写一行列名表头
-- `allow_overwrite` (boolean?) — 为 false 时，若写入会落在非空单元格则拒写以保护原数据（返回 partial_success）
-- `columns` (array<string>) — 列名字符串数组，顺序与 `data` 中每行取值一一对应
-- `data` (array<array<string|number|boolean|null>>) — 数据行；每行是一个数组，长度必须等于 `columns` 数
-- `dtypes` (object?) — 可选
-- `formats` (object?) — 可选
+**Array item** (type object):
+- `name` (string) — target subtable name
+- `start_cell` (string?) — write start cell (A1 notation, e.g. "B2"), default "A1"
+- `mode` (enum?) — overwrite (default): write the "header + data" block starting from start_cell; append: append the data below the existing data in the subtable (by default does not repeat the header) [overwrite / append]
+- `header` (boolean?) — whether to write a row of column-name headers
+- `allow_overwrite` (boolean?) — when false, if the write would land on non-empty cells, refuse to write to protect the original data (returns partial_success)
+- `columns` (array<string>) — array of column-name strings, in an order that corresponds one-to-one with the values of each row in `data`
+- `data` (array<array<string|number|boolean|null>>) — data rows; each row is an array whose length must equal the number of `columns`
+- `dtypes` (object?) — optional
+- `formats` (object?) — optional
 
 ### `+table-put` `--styles`
 
 
-**数组项**（类型 object）：
-- `cell_merges` (array<object>?) — 单元格合并操作数组；range 使用 A1 单元格范围，merge_type 默认 all each: { merge_type?: enum, range: string }
-- `cell_styles` (array<object>?) — 单元格样式操作数组；每项用 A1 单元格 range 指定范围，字段名与 +cells-set-style 对齐 each: { background_color?: string, border?: object, border_styles?: object, font_color?: string, font_family?: string, …共 14 项 }
-- `col_sizes` (array<object>?) — 列宽操作数组；range 使用列范围如 A:C，给 size（px）即像素列宽（type 可省略）；type 为 standard 时不带 size each: { range: string, size?: number, type?: enum }
-- `freeze` (object?) — 冻结行列：rows = 冻结前 N 行，cols = 冻结前 N 列（0 或省略 = 该维度不冻结） { cols?: integer, rows?: integer }
-- `name` (string) — 子表名
-- `row_sizes` (array<object>?) — 行高操作数组；range 使用行范围如 1:3，给 size（px）即像素行高（type 可省略）；type 为 standard/auto 时不带 size each: { range: string, size?: number, type?: enum }
+**Array item** (type object):
+- `cell_merges` (array<object>?) — array of cell merge operations; range uses an A1 cell range, merge_type defaults to all each: { merge_type?: enum, range: string }
+- `cell_styles` (array<object>?) — array of cell style operations; each item specifies a range with an A1 cell range, field names align with +cells-set-style each: { background_color?: string, border?: object, border_styles?: object, font_color?: string, font_family?: string, … 14 items in total }
+- `col_sizes` (array<object>?) — array of column width operations; range uses a column range such as A:C, giving size (px) means pixel column width (type may be omitted); when type is standard, no size is given each: { range: string, size?: number, type?: enum }
+- `freeze` (object?) — freeze rows and columns: rows = freeze the first N rows, cols = freeze the first N columns (0 or omitted = do not freeze that dimension) { cols?: integer, rows?: integer }
+- `name` (string) — subtable name
+- `row_sizes` (array<object>?) — array of row height operations; range uses a row range such as 1:3, giving size (px) means pixel row height (type may be omitted); when type is standard/auto, no size is given each: { range: string, size?: number, type?: enum }
 
 ## Examples
 
-公共四件套：所有 shortcut 顶部排列 `--url` / `--spreadsheet-token` / `--sheet-id` / `--sheet-name`（XOR）。
+Common four-piece set: all shortcuts have `--url` / `--spreadsheet-token` / `--sheet-id` / `--sheet-name` arranged at the top (XOR).
 
-### `+cells-set` 的拆分与转介绍
+<a id="cells-set-的拆分与转介绍"></a>
+### Splitting and cross-referral of `+cells-set`
 
-"工具选择"段已讲清纯值（`+csv-put`）vs 富写入（`+cells-set`）。下表补 CLI 侧的 `+cells-set` **兄弟拆分**，以及不属于本 reference 的**跨 reference 转介绍**——避免 agent 用 `+cells-set` 硬扛所有写入场景。
+The "Tool selection" section already explained pure values (`+csv-put`) vs rich writes (`+cells-set`). The table below supplements the CLI-side `+cells-set` **sibling split**, as well as **cross-reference referrals** that do not belong to this reference —— to avoid agents using `+cells-set` to force through all write scenarios.
 
-| 写入场景 | 用这个 | 不要用 |
+| Write scenario | Use this | Do not use |
 |---------|--------|--------|
-| 只改**已有 cell 的样式**，不动 value/formula | `+cells-set-style` | `+cells-set`（会触发不必要的值写入） |
-| 把**单张图片嵌入**到某个 cell | `+cells-set-image` | `+cells-set`（参数更繁琐） |
-| **插行/列 + 写入** 这种多步组合，且要一次交付 | `+batch-update`（见 lark-sheets-batch-update） | 多次独立 `+cells-set`（插入会扰动后续调用的 range） |
-| 在**多个不连续 range** 上应用同一组样式 | `+styles-put`（cell_styles 多项即多区域，见 lark-sheets-styles-put） | 多次 `+cells-set-style`（多次往返） |
+| Only change the **style of an existing cell**, without touching value/formula | `+cells-set-style` | `+cells-set` (triggers unnecessary value writes) |
+| **Embed a single image** into a cell | `+cells-set-image` | `+cells-set` (more cumbersome parameters) |
+| Multi-step combinations like **insert row/column + write**, delivered in one go | `+batch-update` (see lark-sheets-batch-update) | Multiple independent `+cells-set` (insertion disturbs the ranges of subsequent calls) |
+| Apply the same set of styles to **multiple non-contiguous ranges** | `+styles-put` (multiple cell_styles items means multiple regions, see lark-sheets-styles-put) | Multiple `+cells-set-style` (multiple round trips) |
 
 ### `+cells-set`
 
-示例：
+Example:
 
 ```bash
-# 纯值（数组形态）；默认即覆盖非空 cell，无需显式传 --allow-overwrite
+# Pure values (array form); by default overwrites non-empty cells, no need to explicitly pass --allow-overwrite
 lark-cli sheets +cells-set --url "https://example.feishu.cn/sheets/shtXXX" \
   --sheet-name "Sheet1" --range "A1:B2" \
   --cells '[[{"value":"name"},{"value":"score"}],[{"value":"alice"},{"value":95}]]'
 
-# 富 cell（公式 + 样式，cells 是二维矩阵每元素一个 cell schema）
+# Rich cell (formula + styles, cells is a 2D matrix with one cell schema per element)
 lark-cli sheets +cells-set --spreadsheet-token shtXXX --sheet-id "$SID" \
   --range "C2:C10" --cells @rich-cells.json
 ```
 
-`--cells` 富格式见 `## Schemas` 段（cells 元素含 value / formula / cell_styles / border_styles / data_validation / multiple_values / note / rich_text）；值 / 公式 / 样式 / 批注 / 嵌入图片可同一次写入混合提交。
+`--cells` For rich formatting, see the `## Schemas` section (the cells element contains value / formula / cell_styles / border_styles / data_validation / multiple_values / note / rich_text); values / formulas / styles / comments / embedded images can be submitted together in a single write.
 
-> 中间想跳过的 cell 用空对象 `{}` 占位（底层语义为"保留原值不变"）。例：`--range A1:A5 --cells '[[{"value":1}],[{}],[{}],[{}],[{"value":5}]]'` 只写 A1 和 A5。
+> For cells you want to skip in the middle, use an empty object `{}` as a placeholder (the underlying semantics are "keep the original value unchanged"). Example: `--range A1:A5 --cells '[[{"value":1}],[{}],[{}],[{}],[{"value":5}]]'` writes only A1 and A5.
 >
-> 跨多个不连续区域散点写入（如 `D2` + `F7` + `J15`）超出单次 `--range` + `--cells` 的范围，但**仍在 `+cells-set` 之内**：用本命令的 `--writes` 复数形态一次批量交付（每项 `{sheet_name, range, cells}`，可跨 sheet，见上方「多个不连续区域写入」）。**不要为此拼 `+batch-update` 的 `--operations`**——那是给跨类型、有顺序依赖的操作链用的。
+> Scattered writes across multiple non-contiguous regions (such as `D2` + `F7` + `J15`) exceed the scope of a single `--range` + `--cells`, but are **still within `+cells-set`**: use this command's plural form `--writes` to deliver them all in one batch (each item is `{sheet_name, range, cells}`, and can span sheets; see "Writing to multiple non-contiguous regions" above). **Do not piece together `+batch-update`'s `--operations` for this**—that is for cross-type operation chains with sequential dependencies.
 
 ### `+cells-set-style`
 
-只改样式，不动 value / formula。10 个 cell_styles 字段拍平为独立 flag，边框走 `--border-styles` JSON。
+Only change styles, without touching value / formula. The 10 cell_styles fields are flattened into independent flags, and borders use `--border-styles` JSON.
 
 ```bash
-# 加粗 + 黄底
+# Bold + yellow background
 lark-cli sheets +cells-set-style --url "..." --sheet-name "Sheet1" \
   --range "A1:B2" --font-weight bold --background-color "#FFFF00"
 
-# 配套边框
+# Matching borders
 lark-cli sheets +cells-set-style --url "..." --sheet-id "$SID" \
   --range "A1:D10" --font-size 12 --horizontal-alignment center \
   --border-styles '{"top":{"style":"solid","color":"#000","weight":"thin"},"bottom":{"style":"solid","color":"#000","weight":"thin"}}'
@@ -499,7 +511,7 @@ lark-cli sheets +cells-set-style --url "..." --sheet-id "$SID" \
 
 ### `+cells-set-image`
 
-把单张图片嵌入 cell（必须单 cell 范围）：
+Embed a single image into a cell (must be a single-cell range):
 
 ```bash
 lark-cli sheets +cells-set-image --url "..." --sheet-name "Sheet1" \
@@ -508,102 +520,104 @@ lark-cli sheets +cells-set-image --url "..." --sheet-name "Sheet1" \
 
 ### `+csv-put`
 
-示例：
+Example:
 
 ```bash
-# 内联 CSV
+# Inline CSV
 lark-cli sheets +csv-put --url "https://example.feishu.cn/sheets/shtXXX" \
   --sheet-name "Sheet1" --start-cell "A1" \
   --csv $'name,score\nalice,95\nbob,87'
 
-# 从文件
+# From a file
 lark-cli sheets +csv-put --spreadsheet-token shtXXX --sheet-id "$SID" \
   --start-cell "A1" --csv @data.csv
 ```
 
-> `+csv-put` 比 `+cells-set` 短得多——批量灌值或公式时优先用它。需要样式/批注/图片才换 `+cells-set`。
+> `+csv-put` is much shorter than `+cells-set`—prefer it when bulk-loading values or formulas. Switch to `+cells-set` only when you need styles/comments/images.
 >
-> ✅ `=` 开头的单元格会被当作公式计算（不是字面量文本）：
+> ✅ Cells starting with `=` are treated as formulas for calculation (not literal text):
 >
 > ```bash
 > lark-cli sheets +csv-put --url "..." --sheet-name "Sheet1" \
 >   --start-cell "A1" \
 >   --csv $'name,score\nalice,=SUM(B2:B10)'
-> # ↑ B2 写入公式 =SUM(B2:B10)，读回 formula 保留、value 为计算结果。
-> # 反过来：无法用 +csv-put 写「= 开头的字面量文本」（会被当公式）；样式/批注/图片仍用 +cells-set。
+> # ↑ B2 writes the formula =SUM(B2:B10); when read back, formula is preserved and value is the calculation result.
+> # Conversely: you cannot use +csv-put to write "literal text starting with =", because it will be treated as a formula; for styles/comments/images, still use +cells-set.
 > ```
 >
-> ⚠️ **公式内部含逗号 / 引号建议 RFC 4180 转义**：CSV 用逗号分隔字段，公式里的逗号（如 `COUNTIF(D5:D22,"及格")` 的参数分隔逗号）会被解析器当成字段分隔符，把一格拆成多格、整块二维结构压扁错位。规则：**含逗号的字段整格用双引号包裹，字段内部的引号再翻倍**：
+> ⚠️ **For formulas containing commas / quotes, RFC 4180 escaping is recommended**: CSV uses commas to separate fields, and commas inside formulas (such as the argument-separating comma in `COUNTIF(D5:D22,"及格")`) will be treated by the parser as field separators, splitting one cell into multiple cells and flattening and misaligning the entire two-dimensional structure. Rule: **wrap the entire field containing commas in double quotes, and double any quotes inside the field**:
 >
 > ```bash
-> # 从 G4 写一个 2 列 3 行的统计块；=COUNTIF 含逗号 + 内部引号，建议转义
+> # Write a 2-column, 3-row statistics block starting at G4; =COUNTIF contains a comma + internal quotes, so escaping is recommended
 > lark-cli sheets +csv-put --url "..." --sheet-name "Sheet1" \
 >   --start-cell "G4" \
 >   --csv $'统计项,结果\n成绩总和,=SUM(C5:C22)\n及格人数,"=COUNTIF(D5:D22,""及格"")"'
-> # ↑ "=COUNTIF(D5:D22,""及格"")"：外层双引号包裹整格，内部 "及格" 的引号翻倍成 ""及格""。
-> # 裸写 =COUNTIF(D5:D22,"及格") 会被 CSV 按逗号拆成两格、写入区域从 G4:H6 错位成 G4:K4。
+> # ↑ "=COUNTIF(D5:D22,""Pass"")": the outer double quotes wrap the entire cell, and the quotes around the inner "Pass" are doubled to ""Pass"".
+> # Writing =COUNTIF(D5:D22,"Pass") bare will be split by CSV at the comma into two cells, and the write region will shift from G4:H6 to G4:K4.
 > ```
 >
-> 💡 **含逗号 / 引号 / 换行的公式优先用 `+cells-set`（JSON 二维数组）写入**——`cells[r][c].formula` 直接放公式串，没有 CSV 转义负担。`+table-put` 的 typed payload 可带 `name/start_cell/mode/header/allow_overwrite/columns/data/dtypes/formats`，但没有公式字段；公式写入用 `+cells-set` 或转义后的 `+csv-put`：
+> 💡 **For formulas containing commas / quotes / line breaks, prefer writing with `+cells-set` (JSON two-dimensional array)**—`cells[r][c].formula` places the formula string directly, with no CSV escaping burden. `+table-put`'s typed payload can carry `name/start_cell/mode/header/allow_overwrite/columns/data/dtypes/formats`, but has no formula field; for formula writes, use `+cells-set` or escaped `+csv-put`:
 >
 > ```bash
-> # 同样的统计块，结构化写入无需任何转义
+> # The same statistics block, written structurally with no escaping needed
 > lark-cli sheets +cells-set --url "..." --sheet-name "Sheet1" --range "G4:H6" \
 >   --cells '[[{"value":"统计项"},{"value":"结果"}],[{"value":"成绩总和"},{"formula":"=SUM(C5:C22)"}],[{"value":"及格人数"},{"formula":"=COUNTIF(D5:D22,\"及格\")"}]]'
 > ```
 
-> **定位 + 写入边界（关键，避免误覆盖）**：
-> - 定位用 `--start-cell`（锚点 = 左上角单元格）；也接受 `--range` 别名（与 `+csv-get` / `+cells-set` 一致，传区间会自动取左上角）。
-> - ⚠️ `--start-cell` / `--range` **只定左上角、不限制写入大小**：CSV 从锚点按自身行列数 auto-expand 铺开。给一个"小 range"**不会**截断数据——超出部分照写，且默认覆盖。`+cells-set` 只有裸 `--range A1` 是这个语义；`--range` 一旦写成矩形就是边界，`--cells` 超出它会被拒绝。
-> - dry-run 与成功响应都回显 `writes_range`（实际落区，如 `B2:D4`）：**写前先 `--dry-run` 看一眼落区**，确认不会盖到相邻数据。
-> - 要保护非空 cell：`--allow-overwrite=false`（落区内出现非空 cell 即报错）。
+> **Positioning + write boundaries (critical, to avoid accidental overwrites)**:
+> - Use `--start-cell` for positioning (the anchor = top-left cell); the `--range` alias is also accepted (consistent with `+csv-get` / `+cells-set`; passing a range automatically takes the top-left corner).
+> - ⚠️ `--start-cell` / `--range` **only set the top-left corner and do not limit the write size**: CSV auto-expands from the anchor according to its own row and column count. Giving a "small range" will **not** truncate the data—the excess is still written, and overwrites by default. `+cells-set` only has this semantics for bare `--range A1`; once `--range` is written as a rectangle, it is a boundary, and `--cells` exceeding it will be rejected.
+> - Both dry-run and successful responses echo `writes_range` (the actual landing region, such as `B2:D4`): **before writing, first `--dry-run` to check the landing region**, and confirm it will not overwrite adjacent data.
+> - To protect non-empty cells: `--allow-overwrite=false` (an error is raised if a non-empty cell appears in the landing region).
 
-### `+table-put`（DataFrame → 飞书，类型保真写入）
+<a id="table-putdataframe--飞书类型保真写入"></a>
+### `+table-put` (DataFrame → Feishu, type-preserving write)
 
-把结构化数据（DataFrame、list of dict、Counter）类型保真写入**已有**表（写入语义同 `+cells-set`）。协议形状**对齐 pandas `to_json(orient="split")`**：`columns:[列名]` + `data:[[行...]]`，可选 `dtypes:{列名:pandas_dtype}` 决定每列类型（number 保精度、date 落真日期），可选 `formats:{列名:number_format}` 覆盖显示格式（千分位 / 百分比 / 自定义日期）。dtypes 缺失时整张表按 string 写入（带 `@` 文本格式，邮编 / 订单号等含前导零的 id 保真）。
+Write structured data (DataFrame, list of dict, Counter) with type preservation into an **existing** sheet (write semantics are the same as `+cells-set`). The protocol shape is **aligned with pandas `to_json(orient="split")`**: `columns:[列名]` + `data:[[行...]]`, with optional `dtypes:{列名:pandas_dtype}` to determine each column's type (number preserves precision, date lands as a real date), and optional `formats:{列名:number_format}` to override display formats (thousands separator / percentage / custom date). When dtypes are missing, the entire table is written as string (with `@` text format, preserving ids with leading zeros such as postal codes / order numbers).
 
-只写入**已有**表（`--url` / `--spreadsheet-token` 二选一必填），不新建工作簿——**要新建表格直接用 `+workbook-create --sheets`**（同协议、一步建表 + 类型保真写入，详见 workbook reference）。读回用镜像命令 `+table-get`（见 read-data reference），输出与 `--sheets` 同构、可 round-trip。
+Only writes to an **existing** sheet (`--url` / `--spreadsheet-token`, one of the two is required), and does not create a new workbook—**to create a new sheet, use `+workbook-create --sheets` directly** (same protocol, one-step sheet creation + type-preserving write; see the workbook reference for details). For read-back, use the mirror command `+table-get` (see the read-data reference); the output is isomorphic to `--sheets` and can round-trip.
 
 ```bash
-# sheet 按 name 匹配、缺则新建；多 DataFrame 经 stdin 一次写多 sheet
+# Sheets are matched by name, and created if missing; multiple DataFrames are written to multiple sheets at once via stdin
 uv run python export.py | lark-cli sheets +table-put --url "<表URL>" --sheets -
-# 某 sheet 带 "mode":"append" 追加到已有数据末尾、默认不重复表头
+# A sheet with "mode":"append" appends to the end of existing data, and by default does not repeat the header
 lark-cli sheets +table-put --spreadsheet-token "<token>" --sheets @payload.json
-# --sheets 与 --styles 都是大 JSON 时：stdin 每次调用只能给一个 flag，一个走 -、另一个走 @cwd 相对路径
+# When both --sheets and --styles are large JSON: stdin can only provide one flag per invocation, so one goes through -, and the other goes through an @cwd relative path
 lark-cli sheets +table-put --url "<表URL>" --sheets - --styles @styles.json < sheets.json
 ```
 
-每个 sheet 还可带 `"allow_overwrite": false`（遇非空拒写、保护原数据）、`"header": false`（只写数据不写表头）。完整字段跑 `+table-put --print-schema --flag-name sheets`。
+Each sheet can also carry `"allow_overwrite": false` (refuse to write when encountering non-empty cells, protecting the original data) and `"header": false` (write only data, not the header). For the complete fields, run `+table-put --print-schema --flag-name sheets`.
 
-#### DataFrame → 协议（用 `df_to_sheet` helper）
+<a id="dataframe--协议用-df_to_sheet-helper"></a>
+#### DataFrame → protocol (using the `df_to_sheet` helper)
 
-pandas 的 `df.to_json(orient="split", date_format="iso")` 一步完成所有清洗（NaN→null、Timestamp→ISO 字符串、numpy 标量→原生数字），把 dtypes 拼上即可。本模块 把这段 5 行 helper 打包成可 import 的 [`scripts/lark_sheets_df.py`](../scripts/lark_sheets_df.py)（含 `df_to_sheet` 和 `sheet_to_df`，写入 / 读回成对）：
+pandas' `df.to_json(orient="split", date_format="iso")` completes all cleaning in one step (NaN→null, Timestamp→ISO string, numpy scalar→native number); just attach the dtypes. This module packages this 5-line helper into an importable [`scripts/lark_sheets_df.py`](../scripts/lark_sheets_df.py) (including `df_to_sheet` and `sheet_to_df`, paired for write / read-back):
 
 ```python
-import sys; sys.path.insert(0, "scripts")  # cwd 不在 skill 根时改成 scripts/ 的实际路径
+import sys; sys.path.insert(0, "scripts")  # When cwd is not at the skill root, change it to the actual path under scripts/
 from lark_sheets_df import df_to_sheet
 
-# 单 sheet（显式 format 覆盖默认显示）
+# Single sheet (explicit format overrides the default display)
 payload = {"sheets": [df_to_sheet(df, "销售", {"营收": "#,##0.00", "毛利率": "0.0%"})]}
 
-# 多 sheet——helper 让每个 sheet 一行，不再重复 boilerplate
+# Multiple sheets—the helper lets each sheet be one line, with no repeated boilerplate
 payload = {"sheets": [df_to_sheet(df1, "销售"),
                       df_to_sheet(df2, "成本"),
                       df_to_sheet(df3, "利润")]}
 ```
 
-> **CSV-shaped 全文本数据**（不需要类型保真、含前导零的 id 也要保留）省掉 dtypes 即可，inline 一行写完，不必走 helper（注意保留 `date_format="iso"`，否则 datetime 列会被序列化成 epoch 毫秒数字，CLI 拒绝）：
+> For **CSV-shaped all-text data** (no type preservation needed, and ids with leading zeros must also be preserved), just omit dtypes and write it inline in one line; there is no need to go through the helper (note that `date_format="iso"` must be preserved, otherwise datetime columns will be serialized into epoch millisecond numbers and rejected by the CLI):
 > ```python
 > payload = {"sheets": [{"name": "原始",
 >                        **json.loads(df.to_json(orient="split", date_format="iso"))}]}
 > ```
-> **别把 `to_json + json.loads` 换成 `df.to_dict(orient="split")`**：会留 `numpy.int64` 让 `json.dumps` 后续报 "not serializable"——这一步是清洗的关键。
-> **列名必须是字符串**：整数列名（如未指定表头时 pandas 默认的 0/1/2）会以 JSON 数字进入 `columns` 被 CLI 拒收；inline 写法要先 `df.columns = df.columns.map(str)`。`df_to_sheet` 已自动完成这一步。
+> **Do not replace `to_json + json.loads` with `df.to_dict(orient="split")`**: it will leave `numpy.int64` and cause `json.dumps` to later report "not serializable"—this step is the key to cleaning.
+> **Column names must be strings**: integer column names (such as pandas' default 0/1/2 when no header is specified) will enter `columns` as JSON numbers and be rejected by the CLI; for inline writing, first `df.columns = df.columns.map(str)`. `df_to_sheet` already performs this step automatically.
 
-不用 pandas 也行——typed 协议就是纯 JSON。手写场景：
+You do not have to use pandas—the typed protocol is pure JSON. For handwritten scenarios:
 
 ```python
-# Counter / dict / 手拼数据：直接写 columns + data，按需加 dtypes/formats
+# Counter / dict / manually assembled data: write columns + data directly, and add dtypes/formats as needed
 payload = {"sheets": [{
     "name": "渠道",
     "columns": ["channel", "count", "rate"],
@@ -613,11 +627,12 @@ payload = {"sheets": [{
 }]}
 ```
 
-> **dtype 速查**：`int64`/`float64`（数值）、`Int64`（含空值的整数，nullable）、`bool`/`boolean`、`datetime64[ns]`（date，默认 `yyyy-mm-dd`）、`object`（string）。pandas dtype 字符串原样塞进 dtypes 即可，CLI 端按前缀匹配（`int*`/`uint*`/`Int*`/`float*` → number 等）。未识别 dtype 兜底为 string。
+> **dtype quick reference**: `int64`/`float64` (numeric), `Int64` (integer with null values, nullable), `bool`/`boolean`, `datetime64[ns]` (date, default `yyyy-mm-dd`), `object` (string). pandas dtype strings can be put directly into dtypes as-is; the CLI side matches by prefix (`int*`/`uint*`/`Int*`/`float*` → number, etc.). Unrecognized dtypes fall back to string.
 
-#### `--styles`（写入时同时套样式）
+<a id="--styles写入时同时套样式"></a>
+#### `--styles` (apply styles at the same time as writing)
 
-`--styles` 在 typed 写入后顺带应用视觉处理，省掉一次 `+cells-set-style` 往返。协议与 `+workbook-create --styles` **完全同构**（详见 workbook reference）：顶层 `{styles:[...]}`，数组每项对应一个被写入的子表、含 `name`，并按能力拆成四类可选数组——`cell_styles`（A1 单元格 range + 扁平样式字段，含 `number_format` / 颜色 / 对齐 / `border_styles`，随内容在同一次写入里一并应用）、`cell_merges`、`row_sizes`、`col_sizes`。styles 数组的长度 / 顺序 / name 必须与被写入的子表对应（与 `--sheets.sheets` 一一对应）。
+`--styles` applies visual treatment along with the typed write, saving one `+cells-set-style` round trip. The protocol is **fully isomorphic** to `+workbook-create --styles` (see the workbook reference for details): top-level `{styles:[...]}`, each item in the array corresponds to a written subtable and contains `name`, and is split by capability into four optional arrays—`cell_styles` (A1 cell range + flat style fields, including `number_format` / color / alignment / `border_styles`, applied together with the content in the same write), `cell_merges`, `row_sizes`, `col_sizes`. The styles array's length / order / name must correspond to the written subtables (one-to-one with `--sheets.sheets`).
 
 ```bash
 lark-cli sheets +table-put --url "<表URL>" \
@@ -628,10 +643,11 @@ lark-cli sheets +table-put --url "<表URL>" \
     "col_sizes":[{"range":"A:B","type":"pixel","size":120}]}]}'
 ```
 
-完整字段跑 `+table-put --print-schema --flag-name styles`。
+For the complete fields, run `+table-put --print-schema --flag-name styles`.
 
-### Validate / DryRun / Execute 约束
+<a id="validate--dryrun--execute-约束"></a>
+### Validate / DryRun / Execute constraints
 
-- `Validate`：XOR 公共四件套；`+cells-set` 的 `--cells` 必须能解析为各行等宽的 JSON 二维矩阵（落区按其行列数推断）；`+cells-set-style` 的样式 flag 至少一个非空（或带 `--border-styles`）；`+cells-set-image` 的 `--range` 必须是单 cell（起止 cell 相同）；`+csv-put` 的 `--csv` 必须能按 RFC 4180 解析；`+table-put` 给了 `--styles` 则按子表名 / 顺序 / 数量与 `--sheets.sheets` 对齐校验；防爆参数上限校验。
-- `DryRun`：输出目标 range + 推断尺寸 + 是否覆盖非空 cell 警告，零网络副作用。
-- `Execute`：写后必须按写入范围回读首、中、末及用户点名项；公式同时读取 formula，并按公式完成流程验证。
+- `Validate`: XOR common four-piece set; `+cells-set`'s `--cells` must be parseable as a JSON two-dimensional matrix with equal width per row (the landing region is inferred from its row and column count); `+cells-set-style`'s style flags must have at least one non-empty (or carry `--border-styles`); `+cells-set-image`'s `--range` must be a single cell (start and end cells identical); `+csv-put`'s `--csv` must be parseable according to RFC 4180; if `+table-put` provides `--styles`, validate alignment with `--sheets.sheets` by subtable name / order / count; validate explosion-prevention parameter upper limits.
+- `DryRun`: outputs the target range + inferred size + whether it will overwrite non-empty cells warning, with zero network side effects.
+- `Execute`: after writing, must read back the first, middle, last, and user-named items according to the written range; for formulas, also read formula, and verify according to the formula completion flow.

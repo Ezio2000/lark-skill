@@ -1,61 +1,67 @@
-# 图片准备 (Image Preparation)
+<a id="图片准备-image-preparation"></a>
+# Image Preparation
 
-> 本文件说明如何在画板 DSL 中使用图片节点。进入任何含图片的场景前，必须先完成图片准备流程。
+> This document explains how to use image nodes in the whiteboard DSL. Before entering any scenario that involves images, you must first complete the image preparation process.
 
-## 概述
+<a id="概述"></a>
+## Overview
 
-画板 DSL 支持 `type: 'image'` 节点，但图片不能直接使用 URL 或其他域的 token，**必须先上传到目标画板获取 `whiteboard` 域 media token**，然后在 DSL 中引用。
+The whiteboard DSL supports `type: 'image'` nodes, but images cannot directly use URLs or tokens from other domains. **You must first upload them to the target whiteboard to obtain a media token in the `whiteboard` domain**, and then reference it in the DSL.
 
-**核心规则**：不管图片从哪来（本地文件、URL、文档中的 `docx_image` token、其他域的 Drive token），都必须通过 `docs +media-upload --parent-type whiteboard --parent-node <目标画板token>` 上传，拿到画板专属的 media token 后才能在 DSL 中使用。直接使用非 `whiteboard` 域的 token 会导致画板 API 报 500（错误码 2891001）或图片在文档中消失。
+**Core rule**: Regardless of where the image comes from (a local file, a URL, an `docx_image` token in a document, a Drive token from another domain), it must be uploaded via `docs +media-upload --parent-type whiteboard --parent-node <目标画板token>`. Only after obtaining the whiteboard-specific media token can it be used in the DSL. Directly using a token from a domain other than `whiteboard` will cause the whiteboard API to return 500 (error code 2891001) or the image to disappear from the document.
 
-## Step 0：图片准备流程
+<a id="step-0图片准备流程"></a>
+## Step 0: Image Preparation Process
 
-### 1. 获取图片到本地
+<a id="1-获取图片到本地"></a>
+### 1. Obtain the Image Locally
 
-根据图片来源选择对应方式：
+Choose the corresponding method based on the image source:
 
-| 图片来源 | 获取方式 |
+| Image Source | How to Obtain |
 |---------|---------|
-| 本地文件 | 直接使用 |
-| 网络 URL | `curl -L -o photo.jpg "<URL>"` |
-| 文档中的图片 token | `lark-cli docs +media-download --token <token> --output ./photo.png` |
-| 其他域的 Drive token | `lark-cli docs +media-download --token <token> --output ./photo.png` |
+| Local file | Use directly |
+| Web URL | `curl -L -o photo.jpg "<URL>"` |
+| Image token in a document | `lark-cli docs +media-download --token <token> --output ./photo.png` |
+| Drive token from another domain | `lark-cli docs +media-download --token <token> --output ./photo.png` |
 
-**图片源选择（需要搜索图片时）**：
+**Image source selection (when image search is needed)**:
 
-| 图片源类型 | 说明 |
+| Image Source Type | Description |
 |-------|------|
-| 免费版权图库 | 支持按关键词搜索，图片无版权风险（CC0 或类似协议），图库种类丰富（人物/动物/风景/美食/建筑等），关键词能精准匹配图片内容 |
-| 直接 URL | 用户提供或已知的图片链接，最可靠 |
+| Free-license image library | Supports keyword search, images carry no copyright risk (CC0 or similar licenses), the library has a rich variety of categories (people/animals/landscapes/food/architecture, etc.), and keywords can precisely match image content |
+| Direct URL | An image link provided by the user or already known, the most reliable |
 
-**选择图库的必要条件**：
-- **版权合规**：图片必须无版权纠纷风险，避免使用需要付费授权或有使用限制的图库
-- **关键词搜索**：支持按关键词搜索并返回相关图片，确保图片内容与主题匹配
-- **内容丰富**：图库图片种类多、数量大，能覆盖常见主题（宠物、美食、景点、产品等）
+**Necessary conditions for choosing an image library**:
+- **Copyright compliance**: Images must carry no risk of copyright disputes; avoid using libraries that require paid licensing or have usage restrictions
+- **Keyword search**: Supports keyword search and returns relevant images, ensuring the image content matches the topic
+- **Rich content**: The library has many categories and a large quantity of images, capable of covering common topics (pets, food, attractions, products, etc.)
 
-**严禁使用随机占位图服务**：某些图库仅提供随机占位图，URL 中的关键词参数不会影响返回的图片内容，下载的图片与主题完全无关。
+**Strictly prohibited to use random placeholder image services**: Some image libraries only provide random placeholder images; the keyword parameters in the URL do not affect the returned image content, and the downloaded images are completely unrelated to the topic.
 
-### 2. 校验图片
+<a id="2-校验图片"></a>
+### 2. Validate the Images
 
 ```bash
-ls -l *.jpg   # 确认每张文件大小不同；若大小相同则内容可能重复，需重新下载
+ls -l *.jpg   # Confirm that each file has a different size; if the sizes are the same, the content may be duplicated and needs to be re-downloaded
 ```
 
-**图片内容审查（必须执行）**：
-- 下载完成后，确认文件是真实图片而非 HTML 错误页：若某张图片大小 < 1KB，很可能是下载失败返回了 HTML 错误页，需重新下载
-- **图片内容正确性只能在渲染后验证**：生成 DSL 并本地渲染 PNG 后，必须查看渲染结果，确认每张图片内容与主题相关（如宠物主题的图片确实是宠物，而非建筑/风景等不相关内容）
-- 若发现图片内容与主题不符，必须用更精确的关键词重新下载并重新上传
+**Image content review (must be performed)**:
+- After downloading is complete, confirm that the file is a real image rather than an HTML error page: if a certain image is < 1KB in size, it is very likely that the download failed and returned an HTML error page, and it needs to be re-downloaded
+- **Image content correctness can only be verified after rendering**: After generating the DSL and rendering the PNG locally, you must inspect the rendered result to confirm that each image's content is related to the topic (for example, images for a pet-themed topic are indeed pets, rather than unrelated content such as architecture/landscapes)
+- If you find that the image content does not match the topic, you must re-download with more precise keywords and re-upload
 
-### 3. 上传到目标画板
+<a id="3-上传到目标画板"></a>
+### 3. Upload to the Target Whiteboard
 
-**必须**使用 `docs +media-upload --parent-type whiteboard` 上传：
+You **must** use `docs +media-upload --parent-type whiteboard` to upload:
 
 ```bash
 lark-cli docs +media-upload --file ./photo1.jpg --parent-type whiteboard --parent-node <whiteboard_token>
-# 响应: { "file_token": "<media_token>", ... }
+# Response: { "file_token": "<media_token>", ... }
 ```
 
-逐张上传，收集每个 media token：
+Upload one by one, collecting each media token:
 
 ```bash
 lark-cli docs +media-upload --file ./photo1.jpg --parent-type whiteboard --parent-node <whiteboard_token>  # → <media_token_1>
@@ -63,18 +69,20 @@ lark-cli docs +media-upload --file ./photo2.jpg --parent-type whiteboard --paren
 lark-cli docs +media-upload --file ./photo3.jpg --parent-type whiteboard --parent-node <whiteboard_token>  # → <media_token_3>
 ```
 
-### 4. 在 DSL 中引用
+<a id="4-在-dsl-中引用"></a>
+### 4. Reference in the DSL
 
 ```json
 { "type": "image", "id": "img-1", "width": 240, "height": 160, "image": { "src": "<media_token_1>" } }
 ```
 
-## 常见错误
+<a id="常见错误"></a>
+## Common Errors
 
-| 错误现象 | 原因 | 解决 |
+| Error Symptom | Cause | Solution |
 |---------|------|------|
-| 画板 API 返回 500（2891001） | 使用了非 `whiteboard` 域 token（如 `docx_image`、Drive file token） | 下载图片后用 `docs +media-upload --parent-type whiteboard` 重新上传 |
-| 画板 API 返回 500 | 图片上传到了其他画板 | 重新上传到目标画板 |
-| 画板在文档中图片消失 | 图片 token 的资源域与画板不匹配 | 确保图片通过 `--parent-type whiteboard --parent-node <画板token>` 上传 |
-| 图片裂开/无法显示 | token 无效或已过期 | 重新上传获取新 token |
-| 图片内容与主题无关 | 使用了随机占位图服务 | 改用免费版权图库服务 |
+| Whiteboard API returns 500 (2891001) | A token from a domain other than `whiteboard` was used (such as `docx_image`, Drive file token) | After downloading the image, re-upload it using `docs +media-upload --parent-type whiteboard` |
+| Whiteboard API returns 500 | The image was uploaded to another whiteboard | Re-upload to the target whiteboard |
+| The whiteboard's image disappears from the document | The resource domain of the image token does not match the whiteboard | Ensure the image is uploaded via `--parent-type whiteboard --parent-node <画板token>` |
+| Image is broken/cannot be displayed | The token is invalid or has expired | Re-upload to obtain a new token |
+| Image content is unrelated to the topic | A random placeholder image service was used | Switch to a free-license image library service |

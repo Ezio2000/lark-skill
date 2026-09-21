@@ -1,17 +1,20 @@
-# 分割线 `hr`
+<a id="分割线-hr"></a>
+# Divider `hr`
 
-分隔卡片内容的水平线。**Card 2.0**（1.0 同名 `hr`）。
+A horizontal line that separates card content. **Card 2.0** (1.0 has the same-named `hr`).
 
-## 最小示例
+<a id="最小示例"></a>
+## Minimal example
 
 ```json
 { "tag": "hr" }
 ```
 
-## 字段
+<a id="字段"></a>
+## Fields
 
-| 字段 | 必填 | 类型 | 默认 | 说明 |
+| Field | Required | Type | Default | Description |
 |---|---|---|---|---|
-| `tag` | 是 | String | / | 固定 `hr` |
-| `margin` | 否 | String | 0 | 外边距，范围 [-99,99]px，如 `"8px 0"` |
-| `element_id` | 否 | String | / | 组件唯一标识，字母开头、≤20 字符 |
+| `tag` | Yes | String | / | Fixed `hr` |
+| `margin` | No | String | 0 | Outer margin, range [-99,99]px, e.g. `"8px 0"` |
+| `element_id` | No | String | / | Unique component identifier, starts with a letter, ≤20 characters |

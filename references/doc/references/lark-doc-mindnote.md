@@ -1,127 +1,134 @@
-# 飞书思维笔记（Mindnote）
+<a id="飞书思维笔记mindnote"></a>
+# Feishu Mindnote
 
 
-当用户要操作思维笔记时，入口属于 `lark-doc`，但实际执行命令使用 `lark-cli mindnotes nodes list/create`，不是 `docs +...`。
+When a user wants to operate on a mindnote, the entry point belongs to `lark-doc`, but the actual command execution uses `lark-cli mindnotes nodes list/create`, not `docs +...`.
 
 > [!IMPORTANT]
-> 当前这条链路只支持**读取已有思维笔记**，以及在**已有思维笔记**里读取节点、创建子节点。
-> `mindnotes nodes create` 是新增/更新节点命令，**不是**新建一个新的思维笔记。
-> 如果用户要**新建思维笔记**，不要走本链路，改走 [lark-doc-whiteboard](lark-doc-whiteboard.md)。
+> This chain currently only supports **reading an existing mindnote**, and reading nodes and creating child nodes within an **existing mindnote**.
+> `mindnotes nodes create` is a create/update node command, **not** creating a new mindnote.
+> If the user wants to **create a new mindnote**, do not use this chain; use [lark-doc-whiteboard](lark-doc-whiteboard.md) instead.
 
-## 获取 `mindnote_id`
+<a id="获取-mindnote_id"></a>
+## Obtaining the `mindnote_id`
 
-`--mindnote-id` 传 **Mindnote 文档 token**，不是节点 ID。`lark-cli mindnotes` 只负责读取和写入思维笔记内部节点。
+`--mindnote-id` takes a **Mindnote document token**, not a node ID. `lark-cli mindnotes` is only responsible for reading and writing nodes inside a mindnote.
 
 ```bash
-# 用户给了 Mindnote URL，或给了可能包着 Mindnote 的 Wiki URL
+# The user provided a Mindnote URL, or provided a Wiki URL that may wrap a Mindnote
 lark-cli drive +inspect --url "<mindnote_or_wiki_url>"
 ```
 
-处理规则：
+Handling rules:
 
-- 普通 Mindnote URL：`drive +inspect` 返回的 Mindnote token 可作为 `--mindnote-id`。
-- Wiki URL：不要把 `/wiki/` 路径里的 wiki token 当作 `--mindnote-id`；必须先 `drive +inspect` 解包，确认底层类型是 `mindnote` 后再使用返回的真实 token。直接把 wiki token 传给 `mindnotes nodes list` 通常会返回 `3410003 resource not found`。
+- Regular Mindnote URL: the Mindnote token returned by `drive +inspect` can be used as `--mindnote-id`.
+- Wiki URL: do not treat the wiki token in the `/wiki/` path as `--mindnote-id`; you must first unwrap it with `drive +inspect`, confirm the underlying type is `mindnote`, and then use the returned real token. Passing the wiki token directly to `mindnotes nodes list` usually returns `3410003 resource not found`.
 
-## 命令
+<a id="命令"></a>
+## Commands
 
 ```bash
-# 先看命令帮助
+# First check the command help
 lark-cli mindnotes nodes list --help
 lark-cli mindnotes nodes create --help
 
-# 读取节点列表
+# Read the node list
 lark-cli mindnotes nodes list --mindnote-id "<mindnote_token>"
 
-# 创建子节点
+# Create a child node
 lark-cli mindnotes nodes create \
   --mindnote-id "<mindnote_token>" \
   --data '{"client_token":"<client_token>","nodes":[{"parent_id":"node_parent123","texts":[{"element_type":"text","text":{"content":"子节点内容"}}],"highlight":"yellow","finish":false}]}'
 
-# 更新已有节点
+# Update an existing node
 lark-cli mindnotes nodes create \
   --mindnote-id "<mindnote_token>" \
   --data '{"client_token":"<client_token>","nodes":[{"node_id":"node_existing123","texts":[{"element_type":"text","text":{"content":"更新后的节点内容"}}],"highlight":"blue","finish":true}]}'
 ```
 
-## 参数
+<a id="参数"></a>
+## Parameters
 
 ### `mindnotes nodes list`
 
-| 参数 | 必填 | 说明 |
+| Parameter | Required | Description |
 |------|------|------|
-| `--mindnote-id` | 是 | 思维笔记 token / 唯一标识 |
+| `--mindnote-id` | Yes | Mindnote token / unique identifier |
 
-返回重点：`data.nodes` 中常见字段有 `node_id`、`parent_id`、`texts`、`notes`、`images`、`finish`、`highlight`。
+Return highlights: common fields in `data.nodes` include `node_id`, `parent_id`, `texts`, `notes`, `images`, `finish`, `highlight`.
 
 ### `mindnotes nodes create`
 
-命令参数：
+Command parameters:
 
-| 参数 | 必填 | 说明 |
+| Parameter | Required | Description |
 |------|------|------|
-| `--mindnote-id` | 是 | 思维笔记 token / 唯一标识 |
-| `--data` | 是 | JSON 请求体 |
+| `--mindnote-id` | Yes | Mindnote token / unique identifier |
+| `--data` | Yes | JSON request body |
 
-请求体字段：
+Request body fields:
 
-| 字段 | 必填 | 说明 |
+| Field | Required | Description |
 |------|------|------|
-| `client_token` | 否 | 幂等 token，建议写操作传入；推荐使用时间戳或 UUID |
-| `nodes` | 是 | 待创建或更新的节点数组 |
-| `nodes[].node_id` | 否 | 节点 ID；传入已有 `node_id` 时表示更新对应节点 |
-| `nodes[].parent_id` | 否 | 父节点 ID；创建子节点时传入 |
-| `nodes[].texts` | 否 | 节点正文富文本数组 |
-| `nodes[].notes` | 否 | 节点备注富文本数组 |
-| `nodes[].images` | 否 | 节点图片列表 |
-| `nodes[].highlight` | 否 | `red` / `yellow` / `pink` / `blue` / `cyan` / `olive` / `grey` |
-| `nodes[].finish` | 否 | 节点完成状态 |
+| `client_token` | No | Idempotency token, recommended for write operations; using a timestamp or UUID is recommended |
+| `nodes` | Yes | Array of nodes to create or update |
+| `nodes[].node_id` | No | Node ID; passing an existing `node_id` means updating the corresponding node |
+| `nodes[].parent_id` | No | Parent node ID; pass when creating a child node |
+| `nodes[].texts` | No | Array of node body rich text |
+| `nodes[].notes` | No | Array of node note rich text |
+| `nodes[].images` | No | List of node images |
+| `nodes[].highlight` | No | `red` / `yellow` / `pink` / `blue` / `cyan` / `olive` / `grey` |
+| `nodes[].finish` | No | Node completion status |
 
-富文本字段 `texts` / `notes` 是元素数组。最常见的是：
+The rich text fields `texts` / `notes` are element arrays. The most common one is:
 
 ```json
 [{"element_type":"text","text":{"content":"节点内容"}}]
 ```
 
-### 节点图片（`nodes[].images`）
+<a id="节点图片nodesimages"></a>
+### Node images (`nodes[].images`)
 
-`nodes[].images` 接收的是**图片 token**，不是本地文件路径，也不是 URL。
+`nodes[].images` accepts an **image token**, not a local file path, and not a URL.
 
 ```bash
-# 先上传图片，拿到 token
+# First upload the image and get the token
 lark-cli docs +media-upload --file ./image.png --parent-type mindnote_image --parent-node <mindnote_token>
 
-# 再把 token 写进节点
+# Then write the token into the node
 lark-cli mindnotes nodes create \
   --mindnote-id "<mindnote_token>" \
   --data '{"client_token":"<client_token>","nodes":[{"node_id":"node_existing123","images":[{"token":"canonical_token"}]}]}'
 ```
 
-参数说明：
+Parameter description:
 
-| 参数 | 必填 | 说明 |
+| Parameter | Required | Description |
 |------|------|------|
-| `--file` | 是 | 本地图片路径 |
-| `--parent-type` | 是 | 上传目标类型；图片使用 `mindnote_image` |
-| `--parent-node` | 是 | 传 Mindnote 的 token |
-| `nodes[].images[].token` | 是 | 上传后返回的图片 token |
+| `--file` | Yes | Local image path |
+| `--parent-type` | Yes | Upload target type; use `mindnote_image` for images |
+| `--parent-node` | Yes | Pass the Mindnote token |
+| `nodes[].images[].token` | Yes | Image token returned after upload |
 
-## 推荐工作流
+<a id="推荐工作流"></a>
+## Recommended workflow
 
-1. 先判断用户目标是不是“新建一个思维笔记”。
-2. 如果是新建思维笔记，切到 [lark-doc-whiteboard](lark-doc-whiteboard.md)。
-3. 如果是操作已有思维笔记，先按上方「获取 `mindnote_id`」确认已拿到 Mindnote 文档 token。
-4. 确认目标类型是 **Mindnote** 后，把真实 Mindnote token 作为 `--mindnote-id`。
-5. 先执行 `mindnotes nodes list`，确认目标 `parent_id`。
-6. 新增子节点时，在 `nodes[]` 里传 `parent_id`；更新已有节点时，在 `nodes[]` 里传已有 `node_id`。
-7. 再执行 `mindnotes nodes create`。
-8. 写操作优先带 `client_token`，推荐使用时间戳或 UUID，避免重试时重复创建或重复更新。
+1. First determine whether the user's goal is to "create a new mindnote".
+2. If it is to create a new mindnote, switch to [lark-doc-whiteboard](lark-doc-whiteboard.md).
+3. If it is to operate on an existing mindnote, first follow "Obtaining the `mindnote_id`" above to confirm that the Mindnote document token has been obtained.
+4. After confirming the target type is **Mindnote**, use the real Mindnote token as `--mindnote-id`.
+5. First run `mindnotes nodes list` to confirm the target `parent_id`.
+6. When adding a child node, pass `parent_id` in `nodes[]`; when updating an existing node, pass the existing `node_id` in `nodes[]`.
+7. Then run `mindnotes nodes create`.
+8. For write operations, preferably include `client_token`; using a timestamp or UUID is recommended to avoid duplicate creation or duplicate updates on retry.
 
 > [!CAUTION]
-> `mindnotes nodes create` 是写操作。创建时确认插入位置，更新时确认 `node_id` 指向的就是目标节点。
+> `mindnotes nodes create` is a write operation. When creating, confirm the insertion position; when updating, confirm that `node_id` points to the target node.
 
-## 参考
+<a id="参考"></a>
+## References
 
-- [lark-doc-fetch](lark-doc-fetch.md) — 获取文档内容
-- [lark-doc-whiteboard](lark-doc-whiteboard.md) — 新建思维笔记走画板链路
-- [lark-drive](../../drive/index.md) — 解析 Mindnote / Wiki 等云空间资源
-- [lark-shared](../../shared/index.md) — 认证和全局参数
+- [lark-doc-fetch](lark-doc-fetch.md) — fetch document content
+- [lark-doc-whiteboard](lark-doc-whiteboard.md) — creating a new mindnote goes through the whiteboard chain
+- [lark-drive](../../drive/index.md) — parse cloud space resources such as Mindnote / Wiki
+- [lark-shared](../../shared/index.md) — authentication and global parameters

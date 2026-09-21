@@ -1,8 +1,10 @@
-# drive +member-remove（移除协作者权限）
+<a id="drive-member-remove移除协作者权限"></a>
+# drive +member-remove (remove collaborator permission)
 
-> 这是高风险写操作。真实执行会移除权限，需要核对资源和成员后显式加 `--yes`。
+> This is a high-risk write operation. Real execution removes permissions; you must verify the resource and member and then explicitly add `--yes`.
 
-## 命令
+<a id="命令"></a>
+## Command
 
 ```bash
 lark-cli drive +member-remove \
@@ -13,22 +15,24 @@ lark-cli drive +member-remove \
   --yes
 ```
 
-## 参数
+<a id="参数"></a>
+## Parameters
 
-| 参数 | 必填 | 说明 |
+| Parameter | Required | Description |
 |------|------|------|
-| `--token` | 是 | 裸 token 或完整 URL。路径支持 `/drive/folder/`、`/docx/`、`/doc/`、`/sheets/`、`/base/`、`/bitable/`、`/wiki/`、`/file/`、`/mindnotes/`、`/slides/`、`/minutes/`、`/page/`；URL 可从路径推断类型，裸 token 必须同时传 `--type`。 |
-| `--type` | 条件必填 | 资源类型：`docx` / `doc` / `sheet` / `bitable` / `file` / `folder` / `wiki` / `mindnote` / `slides` / `minutes` / `apps`。完整 URL 可省略。 |
-| `--member-id` | 是 | 要移除的单个协作者 ID。逗号分隔的多成员输入会被拒绝；批量场景应逐个调用。 |
-| `--member-type` | 是 | ID 类型：`email` / `openid` / `openchat` / `opendepartmentid` / `userid` / `unionid` / `groupid` / `appid` / `wikispaceid`。 |
-| `--member-kind` | 条件必填 | 仅 `--member-type=wikispaceid` 使用：未启用知识库成员分组时传 `wiki_space_member`，启用后根据权限传 `wiki_space_viewer` 或 `wiki_space_editor`。 |
-| `--perm-type` | 否 | 仅 wiki 协作者使用：`container`（默认，当前页面及子页面）或 `single_page`（仅当前页面）。 |
-| `--dry-run` | 否 | 只预览 DELETE URL、query 和 body，不调用接口。 |
-| `--yes` | 真实执行时是 | 确认高风险权限移除操作。 |
+| `--token` | Yes | Bare token or full URL. Paths support `/drive/folder/`, `/docx/`, `/doc/`, `/sheets/`, `/base/`, `/bitable/`, `/wiki/`, `/file/`, `/mindnotes/`, `/slides/`, `/minutes/`, `/page/`; the type can be inferred from the URL path, but a bare token requires also passing `--type`. |
+| `--type` | Conditionally required | Resource type: `docx` / `doc` / `sheet` / `bitable` / `file` / `folder` / `wiki` / `mindnote` / `slides` / `minutes` / `apps`. Can be omitted for a full URL. |
+| `--member-id` | Yes | The single collaborator ID to remove. Comma-separated multi-member input is rejected; batch scenarios should call this one by one. |
+| `--member-type` | Yes | ID type: `email` / `openid` / `openchat` / `opendepartmentid` / `userid` / `unionid` / `groupid` / `appid` / `wikispaceid`. |
+| `--member-kind` | Conditionally required | Used only by `--member-type=wikispaceid`: pass `wiki_space_member` when Wiki member grouping is not enabled, and after it is enabled pass `wiki_space_viewer` or `wiki_space_editor` depending on the permission. |
+| `--perm-type` | No | Used only by wiki collaborators: `container` (default, current page and subpages) or `single_page` (current page only). |
+| `--dry-run` | No | Only preview the DELETE URL, query, and body; do not call the API. |
+| `--yes` | Yes for real execution | Confirm the high-risk permission removal operation. |
 
-## 输出
+<a id="输出"></a>
+## Output
 
-以移除 `openid` 类型的用户协作者为例，成功后返回：
+Taking the removal of a user collaborator of type `openid` as an example, on success it returns:
 
 ```json
 {
@@ -45,16 +49,17 @@ lark-cli drive +member-remove \
 }
 ```
 
-Wiki 普通协作者还会返回 `perm_type`；`wikispaceid` 返回所传的 `member_kind`。
+A regular Wiki collaborator also returns `perm_type`; `wikispaceid` returns the passed `member_kind`.
 
-`removed: true` 表示删除请求成功完成，不保证该权限此前一定存在。
+`removed: true` indicates that the delete request completed successfully; it does not guarantee that the permission previously existed.
 
-## 行为说明
+<a id="行为说明"></a>
+## Behavior notes
 
-- **身份支持**：支持 `--as user` 和 `--as bot`。
-- **应用协作者**：使用 `--member-type=appid`，`--member-id` 传应用 ID（通常为 `cli_xxx`）。
-- **部门协作者**：`--member-type=opendepartmentid` 只能配合 `--as user`；bot 身份会在客户端提前拒绝。
-- **安全编码**：资源 token 和 member ID 都作为独立 path segment 编码。
-- **Wiki 范围**：普通 wiki 协作者默认删除 `container` 权限；只删除当前页面权限时显式传 `single_page`。
-- **Wiki 空间成员**：`--member-type=wikispaceid` 仅支持 `--type=wiki`；必须用 `--member-kind` 指明成员角色，并且不能同时传 `--perm-type`。
-- **错误处理**：OpenAPI 返回的 typed error 原样透传，可根据错误信封中的 subtype、code、hint 和权限信息处理。
+- **Identity support**: Supports `--as user` and `--as bot`.
+- **App collaborators**: Use `--member-type=appid`, and pass the app ID (usually `cli_xxx`) for `--member-id`.
+- **Department collaborators**: `--member-type=opendepartmentid` can only be used with `--as user`; the bot identity is rejected early on the client side.
+- **Safe encoding**: Both the resource token and member ID are encoded as independent path segments.
+- **Wiki scope**: Regular wiki collaborators remove the `container` permission by default; to remove only the current page permission, explicitly pass `single_page`.
+- **Wiki space members**: `--member-type=wikispaceid` supports only `--type=wiki`; you must use `--member-kind` to specify the member role, and you cannot pass `--perm-type` at the same time.
+- **Error handling**: Typed errors returned by the OpenAPI are passed through as-is; you can handle them based on the subtype, code, hint, and permission information in the error envelope.

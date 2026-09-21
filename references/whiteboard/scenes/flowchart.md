@@ -1,48 +1,56 @@
-# 流程图 (Flowchart)
+<a id="流程图-flowchart"></a>
+# Flowchart
 
-适用于：各种业务流转图、决策树、审批流、时序控制逻辑、带条件判断的链路、系统架构拓扑等。
+Applicable to: various business flow diagrams, decision trees, approval flows, timing control logic, conditional paths, system architecture topologies, etc.
 
-通用字段语义详见 `elements/schema.md`，通用布局原则详见 `elements/layout.md`；本文件只描述流程图场景下的选型边界与范式。
+For general field semantics, see `elements/schema.md`; for general layout principles, see `elements/layout.md`. This document only describes the selection boundaries and patterns for the flowchart scenario.
 
 > [!IMPORTANT]
-> **流程图必须走 DSL 路径，不再使用 Mermaid！**
-> 复杂分支、判断、回路、跳级关系优先使用 `layout: "dagre"` 计算拓扑；如果只是规整的单线流水线，且卡片强对齐比自动拓扑更重要，也可以使用 Flex + 顶层 `connector` 组合实现。
+> **Flowcharts must use the DSL path; Mermaid is no longer used!**
+> For complex branches, decisions, loops, and skip-level relationships, prefer `layout: "dagre"` to compute the topology; if it is just a regular single-line pipeline and card strong alignment is more important than automatic topology, you can also use Flex + top-level `connector` composition.
 
-## 美学规范
+<a id="美学规范"></a>
+## Aesthetic Specifications
 
-- **摒弃简陋节点，推崇全卡片化**：核心业务节点不要只用一个纯文本 `rect`。**应优先采用 Flex 组合卡片**（如：在 `vertical` frame 内上下组合【Emoji 标题项】和【补充说明项】），使得节点信息结构化、层级分明。
-- **语义化色彩编排**：节点底色严禁随机分配。必须按状态语义映射：常规链路用浅蓝/浅紫、核心风控/检查用预警黄、成功通过用生命绿、失败熔断用危险红。边框颜色可同色系加深，以凸显卡片边缘。
-- **统一判定逻辑**：条件分支必须使用 `diamond` 菱形节点，并且**严禁漏掉** `layoutOptions.edges` 边定义里的第三个标签参数（必须清晰写明"是/否"、"通过/拒绝"）。
-- **形状多样化**：合理搭配不同形状来表达语义 —— `ellipse` 用于外部实体/起终点、`diamond` 用于判断路由、`rect` 用于业务处理节点、`cylinder` 用于持久化存储。
+- **Abandon crude nodes; favor full card-based design**: Core business nodes should not use only a plain-text `rect`. **Prefer Flex composite cards** (e.g., vertically combining an [Emoji title item] and a [supplementary description item] within a `vertical` frame), so that node information is structured and clearly hierarchical.
+- **Semantic color orchestration**: Node background colors must never be assigned randomly. They must be mapped by state semantics: use light blue/light purple for regular paths, warning yellow for core risk control/checks, life green for successful passes, and danger red for failure circuit-breaking. Border colors can be a darker shade of the same color family to highlight card edges.
+- **Unified decision logic**: Conditional branches must use `diamond` diamond nodes, and **must not omit** the third label parameter in the `layoutOptions.edges` edge definition (must clearly state "yes/no", "pass/reject").
+- **Diverse shapes**: Reasonably combine different shapes to express semantics — `ellipse` for external entities/start-end points, `diamond` for decision routing, `rect` for business processing nodes, `cylinder` for persistent storage.
 
-## Layout 选型
+<a id="layout-选型"></a>
+## Layout Selection
 
-| 模式             | 适用条件                                       | 核心配置                                                                                                 |
+| Mode             | Applicable Conditions                                       | Core Configuration                                                                                                 |
 | ---------------- | ---------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
-| **主体用 Dagre** | 有判断、分支、回路、回退、跳级关系的标准流程图 | 主体 frame 设定 `layout: "dagre"`，按需配置 `rankdir: "TB"` 或 `rankdir: "LR"`。                          |
-| **局部复合节点** | 流程中的某一步本身是一个小型 UI 组合体         | 外层仍用 `dagre`，复合步骤内部改用 `layout: "vertical"` / `"horizontal"`。此类节点为**不透明节点**，外层连线只能连到外壳。 |
-| **透明子图**     | 需按业务区域分组，且连线穿越区域边界           | 子容器声明 `layout: "dagre"` + `layoutOptions: { isCluster: true }`，成为透明子图。内部节点直接参与外层拓扑运算。 |
-| **规整流水线**   | 基本是单线 A → B → C → D，且卡片对齐要求极高   | 主体可用 Flex 排版，连线改用顶层 `connector`；不要为了"自动"而硬上 Dagre。                                  |
+| **Main body uses Dagre** | Standard flowcharts with decisions, branches, loops, rollbacks, and skip-level relationships | Main frame sets `layout: "dagre"`, configure `rankdir: "TB"` or `rankdir: "LR"` as needed.                          |
+| **Local composite nodes** | A certain step in the flow is itself a small UI composite         | The outer layer still uses `dagre`, while the composite step internally uses `layout: "vertical"` / `"horizontal"`. Such nodes are **opaque nodes**, and outer connections can only connect to the shell. |
+| **Transparent subgraph**     | Needs to be grouped by business area, and connections cross area boundaries           | The sub-container declares `layout: "dagre"` + `layoutOptions: { isCluster: true }`, becoming a transparent subgraph. Internal nodes directly participate in the outer topology computation. |
+| **Regular pipeline**   | Basically a single line A → B → C → D, and card alignment requirements are extremely high   | The main body can use Flex layout, and connections switch to top-level `connector`; do not force Dagre just for the sake of "automatic".                                  |
 
-## 核心属性
+<a id="核心属性"></a>
+## Core Attributes
 
-- **`rankdir`**: `TB`（上下）或 `LR`（左右）。**强烈推荐优先使用 `LR`**，充分利用宽屏横向空间。
-- **`edges`**: 在根 Dagre 的 `layoutOptions.edges` 中按 `[fromId, toId, "标签"]` 声明。**支持反向连接**实现闭环。所有 edges 统一写在**最外层根 Dagre**，不要写在 cluster 内部。
-- **`ranksep` 与边文本**: 若边上标注了说明文字，**必须根据字数调大间距**：`ranksep = max(60, 字数 × 16)`。
-- **自适应尺寸**: dagre 容器**必须**设定 `width: "fit-content"` 和 `height: "fit-content"`。
-- **`clusterTitle`**: 透明子图可通过 `clusterTitle` 声明悬浮标题（自动吸附左上角、加粗 14px），搭配 `clusterTitleColor` 指定标题颜色。
+- **`rankdir`**: `TB` (top-bottom) or `LR` (left-right). **Strongly recommend prioritizing `LR`**, to make full use of widescreen horizontal space.
+- **`edges`**: Declared by `[fromId, toId, "标签"]` in the root Dagre's `layoutOptions.edges`. **Supports reverse connections** to achieve closed loops. All edges are uniformly written in the **outermost root Dagre**, not inside a cluster.
+- **`ranksep` and edge text**: If explanatory text is annotated on an edge, **the spacing must be increased according to the number of characters**: `ranksep = max(60, 字数 × 16)`.
+- **Adaptive sizing**: The dagre container **must** set `width: "fit-content"` and `height: "fit-content"`.
+- **`clusterTitle`**: A transparent subgraph can declare a floating title via `clusterTitle` (automatically snapped to the top-left corner, bold 14px), paired with `clusterTitleColor` to specify the title color.
 
-## 两种嵌套模式
+<a id="两种嵌套模式"></a>
+## Two Nesting Modes
 
-### 不透明节点（Opaque Node）
-Dagre 内的子容器，只要未声明 `isCluster: true`，对外层 Dagre 就是具有确定宽高的原子节点。外层连线无法寻址其内部子节点。适合封装复杂的组合卡片（如带图标、版本号、多行描述的业务模块）。
+<a id="不透明节点opaque-node"></a>
+### Opaque Node
+A sub-container within Dagre, as long as it does not declare `isCluster: true`, is an atomic node with a definite width and height to the outer Dagre. Outer connections cannot address its internal child nodes. Suitable for encapsulating complex composite cards (such as business modules with icons, version numbers, and multi-line descriptions).
 
-### 透明子图（Compound Cluster）
-子容器同时声明 `layout: "dagre"` 与 `layoutOptions: { isCluster: true }` 时，成为外层 Dagre 的复合子图。其内部子节点直接参与外层拓扑运算，连线可穿越子图边界。适合划分网络区域、功能层级、命名空间等边界容器。推荐搭配 `borderDash: "dashed"` 虚线边框 + 淡色背景。
+<a id="透明子图compound-cluster"></a>
+### Transparent Subgraph (Compound Cluster)
+When a sub-container declares both `layout: "dagre"` and `layoutOptions: { isCluster: true }`, it becomes a compound subgraph of the outer Dagre. Its internal child nodes directly participate in the outer topology computation, and connections can cross subgraph boundaries. Suitable for boundary containers such as network zones, functional layers, and namespaces. Recommended to pair with `borderDash: "dashed"` dashed border + light background.
 
-## 骨架示例（推荐范本）
+<a id="骨架示例推荐范本"></a>
+## Skeleton Example (Recommended Template)
 
-以下是一个混合架构拓扑的完整示例。它同时展示了**透明子图**（Kubernetes Zone，连线可穿透）和**不透明复合节点**（DB 集群、AI 引擎，连线只能连外壳）的标准写法，以及多种形状（ellipse / diamond / rect / cylinder）和语义化配色规范。
+The following is a complete example of a hybrid architecture topology. It simultaneously demonstrates the standard way to write a **transparent subgraph** (Kubernetes Zone, connections can pass through) and **opaque composite nodes** (DB cluster, AI engine, connections can only connect to the shell), as well as multiple shapes (ellipse / diamond / rect / cylinder) and semantic color specifications.
 
 ```json
 {
@@ -170,16 +178,17 @@ Dagre 内的子容器，只要未声明 `isCluster: true`，对外层 Dagre 就�
 }
 ```
 
-**范本要点**：
-- `zone_k8s` 是**透明子图**（`isCluster: true` + `clusterTitle`），外部连线穿越虚线边界直达 `k8s_ingress`、`web_pod`、`api_pod`。
-- `db_cluster` 和 `ai_service` 是**不透明节点**（`layout: "vertical"`），内部用 Flex 组合了多行结构化信息，对外层 Dagre 是固定宽高的原子。连线只能连到外壳 ID。
-- 所有 `edges` 统一写在最外层根 Dagre 的 `layoutOptions` 中。
-- 本范本中用到了 `ellipse`（外部实体）、`diamond`（路由判断）、`rect`（业务节点）、`cylinder`（数据库存储）四种形状。
+**Template Key Points**:
+- `zone_k8s` is a **transparent subgraph** (`isCluster: true` + `clusterTitle`), and external connections cross the dashed boundary directly to `k8s_ingress`, `web_pod`, `api_pod`.
+- `db_cluster` and `ai_service` are **opaque nodes** (`layout: "vertical"`), internally combining multiple lines of structured information with Flex, and are atoms with fixed width and height to the outer Dagre. Connections can only connect to the shell ID.
+- All `edges` are uniformly written in the outermost root Dagre's `layoutOptions`.
+- This template uses four shapes: `ellipse` (external entity), `diamond` (routing decision), `rect` (business node), `cylinder` (database storage).
 
-## 陷阱与常见报错防范
+<a id="陷阱与常见报错防范"></a>
+## Pitfalls and Common Error Prevention
 
-- **误用 Mermaid**：只要用户没有带 `mermaid` 具体语法代码，哪怕描述明确是"流程图"，也**强制使用 DSL 框架下的 Dagre 模式**。
-- **重复画线**：`dagre` 里的所有子节点关系通过 `edges` 定义，引擎会自动生成连线。**绝对不要再去外层用 `connector` 节点重复连一次**。
-- **穿透黑盒**：普通子容器是不透明节点，外部连线无法直接寻址其内部子节点（引擎会自动重定向至外壳）。若需穿透，必须声明 `layout: "dagre"` 与 `layoutOptions: { isCluster: true }`。
-- **`id` 缺失**：只要是在 `edges` 里出现的标识符，`children` 里一定能找到同名 `id` 的节点对应，拼写必须完全一致。
-- **宽度灾难**：Dagre 内容器禁止子框使用 `fill-container`，因为 dagre 父容器本身是被内容撑开的。
+- **Misusing Mermaid**: As long as the user has not provided `mermaid` specific syntax code, even if the description clearly says "flowchart", **force the use of Dagre mode under the DSL framework**.
+- **Duplicate drawing of lines**: All child node relationships in `dagre` are defined through `edges`, and the engine automatically generates connections. **Absolutely do not go to the outer layer and use `connector` nodes to connect them again**.
+- **Penetrating black boxes**: Ordinary sub-containers are opaque nodes, and external connections cannot directly address their internal child nodes (the engine automatically redirects to the shell). If penetration is needed, `layout: "dagre"` and `layoutOptions: { isCluster: true }` must be declared.
+- **Missing `id`**: As long as an identifier appears in `edges`, a node with the same name and `id` can definitely be found in `children`, and the spelling must be exactly consistent.
+- **Width disaster**: Sub-frames inside a Dagre container must not use `fill-container`, because the dagre parent container itself is expanded by its content.

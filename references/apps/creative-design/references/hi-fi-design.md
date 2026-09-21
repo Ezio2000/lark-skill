@@ -1,21 +1,21 @@
-# 高保真设计
+<a id="高保真设计"></a>
+# High-Fidelity Design
 
-创建高保真、精细打磨的设计。
+Create high-fidelity, finely polished designs.
 
-遵循以下通用设计流程（用 todo list 记住）：
-1. 澄清关键信息：能从需求、附件、截图或常见模式合理推断的，直接继续；只在关键信息缺失且会影响设计方向时才向用户提问
-2. 查找现有 UI kit 并收集设计上下文——复制所有相关组件，阅读所有相关示例；如果找不到且会影响核心设计方向，再向用户询问
-3. 在文件开头写下假设、上下文和设计推理，放好设计占位，并尽早展示给用户
-4. 尽快把设计做出来，再次展示给用户，并附上下一步建议
-5. 使用工具检查、验证并迭代设计
+Follow this general design process (keep it in mind with a todo list):
+1. Clarify key information: if it can be reasonably inferred from requirements, attachments, screenshots, or common patterns, just continue; only ask the user when key information is missing and would affect the design direction
+2. Find existing UI kits and gather design context—copy all relevant components, read all relevant examples; if none can be found and it would affect the core design direction, then ask the user
+3. Write down assumptions, context, and design reasoning at the beginning of the file, place design placeholders, and show them to the user as early as possible
+4. Produce the design as quickly as possible, show it to the user again, and include suggestions for next steps
+5. Use tools to inspect, validate, and iterate on the design
 
-好的高保真设计不会从零开始——它们扎根于已有的设计上下文。找到合适的 UI kit / 设计资源，或从截图、代码和品牌资产中提取设计规则。你必须花时间去获取设计上下文，包括组件。如果缺少素材但不影响核心方向，先用合理假设继续推进；只有缺失信息会改变设计方向时才向用户索要。从零 mock 一个完整产品是最后手段，会导致低质量的设计。使用 starter components（设备框架等）可以免费获得高质量的脚手架。
+Good high-fidelity designs do not start from scratch—they are rooted in existing design context. Find suitable UI kits / design resources, or extract design rules from screenshots, code, and brand assets. You must spend time obtaining design context, including components. If materials are missing but do not affect the core direction, continue first with reasonable assumptions; only ask the user when the missing information would change the design direction. Mocking an entire product from scratch is a last resort and will lead to low-quality designs. Using starter components (device frames, etc.) gives you high-quality scaffolding for free.
 
-当并排展示多个方案或探索方向时，布局要清晰：给页面一个中性灰背景，把每个方案放进独立且带标签的框中（小标题 + 尺寸随内容变化的白色圆角卡片），并把相关方案分组。
+When presenting multiple options or exploration directions side by side, keep the layout clear: give the page a neutral gray background, place each option in its own labeled box (a small heading + a white rounded card whose size adapts to the content), and group related options together.
 
-设计时，提出好问题很重要——但只在问题会实质性影响设计方向时才提问，避免频繁打断用户。
+When designing, asking good questions is important—but only ask when the question would materially affect the design direction, and avoid interrupting the user frequently.
 
-给出选项：默认提供 2-3 个有清晰差异的方案（与 [`../creative-design.md`](../creative-design.md)「提问」一节的默认一致）；用户明确要求广度探索时，再围绕多个维度扩展更多变体。把符合既有模式的稳妥方案，与新颖的交互方式混合搭配，包括有趣的布局、隐喻和视觉风格。部分方案使用色彩或高级 CSS，部分带图标，部分不带。变体从基础开始，逐步走向更高级、更有创意的方向！尝试以有趣的方式重混品牌资产和视觉 DNA——玩转尺度、填充、纹理、视觉节奏、层次、新颖布局、字体处理。目标不是找到完美方案，而是探索用户可以混搭组合的原子级变体。
+Provide options: by default, offer 2-3 options with clear differences (consistent with the default in the "Ask Questions" section of [`../creative-design.md`](../creative-design.md)); when the user explicitly requests broad exploration, expand to more variants across multiple dimensions. Mix safe options that follow existing patterns with novel interaction approaches, including interesting layouts, metaphors, and visual styles. Have some options use color or advanced CSS, some with icons, and some without. Variants should start from the basics and gradually move toward more advanced and more creative directions! Try remixing brand assets and visual DNA in interesting ways—play with scale, fill, texture, visual rhythm, hierarchy, novel layouts, and typography treatments. The goal is not to find the perfect option, but to explore atomic-level variants that users can mix and match.
 
-CSS、HTML、JS 和 SVG 能力强大。用户往往不知道它们能做到什么。给用户惊喜。
-
+CSS, HTML, JS, and SVG are powerful. Users often do not know what they can do. Surprise the user.

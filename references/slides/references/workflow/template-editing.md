@@ -1,18 +1,18 @@
 # PPT Template Rewrite Principles
 
-核心原则：模板不是风格参考，而是必须沿用的编辑底稿。
+Core principle: a template is not a style reference, but an editing base that must be followed.
 
 ## Import First
 
-如果用户提供的模板是 PPTX 格式，先把模板导入成 Lark Slides。后续写入目标是导入后的 Slides，不是新建一个脱离模板的 deck，也不是先在本地重画 PPTX 再导入。
+If the template provided by the user is in PPTX format, first import the template into Lark Slides. The subsequent writing target is the imported Slides, not a newly created deck detached from the template, and not a PPTX that is first redrawn locally and then imported.
 
-直接使用以下命令，不需要先加载 `lark-drive` Skill：
+Use the following command directly; there is no need to load the `lark-drive` Skill first:
 
 ```bash
 lark-cli drive +import --as user --file "<template.pptx>" --type slides --json
 ```
 
-可选参数：用 `--name "<title>"` 指定导入后的 Slides 标题；用 `--folder-token <FOLDER_TOKEN>` 指定目标文件夹。若返回 `ready=false` / `timed_out=true`，直接执行返回值里的 `next_command`；等价形式是：
+Optional parameters: use `--name "<title>"` to specify the title of the imported Slides; use `--folder-token <FOLDER_TOKEN>` to specify the target folder. If `ready=false` / `timed_out=true` is returned, directly execute the `next_command` in the returned value; the equivalent form is:
 
 ```bash
 lark-cli drive +task_result --scenario import --ticket <TICKET>
@@ -20,66 +20,66 @@ lark-cli drive +task_result --scenario import --ticket <TICKET>
 
 ## Read Before Editing
 
-导入后必须阅读 Slides 内容，理解每页的真实版式、字体、层级、图片、图表、shape、表格和文本容器。阅读结果是后续编辑的事实来源。
+After importing, you must read the Slides content and understand the actual layout, fonts, hierarchy, images, charts, shapes, tables, and text containers of each page. The reading result is the source of truth for subsequent editing.
 
-阅读页面时至少判断：
+When reading a page, at minimum determine:
 
-- 该页原本承担的角色，例如封面、章节页、目录、流程、对比、数据、总结。
-- 该页的主要版式结构，例如图文关系、箭头、时间线、节点、表格、图表、左右对照、背景图或产品图。
-- 哪些文本框、shape 标签、表格单元格或图表标签承载内容。
-- 原页面的字体、字号、颜色、对齐、层级和留白关系。
+- The role the page originally serves, such as cover, section page, table of contents, process, comparison, data, or summary.
+- The main layout structure of the page, such as image-text relationships, arrows, timelines, nodes, tables, charts, left-right comparisons, background images, or product images.
+- Which text boxes, shape labels, table cells, or chart labels carry content.
+- The fonts, font sizes, colors, alignment, hierarchy, and whitespace relationships of the original page.
 
 ## Edit The Imported Slides Directly
 
-理解页面后，直接在导入后的 Slides 上编辑。允许的操作包括：
+After understanding the pages, edit directly on the imported Slides. Permitted operations include:
 
-- 填写、替换、凝练或删除文字。
-- 替换或补充图片。
-- 更新图表、表格、数字标签或节点标签里的内容。
-- 按需复制、删除或重排模板页。
-- 在源页面没有合适承载位置时，做局部、小范围新增元素。
+- Filling in, replacing, condensing, or deleting text.
+- Replacing or adding images.
+- Updating the content in charts, tables, numeric labels, or node labels.
+- Copying, deleting, or rearranging template pages as needed.
+- Making local, small-scale additions of elements when the source page has no suitable place to carry them.
 
-新增元素只能补足内容缺口，不能成为新的主版式。页面主体仍应由模板原有版式承载。
+Newly added elements may only fill content gaps and must not become a new main layout. The main body of the page should still be carried by the template's original layout.
 
 ## Preserve Design
 
-编辑必须严格沿用原版式和字体，只改内容，不做设计。
+Editing must strictly follow the original layout and fonts, changing only content and not doing design.
 
-默认保留：
+By default, preserve:
 
-- 页面布局、视觉层级、留白和对齐关系。
-- 原字体、字号体系、颜色、文本框位置和 shape 顺序。
-- 背景图、图片、logo、图表、表格、装饰形状、线条、图标和页面结构。
-- 模板中不同页型之间的差异。
+- Page layout, visual hierarchy, whitespace, and alignment relationships.
+- The original fonts, font size system, colors, text box positions, and shape order.
+- Background images, images, logos, charts, tables, decorative shapes, lines, icons, and page structure.
+- The differences between different page types in the template.
 
-不要把模板页改造成统一的通用卡片、空白板式布局、标题栏、三栏、2x2 卡片或大面积遮罩。不要把模板当作背景图后另起一套设计系统。
+Do not transform template pages into uniform generic cards, blank layout boards, title bars, three-column layouts, 2x2 cards, or large-area masks. Do not treat the template as a background image and then start a separate design system.
 
 ## Content Only
 
-内容必须优先进入原页面已有的文本框、shape 标签、节点、表格单元格、图表标签或注释容器。
+Content must preferentially go into the text boxes, shape labels, nodes, table cells, chart labels, or annotation containers already present on the original page.
 
-如果原容器空间不足，优先：
+If the original container has insufficient space, prioritize:
 
-- 凝练文字。
-- 降低字号但保持原字体体系。
-- 拆分到页面已有的邻近容器。
-- 使用模板已有的注释、标签或补充说明区域。
-- 复制同页或同模板中的原生容器样式做局部补充。
+- Condensing the text.
+- Reducing the font size while keeping the original font system.
+- Splitting into existing nearby containers on the page.
+- Using the template's existing annotation, label, or supplementary explanation areas.
+- Copying the native container style from the same page or the same template for local supplementation.
 
-不要为了容纳长文案而重画页面主体结构。不要用新增大卡片遮住原图表、箭头、图片、背景或关键 shape。
+Do not redraw the main page structure just to accommodate long copy. Do not use newly added large cards to cover the original charts, arrows, images, background, or key shapes.
 
 ## Readback And Tune
 
-完成编辑后必须回读结果，并逐页微调。
+After completing the edits, you must read back the result and fine-tune page by page.
 
-回读时重点检查：
+During readback, focus on checking:
 
-- 文字是否溢出、截断、压线或超出容器。
-- 文本是否遮挡图片、图表、shape、箭头、节点或其他文字。
-- shape 顺序是否导致内容被覆盖或遮住。
-- 新内容是否仍然落在模板原有版式中，而不是覆盖模板结构。
-- 字体、字号、颜色、对齐和层级是否仍贴近原页。
+- Whether text overflows, is truncated, crosses lines, or exceeds the container.
+- Whether text obscures images, charts, shapes, arrows, nodes, or other text.
+- Whether the shape order causes content to be covered or obscured.
+- Whether new content still falls within the template's original layout, rather than covering the template structure.
+- Whether fonts, font sizes, colors, alignment, and hierarchy still stay close to the original page.
 
-发现文字溢出时，优先凝练文字或缩减字号。发现遮挡时，调整 shape 顺序、局部位置或复用原有空白区域解决。只有在这些方法都不能满足内容表达时，才做局部新增或删除。
+When text overflow is found, prioritize condensing the text or reducing the font size. When obscuring is found, resolve it by adjusting the shape order, local positions, or reusing existing blank areas. Only when these methods cannot satisfy the content expression should you make local additions or deletions.
 
-完成标准是“原模板的版式、字体和视觉结构仍清晰存在，内容已经被准确替换，并且回读后没有溢出和遮挡”。
+The completion standard is "the original template's layout, fonts, and visual structure still clearly exist, the content has been accurately replaced, and after readback there is no overflow or obscuring."

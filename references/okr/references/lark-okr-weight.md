@@ -1,12 +1,13 @@
 # okr +weight
 
 
-调整 OKR 周期下目标（Objective）或目标下关键结果（Key Result）的权重。支持部分指定权重，未指定的按原权重比例自动分配。
+Adjust the weight of an Objective under an OKR cycle or a Key Result under an Objective. Supports specifying weights partially; unspecified ones are automatically allocated in proportion to their original weights.
 
-## 推荐命令
+<a id="推荐命令"></a>
+## Recommended Commands
 
 ```bash
-# 调整 Objective 权重（部分指定，剩余自动分配）
+# Adjust Objective weights (partially specified, the remainder automatically allocated)
 lark-cli okr +weight \
   --cycle-id 7000000000000000001 \
   --level objective \
@@ -16,7 +17,7 @@ lark-cli okr +weight \
   ]' \
   --as user
 
-# 调整 KR 权重（全部指定，和为 1）
+# Adjust KR weights (all specified, sum equals 1)
 lark-cli okr +weight \
   --cycle-id 7000000000000000001 \
   --level key-result \
@@ -27,7 +28,7 @@ lark-cli okr +weight \
   ]' \
   --as user
 
-# 从文件读取 weights
+# Read weights from a file
 lark-cli okr +weight \
   --cycle-id 7000000000000000001 \
   --level objective \
@@ -35,37 +36,41 @@ lark-cli okr +weight \
   --as user
 ```
 
-参数限制: 请求中的权重保留三位小数，分配的所有权重和不能大于 1 (小于等于 1 是允许的)。
+Parameter limits: Weights in the request retain three decimal places, and the sum of all allocated weights cannot exceed 1 (less than or equal to 1 is allowed).
 
-### 权重归一化
+<a id="权重归一化"></a>
+### Weight Normalization
 
-- 在 OKR 中，一个周期下所有 Objective 和 一个 Objective 下所有 Key Result 的权重和固定为 1.
-- 在使用 +weight shortcut 分配 OKR 权重时，已分配的总权重不得超过 1。
-- 若已分配的权重 < 1，剩余的权重会按照原始权重的比例均分到未指定的 Objective/Key Result 下。
-  - 若所有 Objective/Key Result 均分配了权重但和 < 1，剩余的权重会计算在最后一个 Objective/Key Result 下。
+- In OKR, the sum of the weights of all Objectives under a cycle and all Key Results under an Objective is fixed at 1.
+- When using the +weight shortcut to allocate OKR weights, the total allocated weight must not exceed 1.
+- If the allocated weight < 1, the remaining weight is distributed evenly to the unspecified Objectives/Key Results in proportion to their original weights.
+  - If all Objectives/Key Results have been assigned weights but the sum < 1, the remaining weight is calculated under the last Objective/Key Result.
 
 
 
-## 参数
+<a id="参数"></a>
+## Parameters
 
-| 参数               | 必填 | 默认值    | 说明                                                                  |
+| Parameter               | Required | Default    | Description                                                                  |
 |------------------|----|--------|---------------------------------------------------------------------|
-| `--level`        | 是  | —      | 调整层级：`objective`（调整周期下目标权重）\| `key-result`（调整目标下 KR 权重）             |
-| `--cycle-id`     | 是  | —      | OKR 周期 ID（int64 类型）                                                 |
-| `--objective-id` | 条件 | —      | 目标 ID。当 `--level=key-result` 时**必填**，用于定位父目标。                       |
-| `--weights`      | 是  | —      | JSON 数组格式的权重分配。支持 `@文件路径` 或 `@-` 从 stdin 读取。权重保留三位小数，分配的所有权重和不能大于 1 |
-| `--dry-run`      | 否  | —      | 预览 API 调用而不实际执行                                                     |
-| `--format`       | 否  | `json` | 输出格式                                                                |
+| `--level`        | Yes  | —      | Adjustment level: `objective` (adjust Objective weights under a cycle) \| `key-result` (adjust KR weights under an Objective)             |
+| `--cycle-id`     | Yes  | —      | OKR cycle ID (int64 type)                                                 |
+| `--objective-id` | Conditional | —      | Objective ID. When `--level=key-result`, this is **required**, used to locate the parent Objective.                       |
+| `--weights`      | Yes  | —      | Weight allocation in JSON array format. Supports `@文件路径` or `@-` to read from stdin. Weights retain three decimal places, and the sum of all allocated weights cannot exceed 1 |
+| `--dry-run`      | No  | —      | Preview the API call without actually executing it                                                     |
+| `--format`       | No  | `json` | Output format                                                                |
 
-## 工作流程
+<a id="工作流程"></a>
+## Workflow
 
-1. 使用 `+cycle-list` 和 `+cycle-detail` 获取周期 ID、目标 ID、KR ID 和当前权重。
-2. 构造 `--weights` JSON 数组，指定要调整的 ID 和权重，执行命令。
-3. 返回调整后的完整权重列表。
+1. Use `+cycle-list` and `+cycle-detail` to obtain the cycle ID, Objective ID, KR ID, and current weights.
+2. Construct the `--weights` JSON array, specifying the IDs and weights to adjust, and execute the command.
+3. Return the complete list of weights after adjustment.
 
-## 输出
+<a id="输出"></a>
+## Output
 
-成功返回 JSON：
+On success, returns JSON:
 
 ```json
 {
@@ -83,13 +88,15 @@ lark-cli okr +weight \
 }
 ```
 
-## 关于 1001001 错误
+<a id="关于-1001001-错误"></a>
+## About the 1001001 Error
 
-有时，即使输入的参数完全正确， +weight 也会返回 1001001 错误。这是因为你的租户设置中，不一定开启了目标或关键结果的设置权重功能。
-若你确认输入的参数无误（cycle-id/objective-id 正确，weights 中的 id 均是同一个周期下的目标或同一个目标下的关键结果，weights 中的权重和 <1）,
-不必进一步尝试，你需要向用户确认 OKR 应用目前是否开启了目标或关键结果的设置权重功能。
+Sometimes, even if the input parameters are completely correct, +weight returns a 1001001 error. This is because the weight-setting feature for Objectives or Key Results may not be enabled in your tenant settings.
+If you confirm that the input parameters are correct (cycle-id/objective-id are correct, the ids in weights are all Objectives under the same cycle or Key Results under the same Objective, and the sum of weights in weights < 1),
+do not make further attempts; you need to confirm with the user whether the OKR app currently has the weight-setting feature for Objectives or Key Results enabled.
 
-## 参考
+<a id="参考"></a>
+## References
 
-- [OKR 业务实体](lark-okr-entities.md) -- OKR 实体结构定义
-- [lark-shared](../../shared/index.md) -- 认证和全局参数
+- [OKR business entities](lark-okr-entities.md) -- OKR entity structure definition
+- [lark-shared](../../shared/index.md) -- Authentication and global parameters

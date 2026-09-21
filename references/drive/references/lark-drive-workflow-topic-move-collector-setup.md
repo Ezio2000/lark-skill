@@ -1,151 +1,163 @@
-# 主题资料收集工作流：输入与目标确认
+<a id="主题资料收集工作流输入与目标确认"></a>
+# Topic Material Collection Workflow: Input and Target Confirmation
 
-由状态 `PARSE_INPUT`、`RESOLVE_TARGET`、`CONFIRM_CONTEXT` 加载。
+Loaded by states `PARSE_INPUT`, `RESOLVE_TARGET`, `CONFIRM_CONTEXT`.
 
-本文档负责用户输入解析、目标位置解析、搜索前确认和 `TargetLocation`。不得执行搜索召回、资源分类、目标创建或资源移动。
+This document is responsible for user input parsing, target location parsing, pre-search confirmation, and `TargetLocation`. It must not execute search recall, resource classification, target creation, or resource movement.
 
-本文档只服务 `topic_move_collector`。进入本文档后必须确认 `workflow_id=topic_move_collector`；不得把当前任务改路由到其他 workflow。
+This document only serves `topic_move_collector`. After entering this document, you must confirm `workflow_id=topic_move_collector`; you must not reroute the current task to another workflow.
 
-## 必读上下文
+<a id="必读上下文"></a>
+## Required Context
 
-执行本文档规则前：
+Before executing the rules in this document:
 
-1. 按 [`../../shared/index.md`](../../shared/index.md) 处理身份、认证和权限。
-2. 解析 Drive 目标时，遵循 [`lark-drive-inspect.md`](lark-drive-inspect.md)、[`lark-drive-create-folder.md`](lark-drive-create-folder.md) 和 [`lark-drive-search.md`](lark-drive-search.md)。
-3. 解析 Wiki 目标时，遵循 [`../../wiki/index.md`](../../wiki/index.md)、[`../../wiki/references/lark-wiki-node-get.md`](../../wiki/references/lark-wiki-node-get.md) 和 [`../../wiki/references/lark-wiki-node-create.md`](../../wiki/references/lark-wiki-node-create.md)。
+1. Handle identity, authentication, and permissions according to [`../../shared/index.md`](../../shared/index.md).
+2. When parsing a Drive target, follow [`lark-drive-inspect.md`](lark-drive-inspect.md), [`lark-drive-create-folder.md`](lark-drive-create-folder.md), and [`lark-drive-search.md`](lark-drive-search.md).
+3. When parsing a Wiki target, follow [`../../wiki/index.md`](../../wiki/index.md), [`../../wiki/references/lark-wiki-node-get.md`](../../wiki/references/lark-wiki-node-get.md), and [`../../wiki/references/lark-wiki-node-create.md`](../../wiki/references/lark-wiki-node-create.md).
 
-## 状态：`PARSE_INPUT`
+<a id="状态parse_input"></a>
+## State: `PARSE_INPUT`
 
-进入条件：workflow 被触发。
+Entry condition: the workflow is triggered.
 
-必须：
+Must:
 
-1. 提取 `topic`、`target`、`identity`、`owner_scope` 和 `constraints`。
-2. 将 `topic` 和 `target` 视为必填字段。
-3. 除非用户明确要求 bot / app 视角，否则 `identity` 默认使用用户身份。
-4. 默认 `allow_cross_container_move=true`，但必须在 `CONFIRM_CONTEXT` 展示。
-5. 默认 `owner_scope=mine`，表示只搜索当前用户 owner / 负责的资源。
-6. 只有用户明确要求“不限 owner”“包括共享给我的”“所有我能看到的文档”或“全量搜索”时，才设置 `owner_scope=all_visible`。
-7. 除非用户明确提供限制，否则 `constraints` 保持为空。
-8. 如果缺少 `topic` 或 `target`，只提出最小澄清问题。
+1. Extract `topic`, `target`, `identity`, `owner_scope`, and `constraints`.
+2. Treat `topic` and `target` as required fields.
+3. Unless the user explicitly requests the bot / app perspective, `identity` defaults to using the user identity.
+4. Default `allow_cross_container_move=true`, but it must be displayed in `CONFIRM_CONTEXT`.
+5. Default `owner_scope=mine`, meaning only search resources owned / managed by the current user.
+6. Only set `owner_scope=all_visible` when the user explicitly requests "unrestricted owner", "include those shared with me", "all documents I can see", or "full search".
+7. Unless the user explicitly provides restrictions, keep `constraints` empty.
+8. If `topic` or `target` is missing, only ask the minimal clarifying question.
 
-### 输入字段
+<a id="输入字段"></a>
+### Input Fields
 
-| 字段 | 说明 |
+| Field | Description |
 |-------|------|
-| `topic` | 用户要查找的主题、关键词、内容线索、同义词、缩写、排除词。 |
-| `target` | 归档目标，可以是已有 Drive 文件夹、已有 Wiki 节点、待创建 Drive 文件夹或待创建 Wiki 节点。 |
-| `identity` | 执行身份，默认 `--as user`。 |
-| `owner_scope` | 搜索 owner 范围，默认 `mine`；`all_visible` 仅在用户明确要求扩展到所有可见资源时使用。 |
-| `constraints` | 用户显式给出的类型、时间、创建人、评论、标题、范围等限制。 |
-| `allow_cross_container_move` | 是否允许跨 Drive / Wiki 容器移动；默认允许，但必须确认。 |
+| `topic` | The topic, keywords, content clues, synonyms, abbreviations, and exclusion terms the user wants to find. |
+| `target` | The archive target, which can be an existing Drive folder, an existing Wiki node, a Drive folder to be created, or a Wiki node to be created. |
+| `identity` | The execution identity, defaulting to `--as user`. |
+| `owner_scope` | The search owner scope, defaulting to `mine`; `all_visible` is only used when the user explicitly requests expansion to all visible resources. |
+| `constraints` | Restrictions explicitly given by the user, such as type, time, creator, comments, title, and scope. |
+| `allow_cross_container_move` | Whether cross Drive / Wiki container movement is allowed; allowed by default, but must be confirmed. |
 
-### 澄清模板
+<a id="澄清模板"></a>
+### Clarification Template
 
 ```text
-我还需要补齐两个信息后才能开始：
+I still need two pieces of information before I can start:
 
-1. 要查找的主题 / 关键词 / 内容线索是什么？
-2. 找到后要移动到哪个 Drive 文件夹或 Wiki 节点？如果需要新建目标，也请说明父级位置和新名称。
+1. What is the topic / keyword / content clue to search for?
+2. After finding it, which Drive folder or Wiki node should it be moved to? If a new target needs to be created, please also specify the parent location and the new name.
 ```
 
-## 状态：`RESOLVE_TARGET`
+<a id="状态resolve_target"></a>
+## State: `RESOLVE_TARGET`
 
-进入条件：`topic` 和 `target` 已获得。
+Entry condition: `topic` and `target` have been obtained.
 
-必须：
+Must:
 
-1. 将已有目标解析为具体 token。
-2. 如果目标需要创建，只解析父级位置和新目标名称。
-3. 在本状态中不得创建文件夹或 Wiki 节点。
-4. 分别保留 Drive 文件夹 token、Wiki 节点 token、Wiki 对象 token、space ID 和 parent token。
-5. 如果目标 URL / token 存在，但当前身份无法读取或解析目标位置，设置 `target_resolve_status=permission_denied`，保持在 `RESOLVE_TARGET` 并等待用户更换目标或结束；不得进入搜索。
-6. 如果已知移动方向不支持，尽早标记。
+1. Parse the existing target into a concrete token.
+2. If the target needs to be created, only parse the parent location and the new target name.
+3. In this state, you must not create folders or Wiki nodes.
+4. Keep the Drive folder token, Wiki node token, Wiki object token, space ID, and parent token separately.
+5. If the target URL / token exists, but the current identity cannot read or parse the target location, set `target_resolve_status=permission_denied`, remain in `RESOLVE_TARGET`, and wait for the user to change the target or end; you must not enter search.
+6. If the known movement direction is unsupported, mark it as early as possible.
 
-### 目标解析
+<a id="目标解析"></a>
+### Target Parsing
 
-| 条件 | agent 必须执行 | 设置 `target_type` |
+| Condition | What the agent must do | Set `target_type` |
 |-----------|---------------|-------------------|
-| 已有 Drive 文件夹 URL 或 token | 有 URL 时用 `drive +inspect` 解析；保留 `folder_token` | `drive_folder` |
-| 已有 Wiki 节点 URL 或 token | 用 `wiki +node-get` 或 `drive +inspect` 解析；保留 `wiki_node_token` 和 `space_id` | `wiki_node` |
-| 在已知父级下新建 Drive 文件夹 | 解析父文件夹；保存新文件夹名称；不创建 | `new_drive_folder` |
-| 在已知父级下新建 Wiki 节点 | 解析知识空间和可选父节点；保存新节点标题；不创建 | `new_wiki_node` |
-| 以 Wiki 空间根节点作为目标 | 解析 `space_id`；parent token 可以为空 | `wiki_space` |
-| 目标名称有歧义 | 仅在必要时搜索或列出候选；展示候选并等待用户选择 | `unknown` |
+| Existing Drive folder URL or token | When there is a URL, parse it with `drive +inspect`; keep `folder_token` | `drive_folder` |
+| Existing Wiki node URL or token | Parse with `wiki +node-get` or `drive +inspect`; keep `wiki_node_token` and `space_id` | `wiki_node` |
+| Create a new Drive folder under a known parent | Parse the parent folder; save the new folder name; do not create | `new_drive_folder` |
+| Create a new Wiki node under a known parent | Parse the knowledge space and optional parent node; save the new node title; do not create | `new_wiki_node` |
+| Use the Wiki space root node as the target | Parse `space_id`; the parent token may be empty | `wiki_space` |
+| The target name is ambiguous | Search or list candidates only when necessary; display candidates and wait for the user to choose | `unknown` |
 
-### 目标解析状态
+<a id="目标解析状态"></a>
+### Target Parsing Status
 
-| 条件 | `target_resolve_status` |
+| Condition | `target_resolve_status` |
 |------|--------------------------|
-| 目标已解析，或待创建目标的父级位置已解析 | `resolved` |
-| 目标名称有歧义、候选不唯一，或 `target_type=unknown` 需要用户选择 | `ambiguous` |
-| 已知目标方向或目标类型不支持本 workflow | `unsupported` |
-| 目标 URL / token 存在，但当前身份无权读取、解析或确认目标位置 | `permission_denied` |
+| The target has been parsed, or the parent location of the target to be created has been parsed | `resolved` |
+| The target name is ambiguous, the candidates are not unique, or `target_type=unknown` requires the user to choose | `ambiguous` |
+| The known target direction or target type is not supported by this workflow | `unsupported` |
+| The target URL / token exists, but the current identity is not authorized to read, parse, or confirm the target location | `permission_denied` |
 
-### 目标解析出口门禁
+<a id="目标解析出口门禁"></a>
+### Target Parsing Exit Gate
 
-| `target_resolve_status` | 下一状态 | agent 必须执行 |
+| `target_resolve_status` | Next State | What the agent must do |
 |-------------------------|----------|----------------|
-| `resolved` | `CONFIRM_CONTEXT` | 展示已解析目标并进入搜索前确认。 |
-| `ambiguous` | 保持 `RESOLVE_TARGET` | 展示候选并等待用户选择；不得进入 `CONFIRM_CONTEXT`。 |
-| `unsupported` | 保持 `RESOLVE_TARGET` | 展示不支持原因，等待用户更换目标或结束；不得搜索。 |
-| `permission_denied` | 保持 `RESOLVE_TARGET` | 展示权限 blocker，等待用户更换目标或结束；不得搜索。 |
+| `resolved` | `CONFIRM_CONTEXT` | Display the parsed target and proceed to pre-search confirmation. |
+| `ambiguous` | Remain in `RESOLVE_TARGET` | Display candidates and wait for the user to choose; you must not enter `CONFIRM_CONTEXT`. |
+| `unsupported` | Remain in `RESOLVE_TARGET` | Display the reason it is unsupported, and wait for the user to change the target or end; you must not search. |
+| `permission_denied` | Remain in `RESOLVE_TARGET` | Display the permission blocker, and wait for the user to change the target or end; you must not search. |
 
-用户提供新目标后，重新执行 `RESOLVE_TARGET`。只有新的解析结果为 `resolved`，才能进入 `CONFIRM_CONTEXT`；用户选择结束时进入 `DONE`。
+After the user provides a new target, re-execute `RESOLVE_TARGET`. Only when the new parsing result is `resolved` may you enter `CONFIRM_CONTEXT`; when the user chooses to end, enter `DONE`.
 
-### 跨容器规则
+<a id="跨容器规则"></a>
+### Cross-Container Rules
 
-| 来源 -> 目标 | 默认规则 |
+| Source -> Target | Default Rule |
 |------------------|---------|
-| Drive 资源 -> Drive 文件夹 | 支持，使用 `drive +move`。 |
-| Drive 文档类资源 -> Wiki 节点 / 空间 | 资源类型支持时，使用 `wiki +move`。 |
-| Wiki 节点 -> Wiki 节点 / 空间 | 支持，使用 `wiki +move --node-token`。 |
-| Wiki 节点 -> Drive 文件夹 | `wiki +move-to-drive`。 |
+| Drive resource -> Drive folder | Supported; use `drive +move`. |
+| Drive document-type resource -> Wiki node / space | When the resource type is supported, use `wiki +move`. |
+| Wiki node -> Wiki node / space | Supported; use `wiki +move --node-token`. |
+| Wiki node -> Drive folder | `wiki +move-to-drive`. |
 
-## 状态：`CONFIRM_CONTEXT`
+<a id="状态confirm_context"></a>
+## State: `CONFIRM_CONTEXT`
 
-进入条件：`target_resolve_status=resolved`。
+Entry condition: `target_resolve_status=resolved`.
 
-必须：
+Must:
 
-1. 展示主题、目标、身份、搜索 owner 范围、限制和目标解析字段。
-2. 说明下一步只进行搜索 / 读取。
-3. 说明是否计划创建目标，但尚未执行。
-4. 展示是否允许跨容器移动。
-5. 在进入 `SEARCH_RECALL` 前停止并等待用户确认。
-6. 如果 `owner_scope=all_visible`，明确提示候选数量可能较多，且可能包含无法移动的资源。
+1. Display the topic, target, identity, search owner scope, restrictions, and target parsing fields.
+2. Explain that the next step only performs search / read.
+3. Explain whether target creation is planned, but has not yet been executed.
+4. Display whether cross-container movement is allowed.
+5. Stop before entering `SEARCH_RECALL` and wait for user confirmation.
+6. If `owner_scope=all_visible`, clearly indicate that the number of candidates may be large and may include resources that cannot be moved.
 
-### 确认 UI
-
-```text
-我先确认本次收集任务。
-
-查找主题：
-目标位置：
-目标解析：
-执行身份：
-搜索范围：
-可选限制：
-跨容器移动：
-下一步操作：只进行搜索和读取验证，不创建目标，不移动资源。
-
-请确认是否按以上信息开始搜索？
-```
-
-默认搜索范围文案：
+<a id="确认-ui"></a>
+### Confirmation UI
 
 ```text
-搜索范围：当前用户 owner / 负责的资源
+Let me first confirm this collection task.
+
+Search topic:
+Target location:
+Target parsing:
+Execution identity:
+Search scope:
+Optional restrictions:
+Cross-container movement:
+Next action: only perform search and read verification, do not create targets, do not move resources.
+
+Please confirm whether to start the search based on the above information?
 ```
 
-扩展搜索范围文案：
+Default search scope text:
 
 ```text
-搜索范围：所有当前身份可见资源
-风险提示：候选数量可能较多，且部分资源可能无法移动；后续仍会经过资源解析和内容验证。
+Search scope: resources owned / managed by the current user
 ```
 
-如果用户修改任一字段，更新 `topic`、`target_location`、`owner_scope` 或 `constraints`，然后只重新执行受影响的 setup 状态，再次展示确认信息。
+Expanded search scope text:
+
+```text
+Search scope: all resources visible to the current identity
+Risk notice: the number of candidates may be large, and some resources may not be movable; resource parsing and content verification will still be performed later.
+```
+
+If the user modifies any field, update `topic`, `target_location`, `owner_scope`, or `constraints`, then only re-execute the affected setup state and display the confirmation information again.
 
 ## TargetLocation
 
@@ -162,13 +174,13 @@
 }
 ```
 
-| 字段 | 说明 |
+| Field | Description |
 |-------|------|
-| `target_type` | 目标位置类型，用于决定后续创建和移动命令。 |
-| `target_token` | 已有目标的可执行 token。 |
-| `parent_token` | 待创建目标的父级位置 token。 |
-| `space_id` | Wiki 目标所属知识空间 ID。 |
-| `target_name` | 待创建目标的名称。 |
-| `create_required` | 是否需要在 `EXECUTE` 阶段创建目标。 |
-| `allow_cross_container_move` | 是否允许 Drive / Wiki 之间移动。 |
-| `target_resolve_status` | 目标位置解析状态；不要和 `ResourceItem.item_resolve_status` 混用。 |
+| `target_type` | The target location type, used to determine subsequent creation and movement commands. |
+| `target_token` | The executable token of an existing target. |
+| `parent_token` | The parent location token of the target to be created. |
+| `space_id` | The knowledge space ID to which the Wiki target belongs. |
+| `target_name` | The name of the target to be created. |
+| `create_required` | Whether the target needs to be created in the `EXECUTE` stage. |
+| `allow_cross_container_move` | Whether movement between Drive / Wiki is allowed. |
+| `target_resolve_status` | The target location parsing status; do not mix it up with `ResourceItem.item_resolve_status`. |

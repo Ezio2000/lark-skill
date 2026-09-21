@@ -1,5 +1,6 @@
-# Validation Checklist（兼容入口）
+<a id="validation-checklist兼容入口"></a>
+# Validation Checklist (Compatibility Entry)
 
-本文档已迁移至 [`workflow/validation-xml.md`](workflow/validation-xml.md)。
+This document has been migrated to [`workflow/validation-xml.md`](workflow/validation-xml.md).
 
-此文件仅保留旧路径兼容性；后续引用请使用新路径。
+This file is retained only for compatibility with the old path; for future references, please use the new path.

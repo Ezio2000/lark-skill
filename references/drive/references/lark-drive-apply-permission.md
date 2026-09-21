@@ -1,47 +1,52 @@
 
-# drive +apply-permission（申请文档权限）
+<a id="drive-apply-permission申请文档权限"></a>
+# drive +apply-permission (Apply for Document Permission)
 
 
-本模块 对应 shortcut：`lark-cli drive +apply-permission`。
+This module corresponds to the shortcut: `lark-cli drive +apply-permission`.
 
-向云文档 **Owner** 发起 `view` 或 `edit` 权限申请。申请会以卡片形式推送给 Owner，由 Owner 决定是否通过。
+Initiate a `view` or `edit` permission request to the cloud document **Owner**. The request will be pushed to the Owner as a card, and the Owner decides whether to approve it.
 
 > [!CAUTION]
-> 这是**写入操作** —— 会给 Owner 发推送通知，不要批量或自动化调用。可以先用 `--dry-run` 预览。
+> This is a **write operation** — it will send a push notification to the Owner. Do not call it in batches or automate it. You can preview first with `--dry-run`.
 
-## 身份要求
+<a id="身份要求"></a>
+## Identity Requirements
 
-- **仅支持 `user` 身份**（使用 `user_access_token`），不支持 `bot` / `tenant_access_token`；shortcut 已在 `AuthTypes` 中强制限定为 `user`，使用 bot 会被拒。
-- 所需 scope：`docs:permission.member:apply`（若用户缺权限会走统一的 permission 错误路径）。
+- **Only `user` identity is supported** (using `user_access_token`); `bot` / `tenant_access_token` are not supported. The shortcut has already enforced `user` in `AuthTypes`; using a bot will be rejected.
+- Required scope: `docs:permission.member:apply` (if the user lacks permission, it will go through the unified permission error path).
 
-## 命令
+<a id="命令"></a>
+## Command
 
 ```bash
-# 通过 URL 申请（type 自动从 URL 推断）
+# Apply via URL (type is automatically inferred from the URL)
 lark-cli drive +apply-permission \
   --token "https://example.larksuite.com/docx/doxcnxxxxxxxxx" \
   --perm view \
   --remark "安全评估：需查看需求文档内容" --as user
 
-# 通过 bare token + 显式 --type
+# Apply via bare token + explicit --type
 lark-cli drive +apply-permission \
   --token "doxcnxxxxxxxxx" --type docx \
   --perm edit --as user
 ```
 
-## 参数
+<a id="参数"></a>
+## Parameters
 
-| 参数 | 必填 | 说明 |
+| Parameter | Required | Description |
 |------|------|------|
-| `--token` | 是 | 目标文档 token 或完整 URL（`/docx/`、`/sheets/`、`/base/`、`/bitable/`、`/file/`、`/wiki/`、`/doc/`、`/mindnote/`、`/slides/`、`/page/` 路径里的 token 会被自动提取） |
-| `--type` | 否 | 目标类型，可选值 `doc` / `sheet` / `file` / `wiki` / `bitable` / `docx` / `mindnote` / `slides` / `apps`。传 URL 时由 shortcut 自动推断；如显式传入，必须与 URL 路径类型一致。bare token 必须显式传 |
-| `--perm` | 是 | 申请的权限，仅支持 `view` 或 `edit`（**不支持 `full_access`**，CLI 侧会直接拒绝） |
-| `--remark` | 否 | 备注，会显示在权限申请卡片上 |
-| `--dry-run` | 否 | 仅打印请求内容，不实际发送 |
+| `--token` | Yes | Target document token or full URL (the token in `/docx/`, `/sheets/`, `/base/`, `/bitable/`, `/file/`, `/wiki/`, `/doc/`, `/mindnote/`, `/slides/`, `/page/` paths will be automatically extracted) |
+| `--type` | No | Target type. Possible values: `doc` / `sheet` / `file` / `wiki` / `bitable` / `docx` / `mindnote` / `slides` / `apps`. When passing a URL, it is automatically inferred by the shortcut; if passed explicitly, it must match the URL path type. For a bare token, it must be passed explicitly |
+| `--perm` | Yes | The permission being requested. Only `view` or `edit` is supported (**`full_access` is not supported**; the CLI side will reject it directly) |
+| `--remark` | No | Remark, which will be displayed on the permission request card |
+| `--dry-run` | No | Only print the request content; do not actually send it |
 
-## 输出
+<a id="输出"></a>
+## Output
 
-API 成功时返回空 `data`（仅 `code: 0, msg: "success"`），对应 CLI 输出：
+On API success, an empty `data` is returned (only `code: 0, msg: "success"`), corresponding to the CLI output:
 
 ```json
 {
@@ -51,26 +56,30 @@ API 成功时返回空 `data`（仅 `code: 0, msg: "success"`），对应 CLI �
 }
 ```
 
-## 频率限制
+<a id="频率限制"></a>
+## Rate Limits
 
-- **应用级**：每应用每租户每分钟最多 10 次。
-- **用户级**：同一用户对**同一篇文档**一天不超过 5 次。
+- **Application-level**: At most 10 times per minute per application per tenant.
+- **User-level**: The same user may not exceed 5 times per day for **the same document**.
 
-## 常见错误
+<a id="常见错误"></a>
+## Common Errors
 
-| 错误码 | 含义 | CLI 处理 |
+| Error Code | Meaning | CLI Handling |
 |---|---|---|
-| `1063006` | 申请次数已达上限（5 次/日） | CLI 自动加 hint：`permission-apply quota reached: each user may request access on the same document at most 5 times per day` |
-| `1063007` | 当前文档无法申请（如：文档禁用外部申请、申请者已拥有对应权限、目标类型不支持 apply） | CLI 自动加 hint：`this document does not accept a permission-apply request ... contact the owner directly` |
-| `1063002` | 无操作权限（如该租户关闭了外部申请） | 由统一 permission 错误路径处理 |
-| `1063004` | 用户所在组织无分享权限 | 由统一 permission 错误路径处理 |
-| `1063005` | 资源已删除 | 需要确认目标文档/节点是否仍存在 |
-| `1066001/1066002` | 服务端异常 / 并发冲突 | 稍后重试 |
+| `1063006` | Request count has reached the limit (5 times/day) | CLI automatically adds hint: `permission-apply quota reached: each user may request access on the same document at most 5 times per day` |
+| `1063007` | The current document cannot be applied for (e.g., external applications are disabled for the document, the applicant already has the corresponding permission, the target type does not support apply) | CLI automatically adds hint: `this document does not accept a permission-apply request ... contact the owner directly` |
+| `1063002` | No operation permission (e.g., the tenant has disabled external applications) | Handled by the unified permission error path |
+| `1063004` | The user's organization has no sharing permission | Handled by the unified permission error path |
+| `1063005` | Resource has been deleted | Need to confirm whether the target document/node still exists |
+| `1066001/1066002` | Server exception / concurrent conflict | Retry later |
 
-## 与 wiki URL 的关系
+<a id="与-wiki-url-的关系"></a>
+## Relationship with wiki URLs
 
-传入 `/wiki/<node_token>` 时，shortcut 会直接用 `node_token` 作为路径参数并以 `type=wiki` 调用接口。如果需要先把 wiki 节点解析成 `obj_token`，自行先调用 [`wiki +node-get` shortcut](../../wiki/references/lark-wiki-node-get.md) 拿 `obj_token + obj_type`，再用 bare `obj_token` + `--type <obj_type>` 调本命令。
+When a `/wiki/<node_token>` is passed in, the shortcut will directly use `node_token` as the path parameter and call the API with `type=wiki`. If you need to first resolve the wiki node into a `obj_token`, call the [`wiki +node-get` shortcut](../../wiki/references/lark-wiki-node-get.md) yourself first to get the `obj_token + obj_type`, then call this command with a bare `obj_token` + `--type <obj_type>`.
 
-## 参考
+<a id="参考"></a>
+## References
 
-- OpenAPI 端点：`POST /open-apis/drive/v1/permissions/:token/members/apply`
+- OpenAPI endpoint: `POST /open-apis/drive/v1/permissions/:token/members/apply`

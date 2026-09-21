@@ -1,43 +1,48 @@
 # calendar +join-event
 
-凭**分享 token** 加入日程。
+Join a calendar event using a **share token**.
 
-## 命令
+<a id="命令"></a>
+## Command
 
 ```bash
-# 用户以自身身份加入（默认场景）
+# User joins as themselves (default scenario)
 lark-cli calendar +join-event --token <token> --as user
 
-# 以应用身份加入
+# Join as the app
 lark-cli calendar +join-event --token <token> --as bot
 ```
 
-## 参数
+<a id="参数"></a>
+## Parameters
 
-| 参数 | 必填 | 说明 |
+| Parameter | Required | Description |
 |------|------|------|
-| `--token <token>` | **是** | 分享 token，加入的唯一入参（别名 `--share-token`）。|
+| `--token <token>` | **Yes** | Share token, the only input for joining (alias `--share-token`). |
 
-## token 从哪来
+<a id="token-从哪来"></a>
+## Where the token comes from
 
-| token 类型 | 承载来源 | 取值 |
+| Token type | Source | How to obtain |
 |-----------|---------|------|
-| 链接类 | 分享链接 / 二维码 | 链接 `{{domain}}/calendar/share?token=<token>` 里的 `token` |
-| 卡片类 | 分享卡片 / RSVP 卡片 | 从 IM 日程分享卡片或 RSVP 卡片消息解析出的日程分享 token |
+| Link type | Share link / QR code | The `token` in the link `{{domain}}/calendar/share?token=<token>` |
+| Card type | Share card / RSVP card | The calendar share token parsed from an IM calendar share card or RSVP card message |
 
-- **分享链接**：直接取 URL query 里的 `token` 值传入；无需解析日程字段。例如 `{{domain}}/calendar/share?token=29f762bdmsbd82ce9` → `--token 29f762bdmsbd82ce9`。
-- **二维码**：先用 OCR/扫码解析成分享链接，再取其中的 `token`——CLI 不承接二维码图像，只承接解析后的链接 token。
-- **卡片**：token 落在卡片消息 content（分享卡片 `SHARE_CALENDAR_EVENT`、RSVP 卡片 `GENERAL_CALENDER`）；RSVP 卡片被转发后退化为分享卡片，同样可加入。
+- **Share link**: directly take the `token` value from the URL query and pass it in; no need to parse calendar fields. For example, `{{domain}}/calendar/share?token=29f762bdmsbd82ce9` → `--token 29f762bdmsbd82ce9`.
+- **QR code**: first use OCR/scanning to parse it into a share link, then take the `token` from it—the CLI does not handle QR code images, only the parsed link token.
+- **Card**: the token is in the card message content (share card `SHARE_CALENDAR_EVENT`, RSVP card `GENERAL_CALENDER`); after an RSVP card is forwarded it degrades into a share card, and can likewise be joined.
 
-## 重复性日程
+<a id="重复性日程"></a>
+## Recurring events
 
-加入范围取决于 token 反解出的日程本体是「原重复性日程」还是「例外」（参见 [lark-calendar-recurring](lark-calendar-recurring.md) 的关键概念）：
+The join scope depends on whether the event body reverse-resolved from the token is the "original recurring event" or an "exception" (see the key concepts in [lark-calendar-recurring](lark-calendar-recurring.md)):
 
-- 分享的是**原重复性日程**（`{event_uid}_0`）：加入的是**整个序列**（含例外）。
-- 分享的是某个**例外**（`originalTime > 0` 的单次实例）：只加入这**一个例外日程**。
+- If what is shared is the **original recurring event** (`{event_uid}_0`): you join the **entire series** (including exceptions).
+- If what is shared is an **exception** (a single instance of `originalTime > 0`): you join only this **one exception event**.
 
-## 参考
+<a id="参考"></a>
+## References
 
-- [lark-calendar](../index.md) -- skill 入口与路由
-- [lark-calendar-rsvp](lark-calendar-rsvp.md) -- 已在日程中时回复接受/拒绝/待定（≠ 加入）
-- [lark-calendar-recurring](lark-calendar-recurring.md) -- 重复性日程的序列 vs 实例操作规范
+- [lark-calendar](../index.md) -- skill entry point and routing
+- [lark-calendar-rsvp](lark-calendar-rsvp.md) -- reply accept/decline/tentative when already in the event (≠ join)
+- [lark-calendar-recurring](lark-calendar-recurring.md) -- conventions for series vs instance operations on recurring events

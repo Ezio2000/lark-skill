@@ -1,37 +1,41 @@
 # okr +comment-get
 
-根据评论 ID 获取单条 OKR 评论，查看评论正文、状态、评论对象、引用关系和划词信息。本 shortcut 适合用于在编辑评论后确认其最终状态。
+Get a single OKR comment by comment ID, and view the comment body, status, comment target, reference relationship, and selection information. This shortcut is suitable for confirming the final state of a comment after editing it.
 
-## 推荐命令
+<a id="推荐命令"></a>
+## Recommended Commands
 
 ```bash
-# 获取一条评论的简化正文和元数据。
+# Get the simplified body and metadata of a comment.
 lark-cli okr +comment-get --comment-id 7000000000000000001
 
-# 获取原始 ContentBlock 格式的评论正文。
+# Get the comment body in raw ContentBlock format.
 lark-cli okr +comment-get --comment-id 7000000000000000001 --style richtext
 
-# 预览获取评论的 API 调用，不实际执行。
+# Preview the API call for getting a comment without actually executing it.
 lark-cli okr +comment-get --comment-id 7000000000000000001 --dry-run
 ```
 
-## 参数
+<a id="参数"></a>
+## Parameters
 
-| 参数           | 必填 | 默认值  | 说明                                                                                   |
-|----------------|------|---------|----------------------------------------------------------------------------------------|
-| --comment-id   | 是   | —       | 评论 ID，int64 正整数。                                                                |
-| --user-id-type | 否   | open_id | open_id、union_id、user_id 或 user_key。                                               |
-| --style        | 否   | simple  | simple 返回半纯文本格式，不涉及字体/颜色等信息时推荐使用；richtext 返回 ContentBlock。 |
-| --dry-run      | 否   | —       | 预览 API 调用而不实际执行。                                                            |
-| --format       | 否   | json    | 输出格式。                                                                             |
+| Parameter      | Required | Default | Description                                                                                              |
+|----------------|----------|---------|----------------------------------------------------------------------------------------------------------|
+| --comment-id   | Yes      | —       | Comment ID, an int64 positive integer.                                                                   |
+| --user-id-type | No       | open_id | open_id, union_id, user_id, or user_key.                                                                 |
+| --style        | No       | simple  | simple returns a semi-plain-text format, recommended when font/color information is not involved; richtext returns ContentBlock. |
+| --dry-run      | No       | —       | Preview the API call without actually executing it.                                                      |
+| --format       | No       | json    | Output format.                                                                                           |
 
-## 工作流程
+<a id="工作流程"></a>
+## Workflow
 
-1. 如果只有目标 ID，先用 [+comment-list](lark-okr-comment-list.md) 或 [+comment-detail](lark-okr-comment-detail.md) 定位 comment-id。
-2. 执行 +comment-get --comment-id "..."。
-3. 根据后续操作检查 selection、status 和 ref_comment_id：selection.id 表示划词评论，status 为 solved 表示已解决，ref_comment_id 表示引用关系。
+1. If you only have the target ID, first use [+comment-list](lark-okr-comment-list.md) or [+comment-detail](lark-okr-comment-detail.md) to locate the comment-id.
+2. Run +comment-get --comment-id "...".
+3. Check selection, status, and ref_comment_id according to subsequent operations: selection.id indicates a selection comment, status being solved indicates it is resolved, and ref_comment_id indicates a reference relationship.
 
-## 输出
+<a id="输出"></a>
+## Output
 
 ```json
 {
@@ -49,17 +53,19 @@ lark-cli okr +comment-get --comment-id 7000000000000000001 --dry-run
 }
 ```
 
-selection、solver_id、solved_time 和 ref_comment_id 按接口是否返回保留。
+selection, solver_id, solved_time, and ref_comment_id are retained depending on whether the API returns them.
 
-## 注意事项
+<a id="注意事项"></a>
+## Notes
 
-- Objective/KeyResult 的划词评论通过 selection.id 归属于评论串；实体级评论没有 selection。
-- 解决或重新打开请使用 [+comment-solve / +comment-reopen](lark-okr-comment-solve-reopen.md)。
+- Selection comments on Objective/KeyResult belong to a comment thread via selection.id; entity-level comments have no selection.
+- To resolve or reopen, use [+comment-solve / +comment-reopen](lark-okr-comment-solve-reopen.md).
 
-## 参考
+<a id="参考"></a>
+## References
 
-- [lark-okr](../index.md) — OKR 命令、路由和通用约定
-- [OKR 实体定义](lark-okr-entities.md) — Comment 字段与评论串规则
-- [ContentBlock 格式](lark-okr-contentblock.md) — 评论正文格式
-- [okr +comment-list](lark-okr-comment-list.md) — 查询目标下的评论
-- [lark-shared](../../shared/index.md) — 认证、身份、权限和安全规则
+- [lark-okr](../index.md) — OKR commands, routing, and general conventions
+- [OKR entity definitions](lark-okr-entities.md) — Comment fields and comment thread rules
+- [ContentBlock format](lark-okr-contentblock.md) — Comment body format
+- [okr +comment-list](lark-okr-comment-list.md) — Query comments under a target
+- [lark-shared](../../shared/index.md) — Authentication, identity, permissions, and security rules

@@ -1,36 +1,39 @@
-# lark-apps 本地开发
+<a id="lark-apps-本地开发"></a>
+# lark-apps local development
 
-适用：用户要把妙搭应用（full_stack、frontend 或 html）源码拉到本地，用本地 code agent/IDE 开发、再发布。其中调试数据库仅 full_stack 适用（frontend / html 无数据库）。
+Applies to: the user wants to pull Miaoda app (full_stack, frontend, or html) source code to local, develop with a local code agent/IDE, then publish. The debug database applies only to full_stack (frontend / html have no database).
 
-## 新建 vs 已有应用
+<a id="新建-vs-已有应用"></a>
+## New vs existing app
 
-新建还是修改已有，由上方入口（index.md「选择开发路径」）判定；进到本地流程后按分支走：
+Whether to create new or modify an existing one is determined by the entry point above (index.md "Choose development path"); once in the local flow, follow the branch:
 
-- **新建**：从 `+create` 开始走下面的端到端流程。
-- **已有应用**（本地还没有源码）：跳过 `+create`，先按下方「存量应用入口」拿 `app_id`，再 `+init`（或 `+git-credential-init` + `git clone`）把它拉到本地，然后照常开发。
+- **New**: start from `+create` and follow the end-to-end flow below.
+- **Existing app** (no source code locally yet): skip `+create`, first get `app_id` per "Existing app entry" below, then `+init` (or `+git-credential-init` + `git clone`) to pull it locally, then develop as usual.
 
-## 端到端流程（新建应用）
+<a id="端到端流程新建应用"></a>
+## End-to-end flow (new app)
 
 ### full_stack
 
-`+create(full_stack)` -> `+init`（或手动 `+git-credential-init` + `git clone`）-> 读仓库 Skill -> `npm install && npm run dev` -> 按需 `+db-*` 调库 -> 非自动化改动按本页 commit/push/release；包含自动化 handler 时，在任何 release 前转到 [automation SOP](lark-apps-automation.md)，由它接管状态门禁和完整发布。
+`+create(full_stack)` -> `+init` (or manually `+git-credential-init` + `git clone`) -> read repo Skill -> `npm install && npm run dev` -> `+db-*` to call the database as needed -> for non-automation changes, commit/push/release per this page; when automation handlers are included, before any release switch to the [automation SOP](lark-apps-automation.md), which takes over the state gate and the full release.
 
 ```bash
-# 新建 full_stack 应用
+# Create a new full_stack app
 lark-cli apps +create --as user --name "审批系统" --app-type full_stack \
   --description "支持登录、提交申请、多级审批、状态查询"
 
-# 初始化本地仓库（--dir 取值见下方「领域规则」，勿照抄此处示例值）
+# Initialize the local repository (for --dir values see "Domain rules" below; do not copy the example value here)
 lark-cli apps +init --as user --app-id app_xxx --dir ./approval-app
 
-# 进入仓库后按项目脚手架启动
+# After entering the repository, start per the project scaffold
 cd ./approval-app
 npm install
 npm run dev
 
-# 开发完成后：提交本次改动 -> git push origin sprint/default -> +release-create。
-# +release-create 部署的是远端 sprint/default 上已 push 的代码，不是本地工作区——没 commit + push 的改动不会进入发布。
-git add <本次开发的文件>          # 提交粒度见下方「改完代码后部署上线」
+# After development is complete: commit this change -> git push origin sprint/default -> +release-create.
+# +release-create deploys the code already pushed on the remote sprint/default, not your local working tree—changes not committed + pushed will not enter the release.
+git add <本次开发的文件>          # For commit granularity see "Deploy and go live after code changes" below
 git commit -m "feat: ..."
 git push origin sprint/default
 lark-cli apps +release-create --as user --app-id app_xxx --branch sprint/default
@@ -38,35 +41,36 @@ lark-cli apps +release-create --as user --app-id app_xxx --branch sprint/default
 
 ### frontend
 
-纯前端应用（vite-react，无数据库）。流程与 full_stack 基本一致——`+init` 装依赖、`npm run dev`、commit/push/release——差别是无 `+db-*` 调库步骤。后续需要数据库/后端能力时不在本地升级，按 index.md「类型升级」引导到云端会话。
+Pure frontend app (vite-react, no database). The flow is basically the same as full_stack—`+init` to install dependencies, `npm run dev`, commit/push/release—the difference is there is no `+db-*` database-call step. When database/backend capabilities are needed later, do not upgrade locally; follow index.md "Type upgrade" to guide to a cloud session.
 
 ```bash
-# 新建 frontend 应用
+# Create a new frontend app
 lark-cli apps +create --as user --name "JSON 格式化工具" --app-type frontend \
   --description "纯前端交互工具，无需数据库"
 
-# 初始化本地仓库（--dir 取值见下方「领域规则」，勿照抄此处示例值）
+# Initialize the local repository (for --dir values see "Domain rules" below; do not copy the example value here)
 lark-cli apps +init --as user --app-id app_xxx --dir ./json-tool
 
-# 进入仓库后按项目脚手架启动（vite-react）
+# After entering the repository, start per the project scaffold (vite-react)
 cd ./json-tool
 npm install
 npm run dev
 
-# 开发完成后：提交本次改动 -> git push origin sprint/default -> +release-create
+# After development is complete: commit this change -> git push origin sprint/default -> +release-create
 git add <本次开发的文件>
 git commit -m "feat: ..."
 git push origin sprint/default
 lark-cli apps +release-create --as user --app-id app_xxx --branch sprint/default
-# 发布是异步的：用 +release-get 轮询到 status=finished 才算部署完成、拿到 online_url
+# Publishing is asynchronous: only when +release-get polls to status=finished is deployment complete and online_url obtained
 lark-cli apps +release-get --as user --app-id app_xxx --release-id <上一步返回的 release_id>
 ```
 
 ### html
 
-#### 首次开发（无 app，无代码）
+<a id="首次开发无-app无代码"></a>
+#### First development (no app, no code)
 
-`+create(html)` → `+init` → 加载 [`creative-design`](../creative-design/creative-design.md) skill 在 repo 根目录产出文件 → `git add .` + `git commit` → `git push origin sprint/default` → `+release-create` → `+release-get`。
+`+create(html)` → `+init` → load the [`creative-design`](../creative-design/creative-design.md) skill to produce files in the repo root → `git add .` + `git commit` → `git push origin sprint/default` → `+release-create` → `+release-get`.
 
 ```bash
 lark-cli apps +create --name "活动页" --app-type html --as user
@@ -74,8 +78,8 @@ lark-cli apps +create --name "活动页" --app-type html --as user
 lark-cli apps +init --app-id app_xxx --dir ./my-page
 
 cd ./my-page
-# html 类型无需 npm install，+init 已跳过依赖安装
-# 加载 creative-design skill，在 repo 根目录产出 HTML 及关联文件（JSX 组件、starter components 等）
+# The html type does not need npm install; +init already skips dependency installation
+# Load the creative-design skill to produce HTML and related files in the repo root (JSX components, starter components, etc.)
 
 git add .
 git commit -m "feat: ..."
@@ -83,65 +87,72 @@ git push origin sprint/default
 lark-cli apps +release-create --app-id app_xxx
 ```
 
-#### 已有 app，二次开发/迭代
+<a id="已有-app二次开发迭代"></a>
+#### Existing app, secondary development/iteration
 
-`+init`（拉取远程代码）→ 加载 creative-design skill 在 repo 根目录迭代 → `git add .` + `git commit` → `git push origin sprint/default` → `+release-create` → `+release-get`。
+`+init` (pull remote code) → load the creative-design skill to iterate in the repo root → `git add .` + `git commit` → `git push origin sprint/default` → `+release-create` → `+release-get`.
 
-#### creative-design 已提前生成文件，需要 init 后迁入
+<a id="creative-design-已提前生成文件需要-init-后迁入"></a>
+#### creative-design already generated files, need to migrate in after init
 
-`+create(html)` → `+init` → 先 `ls` 查看 repo 根目录模板结构（创意模式模板无 `src/` 目录，文件直接放根目录）→ 将已生成的所有产出文件（HTML、JSX 组件、starter components 等）拷贝到 repo 根目录 → `git add .` + `git commit` → `git push origin sprint/default` → `+release-create` → `+release-get`。
+`+create(html)` → `+init` → first `ls` to view the repo root template structure (the creative mode template has no `src/` directory; files go directly in the root) → copy all already-generated output files (HTML, JSX components, starter components, etc.) to the repo root → `git add .` + `git commit` → `git push origin sprint/default` → `+release-create` → `+release-get`.
 
-`+init` 是推荐便捷入口；想逐步手动控制时，先 `+git-credential-init` 拿 `repository_url`，再用原生 `git clone` / `git checkout sprint/default`。
+`+init` is the recommended convenient entry point; when you want step-by-step manual control, first `+git-credential-init` to get `repository_url`, then use native `git clone` / `git checkout sprint/default`.
 
-需要集成插件时，读取应用仓库的 `<project-path>/.agents/skills/plugin-guide/SKILL.md`，了解插件目录、实例配置和调用方式。它是应用项目自己的技能，不属于本包的模块重命名范围；文件不存在时按项目实际文档查找。
+When plugin integration is needed, read the app repository's `<project-path>/.agents/skills/plugin-guide/SKILL.md` to learn the plugin directory, instance configuration, and invocation method. It is the app project's own skill and is not within this package's module renaming scope; when the file does not exist, look it up per the project's actual documentation.
 
-## Trigger guide 的项目边界
+<a id="trigger-guide-的项目边界"></a>
+## Project boundaries of the Trigger guide
 
-涉及自动化业务代码时，先查看工作区 `.agents/skills/`，读取与自动化任务匹配的 `trigger-guide`。它定义业务 handler 的实现与接入约束；Apps 触发器配置细节见 [automation SOP](lark-apps-automation.md)。
+When automation business code is involved, first check the workspace `.agents/skills/` and read the `trigger-guide` matching the automation task. It defines the implementation and integration constraints of business handlers; for Apps trigger configuration details see the [automation SOP](lark-apps-automation.md).
 
-文件缺失或不能覆盖当前任务时，报告项目缺少可用的领域 guide；不要在本 lark-cli reference 中猜测安装命令、版本或包内目录。由项目维护方通过其受支持的初始化或同步流程补齐后，再继续代码闭环；`+init` 只负责准备本地项目，不能替代领域 guide。
+When the file is missing or cannot cover the current task, report that the project lacks a usable domain guide; do not guess installation commands, versions, or in-package directories in this lark-cli reference. Have the project maintainer fill it in through their supported initialization or sync flow, then continue the code loop; `+init` is only responsible for preparing the local project and cannot replace the domain guide.
 
-## 改完代码后部署上线
+<a id="改完代码后部署上线"></a>
+## Deploy and go live after code changes
 
-已拉到本地、改完代码，用户说"推上去""部署""上线""发布到云端"时，按此序列。
+When the code has been pulled locally and changed, and the user says "push it up", "deploy", "go live", or "publish to the cloud", follow this sequence.
 
-若本次改动包含自动化 handler，在执行本节通用 commit/push/release 序列前就转到 [automation SOP](lark-apps-automation.md) 的匹配路径，由该 SOP 负责完整的状态门禁、commit/push、release 和可选 enable/test；不要先按本节发布再补 trigger 状态检查。下列通用序列只用于不含自动化 handler 的改动。
+If this change includes automation handlers, before executing this section's general commit/push/release sequence, switch to the matching path of the [automation SOP](lark-apps-automation.md), and let that SOP handle the full state gate, commit/push, release, and optional enable/test; do not publish per this section first and then add trigger state checks. The general sequence below is only for changes that do not include automation handlers.
 
-> `+release-create` 部署的是远端 `sprint/default` 上**已 push** 的代码，不是你本地工作区——未 commit / 未 push 的改动不会进入这次发布。所以发布前务必先把本次改动提交并推送。
+> `+release-create` deploys the code **already pushed** on the remote `sprint/default`, not your local working tree—changes not committed / not pushed will not enter this release. So before publishing, be sure to commit and push this change first.
 
-1. `git status` 看本次改动；`git add <本次相关文件>` 暂存后 `git commit` 提交。只提交本次任务相关的改动即可，无关的零散文件不必强求清空——发布门禁是「**本次相关改动已提交并推送**」，不是「工作区绝对干净」。
-2. `git push origin sprint/default` 把工作分支推到云端（遇非 fast-forward：先 `git pull --rebase origin sprint/default` 解决冲突再推，绝不 force-push；遇 Git 认证失败 / 401 / 403 / credential helper 缺失 / token 过期：先执行 `lark-cli apps +git-credential-init --app-id <app_id> --as user` 刷新本地 Git 凭证，再重试原 git 命令；刷新凭证也失败时，停止并向用户报告错误，不要换路）。
-3. `lark-cli apps +release-create --as user --app-id <app_id> --branch sprint/default` 发起部署上线，记下返回的 `release_id`。
-4. `lark-cli apps +release-get --as user --app-id <app_id> --release-id <release_id>` 轮询：`publishing` 时每 20 秒继续轮询，整体最多约 5 分钟；超时仍未完成时停止本轮轮询、报告 `release_id` 和当前 status。`finished` 成功时，若返回 `online_url`，可直接使用；未返回时不要编造链接。交付线上访问链接给他人前，注意 `online_url` 默认仅创建者可见，需先告知当前仅本人可见、按需用 `+access-scope-set` 放开可见范围。无需再调 `+list`；`failed` 时若返回非空 `error_logs`，据此给出失败原因；否则只报告 `release_id` 和当前 status，不要编造原因（`+list` 仅作独立查询入口）。
+1. `git status` to see this change; `git add <本次相关文件>` to stage, then `git commit` to commit. Just commit the changes relevant to this task; there is no need to force-clear unrelated scattered files—the release gate is "**this task's relevant changes are committed and pushed**", not "the working tree is absolutely clean".
+2. `git push origin sprint/default` to push the working branch to the cloud (on non-fast-forward: first `git pull --rebase origin sprint/default` to resolve conflicts then push, never force-push; on Git authentication failure / 401 / 403 / missing credential helper / expired token: first run `lark-cli apps +git-credential-init --app-id <app_id> --as user` to refresh local Git credentials, then retry the original git command; if refreshing credentials also fails, stop and report the error to the user, do not switch paths).
+3. `lark-cli apps +release-create --as user --app-id <app_id> --branch sprint/default` to initiate deployment and go live, and note the returned `release_id`.
+4. `lark-cli apps +release-get --as user --app-id <app_id> --release-id <release_id>` to poll: when `publishing`, keep polling every 20 seconds, for at most about 5 minutes overall; if it still has not completed on timeout, stop this round of polling and report `release_id` and the current status. When `finished` succeeds, if `online_url` is returned, it can be used directly; when it is not returned, do not fabricate a link. Before delivering the online access link to others, note that `online_url` is by default visible only to the creator, so first inform that it is currently visible only to yourself, and use `+access-scope-set` as needed to open up the visibility scope. No need to call `+list` again; when `failed`, if a non-empty `error_logs` is returned, give the failure reason based on it; otherwise only report `release_id` and the current status, do not fabricate a reason (`+list` is only an independent query entry point).
 
-用户只要求启用已有 trigger 时，转到 [automation SOP 的「仅启用已有 disabled trigger」路径](lark-apps-automation.md#仅启用已有-disabled-trigger)；不得因 enable 反向修改 handler、commit/push 或 release。
+When the user only asks to enable an existing trigger, switch to [the "enable existing disabled trigger only" path of the automation SOP](lark-apps-automation.md#仅启用已有-disabled-trigger); do not, because of enable, reversely modify the handler, commit/push, or release.
 
-## 领域规则
+<a id="领域规则"></a>
+## Domain rules
 
-- 代码读写走原生 `git`；CLI 负责凭证、初始化、发布和数据库调试。不存在 `apps +pull` / `apps +push` / `apps code +read` 这类代码读写 shortcut，不要臆造。
-- 工作环境没有 `git` 时，先引导安装 Git（macOS 可用 `xcode-select --install` 或 `brew install git`；Linux 按发行版包管理器安装），安装后重试原 `+init` / git 命令；不要因此改走其他发布链路。
-- `+init` 会编排 `+git-credential-init`、`git clone`、切到 `sprint/default`、运行脚手架，并在有变更时提交/推送。
-- `+init --dir` 使用用户指定目录；未指定时可按应用名选择新的空目录并说明位置。目录已存在且非空时先确认它是否为目标项目，避免覆盖；只有无法判断时才询问。
-- `sprint/default` 是工作分支；`main` 是发布态快照，由 `+release-create` 成功后服务端 fast-forward 推进；服务端护栏禁直推 `main`、拒 force-push、要求 `sprint/default` fast-forward。
-- 已拉到本地后，pull/push/diff/log 都用原生 git；云端 `sprint/default` 比本地新时，先 `git pull --rebase origin sprint/default`，解决冲突后再 push 和 publish。
-- `git clone` / `git pull` / `git push` 如果报认证失败、401/403、credential helper 缺失或 token 过期，优先重新执行 `lark-cli apps +git-credential-init --app-id <app_id> --as user` 更新本地 Git 凭证，然后重试原 git 命令；刷新凭证也失败时，停止并向用户报告错误，不要换路；不要手动复制 token、不要把 token 拼进 remote URL。
-- 环境变量由脚手架在本地启动时处理；需要手动刷新时用 `+env-pull`。
-- 资源型文件（图片、字体、音视频等）不要直接引用本地路径，也不要提交到 git 仓库或以 base64 内联到代码中。先通过 `lark-cli apps +file-upload --app-id <app_id> --file <local_path>` 上传到应用文件存储，拿到返回的远端 URL 后在代码中引用该 URL。详情读 [`lark-apps-file.md`](lark-apps-file.md)。上传返回的链接按 app 隔离，不同应用必须各自重新上传，不能跨应用复用同一链接。
-- DB 调试用 `+db-table-list` / `+db-table-get` / `+db-execute`；不要裸连数据库或自行拼连接串。
-- DB 分 `dev` / `online`；使用 `--environment dev|online`，不要使用旧的 `--env`。只有确认应用已开启多环境时才引导 `--environment dev`；单环境应用省略 `--environment`（服务端选 online）或显式传 `--environment online`。在 dev 写入不能证明线上 handler 已验证。dev 的库结构变更要上线时，仍按应用发布链路走 `+release-create`，不要另造“数据库发布”步骤。
-- 存量单库应用需要 dev/online 多环境时，用 `+db-env-create --environment dev`。这是不可逆 high-risk 操作。
-- 只从 `+list` 看到 `is_published=true`，不能证明本地刚推送的代码已经部署；必须有本轮 `+release-get finished`。
+- Code reading and writing use native `git`; the CLI handles credentials, initialization, publishing, and database debugging. There are no code read/write shortcuts such as `apps +pull` / `apps +push` / `apps code +read`; do not invent them.
+- When the working environment has no `git`, first guide installation of Git (on macOS use `xcode-select --install` or `brew install git`; on Linux install per the distribution's package manager), then retry the original `+init` / git command; do not switch to another publishing path because of this.
+- `+init` orchestrates `+git-credential-init`, `git clone`, switching to `sprint/default`, running the scaffold, and committing/pushing when there are changes.
+- `+init --dir` uses the user-specified directory; when unspecified, you may choose a new empty directory based on the app name and explain its location. When the directory already exists and is non-empty, first confirm whether it is the target project to avoid overwriting; only ask when it cannot be determined.
+- `sprint/default` is the working branch; `main` is the release-state snapshot, advanced by server-side fast-forward after `+release-create` succeeds; server-side guardrails prohibit direct push to `main`, reject force-push, and require `sprint/default` fast-forward.
+- Once pulled locally, use native git for pull/push/diff/log; when the cloud `sprint/default` is newer than local, first `git pull --rebase origin sprint/default`, then push and publish after resolving conflicts.
+- If `git clone` / `git pull` / `git push` report authentication failure, 401/403, missing credential helper, or expired token, preferentially re-run `lark-cli apps +git-credential-init --app-id <app_id> --as user` to update local Git credentials, then retry the original git command; if refreshing credentials also fails, stop and report the error to the user, do not switch paths; do not manually copy the token, and do not splice the token into the remote URL.
+- Environment variables are handled by the scaffold at local startup; when a manual refresh is needed, use `+env-pull`.
+- Resource-type files (images, fonts, audio/video, etc.) must not directly reference local paths, nor be committed to the git repository or inlined into code as base64. First upload to the app file storage via `lark-cli apps +file-upload --app-id <app_id> --file <local_path>`, and after obtaining the returned remote URL, reference that URL in the code. For details read [`lark-apps-file.md`](lark-apps-file.md). The link returned by upload is isolated per app; different apps must each re-upload and cannot reuse the same link across apps.
+- For DB debugging use `+db-table-list` / `+db-table-get` / `+db-execute`; do not connect to the database bare or build connection strings yourself.
+- DB is divided into `dev` / `online`; use `--environment dev|online`, do not use the old `--env`. Only guide `--environment dev` when it is confirmed that the app has multi-environment enabled; for single-environment apps omit `--environment` (the server selects online) or explicitly pass `--environment online`. Writing in dev cannot prove the online handler has been verified. When a dev database structure change needs to go live, still follow the app publishing path via `+release-create`; do not create a separate "database release" step.
+- When an existing single-database app needs dev/online multi-environment, use `+db-env-create --environment dev`. This is an irreversible high-risk operation.
+- Seeing `is_published=true` only from `+list` cannot prove that the code just pushed locally has been deployed; there must be a `+release-get finished` for this round.
 
-## 存量应用入口
+<a id="存量应用入口"></a>
+## Existing app entry
 
-已有项目目录先读 `.spark/meta.json` 取 `app_id`；没有本地项目但知道应用名时用：
+For an existing project directory, first read `.spark/meta.json` to get `app_id`; when there is no local project but the app name is known, use:
 
 ```bash
 lark-cli apps +list --keyword "应用名"
 ```
 
-拿到 `app_id` 后再 `+init` 或 `+git-credential-init`。
+After obtaining `app_id`, then `+init` or `+git-credential-init`.
 
-## 何时不用
+<a id="何时不用"></a>
+## When not to use
 
-- 用户明确要云端妙搭 Agent 生成/迭代，而不是本地写代码：读 [`lark-apps-cloud-dev.md`](lark-apps-cloud-dev.md)。
+- The user explicitly wants the cloud Miaoda Agent to generate/iterate, rather than writing code locally: read [`lark-apps-cloud-dev.md`](lark-apps-cloud-dev.md).

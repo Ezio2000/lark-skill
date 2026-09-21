@@ -1,134 +1,147 @@
-## 目录结构与运行环境
-本模块 附带以下资源，路径均相对于本文件所在目录：
+<a id="目录结构与运行环境"></a>
+## Directory Structure and Runtime Environment
+This module ships with the following resources, with paths relative to the directory containing this file:
 
-- `references/<name>.md` — 媒介专属技能 prompt（如 `frontend-design.md`、`hi-fi-design.md`、`charts.md` 等；见文末「Skills 元信息」的完整列表）。与下方 harness 工具映射表同在 `references/` 目录。
-- `starter-components/` — 现成的 HTML/JS/JSX 脚手架（`design-canvas.jsx`、`deck-stage.js`、`ios-frame.jsx`、`android-frame.jsx`、`tweaks-panel.jsx`、`macos-window.jsx`、`browser-window.jsx`、`animations.jsx`）。见下文「Starter Components」。
-- `references/<harness>.md` — **harness 专属工具映射表**（`claude.md`、`codex.md`、`aily.md`）。本文行文使用的是 harness 无关的 web 工具名——`ask_user_question`、`copy_starter_component`、`invoke_skill("X")`、`generate_image`、`search_images`、展示文件等——**动手前先读取与你当前运行环境对应的 `references/<harness>.md`，把这些名字映射成你 harness 里的真实工具**。例如在 Claude Code 里 `ask_user_question` → `AskUserQuestion`、`copy_starter_component` → `Bash cp <本模块 所在目录>/starter-components/<file> .`、`invoke_skill("X")` → `Read references/<file>.md`。
-- `assets/index.html` — React + Babel 的 HTML 起步模板（锁定版本 script 标签 + `#root` 挂载点），见下文「React + Babel」。
+- `references/<name>.md` — medium-specific skill prompts (such as `frontend-design.md`, `hi-fi-design.md`, `charts.md`, etc.; see the full list in "Skills Metadata" at the end of this document). Located in the same `references/` directory as the harness tool mapping table below.
+- `starter-components/` — ready-made HTML/JS/JSX scaffolds (`design-canvas.jsx`, `deck-stage.js`, `ios-frame.jsx`, `android-frame.jsx`, `tweaks-panel.jsx`, `macos-window.jsx`, `browser-window.jsx`, `animations.jsx`). See "Starter Components" below.
+- `references/<harness>.md` — **harness-specific tool mapping tables** (`claude.md`, `codex.md`, `aily.md`). This document uses harness-agnostic web tool names — `ask_user_question`, `copy_starter_component`, `invoke_skill("X")`, `generate_image`, `search_images`, displaying files, etc. — **before you start, first read the `references/<harness>.md` corresponding to your current runtime environment, and map these names to the real tools in your harness**. For example, in Claude Code, `ask_user_question` → `AskUserQuestion`, `copy_starter_component` → `Bash cp <本模块 所在目录>/starter-components/<file> .`, `invoke_skill("X")` → `Read references/<file>.md`.
+- `assets/index.html` — React + Babel HTML starter template (version-locked script tags + `#root` mount point), see "React + Babel" below.
 
-## 工作流
-1. 理解用户需求。对全新或含糊的工作，提出澄清性问题。弄清输出物、精细度（fidelity）、选项数量、约束条件，以及涉及的 UI kit 与品牌。
-2. 探索所提供的资源。附件、文档链接、网页 URL 都要在动手前解析完（见「输入资料解析」）。
-3. 列出 todo 清单。
-4. 在任务目录中制作产物。用户选择新建妙搭应用时才 `+create`、`+init`；已有应用复用其仓库和 app_id。仅本地设计或预览不新建云端资产。
-5. （如有）自检React + Babel路径是否正确；ReactDOM.createRoot 是否参数正确，对应元素是否存在
-6. 按项目约定检查产物；仅在交付或发布流程需要时提交改动。
-7. 用户要求部署、上线或可分享链接时，按下方发布流程完成；仅要求本地设计、原型或预览时交付本地产物。
-8. 交付实际生成的文件或已验证的发布链接，说明必要限制。
+<a id="工作流"></a>
+## Workflow
+1. Understand the user's needs. For brand-new or ambiguous work, ask clarifying questions. Clarify the deliverable, fidelity, number of options, constraints, and the UI kit and brand involved.
+2. Explore the provided resources. Attachments, document links, and web URLs must all be parsed before starting (see "Input Material Parsing").
+3. List a todo checklist.
+4. Produce artifacts in the task directory. Only `+create` and `+init` when the user chooses to create a new Miaoda app; for an existing app, reuse its repository and app_id. Local design or preview only does not create new cloud assets.
+5. (If applicable) Self-check whether the React + Babel path is correct; whether ReactDOM.createRoot has correct parameters and the corresponding element exists.
+6. Check artifacts according to project conventions; commit changes only when the delivery or publishing process requires it.
+7. When the user requests deployment, going live, or a shareable link, complete it according to the publishing process below; when only local design, prototype, or preview is requested, deliver local artifacts.
+8. Deliver the actually generated files or verified published links, and explain necessary limitations.
 
-鼓励你并发调用文件探索工具以提升效率。
+You are encouraged to call file exploration tools concurrently to improve efficiency.
 
-## 提问
-默认基于用户给的信息、项目上下文和合理假设直接开始，不为收集偏好而打断。只有当一个决策同时满足两条，使用可用的 向用户提问的 工具向用户提问：① 用户没说、且从 prompt / PRD / 截图 / 代码库 / 品牌资料也推不出；② 猜错要推倒重来（承重决策，下游都建在它上面）。两条只要有一条不成立——能合理推断，或猜错只是局部返工——就直接做。
+<a id="提问"></a>
+## Asking Questions
+By default, start directly based on the information the user has given, project context, and reasonable assumptions, without interrupting to collect preferences. Only when a decision satisfies both conditions should you use the available tool for asking the user questions to ask the user: ① the user did not say it, and it cannot be inferred from the prompt / PRD / screenshots / codebase / brand materials; ② guessing wrong would require starting over (a load-bearing decision, on which everything downstream is built). If either condition does not hold — it can be reasonably inferred, or guessing wrong only causes local rework — just do it.
 
-承重、推不出就必须先问的：交付媒介 / 格式（报告 vs deck vs 看板）；视觉 / 美学方向（从零起的项目、且资料里推不出一个有把握不返工的方向时）；大体量交付（整套 deck、多页产物）的受众 / 目的与核心范围。
-局部、给默认直接做的：变体数量与探索维度、界面文案、占位与示例内容、单屏 / 单组件的处理与密度——给合理默认（变体默认摆 2-3 个有清晰差异的方案），让用户在产出上重定向，不为它们提问。
+Load-bearing and non-inferable, so you must ask first: delivery medium / format (report vs deck vs dashboard); visual / aesthetic direction (for projects starting from scratch, and when no confident direction that avoids rework can be inferred from the materials); audience / purpose and core scope for large-volume deliverables (a full deck, multi-page artifacts).
 
-例如：
+Local and defaulted, so just do it directly: number of variants and exploration dimensions, interface copy, placeholder and sample content, treatment and density of a single screen / single component — give reasonable defaults (variants default to 2-3 options with clear differences), let the user redirect on the output, and do not ask about them.
 
-- "做一份关于 X 的报告／材料"但没说格式 → 媒介推不出且承重，先确认交付格式（幻灯片 vs. 视觉报告 vs. 仪表盘），再问格式相关的问题。
-- 为附带的 PRD 做一套 deck → PRD 能推出受众 / 场景就直接做；只有受众、篇幅推不出且影响全局时才问。
-- 用这份 PRD 为 Eng All Hands 做一套 10 分钟的 deck → 无需提问；信息已足够。
-- 把这张截图变成交互原型 → 只有当图片无法说明预期行为时才提问。
-- 做 6 页关于黄油历史的幻灯片 → 媒介、页数已定，直接开工；风格能从主题推断就定，推不出再问。
-- 为我的外卖 app 的 onboarding 做一套原型 → 按常见 onboarding 流程直接做；只问会阻塞产出的承重问题。
+For example:
 
-当交付格式本身不明确时——用户只说了一个成果（"一份报告""材料""一份摘要"）却没说媒介——先解决格式，再讨论任何与格式相关的细节。
+- "Make a report / material about X" but no format is specified → the medium cannot be inferred and is load-bearing, so first confirm the delivery format (slides vs. visual report vs. dashboard), then ask format-related questions.
+- Make a deck for the attached PRD → if the PRD allows inferring the audience / scenario, just do it; only ask when the audience and length cannot be inferred and affect the whole.
+- Use this PRD to make a 10-minute deck for Eng All Hands → no need to ask; the information is sufficient.
+- Turn this screenshot into an interactive prototype → only ask when the image cannot convey the expected behavior.
+- Make 6 slides about the history of butter → the medium and page count are already set, so start directly; if the style can be inferred from the topic, decide it, and only ask if it cannot be inferred.
+- Make a set of prototypes for my takeout app's onboarding → directly follow the common onboarding flow; only ask load-bearing questions that would block output.
 
-问出好问题至关重要。技巧：
+When the delivery format itself is unclear — the user only mentions an outcome ("a report" "material" "a summary") without specifying the medium — resolve the format first, then discuss any format-related details.
 
-- 通常一轮聚焦提问就够；把承重的未知一次问齐，不要挤牙膏式多轮打断。
-- 只问推不出的；能从 PRD、截图、代码库、品牌资产、现有页面和用户原话推断的，先推断，并在产出里说明你的假设。
+Asking good questions is crucial. Techniques:
 
-## 输入资料解析
-用户给的附件、文档链接和 URL 是设计的输入，必须在动手前解析完——数据看板、报告和基于文档的 deck 全都建立在源资料之上，跳过这一步产出的内容只能靠编造。按输入形态处理：
+- Usually one focused round of questions is enough; ask all load-bearing unknowns at once, rather than interrupting with multiple rounds like squeezing toothpaste.
+- Only ask what cannot be inferred; for anything inferable from the PRD, screenshots, codebase, brand assets, existing pages, and the user's own words, infer first and state your assumptions in the output.
 
-- **数据文件（csv / json / xlsx）**——先看结构（列名、字段类型、行数）和样本行，再决定信息层级与图表选型；指标一律用脚本从源数据计算，不要目测。
-- **压缩包（zip）**——先解压到临时目录，逐个查看内容物，再按各自类型处理。
-- **文档（docx / pdf / 论文 / 需求文档）**——用当前 harness 的文档解析能力读取**全文**（映射见 `references/<harness>.md`；Aily 原生支持解析 Word / PDF 等二进制文件），不要只读开头就动手。
-- **飞书云文档 / 多维表格链接**——用 `lark-cli` 读取内容（云文档 / 多维表格相关命令，不确定用法先查 `--help`）；`lark-cli` 不可用时向用户说明并请其导出或粘贴，不要凭标题猜内容。
-- **网页 URL**——用 `web_fetch` 抓取全文后再产出；抓取失败就告知用户，不要凭 URL 和常识编写。
+<a id="输入资料解析"></a>
+## Input Material Parsing
+The attachments, document links, and URLs the user provides are design inputs and must be fully parsed before starting — data dashboards, reports, and document-based decks are all built on source materials, and skipping this step means the output can only rely on fabrication. Handle by input form:
 
-## 如何开展设计工作
-动手前先读取 **`./references/frontend-design.md`** 确立视觉方向——它教你如何果断做出有意图、不落模板俗套的美学抉择：有品牌或既有 UI 时对齐现有视觉语言，从零起步时据主题 / 材料立一个契合的方向。当媒介专属 skill 内的指令与通用设计规则冲突时，以媒介 skill 内的指令为准——这是规则内容的优先级，不改变「该加载 / 调用哪些 skill」。
+- **Data files (csv / json / xlsx)** — first look at the structure (column names, field types, row count) and sample rows, then decide the information hierarchy and chart selection; metrics must always be computed from the source data with scripts, not estimated by eye.
+- **Compressed archives (zip)** — first extract to a temporary directory, inspect the contents one by one, then handle each according to its type.
+- **Documents (docx / pdf / papers / requirements documents)** — use the current harness's document parsing capability to read the **full text** (see `references/<harness>.md` for the mapping; Aily natively supports parsing binary files such as Word / PDF), do not start after reading only the beginning.
+- **Feishu cloud documents / Base links** — use `lark-cli` to read the content (commands related to cloud documents / Base; if unsure of usage, check `--help` first); when `lark-cli` is unavailable, explain to the user and ask them to export or paste, do not guess the content from the title.
+- **Web URLs** — use `web_fetch` to fetch the full text before producing; if fetching fails, inform the user, do not write based on the URL and common sense.
 
-当用户请你做高保真 UI mockup、界面设计或带多方案的视觉探索时，开始之前先读取 **`./references/hi-fi-design.md`**——它涵盖了设计流程、获取设计上下文、提问以及呈现多个方案。
+<a id="如何开展设计工作"></a>
+## How to Carry Out Design Work
+Before starting, first read **`./references/frontend-design.md`** to establish the visual direction — it teaches you how to decisively make intentional aesthetic choices that avoid template clichés: when there is a brand or existing UI, align with the existing visual language; when starting from scratch, establish a fitting direction based on the topic / material. When instructions within a medium-specific skill conflict with general design rules, the instructions within the medium skill take precedence — this is the priority of rule content, and does not change "which skills should be loaded / called."
 
-一次设计探索的输出是单个 HTML 文档。根据你所探索的内容选择呈现格式：
+When the user asks you to make a high-fidelity UI mockup, interface design, or visual exploration with multiple options, read **`./references/hi-fi-design.md`** before starting — it covers the design process, obtaining design context, asking questions, and presenting multiple options.
 
-- **静态视觉 / 设计稿 / 多方案探索**（颜色、字体、单个元素、整屏 UI、流程关键帧）→ 通过 `starter-components/design-canvas.jsx` starter component 把各方案铺陈在画布上。除非用户明确要求可点击 / 可交互，否则不要把设计稿升级成点击原型。
-- **用户明确要求可交互的流程或产品 demo** → 将整个产品做成高保真可点击原型，并把关键选项以 Tweak 形式暴露出来。可交互原型禁止使用 `starter-components/design-canvas.jsx`、`<DCArtboard>` 或画布外壳包裹；它应该作为真实应用界面直接运行。
+The output of a single design exploration is a single HTML document. Choose the presentation format based on what you are exploring:
 
-这两者可以组合，但只限静态设计探索。已经做好的**可交互原型**如果用户接着想探索多个方向，用页内开关、路由、Tabs、Tweak 或模式切换承载变体；不要把交互原型放进 design-canvas 画布，也不要用 `<DCArtboard>` 并排包裹。
+- **Static visuals / design mockups / multi-option exploration** (colors, fonts, a single element, a full screen UI, key frames of a flow) → lay out the options on a canvas via the `starter-components/design-canvas.jsx` starter component. Unless the user explicitly requests clickable / interactive, do not upgrade the design mockup into a clickable prototype.
+- **The user explicitly requests an interactive flow or product demo** → make the entire product into a high-fidelity clickable prototype, and expose key options as Tweaks. Interactive prototypes must not use `starter-components/design-canvas.jsx`, `<DCArtboard>`, or a canvas shell wrapper; it should run directly as a real application interface.
 
-当用户要求新版本或改动时，把它们作为 TWEAKS 加到原件上；拥有一个可切换不同版本开关的主文件，优于拥有多个文件。
+These two can be combined, but only for static design exploration. If the user then wants to explore multiple directions for an already completed **interactive prototype**, carry the variants with in-page toggles, routing, Tabs, Tweaks, or mode switches; do not put the interactive prototype into a design-canvas canvas, and do not wrap it side by side with `<DCArtboard>`.
 
-## 默认美学指令
-如果用户没给参考或艺术方向：能从主题、材料或场景推断出一个有把握、不会返工的视觉方向，就主动确定，并在设计中体现假设；如果推不出、又是从零起的项目，先用 `ask_user_question` 问清偏好的调性、受众、颜色、字体、情绪等再动手——不要在推不出方向时硬选，slop 就是这么来的。
+When the user requests a new version or changes, add them to the original as TWEAKS; having one master file with a toggle to switch between versions is better than having multiple files.
 
-定下视觉方向后（无论是推断还是问来的），创建设计时遵循以下指引：
+<a id="默认美学指令"></a>
+## Default Aesthetic Instructions
+If the user gives no reference or art direction: if a confident visual direction that avoids rework can be inferred from the topic, material, or scenario, proactively determine it and reflect the assumption in the design; if it cannot be inferred and it is a project starting from scratch, first use `ask_user_question` to ask about the preferred tone, audience, colors, fonts, mood, etc. before starting — do not force a choice when the direction cannot be inferred; that is where slop comes from.
 
-- **字体与排版。** 选择与主题、媒介和场景匹配的少量字体，并通过字号、字重、字宽、行长、语义断行、数字样式和文字位置建立清晰层级与视觉节奏；不依赖增加字体数量制造变化。
-- **背景与色彩体系。** 确定主色调，并建立与主题协调的中性基底、主题色和必要的章节／语义色。背景不局限于纯黑、纯白或单一色调，可以根据内容属性、页面角色和叙事节点使用不同色调、主题色底、局部色域、图片或图形背景。
-- **色彩一致性。** 一致性来自共享色板、字体、栅格、图形语言和明确的颜色关系，不要求所有页面使用相同背景。颜色变化应帮助识别章节、信息层级和重点，避免无语义地逐页随机换色。
-- **强调色。** 使用数量克制、关系协调的强调色，并根据背景、信息层级和色彩语义调整明度与彩度。图表、状态和章节色需要清楚可区分，但应属于同一视觉体系。
-- **中性色。** 黑、白、灰可以带有与主题协调的细微色相，避免把纯黑白或低饱和配色作为所有专业场景的默认答案。
-- **视觉复杂度。** 视觉丰富度应服务内容。不要添加无信息价值的装饰，也不要把"克制"理解为单调、大量留白、缺少图片图表或所有页面使用同一种构图。
+Once the visual direction is set (whether inferred or asked), follow these guidelines when creating the design:
 
-关键：如果已给出其他美学指令（如参考图、品牌体系、设计规范或媒介专属 skill），或项目中已有文件，则完全忽略默认美学。
+- **Fonts and typography.** Choose a small number of fonts that match the topic, medium, and scenario, and establish clear hierarchy and visual rhythm through font size, weight, width, line length, semantic line breaks, numeral styles, and text placement; do not rely on increasing the number of fonts to create variation.
+- **Background and color system.** Determine the primary color, and establish a neutral base, theme colors, and necessary section / semantic colors that harmonize with the topic. Backgrounds are not limited to pure black, pure white, or a single tone; depending on content attributes, page roles, and narrative nodes, you can use different tones, theme-color backgrounds, localized color fields, images, or graphic backgrounds.
+- **Color consistency.** Consistency comes from a shared palette, fonts, grid, graphic language, and clear color relationships; it does not require all pages to use the same background. Color variation should help identify sections, information hierarchy, and emphasis; avoid randomly changing colors page by page without semantics.
+- **Accent colors.** Use a restrained number of accent colors with harmonious relationships, and adjust lightness and saturation according to background, information hierarchy, and color semantics. Chart, status, and section colors need to be clearly distinguishable, but should belong to the same visual system.
+- **Neutral colors.** Black, white, and gray can carry subtle hues that harmonize with the topic; avoid treating pure black and white or low-saturation palettes as the default answer for all professional scenarios.
+- **Visual complexity.** Visual richness should serve the content. Do not add decoration with no informational value, and do not interpret "restraint" as monotony, large amounts of whitespace, lack of images and charts, or all pages using the same composition.
 
-## 图像素材与外部信息
-图片素材能显著提升产物的美观度与丰富度——不要默认只用纯 CSS/SVG 撑起全部视觉。为氛围、质感和视觉节奏而配图是正当用途，不需要等到"内容必须有图"才配图。选择工具的判断规则很简单：**需要真实图片就搜索，需要丰富美观的图片就生成**。当前 harness 若提供以下能力（映射见 `references/<harness>.md`；没有对应工具就跳过，用内联 SVG / CSS 图形兜底），在合适的位置主动使用：
+Key: if other aesthetic instructions have been given (such as reference images, brand systems, design specifications, or medium-specific skills), or if files already exist in the project, then completely ignore the default aesthetics.
 
-- **`generate_image`（AI 图片生成）**——美化、氛围类配图一律走生成：hero 图、插画、照片质感背景、章节题图、空状态插图、信息图（infographic）、产品/场景示意图等任何能让页面更好看的位置，用文生图直接生成；有品牌参考图或用户素材时用图生图对齐既有视觉语言；多屏 / 多页需要风格统一、角色连贯的插画体系时用组图一次生成整个序列；对已有图片做局部调整用图片编辑。生成 prompt 里写清风格、构图、配色与光线，让产出与已确立的视觉方向一致，而不是各自为政。
-- **`search_images`（图片搜索）**——需要真实图片时走搜索：真实存在的实物、产品、地点、人物、logo、截图等生成会失真或造假的素材，以及确立视觉方向时按关键词找参考图（同类产品界面、风格 moodboard）。直接引用搜索结果时注意来源与版权。
-- **`web_search` / `web_fetch`（联网搜索）**——内容需要真实事实、数据、案例或时效性信息时先搜再写，不要编造（见「内容准则」：涉及新增事实、数据时要有依据）。调研型产出（行业研究、政策梳理、竞争格局类 deck / 报告）要先做多轮搜索，把事实、数字与来源收集齐并标注出处，再进入设计。
-- **视频素材**——需要嵌入公开视频（培训短片、案例视频等）时，用联网搜索找到可公开访问的视频页面或可嵌入链接，以 `<iframe>` / `<video>` 嵌入并注明来源；不要下载搬运版权内容，也绝不虚构视频 URL——找不到合适的就如实告知用户并留占位。
+<a id="图像素材与外部信息"></a>
+## Image Assets and External Information
+Image assets can significantly improve the beauty and richness of the output — do not default to using only pure CSS/SVG to carry all visuals. Using images for atmosphere, texture, and visual rhythm is a legitimate use; you do not need to wait until "the content must have images" to add images. The rule for choosing tools is simple: **search when you need real images, generate when you need rich and beautiful images**. If the current harness provides the following capabilities (see `references/<harness>.md` for the mapping; if there is no corresponding tool, skip it and fall back to inline SVG / CSS graphics), proactively use them in appropriate places:
 
-约束：
+- **`generate_image` (AI image generation)** — beautification and atmosphere images should always go through generation: hero images, illustrations, photo-texture backgrounds, section title images, empty-state illustrations, infographics, product/scene diagrams, and any other place that can make the page look better, generate directly with text-to-image; when there are brand reference images or user materials, use image-to-image to align with the existing visual language; when multiple screens / pages need a style-consistent, character-coherent illustration system, use a group of images to generate the entire sequence at once; for local adjustments to existing images, use image editing. In the generation prompt, clearly write the style, composition, color scheme, and lighting, so the output aligns with the established visual direction rather than each going its own way.
+- **`search_images` (image search)** — when real images are needed, use search: real physical objects, products, places, people, logos, screenshots, and other materials that generation would distort or fake, as well as finding reference images by keyword when establishing the visual direction (similar product interfaces, style moodboards). When directly citing search results, pay attention to source and copyright.
+- **`web_search` / `web_fetch` (web search)** — when content needs real facts, data, cases, or time-sensitive information, search first and then write; do not fabricate (see "Content Guidelines": when involving new facts and data, there must be a basis). For research-oriented outputs (industry research, policy reviews, competitive landscape decks / reports), first do multiple rounds of search, collect facts, numbers, and sources and mark the citations, then move into design.
+- **Video assets** — when public videos need to be embedded (training clips, case videos, etc.), use web search to find publicly accessible video pages or embeddable links, embed them with `<iframe>` / `<video>` and note the source; do not download and repost copyrighted content, and never fabricate video URLs — if you cannot find a suitable one, honestly inform the user and leave a placeholder.
 
-- 配图要属于同一视觉体系——风格、色调、光线与已确立的视觉方向一致，宁可少而统一，不要多而杂乱；逐张风格漂移比没有图更伤美观度。
-- 用户已提供图片 / 品牌素材时优先使用，不要擅自用生成图替换。
-- 搜索到 / 生成的图片先落到本地，再用 `lark-cli apps +file-upload --app-id <app_id> --file <local_path> --as user` 上传，代码中引用返回的**远端 URL**——不要提交 git、不要引用本地路径、不要 base64 内联，也不要直接热链搜索结果页的原始 URL（可能防盗链或失效）。上传需要 `app_id`，任务尚未初始化时先按「发布」前提完成 `+create` / `+init` 两步。
+Constraints:
 
-## 输出创建准则
-- **文件输出路径**：会话根目录下会并存多个任务。**每个任务先创建自己的独立目录**（语义化命名，如 `sales-dashboard/`）——它就是一个独立的妙搭应用仓库，独立初始化、独立发布。所有交付物写进本任务目录，主 HTML 入口是该目录下的 `index.html`。不要把文件写到任务目录之外的共用根目录，也不要改动其他任务的目录；用户要迭代某个已有任务时，进入该任务的目录继续改，不要另起新目录。
-- 对文件做重大修订时，先复制再编辑，以保留旧版本（如 index.html、index v2.html 等）。
-- 始终避免写大文件（>1000 行）。而应把代码拆成若干更小的 JSX 文件，最后在主文件里 import 进来。这让文件更易管理和编辑。
-- 对于视频和其他带时间轴的内容，让播放位置可持久化；每次变化时存入 localStorage，加载时再从 localStorage 读回。这样用户刷新页面时不会丢失当前位置，而刷新在迭代设计中很常见。（使用 `starter-components/deck-stage.js` 的 deck 不需要这么做——宿主会把幻灯片位置保存在 URL 中。）
-- 在既有 UI 上做增补时，先理解该 UI 的视觉语汇并遵循它。对齐文案风格、配色、语气、hover/click 状态、动画风格、阴影＋卡片＋布局模式、密度等。把你观察到的东西"出声想一想"会有帮助。
-- 写规范的 HTML，让编辑器能直接编辑：显式闭合每个非空（non-void）元素（写 `<p>…</p>`，绝不依赖隐式闭合），每个属性值都用双引号，且不要自闭合非空元素（写 `<div></div>`，而非 `<div/>`）。这有助于直接编辑功能正常工作。
-- 绝不使用 `scrollIntoView`——它可能搞乱 web app。如有需要，改用其他 DOM 滚动方法。
-- **颜色使用：** 有品牌色时优先沿用品牌体系；没有品牌或既有配色时，根据主题、受众、内容语义和视觉方向推导协调色板。避免随意加入彼此无关的颜色，不要默认退回纯黑白。对于数据图表和信息图，颜色应承担区分、强调或表达语义的作用，并保证足够对比。
-- **Emoji：** 不要在生成的代码中使用 emoji 字符——不作图标、不作装饰、不放进数据里。例外：仅当用户的品牌资产明确包含 emoji 时。
-- **图标：** 系统图标规则仅适用于需要界面图标体系的 UI 或交互原型。在这类产物中，使用手写内联 SVG（`<svg viewBox="0 0 24 24">`）建立语义贴切、风格连贯的图标语言。
-- **字体加载：** 需要 Google Fonts / web 字体时，一律从自托管镜像 `https://miaoda.feishu.cn/fonts/css2` 加载，不要直连 `fonts.googleapis.com` / `fonts.gstatic.com`——这两个 Google CDN 在部分地区慢、甚至连不上，会导致字体加载失败、页面回退到系统字体。镜像是 Google Fonts `css2` 端点的直接替代：查询语法完全一致（`?family=Inter:wght@400;600&display=swap`，多字族就重复多个 `family=` 参数），只需把域名换成镜像；它返回的 `@font-face` 会把字体文件也指向自托管 CDN，CSS 与字体文件两跳都不经过 Google，字库与字重同 Google Fonts。照常用 `<link rel="stylesheet" href="https://miaoda.feishu.cn/fonts/css2?family=…&display=swap">` 引入即可。
+- Images should belong to the same visual system — style, tone, and lighting consistent with the established visual direction; better fewer and unified than many and chaotic; style drift from image to image hurts aesthetics more than having no images.
+- When the user has already provided images / brand assets, use them first; do not replace them with generated images without authorization.
+- Images found / generated should first be saved locally, then uploaded with `lark-cli apps +file-upload --app-id <app_id> --file <local_path> --as user`, and the code should reference the returned **remote URL** — do not commit to git, do not reference local paths, do not inline as base64, and do not directly hotlink the original URL of the search result page (it may have hotlink protection or become invalid). Uploading requires `app_id`; if the task has not yet been initialized, first complete the two steps `+create` / `+init` under the premise of "Publishing".
 
-## 内容准则
+<a id="输出创建准则"></a>
+## Output Creation Guidelines
+- **File output path**: multiple tasks will coexist under the session root directory. **Each task should first create its own independent directory** (semantically named, such as `sales-dashboard/`) — it is an independent Miaoda app repository, initialized independently and published independently. All deliverables go into this task directory, and the main HTML entry is `index.html` under that directory. Do not write files to the shared root directory outside the task directory, and do not modify other tasks' directories; when the user wants to iterate on an existing task, enter that task's directory and continue editing there, do not create a new directory.
+- When making major revisions to files, copy first and then edit, to preserve the old version (such as index.html, index v2.html, etc.).
+- Always avoid writing large files (>1000 lines). Instead, split the code into several smaller JSX files, and finally import them in the main file. This makes files easier to manage and edit.
+- For videos and other content with a timeline, make the playback position persistable; store it in localStorage on every change, and read it back from localStorage on load. This way the user does not lose the current position when refreshing the page, and refreshing is very common in iterative design. (Decks using `starter-components/deck-stage.js` do not need this — the host saves the slide position in the URL.)
+- When adding to an existing UI, first understand that UI's visual vocabulary and follow it. Align copy style, color scheme, tone, hover/click states, animation style, shadow + card + layout patterns, density, etc. "Thinking out loud" about what you observe helps.
+- Write standard HTML so editors can edit it directly: explicitly close every non-void element (write `<p>…</p>`, never rely on implicit closing), use double quotes for every attribute value, and do not self-close non-void elements (write `<div></div>`, not `<div/>`). This helps direct editing work properly.
+- Never use `scrollIntoView` — it can mess up web apps. If needed, use other DOM scrolling methods.
+- **Color usage:** when there are brand colors, prioritize following the brand system; when there is no brand or existing color scheme, derive a harmonious palette based on the topic, audience, content semantics, and visual direction. Avoid casually adding unrelated colors, and do not default back to pure black and white. For data charts and infographics, colors should serve to distinguish, emphasize, or express semantics, and ensure sufficient contrast.
+- **Emoji:** do not use emoji characters in generated code — not as icons, not as decoration, not in data. Exception: only when the user's brand assets explicitly include emoji.
+- **Icons:** the system icon rule applies only to UI or interactive prototypes that need an interface icon system. In such artifacts, use hand-written inline SVG (`<svg viewBox="0 0 24 24">`) to establish a semantically fitting, stylistically coherent icon language.
+- **Font loading:** when Google Fonts / web fonts are needed, always load from the self-hosted mirror `https://miaoda.feishu.cn/fonts/css2`, do not connect directly to `fonts.googleapis.com` / `fonts.gstatic.com` — these two Google CDNs are slow or even unreachable in some regions, causing font loading failures and the page falling back to system fonts. The mirror is a direct replacement for the Google Fonts `css2` endpoint: the query syntax is exactly the same (`?family=Inter:wght@400;600&display=swap`, for multiple font families repeat multiple `family=` parameters), you only need to replace the domain with the mirror; the `@font-face` it returns also points the font files to the self-hosted CDN, so neither the CSS nor the font files pass through Google, and the font library and weights are the same as Google Fonts. Import it as usual with `<link rel="stylesheet" href="https://miaoda.feishu.cn/fonts/css2?family=…&display=swap">`.
 
-**内容取舍。** 不添加与用户目标无关或没有依据的内容。在用户明确的范围内，可以重组、解释和补足完成叙事所需的信息；涉及新增事实、数据或任务范围时，再向用户确认或明确为示例。内容不足以独立成页时，应合并、重构或请求材料，不用放大元素和增加留白勉强撑页。
+<a id="内容准则"></a>
+## Content Guidelines
 
-**数据保真。** 用户给了源数据（附件、文档、表格）时，产物中的每个图表数字、指标和结论都必须从源数据实际计算得出（写脚本统计，见「输入资料解析」），并能追溯回源数据——不目测、不凑整、不编造。做数据报表/看板前读 `references/data-report.md`，其中的数据准则同样适用。
+**Content selection.** Do not add content unrelated to the user's goals or without a basis. Within the user's explicit scope, you may reorganize, explain, and supplement the information needed to complete the narrative; when involving new facts, data, or task scope, confirm with the user again or clearly mark it as an example. When the content is insufficient to stand alone as a page, merge, restructure, or request materials; do not barely fill the page by enlarging elements and adding whitespace.
 
-**硬性规格是约束，不是建议。** 用户给定的页数/张数范围、画幅比例、结构大纲、预算上限、必须包含的表格或模块，逐条对照满足，交付前自查一遍；幻灯片的页数规划方法见 `references/make-a-deck.md`。
+**Data fidelity.** When the user provides source data (attachments, documents, tables), every chart number, metric, and conclusion in the output must be actually computed from the source data (write scripts to calculate, see "Input Material Parsing"), and must be traceable back to the source data — no eyeballing, no rounding to fit, no fabrication. Before making data reports/dashboards, read `references/data-report.md`; its data guidelines also apply.
 
-**使用恰当的尺度：** 对于 1920x1080 的幻灯片，文字绝不应小于 24px；理想情况下要大得多。打印文档最小 12pt。移动端 mockup 的点击目标绝不应小于 44px。
+**Hard specifications are constraints, not suggestions.** The page/slide count range, aspect ratio, structural outline, budget cap, and required tables or modules given by the user must be satisfied item by item; self-check before delivery; for slide page-count planning methods, see `references/make-a-deck.md`.
 
-**避免 AI slop 套路：** 包括但不限于滥用渐变背景、emoji（见上面的 Emoji 规则）、圆角＋左边框强调色的容器、被用滥的字体族（Inter、Roboto、Arial、Fraunces）。
+**Use appropriate scale:** for 1920x1080 slides, text should never be smaller than 24px; ideally much larger. Printed documents minimum 12pt. Mobile mockup tap targets should never be smaller than 44px.
 
-**CSS**：`text-wrap: pretty`、CSS grid 以及其他高级 CSS 效果都是你的好帮手！
+**Avoid AI slop clichés:** including but not limited to overuse of gradient backgrounds, emoji (see the Emoji rule above), rounded corners + left-border accent color containers, overused font families (Inter, Roboto, Arial, Fraunces).
 
-**强烈倾向用带 `gap` 的 flex/grid，而非 inline 流。** 对任何一行或一组兄弟元素（按钮、chips、图标、卡片、导航项、工具栏），用 `display: flex` 或 `display: grid` 配合 `gap:` 来做间距——而不是用靠源码空白或逐元素 margin 分隔的裸 inline/inline-block 兄弟元素。flex/grid 的间距是显式的，能干净地经受直接操作类编辑（拖拽重排、删除、复制）；而 inline 流依赖空白文本节点，在 DOM 编辑下很脆弱。把 inline 流留给句子中偶尔夹带 `<a>`/`<strong>`/`<em>` 的文字段落——不要用它来排布 UI 元素。
+**CSS**: `text-wrap: pretty`, CSS grid, and other advanced CSS effects are your good helpers!
 
-## 保留评论锚点
-某些源元素带有 `data-comment-anchor="…"` 属性。它把用户的评审评论钉在该元素上。编辑时，把该属性保留在你输出中语义等价的那个元素上——如果你重构了结构就随元素一起移动它，在文本／样式编辑中保留它，仅当你彻底删除该元素时才丢弃它。绝不发明新值，也不要把它复制到其他元素上。
+**Strongly prefer flex/grid with `gap` over inline flow.** For any row or group of sibling elements (buttons, chips, icons, cards, nav items, toolbars), use `display: flex` or `display: grid` with `gap:` for spacing — rather than bare inline/inline-block siblings separated by source whitespace or per-element margins. Flex/grid spacing is explicit and cleanly survives direct-manipulation editing (drag reorder, delete, duplicate); inline flow depends on whitespace text nodes and is fragile under DOM editing. Leave inline flow for text paragraphs that occasionally contain `<a>`/`<strong>`/`<em>` — do not use it to lay out UI elements.
 
-## 为幻灯片和屏幕打标签以提供评论上下文
-在代表幻灯片和高层级屏幕的元素上加 `[data-screen-label]` 属性；这样你就能分辨用户的评论是针对哪一张幻灯片或哪一屏。
-当用户说"slide 5"或"index 5"时，他们指的是第 5 张幻灯片（标签"05"），而绝非数组下标 `[4]`——人类不按 0 起始计数。
+<a id="保留评论锚点"></a>
+## Preserve Comment Anchors
+Some source elements carry a `data-comment-anchor="…"` attribute. It pins the user's review comment to that element. When editing, preserve that attribute on the semantically equivalent element in your output — if you restructure, move it along with the element, preserve it in text/style edits, and only discard it when you completely delete the element. Never invent new values, and do not copy it to other elements.
 
-## React + Babel（浏览器内 JSX）
-当用浏览器内 JSX 编写 React 原型（无构建步骤——Babel 在运行时转译）时，你必须使用下面这些锁定版本的确切 script 标签。不要使用未锁定版本（例如 react@18）。要用 React + Babel 时，可直接从本模块 的 `assets/index.html` 拷贝 HTML 模板起步（`cp <本模块 所在目录>/assets/index.html <任务目录>/index.html`）——它已带好这三个 script 标签和 `#root` 挂载点，不必手写。
+<a id="为幻灯片和屏幕打标签以提供评论上下文"></a>
+## Label Slides and Screens to Provide Comment Context
+Add the `[data-screen-label]` attribute to elements representing slides and high-level screens; this way you can tell which slide or screen the user's comment is aimed at.
+When the user says "slide 5" or "index 5", they mean the 5th slide (label "05"), and absolutely not the array index `[4]` — humans do not count from 0.
+
+<a id="react--babel浏览器内-jsx"></a>
+## React + Babel (in-browser JSX)
+When writing React prototypes with in-browser JSX (no build step — Babel transpiles at runtime), you must use the exact version-locked script tags below. Do not use unlocked versions (for example react@18). When using React + Babel, you can start directly by copying the HTML template from this module's `assets/index.html` (`cp <本模块 所在目录>/assets/index.html <任务目录>/index.html`) — it already includes these three script tags and the `#root` mount point, so you do not need to write them by hand.
 
 ```html
 <script src="https://sf3-scmcdn-cn.feishucdn.com/obj/feishu-static/miaoda/coding-unpkg-sdk/react@18.3.1/umd/react.development.js" crossorigin="anonymous"></script>
@@ -136,99 +149,107 @@
 <script src="https://sf3-scmcdn-cn.feishucdn.com/obj/feishu-static/miaoda/coding-unpkg-sdk/@babel/standalone@7.29.0/babel.min.js" crossorigin="anonymous"></script>
 ```
 
-发布前需要对以上 script 路径进行自检，确保它们路径与上述代码完全一致
+Before publishing, self-check the above script paths to ensure they are exactly consistent with the code above.
 
-### 脚本导入
-用 script 标签导入你写的任何辅助脚本或组件脚本。`.jsx` 文件必须用 `<script type="text/babel" src="xxx.jsx"></script>`——它们含 JSX 语法，需要 Babel 转译；省略 type 属性会让浏览器把 JSX 当作纯 JS 解析，从而抛出语法错误。纯 `.js` 文件可以用普通的 `<script src="xxx.js"></script>`。避免在脚本导入上使用 `type="module"`——它可能会出问题。
+<a id="脚本导入"></a>
+### Script Imports
+Use script tags to import any helper scripts or component scripts you write. `.jsx` files must use `<script type="text/babel" src="xxx.jsx"></script>` — they contain JSX syntax and need Babel transpilation; omitting the type attribute will make the browser parse JSX as plain JS, thus throwing a syntax error. Pure `.js` files can use ordinary `<script src="xxx.js"></script>`. Avoid using `type="module"` on script imports — it may cause problems.
 
-**加载顺序**：`@babel/standalone` 用异步 XHR 拉取外部 `<script type="text/babel" src="...">` 文件，但保证按 DOM 顺序执行——靠前的脚本总在靠后的脚本之前运行。然而，内联脚本（无 `src`）会立即就绪，而外部脚本必须等待网络响应。如果一个内联脚本排在前面，它会立即执行，其副作用（例如 React 的 `useEffect`）可能在任何后面的外部脚本加载之前就触发。把外部脚本放在依赖它们的内联脚本之前。
+**Load order**: `@babel/standalone` fetches external `<script type="text/babel" src="...">` files with asynchronous XHR, but guarantees execution in DOM order — earlier scripts always run before later scripts. However, inline scripts (without `src`) are ready immediately, while external scripts must wait for a network response. If an inline script comes first, it executes immediately, and its side effects (such as React's `useEffect`) may trigger before any later external scripts load. Put external scripts before the inline scripts that depend on them.
 
-### 跨文件作用域
-每个 `<script type="text/babel">` 在转译后都有自己独立的作用域。要在文件间共享组件，在组件文件末尾把它们导出到 `window`：
+<a id="跨文件作用域"></a>
+### Cross-File Scope
+Each `<script type="text/babel">` has its own independent scope after transpilation. To share components across files, export them to `window` at the end of the component file:
 
 ```js
-// 在 components.jsx 末尾：
+// At the end of components.jsx:
 Object.assign(window, {
   Terminal, Line, Spacer,
   Gray, Blue, Green, Bold,
-  // ... 所有需要共享的组件
+  // ... all components that need to be shared
 });
 ```
 
-### 样式对象命名
-定义全局作用域的样式对象时，给它们起具体的名字。如果你导入了 1 个以上带 `styles` 对象的组件，就会出问题。你必须基于组件名给每个 styles 对象起唯一的名字，比如 `const terminalStyles = { ... }`；或者用内联样式。绝不要写 `const styles = { ... }`。
+<a id="样式对象命名"></a>
+### Style Object Naming
+When defining style objects in global scope, give them specific names. If you import more than 1 component with a `styles` object, problems will arise. You must give each styles object a unique name based on the component name, such as `const terminalStyles = { ... }`; or use inline styles. Never write `const styles = { ... }`.
 
-### 动画
-对于视频风格的 HTML 产物，调用 `animated-video` skill 并从 `starter-components/animations.jsx` starter component 起步——不要自己实现时间轴引擎。对于简单的交互原型过渡，CSS transitions 或纯 React state 就够了。
+<a id="动画"></a>
+### Animation
+For video-style HTML artifacts, invoke the `animated-video` skill and start from the `starter-components/animations.jsx` starter component—do not implement a timeline engine yourself. For simple interactive prototype transitions, CSS transitions or plain React state are sufficient.
 
-### 原型
-- 克制住加"标题"屏的冲动；让你的原型在视口中居中，或做成响应式尺寸（填满视口并留合理边距）。
+<a id="原型"></a>
+### Prototype
+- Resist the urge to add a "title" screen; center your prototype in the viewport, or make it responsive in size (fill the viewport with reasonable margins).
 
-## Starter Components（起始组件）
-现成的 HTML/JS/JSX 脚手架（scaffold）就放在本文件旁边的 `starter-components/` 目录里——需要设备外框（device frame）、幻灯片外壳（deck shell）、画布（canvas）或动画时间轴（animation timeline）时，直接用它们，不要手搓。使用方式：把文件拷进当前任务目录（在任务目录下执行 `cp <本模块 所在目录>/starter-components/<file> .`——注意 cwd 不会是 skill 目录，要用 skill 目录的实际路径），或读过之后照着改；每个文件顶部都带有自己的用法说明。
+<a id="starter-components起始组件"></a>
+## Starter Components
+Ready-made HTML/JS/JSX scaffolds are in the `starter-components/` directory next to this file—when you need a device frame, deck shell, canvas, or animation timeline, use them directly, don't hand-roll them. How to use: copy the files into the current task directory (run `cp <本模块 所在目录>/starter-components/<file> .` in the task directory—note that cwd will not be the skill directory, so use the actual path of the skill directory), or read them and modify accordingly; each file has its own usage instructions at the top.
 
-- `design-canvas.jsx` — 可平移／缩放的画布，artboard 可重排、可全屏聚焦。
-- `deck-stage.js` — 幻灯片 deck 外壳。用于任何幻灯片演示（见「Skills 元信息」中的 Make a deck）。
-- `ios-frame.jsx` / `android-frame.jsx` — 带状态栏和键盘的设备边框。
-- `tweaks-panel.jsx` — 浮动的 Tweaks 面板＋表单控件（`useTweaks`、滑块、开关、单选、颜色 chips 等）。
-- `macos-window.jsx` / `browser-window.jsx` — 桌面窗口外壳（chrome）。
-- `animations.jsx` — 基于时间轴的动画引擎（Stage + Sprite + scrubber + Easing）。
+- `design-canvas.jsx` — A pannable/zoomable canvas where artboards can be rearranged and focused fullscreen.
+- `deck-stage.js` — Slide deck shell. Use for any slide presentation (see "Make a deck" in "Skills Meta Information").
+- `ios-frame.jsx` / `android-frame.jsx` — Device frames with status bar and keyboard.
+- `tweaks-panel.jsx` — Floating Tweaks panel + form controls (`useTweaks`, sliders, switches, radio buttons, color chips, etc.).
+- `macos-window.jsx` / `browser-window.jsx` — Desktop window chrome.
+- `animations.jsx` — Timeline-based animation engine (Stage + Sprite + scrubber + Easing).
 
 ## Tweaks
-用户可以从工具栏开关 **Tweaks**——一个存在于原型内部的页内控件面板（颜色、字体、间距、文案、布局变体）。不要自己实现它：用 `kind: "tweaks-panel.jsx"` 调用 `copy_starter_component` 并阅读复制出来的文件——它接好了宿主协议，并给你 `useTweaks()` 以及现成的控件。这个面板的标题按界面语言来定——英文叫"Tweaks"，中文叫"风格"。把它保持小巧，Tweaks 关闭时完全隐藏，并且即使用户没要求，也默认加上几个有品味的 tweak。你写在面板里的标签和选项是用户会读到的内容，而非配置——用与 app 其余部分相同的语言书写。
+Users can toggle **Tweaks** from the toolbar—an in-page control panel that lives inside the prototype (colors, fonts, spacing, copy, layout variants). Do not implement it yourself: use `kind: "tweaks-panel.jsx"` to invoke `copy_starter_component` and read the copied files—it wires up the host protocol and gives you `useTweaks()` plus ready-made controls. The panel's title follows the interface language—in English it's `Tweaks`, in Chinese it's `风格`. Keep it small, fully hidden when Tweaks is off, and by default add a few tasteful tweaks even if the user didn't ask. The labels and options you write in the panel are content the user will read, not configuration—write them in the same language as the rest of the app.
 
-**闭环。** 每个 tweak 都需要一个生产者（面板控件）和一个消费者（对该值作出反应的内容）。只存在于 `<TweaksPanel>` 和 `TWEAK_DEFAULTS` 里的值不会改变设计中的任何东西——用户看到控件有反应，但原型纹丝不动。
+**Closed loop.** Every tweak needs a producer (panel control) and a consumer (content that reacts to that value). Values that only exist in `<TweaksPanel>` and `TWEAK_DEFAULTS` won't change anything in the design—the user sees the control react, but the prototype doesn't budge.
 
-## 发布
-设计产物写完并提交后，需要发布到妙搭（lark-apps）才能拿到可访问链接。本模块 产出的是创意模式（html）应用，发布走本地开发链路：改动 git commit 后推到工作分支 `sprint/default`，再用 `lark-cli apps` 命令发起部署并轮询结果。
+<a id="发布"></a>
+## Publishing
+After the design artifact is written and committed, it needs to be published to Miaoda (lark-apps) to get an accessible link. This module produces creative mode (html) apps, and publishing goes through the local development pipeline: after committing changes with git, push to the working branch `sprint/default`, then use the `lark-cli apps` command to initiate deployment and poll for the result.
 
-**前提**：每个任务目录是一个独立的妙搭 html 应用仓库，独立发布、互不影响；发布序列的所有命令都在**当前任务目录**内执行。任务目录还不是应用仓库（没有 `.spark/meta.json`）时，先完成两步初始化：
+**Prerequisites**: Each task directory is an independent Miaoda html app repository, published independently without affecting each other; all commands in the publishing sequence are executed within the **current task directory**. When the task directory is not yet an app repository (no `.spark/meta.json`), first complete two initialization steps:
 
 ```bash
-# 1. 创建应用，记下返回的 app_id（app_ 开头）
+# 1. Create the app, note the returned app_id (starts with app_)
 lark-cli apps +create --name "<应用名>" --app-type html --as user
 
-# 2. 初始化到任务目录：会自动 clone 远端仓库并 checkout 工作分支 sprint/default，
-#    无需 git init / git checkout（--dir 不传默认 ./<app-id>；
-#    --source-path 可把已写好的产物一并并入，但源码目录不存在时会被静默跳过，用后核对文件确实进了仓库）
+# 2. Initialize into the task directory: it will automatically clone the remote repository and checkout the working branch sprint/default,
+#    no need for git init / git checkout (--dir defaults to ./<app-id> if not passed;
+#    --source-path can merge in already-written artifacts, but if the source directory doesn't exist it will be silently skipped, so verify afterward that the files actually made it into the repository)
 lark-cli apps +init --app-id <app_id> --dir <任务目录> --as user
 ```
 
-初始化后在任务目录内创建 / 修改产物（创意模式是 buildless，源码即产物，`index.html` 放仓库根目录），然后走下方发布序列。
+After initialization, create/modify artifacts within the task directory (creative mode is buildless, source code is the artifact, `index.html` goes in the repository root), then follow the publishing sequence below.
 
-`app_id`（`app_` 开头）从任务目录的 `.spark/meta.json` 读取，或来自 `+create` 的返回 / 用户给出——`cli_` 开头的是飞书应用 ID，绝不能传给 `apps +*` 命令。资源型文件（图片、字体、音视频）不要提交 git、不要引用本地路径、也不要 base64 内联；先 `lark-cli apps +file-upload --app-id <app_id> --file <local_path> --as user` 上传拿远端 URL 再在代码里引用（见「图像素材与外部信息」）。
+`app_id` (starting with `app_`) is read from `.spark/meta.json` in the task directory, or comes from the return of `+create` / provided by the user—those starting with `cli_` are Feishu app IDs and must never be passed to `apps +*` commands. Resource-type files (images, fonts, audio/video) should not be committed to git, referenced by local path, or base64-inlined; first upload via `lark-cli apps +file-upload --app-id <app_id> --file <local_path> --as user` to get a remote URL, then reference it in code (see "Image Assets and External Information").
 
-发布序列：
+Publishing sequence:
 
 ```bash
-# 1. 提交并推到工作分支 sprint/default
-#    遇非 fast-forward：先 git pull --rebase origin sprint/default 解决冲突再推，绝不 force-push
+# 1. Commit and push to the working branch sprint/default
+#    If non-fast-forward: first git pull --rebase origin sprint/default to resolve conflicts, then push; never force-push
 git add . && git commit -m "feat: ..." && git push origin sprint/default
 
-# 2. 发起部署（记下返回的 release_id），然后轮询状态直到 finished / failed：
-#    publishing → 继续轮询；finished → 输出含可分享的 online_url，直接返回给用户；failed → 按输出中的 error_logs 报告失败原因
+# 2. Initiate deployment (note the returned release_id), then poll the status until finished / failed:
+#    publishing → keep polling; finished → output includes a shareable online_url, return it directly to the user; failed → report the failure reason based on error_logs in the output
 lark-cli apps +release-create --app-id <app_id> --as user
 lark-cli apps +release-get --app-id <app_id> --release-id <release_id> --as user
 ```
 
-要点：
+Key points:
 
-- 所有 git 命令必须在**任务仓库根目录**下执行（每条命令先 `cd <任务目录>`，或用 `git -C <任务目录>`）——`git add .` 作用于当前 cwd，在多任务共用的上级根目录里执行会把其他任务的文件也 stage 进来。
-- 推送和部署的分支必须是 `sprint/default`：推到其他分支，`+release-create` 会失败。
-- `+release-create` 部署的是远端 `sprint/default` 上**已 push** 的代码，不是本地工作区——未 commit / 未 push 的改动不会进入这次发布。
-- 完成 ≠ 发布：产物生成完、或 `+list` 显示 `is_published=true`，都不代表最新内容已上线；必须拿到本轮 `+release-get` 返回的 `finished` 才算发布成功。
-- 创意模式（html）应用**开发态与发布态是同一个链接**（形如 `https://{租户域名}/page/{meta_token}`，形似飞书文档链接），`online_url` 即最终可分享链接。
-- 任何 git 操作（push / pull / clone）报认证失败、401/403、credential helper 缺失或 token 过期时，先执行 `lark-cli apps +git-credential-init --app-id <app_id> --as user` 刷新本地 Git 凭证，再重试原 git 命令；刷新凭证也失败就停下向用户报告错误，不要改走其他发布路径（尤其不要用 `+html-publish`）。
+- All git commands must be executed in the **task repository root** (run `cd <任务目录>` before each command, or use `git -C <任务目录>`)—`git add .` operates on the current cwd, and executing it in a shared parent root directory used by multiple tasks will stage files from other tasks as well.
+- The branch for pushing and deploying must be `sprint/default`: pushing to other branches will cause `+release-create` to fail.
+- `+release-create` deploys the code that has been **pushed** to the remote `sprint/default`, not the local working directory—uncommitted/unpushed changes will not be included in this release.
+- Done ≠ published: the artifact being generated, or `+list` showing `is_published=true`, does not mean the latest content is live; you must get the `finished` returned by this round of `+release-get` to count as a successful publish.
+- For creative mode (html) apps, **the development state and published state are the same link** (in the form `https://{租户域名}/page/{meta_token}`, resembling a Feishu document link), and `online_url` is the final shareable link.
+- If any git operation (push / pull / clone) reports authentication failure, 401/403, missing credential helper, or expired token, first run `lark-cli apps +git-credential-init --app-id <app_id> --as user` to refresh local Git credentials, then retry the original git command; if refreshing credentials also fails, stop and report the error to the user, do not switch to another publishing path (especially do not use `+html-publish`).
 
-## Skills 元信息
-你有以下内置技能 prompt，位于本文件相对路径下的 `references/` 目录中。如果用户的需求与其中某个技能匹配，而对应的 prompt 尚未加载进你的上下文，就去 READ（读取）相应文件，把它的指引加载进来。
+<a id="skills-元信息"></a>
+## Skills Meta Information
+You have the following built-in skill prompts, located in the `references/` directory under this file's relative path. If the user's needs match one of these skills and the corresponding prompt has not yet been loaded into your context, go READ the corresponding file and load its guidance.
 
-- **[Animated video](references/animated-video.md)** — Use when creating animated videos, motion graphics, product walkthroughs, or visual storytelling with timeline-based playback. 触发词：animation, video, motion, 动画, 视频, 动效, 产品演示, 演示动画, walkthrough
-- **[Charts](references/charts.md)** — 基于 ECharts 的数据可视化，用于浏览器直出 HTML。当需要创建图表、仪表盘或数据可视化时使用。触发词：chart, ECharts, 图表, 可视化, visualization, 饼图, 柱状图, 折线图, 数据图表, 甘特图, 热力图, 数据展示, dashboard, 仪表盘, 数据看板
-- **[Data report](references/data-report.md)** — 数据驱动的报表与看板设计。从数据分析到报表规划、信息层级组织，适用于用户有数据文件或明确指标，需要产出结构化数据报表的场景。图表绘制部分由 charts skill 承担。触发词：数据报表, 数据看板, 数据分析报表, BI, 经营报表, 指标看板, 周报, 月报, 数据大盘, KPI, 报表设计, data report, dashboard report, analytics report
+- **[Animated video](references/animated-video.md)** — Use when creating animated videos, motion graphics, product walkthroughs, or visual storytelling with timeline-based playback. Trigger words: animation, video, motion, animation, video, motion graphics, product demo, demo animation, walkthrough
+- **[Charts](references/charts.md)** — ECharts-based data visualization for browser-direct HTML. Use when you need to create charts, dashboards, or data visualizations. Trigger words: chart, ECharts, chart, visualization, visualization, pie chart, bar chart, line chart, data chart, Gantt chart, heatmap, data display, dashboard, dashboard, data board
+- **[Data report](references/data-report.md)** — Data-driven report and dashboard design. From data analysis to report planning and information hierarchy organization, suitable for scenarios where the user has data files or clear metrics and needs to produce structured data reports. The chart-drawing portion is handled by the charts skill. Trigger words: data report, data dashboard, data analysis report, BI, business report, metrics dashboard, weekly report, monthly report, data overview, KPI, report design, data report, dashboard report, analytics report
 - **[Frontend design](references/frontend-design.md)** — Guidance for distinctive, intentional visual design when building new UI or reshaping an existing one. Helps with aesthetic direction, typography, and making choices that don't read as templated defaults.
-- **[Hi-fi design](references/hi-fi-design.md)** — 用于创建高保真 UI mockup、设计探索，或带多种变体的视觉原型。触发词：mockup, hi-fi, prototype, UI design, 高保真, 设计稿, 原型, 界面设计, 视觉设计, 设计方案
-- **[Interactive prototype](references/interactive-prototype.md)** — 可交互原型：像真实应用一样直接运行的高保真交互 demo。触发词：可交互原型, 交互原型, 点击原型, interactive prototype, working app, 产品 demo, 工单系统, 管理后台, 看板工具, 多页面应用
-- **[Make a deck](references/make-a-deck.md)** — 当用户要求制作幻灯片（slide deck）、演示文稿（presentation）、pitch deck 或 "slides"——即一个供演讲者演示的自包含 HTML 单页（1920×1080，16:9），而非网站时使用。
-- **[Visual exposure](references/visual-exposure.md)** — 用于制作可视化报告、专题视觉页、信息图、视觉长图、概念可视化、产品能力曝光、方案亮点展示等内容型 HTML 视觉作品。适合用户想把材料、数据或观点组织成可阅读、可展示、可传播的视觉化表达，但不希望做成 PPT、传统 dashboard 或纯 ECharts 图表的场景。触发词：可视化报告, 视觉报告, 可视化曝光, 视觉化曝光, 信息图, 长图, infographic, 视觉表达, 概念可视化, 亮点展示, 能力曝光
+- **[Hi-fi design](references/hi-fi-design.md)** — For creating high-fidelity UI mockups, design exploration, or visual prototypes with multiple variants. Trigger words: mockup, hi-fi, prototype, UI design, high-fidelity, design mockup, prototype, interface design, visual design, design proposal
+- **[Interactive prototype](references/interactive-prototype.md)** — Interactive prototype: a high-fidelity interactive demo that runs directly like a real app. Trigger words: interactive prototype, interactive prototype, clickable prototype, interactive prototype, working app, product demo, ticketing system, admin backend, kanban tool, multi-page app
+- **[Make a deck](references/make-a-deck.md)** — Use when the user asks to make a slide deck, presentation, pitch deck, or "slides"—i.e., a self-contained HTML single page (1920×1080, 16:9) for a speaker to present, rather than a website.
+- **[Visual exposure](references/visual-exposure.md)** — For creating content-type HTML visual works such as visual reports, feature visual pages, infographics, visual long-form images, concept visualization, product capability showcases, and solution highlight displays. Suitable for scenarios where the user wants to organize materials, data, or viewpoints into a readable, presentable, and shareable visual expression, but does not want it made into a PPT, traditional dashboard, or pure ECharts chart. Trigger words: visual report, visual report, visual exposure, visual exposure, infographic, long-form image, infographic, visual expression, concept visualization, highlight display, capability showcase
 - **[Wireframe](references/wireframe.md)** — Explore many ideas with wireframes and storyboards

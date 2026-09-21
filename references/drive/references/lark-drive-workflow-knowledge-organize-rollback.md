@@ -1,4 +1,5 @@
-# 知识整理工作流：Rollback
+<a id="知识整理工作流rollback"></a>
+# Knowledge Organization Workflow: Rollback
 
 Loaded by states: `ROLLBACK_CONFIRM`, `ROLLBACK`, `ROLLBACK_VERIFY`, `ROLLBACK_CLEANUP_CONFIRM`, `ROLLBACK_CLEANUP`, `ROLLBACK_CLEANUP_VERIFY`.
 
@@ -6,7 +7,7 @@ This file owns recovery plan generation, recovery confirmation, recovery executi
 
 It MUST NOT generate organization plans, revise classification rules, execute unconfirmed deletes, rename resources, modify permissions, or use `wiki +move` docs-to-wiki mode.
 
-User-facing language should use "恢复到整理前的位置" / "恢复". Internal state and field names may use `rollback`.
+User-facing language should use "restore to the pre-organization location" / "restore". Internal state and field names may use `rollback`.
 
 ## Required Context
 
@@ -109,16 +110,16 @@ MUST:
 Confirmation output:
 
 ```text
-可恢复范围如下：
+The recoverable scope is as follows:
 
-| 项目 | 数量 |
+| Item | Count |
 |------|------|
-| 可尝试恢复到原位置 | <recoverable_move_count> |
-| 无法安全自动恢复 | <unsupported_count> |
-| 未完成 / 等待中的移动 | <pending_count> |
-| 本次新建目录 / 节点 | <created_container_count> |
+| Can attempt to restore to original location | <recoverable_move_count> |
+| Cannot be safely auto-recovered | <unsupported_count> |
+| Incomplete / pending moves | <pending_count> |
+| Directories / nodes newly created in this run | <created_container_count> |
 
-恢复操作只会尝试把已成功移动的资源移回原位置，不会删除、重命名或修改权限。是否执行恢复？
+The recovery operation only attempts to move successfully moved resources back to their original locations. It will not delete, rename, or modify permissions. Do you want to execute recovery?
 ```
 
 If no move can be restored automatically, report that no automatic restore is available and move to `DONE`.
@@ -172,7 +173,7 @@ MUST:
 Progress output should stay concise:
 
 ```text
-恢复进度：已尝试 <done>/<total> 项，失败 <failed_count> 项。
+Recovery progress: attempted <done>/<total> items, <failed_count> failed.
 ```
 
 ## State: ROLLBACK_VERIFY
@@ -189,7 +190,7 @@ MUST:
 
 Verification table:
 
-| plan_id | 标题 | 原位置 | 当前实际位置 | 状态 | 失败原因 |
+| plan_id | Title | Original location | Current actual location | Status | Failure reason |
 |---------|------|--------|--------------|------|----------|
 
 Status values:
@@ -232,14 +233,14 @@ Generate `rollback_cleanup_plan` with:
 Confirmation output:
 
 ```text
-恢复已完成。本次整理新建的部分空目录 / 节点如下，是否需要删除？
+Recovery is complete. Some empty directories / nodes newly created during this organization are listed below. Do you need to delete them?
 
-| 项目 | 数量 |
+| Item | Count |
 |------|------|
-| 可删除的新建空目录 / 节点 | <safe_count> |
-| 不可删除，需人工确认 | <blocked_count> |
+| Deletable newly created empty directories / nodes | <safe_count> |
+| Not deletable, requires manual confirmation | <blocked_count> |
 
-注：删除只会作用于本次 workflow 新建且当前可安全清理的空目录 / 节点。
+Note: Deletion will only affect empty directories / nodes that were newly created by this workflow run and are currently safe to clean up.
 ```
 
 If the user wants details, paginate cleanup items at 20 rows per page.
@@ -294,7 +295,7 @@ MUST:
 
 Verification table:
 
-| 类型 | 路径 | token | 状态 | 失败原因 |
+| Type | Path | token | Status | Failure reason |
 |------|------|-------|------|----------|
 
 Status values:

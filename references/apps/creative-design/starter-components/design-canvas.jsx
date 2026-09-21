@@ -45,10 +45,10 @@ const DC = {
   font: '-apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif',
 };
 
-// ── 移动端判定：复刻主仓 @apaas-ai/global-states isMobile() 的 UA 语义
-// （跨域产物 iframe 无法 import 该包，同 deck-stage 的先例）。刻意不用视口
-// 断点——桌面工作台的预览 iframe 本身就窄，视口宽度会把桌面预览误判成移动端。
-// 启动时一次性判定，不随 resize 抖动。
+// ── Mobile detection: replicates the UA semantics of isMobile() from the main repo @apaas-ai/global-states
+// (cross-origin artifact iframes cannot import that package, following the precedent of deck-stage). Deliberately not using viewport
+// breakpoints — the desktop workbench's preview iframe is itself narrow, and viewport width would misclassify desktop previews as mobile.
+// Determined once at startup, does not jitter with resize.
 const DC_MOBILE_UA_RE = /(phone|pad|pod|iPhone|iPod|ios|iPad|Android|Mobile|BlackBerry|IEMobile|MQQBrowser|JUC|Fennec|wOSBrowser|BrowserNG|WebOS|Symbian|Windows Phone)/i;
 const dcIsMobile = typeof navigator !== 'undefined' &&
   (DC_MOBILE_UA_RE.test(navigator.userAgent) ||
@@ -1429,4 +1429,3 @@ function DCPostIt({ children, top, left, right, bottom, rotate = -2, width = 180
 }
 
 Object.assign(window, { DesignCanvas, DCSection, DCArtboard, DCPostIt });
-

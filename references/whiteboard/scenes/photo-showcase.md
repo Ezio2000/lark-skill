@@ -1,38 +1,44 @@
-# 图片展示 (Photo Showcase)
+<a id="图片展示-photo-showcase"></a>
+# Photo Showcase
 
-适用于：用户**显式要求使用图片/配图/插图**的场景（如"画一个带配图的旅行路线"、"做一个有图片的产品展示"）。
+Applies to: scenarios where the user **explicitly requests the use of images/illustrations/pictures** (such as "draw a travel route with illustrations" or "make a product showcase with images").
 
-> **注意**：仅当用户明确说了「图片/配图/插图/照片」等词时才进入本场景。单纯说"旅行路线图"、"产品展示"等不触发。
+> **Note**: Enter this scenario only when the user explicitly says words like "image/illustration/picture/photo". Simply saying "travel route map" or "product showcase" does not trigger it.
 
-> **前置条件**：进入本场景前，必须已完成 [`elements/image.md`](../elements/image.md) 的 Step 0（图片准备），拿到所有 media token。
+> **Prerequisite**: Before entering this scenario, Step 0 (image preparation) of [`elements/image.md`](../elements/image.md) must already be completed, and all media tokens obtained.
 
-## Content 约束
+<a id="content-约束"></a>
+## Content constraints
 
-- 图片 3-6 张，每张配标题（必需）+ 简短描述（可选，15字内）
-- **每张图必须是不同的真实图片**（不同 media token），下载时用不同关键词/URL
-- 下载后用 `ls -l` 比较文件大小确保每张图不重复
-- 文字仅作辅助说明，图片是信息主体
+- 3-6 images, each with a title (required) + a short description (optional, within 15 characters)
+- **Each image must be a different real image** (different media token); use different keywords/URLs when downloading
+- After downloading, use `ls -l` to compare file sizes to ensure no image is duplicated
+- Text serves only as auxiliary explanation; images are the main body of information
 
-## Layout 选型
+<a id="layout-选型"></a>
+## Layout selection
 
-| 模式 | 适用条件 | 特征 |
+| Mode | Applicable conditions | Characteristics |
 |------|---------|------|
-| **卡片网格（默认）** | 多图平级展示（产品墙、团队介绍、美食推荐） | horizontal frame 内放等尺寸图文卡片 |
-| **路线时间线** | 有先后顺序（旅行路线、团建路线、项目演进） | 图文卡片 + connector 串联 |
-| **中心辐射** | 有一个核心主题 + 周围子项 | 中心标题 + 周围图文卡片 |
+| **Card grid (default)** | Multiple images displayed at the same level (product wall, team introduction, food recommendations) | Equal-sized image-text cards placed inside a horizontal frame |
+| **Route timeline** | Has a sequential order (travel route, team-building route, project evolution) | Image-text cards + connectors linking them |
+| **Hub and spoke** | One core theme + surrounding sub-items | Center title + surrounding image-text cards |
 
-## Layout 规则
+<a id="layout-规则"></a>
+## Layout rules
 
-- **图文卡片结构**：vertical frame（图上文下），image 宽度 = 卡片宽度，height 按 3:2 比例
-- **卡片统一尺寸**：所有卡片宽高一致（推荐 240×280 或 200×250）
-- **图片统一尺寸**：所有 image 节点用相同 width/height（推荐 240×160 或 200×133）
-- **卡片间距**：gap: 24（比纯文字图表间距更大，让图片呼吸）
-- **卡片样式**：白色底 + 圆角 12 + 细边框，image 无圆角（紧贴卡片顶部）
-- **有序路线时**：卡片间用 connector 连接，connector 放顶层 nodes 数组
+- **Image-text card structure**: vertical frame (image on top, text below), image width = card width, height in 3:2 ratio
+- **Uniform card size**: all cards have the same width and height (recommended 240×280 or 200×250)
+- **Uniform image size**: all image nodes use the same width/height (recommended 240×160 or 200×133)
+- **Card spacing**: gap: 24 (larger than the spacing for text-only diagrams, to let the images breathe)
+- **Card style**: white background + 12px rounded corners + thin border, image has no rounded corners (flush with the top of the card)
+- **For ordered routes**: connect cards with connectors, and place connectors in the top-level nodes array
 
-## 骨架示例
+<a id="骨架示例"></a>
+## Skeleton example
 
-### 卡片网格（产品展示/团队介绍/美食推荐）
+<a id="卡片网格产品展示团队介绍美食推荐"></a>
+### Card grid (product showcase/team introduction/food recommendations)
 
 ```json
 {
@@ -66,9 +72,10 @@
 }
 ```
 
-每张图文卡片结构相同，复制并替换 `<token_N>`、标题和描述即可。3 张卡片一行，超过 3 张换行（嵌套第二个 horizontal frame）。
+Each image-text card has the same structure; just copy it and replace `<token_N>`, the title, and the description. 3 cards per row; if there are more than 3, wrap to a new row (nest a second horizontal frame).
 
-### 路线时间线（旅行路线/团建路线）
+<a id="路线时间线旅行路线团建路线"></a>
+### Route timeline (travel route/team-building route)
 
 ```json
 {
@@ -111,16 +118,17 @@
 }
 ```
 
-注意：connector 必须放在**顶层 nodes 数组**，不能嵌套在 frame.children 内。connector 的属性须包裹在 `connector` 字段中。
+Note: connectors must be placed in the **top-level nodes array** and must not be nested inside frame.children. The connector's properties must be wrapped in the `connector` field.
 
-## 图片准备检查清单
+<a id="图片准备检查清单"></a>
+## Image preparation checklist
 
-生成 DSL 前确认：
+Before generating the DSL, confirm:
 
-- [ ] 所有 image 节点的 `image.src` 都是通过 `docs +media-upload --parent-type whiteboard` 上传的 media token（非 URL、非 Drive file token）
-- [ ] 所有图片已上传到目标画板（`--parent-node` 设为目标画板 token）
-- [ ] 每个 media token 不同（对应不同的真实图片）
-- [ ] 所有图片尺寸一致（同一画板内统一 width×height）
-- [ ] 图片宽高比合理（推荐 3:2，即 240×160）
-- [ ] 渲染 PNG 后查看图片内容，确认每张图片与主题相关
-- [ ] 未使用随机占位图服务（关键词参数不影响返回内容的图库）
+- [ ] The `image.src` of all image nodes are media tokens uploaded via `docs +media-upload --parent-type whiteboard` (not URLs, not Drive file tokens)
+- [ ] All images have been uploaded to the target whiteboard (`--parent-node` set to the target whiteboard token)
+- [ ] Each media token is different (corresponding to a different real image)
+- [ ] All images have the same dimensions (uniform width×height within the same whiteboard)
+- [ ] Image aspect ratios are reasonable (3:2 recommended, i.e., 240×160)
+- [ ] After rendering the PNG, check the image content to confirm each image is relevant to the theme
+- [ ] No random placeholder image service is used (an image library where keyword parameters do not affect the returned content)

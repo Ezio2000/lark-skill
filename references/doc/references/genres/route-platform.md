@@ -1,9 +1,10 @@
-# Genre Router: Platform / 平台发布稿 (`route_platform`)
+<a id="genre-router-platform--平台发布稿-route_platform"></a>
+# Genre Router: Platform / Platform Publishing Draft (`route_platform`)
 
-仅当最终交付物是小红书笔记、微信公众号文章或邮件成稿时进入本 router；按目标平台选择且只读取一个 leaf。仅把平台作为研究对象、信息来源或业务渠道时不触发；多平台成稿分别路由和生成。
+Enter this router only when the final deliverable is a Xiaohongshu note, a WeChat Official Account article, or a finished email draft; select by target platform and read only one leaf. It is not triggered when the platform is only used as a research subject, information source, or business channel; multi-platform finished drafts are routed and generated separately.
 
-| 关键词             | Leaf                               |
+| Keyword             | Leaf                               |
 |-----------------|------------------------------------|
-| XHS、小红书         | [`xiaohongshu.md`](xiaohongshu.md) |
-| 微信、wechat       | [`wechat.md`](wechat.md)           |
-| 邮件、email、e-mail | [`email.md`](email.md)             |
+| XHS, Xiaohongshu         | [`xiaohongshu.md`](xiaohongshu.md) |
+| WeChat, wechat       | [`wechat.md`](wechat.md)           |
+| email, email, e-mail | [`email.md`](email.md)             |

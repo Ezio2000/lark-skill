@@ -1,8 +1,10 @@
-# 下拉单选 `select_static`
+<a id="下拉单选-select_static"></a>
+# Dropdown single select `select_static`
 
-下拉菜单单选。**Card 2.0**。
+Dropdown menu single select. **Card 2.0**.
 
-## 最小示例
+<a id="最小示例"></a>
+## Minimal example
 
 ```json
 {
@@ -15,29 +17,31 @@
 }
 ```
 
-## 字段
+<a id="字段"></a>
+## Fields
 
-| 字段 | 必填 | 类型 | 默认 | 说明 |
+| Field | Required | Type | Default | Description |
 |---|---|---|---|---|
-| `tag` | 是 | String | / | 固定 `select_static` |
-| `options` | 否 | Array | / | 选项，见下 |
-| `options[].text` | 是 | Object | / | 选项名，plain_text |
-| `options[].value` | 是 | String | / | 选项回调值，**同组件内不可重复** |
-| `options[].icon` | 否 | Object | / | 选项前缀图标（同 `div.icon`） |
-| `name` | 否* | String | / | 唯一标识；**form 内必填且全局唯一** |
-| `required` | 否 | Boolean | false | 是否必选（form 内生效） |
-| `type` | 否 | String | default | `default`(带框) / `text`(纯文本) |
-| `placeholder` | 否 | Object | / | 占位文本，plain_text |
-| `initial_option` | 否 | String | / | 初始选中内容（覆盖 placeholder 和 initial_index） |
-| `initial_index` | 否 | Int | / | 初始选中序号，0=不选，1=第一个 |
-| `width` | 否 | String | default | `default` / `fill` / `[100,∞)px` |
-| `disabled` | 否 | Boolean | false | 是否禁用 |
-| `behaviors` | 否 | Array | / | `[{type:"callback", value:{...}}]` |
-| `confirm` | 否 | Object | / | 二次确认弹窗 `{title, text}` |
-| `margin` | 否 | String | 0 | 外边距 [-99,99]px |
+| `tag` | Yes | String | / | Fixed `select_static` |
+| `options` | No | Array | / | Options, see below |
+| `options[].text` | Yes | Object | / | Option name, plain_text |
+| `options[].value` | Yes | String | / | Option callback value, **must be unique within the same component** |
+| `options[].icon` | No | Object | / | Option prefix icon (same as `div.icon`) |
+| `name` | No* | String | / | Unique identifier; **required within a form and globally unique** |
+| `required` | No | Boolean | false | Whether required (takes effect within a form) |
+| `type` | No | String | default | `default` (with border) / `text` (plain text) |
+| `placeholder` | No | Object | / | Placeholder text, plain_text |
+| `initial_option` | No | String | / | Initially selected content (overrides placeholder and initial_index) |
+| `initial_index` | No | Int | / | Initial selected index, 0=not selected, 1=first |
+| `width` | No | String | default | `default` / `fill` / `[100,∞)px` |
+| `disabled` | No | Boolean | false | Whether disabled |
+| `behaviors` | No | Array | / | `[{type:"callback", value:{...}}]` |
+| `confirm` | No | Object | / | Secondary confirmation dialog `{title, text}` |
+| `margin` | No | String | 0 | Outer margin [-99,99]px |
 
-## 嵌套 / 易错点
+<a id="嵌套--易错点"></a>
+## Nesting / Common pitfalls
 
-- 可嵌套在 column_set / form / collapsible_panel / 循环容器 / interactive_container 内。
-- 选项 `value` 必须唯一，否则交互异常、服务端无法区分选了哪个。
-- 回调 `action.tag="select_static"` + `action.option`（选中项的 value）。
+- Can be nested within column_set / form / collapsible_panel / loop container / interactive_container.
+- Option `value` must be unique, otherwise interaction will be abnormal and the server cannot distinguish which one was selected.
+- Callback `action.tag="select_static"` + `action.option` (the value of the selected option).

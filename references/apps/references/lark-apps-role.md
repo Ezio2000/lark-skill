@@ -1,36 +1,42 @@
-# apps role 域命令（应用角色）
+<a id="apps-role-域命令应用角色"></a>
+# apps role domain commands (app roles)
 
-管理妙搭应用内的平台角色、角色成员，以及查询某个用户命中的角色。运行时命令事实以 `lark-cli apps +<cmd> --help` 为准；身份、授权和高风险确认遵循本域 [`index.md`](../index.md)。
+Manage platform roles and role members within a Miaoda app, and query the roles a user matches. Runtime command facts are governed by `lark-cli apps +<cmd> --help`; identity, authorization, and high-risk confirmation follow this domain's [`index.md`](../index.md).
 
-## 何时用
+<a id="何时用"></a>
+## When to use
 
-用户要列出、查看、创建、更新或删除某个妙搭应用内的平台角色，管理角色的用户、部门或群成员，或查询某个用户在应用中命中的角色时使用。多维表格 / Base 的角色与权限走 `lark-base`；设置谁能访问应用走 `+access-scope-*`，不要路由到本命令域。
+Use when the user wants to list, view, create, update, or delete a platform role within a Miaoda app, manage a role's user, department, or group members, or query the roles a user matches in an app. Roles and permissions for Bitable / Base go through `lark-base`; setting who can access an app goes through `+access-scope-*`, and should not be routed to this command domain.
 
-## 命令一览
+<a id="命令一览"></a>
+## Command overview
 
-| 命令 | 做什么 | 关键参数 |
+| Command | What it does | Key parameters |
 |---|---|---|
-| `+role-list` | 分页列出角色，或按名称筛选角色 | `--app-id`、`--name`、`--page-size`/`--page-token` |
-| `+role-get` | 根据真实 `role_id` 读取角色详情 | `--app-id`、`--role-id` |
-| `+role-match-list` | 查询指定用户命中的角色 | `--app-id`、`--user-id` |
-| `+role-create` | 创建角色 | `--app-id`、`--name`、`--description`、`--role-id` |
-| `+role-update` | 更新角色名称或描述 | `--app-id`、`--role-id`、`--name`/`--description` |
-| `+role-delete` | 永久删除角色 | `--app-id`、`--role-id`、`--yes` |
-| `+role-member-list` | 查询角色的用户、部门和群成员 | `--app-id`、`--role-id`、`--member-type` |
-| `+role-member-add` | 向角色添加用户、部门或群成员 | `--app-id`、`--role-id`、`--users`/`--departments`/`--chats` |
-| `+role-member-remove` | 定向移除或清空角色成员 | `--app-id`、`--role-id`、成员参数或 `--all`、`--yes` |
+| `+role-list` | Paginate through roles, or filter roles by name | `--app-id`, `--name`, `--page-size`/`--page-token` |
+| `+role-get` | Read role details based on the real `role_id` | `--app-id`, `--role-id` |
+| `+role-match-list` | Query the roles a specified user matches | `--app-id`, `--user-id` |
+| `+role-create` | Create a role | `--app-id`, `--name`, `--description`, `--role-id` |
+| `+role-update` | Update a role's name or description | `--app-id`, `--role-id`, `--name`/`--description` |
+| `+role-delete` | Permanently delete a role | `--app-id`, `--role-id`, `--yes` |
+| `+role-member-list` | Query a role's user, department, and group members | `--app-id`, `--role-id`, `--member-type` |
+| `+role-member-add` | Add user, department, or group members to a role | `--app-id`, `--role-id`, `--users`/`--departments`/`--chats` |
+| `+role-member-remove` | Remove specific members or clear all role members | `--app-id`, `--role-id`, member parameters or `--all`, `--yes` |
 
-## 约定（先读）
+<a id="约定先读"></a>
+## Conventions (read first)
 
-- `app_...` 标识的是妙搭应用，其角色和成员只使用 `apps +role-*` / `apps +role-member-*`；不要改走 Base 角色命令或裸 bitable API。
-- 角色名称不是 `role_id`。只有名称时优先用 `+role-list --name` 精确解析；若已取得完整分页列表，也可从中证明精确名称唯一命中。0 条如实报告，多条让用户消歧，唯一命中后才使用返回的真实 ID。
-- `+role-list` 返回 `has_more=true` 时，用本页 `page_token` 继续查询，直到 `has_more=false`；不要根据 `total` 补造条目。
-- `+role-list`、`+role-get`、`+role-match-list` 的角色数据分别位于 `data.items`、`data.role`、`data.roles`，不要混用。
-- 同一角色的写入及依赖该写入结果的操作必须串行。不同角色的独立操作只有在每次写入可单独追溯、失败不影响其它目标且分别验收时才可并行；否则保持串行。互不依赖的名称解析或只读查询可并行。
+- `app_...` identifies a Miaoda app; its roles and members only use `apps +role-*` / `apps +role-member-*`; do not switch to Base role commands or raw bitable APIs.
+- A role name is not a `role_id`. When only a name is available, prefer `+role-list --name` for exact resolution; if the full paginated list has already been obtained, you may also prove from it that the exact name has a unique match. Report 0 results truthfully; for multiple results, have the user disambiguate; only after a unique match may you use the returned real ID.
+- When `+role-list` returns `has_more=true`, use this page's `page_token` to continue querying until `has_more=false`; do not fabricate entries based on `total`.
+- The role data for `+role-list`, `+role-get`, and `+role-match-list` is located in `data.items`, `data.role`, and `data.roles` respectively; do not mix them up.
+- Writes to the same role and operations that depend on the result of that write must be serialized. Independent operations on different roles may be parallelized only when each write can be traced individually, a failure does not affect other targets, and each is verified separately; otherwise keep them serial. Name resolutions or read-only queries that do not depend on each other may be parallelized.
 
-## 各命令
+<a id="各命令"></a>
+## Individual commands
 
-### 查询角色
+<a id="查询角色"></a>
+### Query roles
 
 ```bash
 lark-cli apps +role-list --app-id <app_id> --page-size 100
@@ -39,36 +45,38 @@ lark-cli apps +role-get --app-id <app_id> --role-id <role_id>
 lark-cli apps +role-match-list --app-id <app_id> --user-id <ou_x>
 ```
 
-整理角色列表时保留 `role_id`、`name` 和 `description`。不要猜测未知 `role_id`，也不要从同名候选中静默选择。
-`items=[]` 时直接报告当前没有角色；不要为表格补造“无”或 `N/A` 占位行。
-`+role-match-list --user-id` 只接受 `ou_...`；用户给的是姓名、邮箱或手机号时，先解析唯一 open ID，再查询命中角色。
+When organizing the role list, preserve `role_id`, `name`, and `description`. Do not guess an unknown `role_id`, and do not silently choose among candidates with the same name.
+When `items=[]`, directly report that there are currently no roles; do not fabricate a "none" or `N/A` placeholder row for the table.
+`+role-match-list --user-id` only accepts `ou_...`; when the user provides a name, email, or phone number, first resolve the unique open ID, then query the matched roles.
 
-### 创建与更新
+<a id="创建与更新"></a>
+### Create and update
 
 ```bash
 lark-cli apps +role-create --app-id <app_id> --name '<name>' \
   --description '<description>'
 
-# 只修改名称
+# Only modify the name
 lark-cli apps +role-update --app-id <app_id> --role-id <role_id> \
   --name '<new_name>' --as user --format json
 
-# 只修改描述
+# Only modify the description
 lark-cli apps +role-update --app-id <app_id> --role-id <role_id> \
   --description '<new_description>' --as user --format json
 ```
 
-- `--description` 和创建时的 `--role-id` 可选；仅在确实需要稳定 ID 时传 `--role-id`，创建后不能修改。
-- 更新时只传用户明确要求变更的字段。
-- 成功响应中的角色位于 `data.role`。只有用户要求独立验证，或结果将用于后续高风险操作时，才额外执行 `+role-get`。
+- `--description` and the `--role-id` at creation time are optional; pass `--role-id` only when a stable ID is genuinely needed, and it cannot be modified after creation.
+- When updating, pass only the fields the user explicitly requested to change.
+- The role in a successful response is located in `data.role`. Only when the user requests independent verification, or the result will be used for a subsequent high-risk operation, additionally execute `+role-get`.
 
-### 删除角色
+<a id="删除角色"></a>
+### Delete a role
 
-删除前解析唯一应用、角色和受影响成员。用户已明确要求删除该角色，且影响与请求一致时沿用授权执行；候选不唯一或会扩大范围时先说明并询问。无需在后续轮次重复请求相同授权。
+Before deletion, resolve the unique app, role, and affected members. If the user has explicitly requested deletion of that role and the impact matches the request, proceed with the existing authorization; if the candidate is not unique or the scope would be expanded, explain first and ask. There is no need to repeatedly request the same authorization in subsequent turns.
 
-只有名称时仍按上述规则唯一解析，优先使用 `+role-list --name`。目标写前已不存在时立即停止，如实说明本次是 no-op、没有执行删除，不能把“当前不存在”表述为“删除成功”。
+When only a name is available, still resolve uniquely per the above rules, preferring `+role-list --name`. If the target no longer exists before the write, stop immediately and truthfully state that this was a no-op and no deletion was performed; do not describe "currently does not exist" as "deleted successfully".
 
-删除前读取准确角色和完整成员范围，向用户说明 app、role、`users` / `departments` / `chats` 影响；授权覆盖该目标及影响时使用 `--yes`：
+Before deletion, read the exact role and the complete member scope, and explain to the user the app, role, `users` / `departments` / `chats` impact; when the authorization covers that target and impact, use `--yes`:
 
 ```bash
 lark-cli apps +role-get --app-id <app_id> --role-id <role_id>
@@ -76,34 +84,36 @@ lark-cli apps +role-member-list --app-id <app_id> --role-id <role_id>
 lark-cli apps +role-delete --app-id <app_id> --role-id <role_id> --yes
 ```
 
-成功响应包含匹配的 `data.role_id` 和 `data.deleted=true`。只有用户明确要求独立验证删除结果时，才再用 `+role-list --name` 检查目标 ID 已不存在。
+A successful response contains the matching `data.role_id` and `data.deleted=true`. Only when the user explicitly requests independent verification of the deletion result, use `+role-list --name` again to check that the target ID no longer exists.
 
-### 成员 ID 解析
+<a id="成员-id-解析"></a>
+### Member ID resolution
 
-成员 flags 只接受 open ID：用户 `ou_...`、部门 `od-...`、群 `oc_...`。用户已提供对应类型的合法 open ID 时直接使用；只有名称或邮箱时才解析。
-对象类型以用户语义为准，不能互换解析器：用户走通讯录用户搜索，部门走部门搜索，群走群搜索。
+Member flags only accept open IDs: user `ou_...`, department `od-...`, group `oc_...`. When the user has already provided a valid open ID of the corresponding type, use it directly; only resolve when only a name or email is available.
+The object type is determined by the user's semantics, and resolvers must not be interchanged: users go through contacts user search, departments through department search, groups through group search.
 
 ```bash
-# 用户：每个姓名或邮箱单独查询。
+# User: query each name or email separately.
 lark-cli contact +search-user --query '<姓名或邮箱>' \
   --exclude-external-users --page-size 30
 
-# 部门：拉完分页，只接受唯一的 open_department_id。
+# Department: paginate fully, and only accept a unique open_department_id.
 lark-cli api POST /open-apis/contact/v3/departments/search \
   --params '{"user_id_type":"open_id","department_id_type":"open_department_id","page_size":50}' \
   --data '{"query":"<部门名称>"}'
 
-# 群：拉完分页，只接受名称精确匹配的唯一 chat_id。
+# Group: paginate fully, and only accept a unique chat_id whose name matches exactly.
 lark-cli im +chat-search --query '<群名称>' --page-size 50
 ```
 
-- 只接受与输入姓名、邮箱或群名精确匹配的唯一结果；部门搜索只接受完整 query 的唯一 `od-...`。0 条、多条或分页未完成时停止写入并让用户补充或消歧。
-- 多个对象逐个解析。全部解析成功且总数不超过 100 后，按类型放入一次成员写入；任一对象失败时不要部分写入，也不要自动拆批。
+- Only accept a unique result that exactly matches the input name, email, or group name; department search only accepts a unique `od-...` for the complete query. If there are 0 results, multiple results, or pagination is incomplete, stop writing and have the user supplement or disambiguate.
+- Resolve multiple objects one by one. After all are resolved successfully and the total does not exceed 100, place them into a single member write by type; if any object fails, do not partially write, and do not automatically split into batches.
 
-### 成员操作
+<a id="成员操作"></a>
+### Member operations
 
 ```bash
-# 省略 --member-type，返回完整 users / departments / chats。
+# Omit --member-type to return the complete users / departments / chats.
 lark-cli apps +role-member-list --app-id <app_id> --role-id <role_id>
 
 lark-cli apps +role-member-add --app-id <app_id> --role-id <role_id> \
@@ -112,22 +122,23 @@ lark-cli apps +role-member-add --app-id <app_id> --role-id <role_id> \
 lark-cli apps +role-member-remove --app-id <app_id> --role-id <role_id> \
   --users ou_x --yes
 
-# 清空成员，不删除角色。
+# Clear members without deleting the role.
 lark-cli apps +role-member-remove --app-id <app_id> --role-id <role_id> \
   --all --yes
 ```
 
-- `+role-member-list` 不分页；`--member-type` 只返回选中类型的字段，未返回的成员字段表示“未查询”而不是空。影响确认或完整比较时必须省略它。
-- 汇总 `--member-type` 结果时明确这是过滤投影，不得据此断言角色没有其它类型成员。
-- 用户要求 CLI 原生 table 时，直接执行 `+role-member-list --format table`；可原样转发或做事实摘要，不要先取 JSON 再手工重建一张替代表格。
-- 写入和依赖其结果的回读不得放进同一个并发批次；必须等待写入完整返回成功后，再单独发起回读。误并发时只能以写入完成后的新回读作为结果证据。
-- 添加前仅在用户要求独立证明或确认其他成员类型未变化时读取完整基线，并在写后完整回读；否则成功响应即可作为结果。
-- 定向移除前确认准确成员及影响。若需要证明结果，写后完整回读；不要把过滤结果当作完整成员集合。
-- `--all` 前读取完整成员范围并确认；成功后执行一次无过滤 `+role-member-list`，确认三个成员数组均为空。
+- `+role-member-list` is not paginated; `--member-type` returns only the fields of the selected type, and member fields not returned mean "not queried" rather than empty. It must be omitted when confirming impact or performing a complete comparison.
+- When summarizing `--member-type` results, make clear that this is a filtered projection, and do not assert based on it that the role has no members of other types.
+- When the user requests the CLI's native table, directly execute `+role-member-list --format table`; you may forward it as-is or provide a factual summary, but do not first fetch JSON and then manually rebuild a substitute table.
+- Writes and the read-back that depends on their results must not be placed in the same concurrent batch; you must wait for the write to return successfully in full, then separately initiate the read-back. If they are mistakenly run concurrently, only a new read-back after the write completes may serve as evidence of the result.
+- Before adding, read the complete baseline only when the user requests independent proof or confirmation that other member types are unchanged, and perform a complete read-back after the write; otherwise the successful response suffices as the result.
+- Before a targeted removal, confirm the exact members and impact. If the result needs to be proven, perform a complete read-back after the write; do not treat the filtered result as the complete member set.
+- Before `--all`, read the complete member scope and confirm; after success, execute one unfiltered `+role-member-list` to confirm that all three member arrays are empty.
 
-## 权限
+<a id="权限"></a>
+## Permissions
 
-| 操作 | 所需 scope |
+| Operation | Required scope |
 |---|---|
 | list / get / member-list / match-list | `spark:app:read` |
 | create / update / delete / member-add / member-remove | `spark:app:write` |

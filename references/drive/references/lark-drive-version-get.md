@@ -1,9 +1,10 @@
 # drive +version-get
 
 
-下载指定版本的文件内容。该 shortcut 同时支持 `--as user` 和 `--as bot`；自动化场景推荐使用 `--as bot`。
+Download the file content of a specified version. This shortcut supports both `--as user` and `--as bot`; for automation scenarios, `--as bot` is recommended.
 
-## 命令
+<a id="命令"></a>
+## Command
 
 ```bash
 lark-cli drive +version-get \
@@ -30,25 +31,28 @@ lark-cli drive +version-get \
   --as bot
 ```
 
-## 参数
+<a id="参数"></a>
+## Parameters
 
-| 参数 | 必填 | 说明 |
+| Parameter | Required | Description |
 |------|------|------|
-| `--file-token` | 是 | 目标文件 token |
-| `--version` | 是 | `drive +version-history` 返回的长数字 `version` 字段，不是 `tag` |
-| `--output` | 否 | 本地保存路径或目录；省略时保存到当前目录，并优先使用服务端文件名 |
-| `--overwrite` | 否 | 覆盖已存在的本地输出文件 |
+| `--file-token` | Yes | Target file token |
+| `--version` | Yes | The long numeric `version` field returned by `drive +version-history`, not `tag` |
+| `--output` | No | Local save path or directory; when omitted, saves to the current directory and prefers the server-side file name |
+| `--overwrite` | No | Overwrite an existing local output file |
 
-## 关键行为
+<a id="关键行为"></a>
+## Key Behaviors
 
-- 省略 `--output` 时，CLI 保存到当前目录，并优先使用服务端文件名
-- `--output` 指向已存在目录，或以 `/` / `\\` 结尾时，CLI 会使用远端文件名保存
-- `--output` 是文件路径且没有后缀时，CLI 会像 `docs +media-download` 一样尝试从响应头推断后缀；推不出来就保持无后缀
-- 目标文件已存在时，只有显式传 `--overwrite` 才会覆盖
+- When `--output` is omitted, the CLI saves to the current directory and prefers the server-side file name
+- When `--output` points to an existing directory, or ends with `/` / `\\`, the CLI saves using the remote file name
+- When `--output` is a file path without an extension, the CLI attempts to infer the extension from the response headers like `docs +media-download`; if it cannot be inferred, it remains without an extension
+- When the target file already exists, it is only overwritten if `--overwrite` is explicitly passed
 
-## 返回值
+<a id="返回值"></a>
+## Return Value
 
-返回值：
+Return value:
 
 ```json
 {
@@ -64,7 +68,8 @@ lark-cli drive +version-get \
 }
 ```
 
-## 参考
+<a id="参考"></a>
+## References
 
-- [lark-drive](../index.md) -- 云空间（云盘/云存储）全部命令
-- [lark-shared](../../shared/index.md) -- 认证和全局参数
+- [lark-drive](../index.md) -- All commands for Drive (cloud drive/cloud storage)
+- [lark-shared](../../shared/index.md) -- Authentication and global parameters

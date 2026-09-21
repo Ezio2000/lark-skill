@@ -1,117 +1,123 @@
-# Lark Sheet Formula Verify（+formula-verify）
+# Lark Sheet Formula Verify (+formula-verify)
 
-> **本文定位**：飞书表格"公式写入后是否真的零错误"的诊断入口。公式的书写规则与 Excel→飞书迁移的语义规则一律以 `references/lark-sheets-formula-translation.md` 为唯一权威，本文不重复；本文聚焦"写完之后如何用一次调用发现公式错误"与 AI 公式的全区间一次异步状态检查交付。
+> **Scope of this document**: The diagnostic entry point for "whether a Feishu Sheet formula truly has zero errors after being written." The rules for writing formulas and the semantic rules for Excel→Feishu migration are all governed solely by `references/lark-sheets-formula-translation.md` as the single authority, and are not repeated here; this document focuses on "how to discover formula errors with a single call after writing" and the delivery of a one-time full-range asynchronous status check for AI formulas.
 >
-> **边界**：本文不讲公式怎么写（去 `references/lark-sheets-formula-translation.md`），也不讲公式怎么写入表格（去 `references/lark-sheets-write-cells.md` / `references/lark-sheets-batch-update.md`）。本文只讲两件事：
+> **Boundaries**: This document does not cover how to write formulas (go to `references/lark-sheets-formula-translation.md`), nor how to write formulas into a sheet (go to `references/lark-sheets-write-cells.md` / `references/lark-sheets-batch-update.md`). This document covers only two things:
 >
-> - **普通公式**：任务里发生公式落表、批量填充公式、`--copy-to-range` 扩展公式、导入含公式 workbook 时，对本次公式范围逐段跑 `+formula-verify --exit-on-error`；`errors_found` 修复、`partial` 拆分续扫，全部分段 `status='success'` 后才算完成。
-> - **AI 公式**（`=AI(...)`）：不要用普通公式的"轮询到 zero-error"逻辑；改用 `+formula-verify --ai-only --range` 按「AI 公式校验」的全区间一次异步状态检查规则交付。
+> - **Ordinary formulas**: When a task involves writing formulas to a sheet, batch-filling formulas, `--copy-to-range` extending formulas, or importing a workbook containing formulas, run `+formula-verify --exit-on-error` segment by segment over the formula range for this operation; `errors_found` fixes and `partial` splitting for continued scanning are only considered complete after all segments are `status='success'`.
+> - **AI formulas** (`=AI(...)`): Do not use the ordinary-formula "poll until zero-error" logic; instead use `+formula-verify --ai-only --range` to deliver according to the one-time full-range asynchronous status check rules of "AI Formula Verification."
 
-## 为什么需要自检
+<a id="为什么需要自检"></a>
+## Why self-check is needed
 
-飞书表格已经实时算好结果，但"算出来"和"算对了"是两件事。常见缺口：
+Feishu Sheets already computes results in real time, but "computed" and "computed correctly" are two different things. Common gaps:
 
-- 公式编译失败 → 单元格落成文本（写入类 shortcut 返回的 `formula_errors[]` 是**编译失败**信号）。
-- 公式编译成功但**运行时错误**：`#REF!` / `#DIV/0!` / `#VALUE!` / `#NAME?` / `#NULL!` / `#NUM!` / `#N/A`——这一类只看 `formula_errors[]` 看不到，必须扫单元格值。
+- Formula compilation failure → the cell falls back to text (the `formula_errors[]` returned by write-type shortcuts is a **compilation failure** signal).
+- Formula compiles successfully but has a **runtime error**: `#REF!` / `#DIV/0!` / `#VALUE!` / `#NAME?` / `#NULL!` / `#NUM!` / `#N/A`—this category cannot be seen by looking only at `formula_errors[]`; you must scan the cell values.
 
-`+formula-verify` 把两路信号合并成一份统一 JSON：一次调用聚合公式错误清单 + 编译失败清单 + 每类错误的定位与样本，调用方可据此定位修复。任务只要发生公式落表，就把它作为公式错误码健康检查；限定本次新增 / 修改的公式范围逐段扫描并带 `--exit-on-error`。`status='success'` 仅表示无编译/运行时错误，不判断字段映射、阈值、单位、口径或业务结果是否正确——业务语义哨兵见 `references/lark-sheets-formula-translation.md`。
+`+formula-verify` merges the two signal paths into a single unified JSON: one call aggregates the formula error list + compilation failure list + the location and samples for each error type, so the caller can locate and fix them accordingly. Whenever a task writes formulas to a sheet, use it as a formula error code health check; limit it to the newly added / modified formula range for this operation, scan segment by segment, and include `--exit-on-error`. `status='success'` only indicates the absence of compilation/runtime errors; it does not judge whether field mappings, thresholds, units, definitions, or business results are correct—for business semantic sentinels see `references/lark-sheets-formula-translation.md`.
 
-## 调用契约
+<a id="调用契约"></a>
+## Invocation contract
 
-最小调用形态：
+Minimal invocation form:
 
-| 入参 | 含义 |
+| Parameter | Meaning |
 |---|---|
-| `--url` / `--spreadsheet-token` | 表格定位（XOR 二选一，必填） |
-| `--sheet-id` / `--sheet-name` | 限定子表（mutually exclusive；省略则扫全部可见子表） |
-| `--range` | 限定 A1 范围；省略则用各 sheet 的 `current_region` |
-| `--max-locations` | 每类错误样本上限，默认 20 |
-| `--exit-on-error` | `status='errors_found'` 时返回非 0 退出码；`partial` 仍需调用方检查 status 并拆分续扫 |
-| `--ai-only` | 只检查 `=AI(...)` 异步计算状态；与普通公式 7 类错误扫描分开使用 |
+| `--url` / `--spreadsheet-token` | Sheet locator (XOR, choose one, required) |
+| `--sheet-id` / `--sheet-name` | Limit to sub-sheets (mutually exclusive; if omitted, scan all visible sub-sheets) |
+| `--range` | Limit to an A1 range; if omitted, use each sheet's `current_region` |
+| `--max-locations` | Upper limit of samples per error type, default 20 |
+| `--exit-on-error` | Return a non-zero exit code when `status='errors_found'`; with `partial` the caller still needs to check status and split for continued scanning |
+| `--ai-only` | Only check `=AI(...)` asynchronous computation status; used separately from the ordinary-formula 7-category error scan |
 
-返回核心字段：
+Core returned fields:
 
-- `status` ∈ `success` / `errors_found` / `partial`——**唯一可机读的健康度判据**。
-- `total_errors` / `total_formulas` / `scanned_cells`——本次扫描规模指标。
-- `has_more`——为 true 表示扫描被内部上限截断（详见后文「截断与续读」），未覆盖完整范围。
-- `error_summary[<错误类型>]`——每类错误的 `count` / `locations[]` / `samples[].{address,formula,depends_on}`。
-- `compile_errors[]`——合并最近一次写入留下的编译失败清单，与运行时错误并存时同时出现。
-- `warning_message`——仅在 `has_more=true` 时出现，告知调用方需要缩小 `--range` / 拆 `--sheet-id` 续读。
+- `status` ∈ `success` / `errors_found` / `partial`—the **only machine-readable health criterion**.
+- `total_errors` / `total_formulas` / `scanned_cells`—scale metrics for this scan.
+- `has_more`—when true, indicates the scan was truncated by an internal limit (see "Truncation and continued reading" below), and the full range was not covered.
+- `error_summary[<错误类型>]`—the `count` / `locations[]` / `samples[].{address,formula,depends_on}` for each error type.
+- `compile_errors[]`—merges the compilation failure list left by the most recent write; appears together with runtime errors when both exist.
+- `warning_message`—appears only when `has_more=true`, informing the caller to narrow `--range` / split `--sheet-id` for continued reading.
 
-## 写入后诊断规则
+<a id="写入后诊断规则"></a>
+## Post-write diagnostic rules
 
-任何批量公式 / 含公式列写入完成后，都必须对本次新增 / 修改的公式范围逐段调用 `+formula-verify --exit-on-error`。不要等用户显式说"校验一下公式"才执行；只要任务动作包含写公式，这一步就是完成路径的一部分。AI 公式不套这条：`=AI(...)` 是异步计算，按「AI 公式校验」的全区间一次异步状态检查规则交付，不等 `status='success'`。触发场景：
+After any batch formula / formula-containing column write completes, you must call `+formula-verify --exit-on-error` segment by segment over the newly added / modified formula range for this operation. Do not wait for the user to explicitly say "verify the formulas" before executing; as long as the task action includes writing formulas, this step is part of the completion path. AI formulas do not follow this rule: `=AI(...)` is asynchronous computation, so deliver according to the one-time full-range asynchronous status check rules of "AI Formula Verification," and do not wait for `status='success'`. Trigger scenarios:
 
 - `+cells-set` / `+csv-put`
-- `+cells-set --copy-to-range` / 模板单元格向整列或整块扩展公式
+- `+cells-set --copy-to-range` / extending a template cell's formula to an entire column or block
 - `+workbook-import`
-- `+batch-update` 中含写入子操作
-- `+table-put`（任意列含公式时）
-- `+workbook-import`（导入的 xlsx 含公式时）
+- `+batch-update` contains a write sub-operation
+- `+table-put` (when any column contains formulas)
+- `+workbook-import` (when the imported xlsx contains formulas)
 
-处置规则：
+Handling rules:
 
-1. `status='success'` → 当前分段无编译/运行时错误；但还必须按 `references/lark-sheets-formula-translation.md` 的业务语义契约核字段、阈值、单位、完整范围和业务哨兵。全部目标分段均为 success 且哨兵值正确后才完成。
-2. `status='partial'` → 扫描被内部上限截断；缩小 `--range` 或拆 `--sheet-id` 续扫，未扫描区域仍未知，不能用交付说明代替验证。
-3. `status='errors_found'` 且 `compile_errors[]` 非空 → 根据 `compile_errors[].reason` 修正公式语法（飞书函数名 / 范围语法 / 引用样式）；确实无法表达时才降级静态值，并说明原因与不联动风险。
-4. `status='errors_found'` 且只剩运行时错误 → 按 `error_summary` 的 `samples[].formula` + `depends_on` 排查根因（零除？空值参与运算？引用越界？日期差写法？数组语义？），修复后重验。
-5. 同一处错误连续修复 3 次仍未通过 → 可用 `IFERROR` 兜底或退回纯值，但降级后的目标格已不再是公式；需回读确认没有残留错误公式，并在交付说明写清不随源数据更新。
+1. `status='success'` → the current segment has no compilation/runtime errors; but you must still verify fields, thresholds, units, full range, and business sentinels according to the business semantic contract of `references/lark-sheets-formula-translation.md`. Only after all target segments are success and the sentinel values are correct is it complete.
+2. `status='partial'` → the scan was truncated by an internal limit; narrow `--range` or split `--sheet-id` for continued scanning; the unscanned area is still unknown, and a delivery note cannot substitute for verification.
+3. `status='errors_found'` and `compile_errors[]` is non-empty → fix the formula syntax according to `compile_errors[].reason` (Feishu function names / range syntax / reference style); only when it truly cannot be expressed should you downgrade to a static value, and explain the reason and the risk of not being linked.
+4. `status='errors_found'` and only runtime errors remain → troubleshoot the root cause according to `error_summary`'s `samples[].formula` + `depends_on` (division by zero? empty values participating in operations? out-of-bounds references? date difference syntax? array semantics?), then re-verify after fixing.
+5. If the same error still fails after 3 consecutive fixes → you may use `IFERROR` as a fallback or revert to a pure value, but the downgraded target cell is no longer a formula; you need to read back to confirm there is no residual erroneous formula, and clearly state in the delivery note that it will not update with the source data.
 
-注意：
+Notes:
 
-- 在 `status='errors_found'` 的状态下调用 `+cells-set --copy-to-range` 继续扩展会把错误复制放大，建议先处理关键错误。
-- "编译失败但运行时无报错"不是 zero-error（编译失败的单元格此刻是文本不是公式，源数据一变就再也算不出值）。
-- 只靠肉眼读首末 5 行确认不可靠——表中段、隐藏行、合并区里的错误这样根本看不到；`+formula-verify` 可补充这一诊断视角。
-- 只验证写入区首行不够：批量填公式后同时抽查首行、中段、尾部和汇总行；目标是发现“只填到前 N 行”“把明细公式写进合计行”“尾部仍是空/错误值”这类问题。
-- 修公式时先定位根因格，再看下游链路。不要把被上游错误污染的下游格全部重写；同型公式优先从相邻正确单元格复制/改引用，写完回读下游关键格是否仍有 `#VALUE!` / `#REF!`。
-- 查找/匹配公式必须有错误处理：不要裸写 `VLOOKUP` / `XLOOKUP`。未匹配时返回明确文本（如“未匹配到”），不要静默空串，除非用户明确要求空值。
-- 排名/排序公式要处理空值、0 值和不参与排名项；这些项应保持空/0，而不是进入通用排名公式得到正整数名次。
+- Calling `+cells-set --copy-to-range` to continue extending while in the `status='errors_found'` state will copy and amplify the errors; it is recommended to handle critical errors first.
+- "Compilation failed but no runtime error" is not zero-error (a cell that failed to compile is text, not a formula, at this moment, and once the source data changes it can never compute a value again).
+- Confirming by visually reading only the first and last 5 rows is unreliable—errors in the middle of the sheet, in hidden rows, or in merged areas simply cannot be seen this way; `+formula-verify` can supplement this diagnostic perspective.
+- Verifying only the first row of the write area is not enough: after batch-filling formulas, spot-check the first row, middle section, tail, and summary row at the same time; the goal is to discover problems like "only the first N rows were filled," "detail formulas were written into the total row," or "the tail is still empty/error values."
+- When fixing formulas, locate the root-cause cell first, then look at the downstream chain. Do not rewrite all downstream cells contaminated by upstream errors; for formulas of the same type, prefer copying/changing references from an adjacent correct cell, and after writing, read back the key downstream cells to check whether `#VALUE!` / `#REF!` still remain.
+- Lookup/match formulas must have error handling: do not write bare `VLOOKUP` / `XLOOKUP`. When there is no match, return explicit text (e.g., "no match found"); do not silently return an empty string, unless the user explicitly requests an empty value.
+- Ranking/sorting formulas must handle empty values, 0 values, and items that do not participate in ranking; these items should remain empty/0, rather than entering the general ranking formula and getting a positive integer rank.
 
-## 截断与续读
+<a id="截断与续读"></a>
+## Truncation and continued reading
 
-后端有一个内部硬上限对总扫描单元格数做截断（不暴露给调用方），超过后立即返回 `has_more=true` + `warning_message`，`error_summary` / `compile_errors` 仅覆盖已扫描部分。处理路径：
+The backend has an internal hard limit that truncates the total number of scanned cells (not exposed to the caller); once exceeded, it immediately returns `has_more=true` + `warning_message`, and `error_summary` / `compile_errors` only cover the already-scanned portion. Handling path:
 
-- 关键输出区优先按 `--sheet-id` / `--sheet-name` 拆成多次调用。
-- 同 sheet 内按 `--range` 切片（如先 `A1:Z200` 再 `AA1:AZ200`），逐块诊断。
-- 续扫是完成条件的一部分：本次写入的公式范围必须全部拆分扫描到 `success`，不能因时间不足只在交付说明里列未覆盖范围就结束（同处置规则 2）。确实无法在本轮扫完时，按处置规则 5 对未验证公式降级为静态值并声明，而不是留下未验证的活公式。
+- Prioritize splitting key output areas into multiple calls by `--sheet-id` / `--sheet-name`.
+- Within the same sheet, slice by `--range` (e.g., first `A1:Z200` then `AA1:AZ200`), and diagnose block by block.
+- Continued scanning is part of the completion condition: the formula range written in this operation must all be split and scanned to `success`; you cannot end by merely listing the uncovered range in the delivery note due to insufficient time (same as handling rule 2). If it truly cannot be fully scanned in this round, downgrade the unverified formulas to static values and declare it according to handling rule 5, rather than leaving unverified live formulas.
 
-## AI 公式校验（`--ai-only`）
+<a id="ai-公式校验--ai-only"></a>
+## AI Formula Verification (`--ai-only`)
 
-飞书表格提供一个统一的 **`AI` 公式**（`=AI(prompt, [range])`，用自然语言驱动翻译 / 分类 / 情感分析 / 信息提取 / 总结 / 润色等，写法与清单见 `references/lark-sheets-formula-translation.md`）。AI 公式的写入与普通公式一致（复用 `+cells-set` / `set_cell_range`，无需特殊接口），但**计算是异步的**：写入后要等 AI 算完才有结果。普通的 `+formula-verify` 只扫本地单元格值（7 类 Excel 错误），看不到 AI 公式的计算状态。
+Feishu Sheets provides a unified **`AI` formula** (`=AI(prompt, [range])`, driven by natural language for translation / classification / sentiment analysis / information extraction / summarization / polishing, etc.; for syntax and the list see `references/lark-sheets-formula-translation.md`). AI formulas are written the same way as ordinary formulas (reusing `+cells-set` / `set_cell_range`, no special interface needed), but **computation is asynchronous**: after writing, you must wait for the AI to finish computing before there is a result. The ordinary `+formula-verify` only scans local cell values (7 categories of Excel errors) and cannot see the computation status of AI formulas.
 
-`--ai-only` 让 `+formula-verify` 只校验 AI 公式、跳过普通公式的 Excel 错误扫描，专用于写完 AI 公式后的异步状态检查。**它必须是第一校验入口；禁止先用 `+cells-get` / `+csv-get` 轮询 AI 结果。**
+`--ai-only` makes `+formula-verify` verify only AI formulas and skip the ordinary-formula Excel error scan, dedicated to the asynchronous status check after writing AI formulas. **It must be the first verification entry point; it is forbidden to first use `+cells-get` / `+csv-get` to poll for AI results.**
 
-- **`--ai-only` 返回字段**（机读判据以这些为准，均为整数）：
-  - `ai_formula_total`——后端返回的 AI 公式汇总计数，**不是本次写入的单元格条数**（同一批写入的多个 AI 公式可能只计为 1），`--range` 也不收窄它——**认返回里的单元格定位，不要拿它和本次预期条数做等值比对**。
-  - `ai_formula_done`——已算出结果的条数。
-  - `ai_formula_pending_count`——仍在后台计算（`pending`）的条数。
-  - `ai_formula_failed_count`——失败 / 不支持的条数。
-- **异步预期**：少量 AI 公式通常很快算出结果；批量写入后部分公式仍为 `pending`（计算中）属于正常现象，飞书会在后台持续计算。
-- **`--exit-on-error` 兼容**：`--ai-only --exit-on-error` 时，若 `ai_formula_failed_count > 0`，返回非 0 退出码，便于脚本 / CI 收敛。
-- 可与 `--sheet-id` / `--sheet-name` / `--range` 共存，表示「只在指定范围里校验 AI 公式」。
-- **普通公式不要带 `--ai-only`**：带上会跳过 7 类 Excel 错误扫描，普通公式等于没验。
+- **`--ai-only` returned fields** (the machine-readable criteria are based on these, all integers):
+  - `ai_formula_total`—the AI formula summary count returned by the backend, **not the number of cells written in this operation** (multiple AI formulas written in the same batch may be counted as only 1), and `--range` does not narrow it either—**trust the cell locations in the return; do not compare it for equality against the expected count for this operation**.
+  - `ai_formula_done`—the number that have already computed results.
+  - `ai_formula_pending_count`—the number still computing in the background (`pending`).
+  - `ai_formula_failed_count`—the number that failed / are unsupported.
+- **Asynchronous expectation**: A small number of AI formulas usually compute results quickly; after a batch write, some formulas still being `pending` (computing) is normal, and Feishu will continue computing in the background.
+- **`--exit-on-error` compatibility**: When `--ai-only --exit-on-error`, if `ai_formula_failed_count > 0`, return a non-zero exit code, making it easier for scripts / CI to converge.
+- Can coexist with `--sheet-id` / `--sheet-name` / `--range`, meaning "verify AI formulas only within the specified range."
+- **Do not include `--ai-only` for ordinary formulas**: including it will skip the 7-category Excel error scan, which means ordinary formulas are effectively unverified.
 
-**`--range` 用整个写入区间，不要抽样**：`--ai-only` 是只读操作、成本低，`--range` 应覆盖本次写入的**全部** AI 公式区间（而非代表性子集）——子集抽检会漏掉「只有列尾那批被写坏」的情况。但别把 `--range` 当过滤器用：它只透传给后端，AI-only 汇总不保证按它收窄，失败项要按返回的单元格定位核对是否落在本次写入区间内。区间过大触发截断（`has_more=true`）时按「截断与续读」拆 `--range` / `--sheet-id`。
+**`--range` uses the entire write range; do not sample**: `--ai-only` is a read-only operation with low cost, and `--range` should cover **all** AI formula ranges written in this operation (not a representative subset)—subset spot-checking will miss the case where "only the last batch in the column was written incorrectly." But do not use `--range` as a filter: it is only passed through to the backend, and the AI-only summary is not guaranteed to narrow by it; failed items must be checked against the returned cell locations to confirm whether they fall within the write range for this operation. If the range is too large and triggers truncation (`has_more=true`), split by `--range` / `--sheet-id` according to "Truncation and continued reading."
 
-**必经步骤：一次性公式文本核对（不是轮询）**。写完 AI 公式后，先对种子格 / 首格做**一次** `+cells-get --include formula`，确认引号 / 括号没在 shell / CSV / JSON 层被破坏、单元格里落进去的确实是 `=AI(...)` 公式而非残缺字面量或 `#ERROR`。这一步只做一次、只看文本，被禁止的只是**用 `+cells-get` 反复轮询计算结果**（结果状态一律走 `--ai-only`）。
+**Required step: one-time formula text verification (not polling)**. After writing AI formulas, first perform **one** `+cells-get --include formula` on the seed cell / first cell to confirm that quotes / parentheses were not broken at the shell / CSV / JSON layer, and that what actually landed in the cell is indeed a `=AI(...)` formula rather than a broken literal or `#ERROR`. This step is done only once and only looks at the text; what is forbidden is only **using `+cells-get` to repeatedly poll for computation results** (result status always goes through `--ai-only`).
 
-交付判据（机读）：全写入区间内 `ai_formula_failed_count == 0`；`failed` / `unsupported` 先修完再谈交付。满足后即使仍有 `ai_formula_pending_count > 0` 也可以交付，不必轮询到全部完成；交付时告知用户"AI 公式仍在后台运行，结果会陆续完成"。另外「公式在写入层被破坏、根本没算作 AI 公式」的静默失败不会体现为 `failed`，靠上面那次公式文本核对拦住——不要指望用 `ai_formula_total` 和预期条数对数（该总数未必按 `--range` 收窄）。
+Delivery criteria (machine-readable): `ai_formula_failed_count == 0` within the entire write range; fix `failed` / `unsupported` first before discussing delivery. Once satisfied, you may deliver even if there are still `ai_formula_pending_count > 0`; there is no need to poll until all are complete; when delivering, tell the user "AI formulas are still running in the background, and results will complete gradually." In addition, the silent failure of "the formula was broken at the write layer and was not counted as an AI formula at all" will not appear as `failed`; it is caught by the one-time formula text verification above—do not expect to reconcile `ai_formula_total` against the expected count (that total is not necessarily narrowed by `--range`).
 
-`ai_formula_failed_count > 0`，或文本核对暴露出 `#ERROR`、残缺括号（如 `E2)`）、半截函数名、全角括号时，说明公式串在引号层被破坏、没作为公式写进去——不要继续等 pending，回到 `+cells-set` 用 `\"` 转义重写该格（写入范例见 `references/lark-sheets-formula-translation.md` 的 AI 公式章节）。
+`ai_formula_failed_count > 0`, or when the text verification reveals `#ERROR`, broken parentheses (e.g., `E2)`), a truncated function name, or full-width parentheses, it means the formula string was broken at the quote layer and was not written in as a formula—do not keep waiting for pending; go back to `+cells-set` and rewrite that cell using `\"` escaping (for a write example see the AI formula section of `references/lark-sheets-formula-translation.md`).
 
-典型用法：
+Typical usage:
 
 ```bash
-# 写入一批 AI 公式后，对整个写入区间校验计算状态
+# After writing a batch of AI formulas, verify the computation status for the entire write range
 lark-cli sheets +formula-verify --url <表URL> --sheet-name <子表名> --range <整个写入区间> --ai-only
-# ai_formula_failed_count==0 即可交付；pending 会在后台继续计算
+# ai_formula_failed_count==0 is sufficient for delivery; pending will continue computing in the background
 ```
 
-## 常见陷阱
+<a id="常见陷阱"></a>
+## Common pitfalls
 
-| 坑 | 应对 |
+| Pitfall | Response |
 |---|---|
-| 错误字符串本地化 | 后端按内部 `error_kind` / `compute_status` 字段识别错误类别，不走字符串匹配；调用方拿到的 7 类英文错误代码由后端统一规范输出，与 locale 无关。 |
-| `formatted_value` 可能隐藏错误 | 某些条件格式 / 自定义数字格式会把 `#DIV/0!` 显示成空白。后端直接读 cell `error_kind`，不依赖 `formatted_value`，绕开此类被遮蔽。 |
-| 把 `partial` 当全量健康 | `partial` 仅表示**已扫描部分**无错误，剩余区域未知；缩小 ranges 或按 sheet 拆分，直到本次普通公式范围全部 success。 |
-| 编译失败 vs 运行时错误 | 同一份报告里 `compile_errors[]` 与 `error_summary` 并存。语义层先解决 `compile_errors[]`、再做运行时自检。 |
+| Error string localization | The backend identifies error categories by internal `error_kind` / `compute_status` fields, not by string matching; the 7 categories of English error codes the caller receives are output uniformly by the backend and are independent of locale. |
+| `formatted_value` may hide errors | Some conditional formatting / custom number formats display `#DIV/0!` as blank. The backend reads the cell `error_kind` directly, without relying on `formatted_value`, bypassing this kind of masking. |
+| Treating `partial` as full health | `partial` only indicates that the **already-scanned portion** has no errors; the remaining area is unknown; narrow ranges or split by sheet until the entire ordinary-formula range for this operation is success. |
+| Compilation failure vs runtime error | In the same report, `compile_errors[]` and `error_summary` coexist. At the semantic layer, resolve `compile_errors[]` first, then do the runtime self-check. |

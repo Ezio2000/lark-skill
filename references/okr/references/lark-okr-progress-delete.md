@@ -1,37 +1,41 @@
 # okr +progress-delete
 
 
-根据 ID 删除一条 OKR 进展记录。此操作为高风险操作，删除后不可恢复。
+Delete an OKR progress record by ID. This is a high-risk operation and cannot be recovered after deletion.
 
-## 推荐命令
+<a id="推荐命令"></a>
+## Recommended commands
 
 ```bash
-# 删除指定 ID 的进展记录
+# Delete the progress record with the specified ID
 lark-cli okr +progress-delete --progress-id 1234567890123456789
 
-# 预览 API 调用而不实际执行
+# Preview the API call without actually executing it
 lark-cli okr +progress-delete --progress-id 1234567890123456789 --dry-run
 ```
 
-## 参数
+<a id="参数"></a>
+## Parameters
 
-| 参数              | 必填 | 默认值    | 说明                    |
+| Parameter              | Required | Default    | Description                    |
 |-----------------|----|--------|-----------------------|
-| `--progress-id` | 是  | —      | 进展记录 ID（int64 类型，正整数） |
-| `--dry-run`     | 否  | —      | 预览 API 调用而不实际执行。      |
-| `--format`      | 否  | `json` | 输出格式。                 |
+| `--progress-id` | Yes  | —      | Progress record ID (int64 type, positive integer) |
+| `--dry-run`     | No  | —      | Preview the API call without actually executing it.      |
+| `--format`      | No  | `json` | Output format.                 |
 
-## 工作流程
+<a id="工作流程"></a>
+## Workflow
 
-1. 使用 `+progress-get` 确认要删除的进展记录 ID 和内容。
-2. 执行 `lark-cli okr +progress-delete --progress-id "1234567890123456789"`。
-3. 报告结果：已删除的进展记录 ID。
+1. Use `+progress-get` to confirm the ID and content of the progress record to be deleted.
+2. Execute `lark-cli okr +progress-delete --progress-id "1234567890123456789"`.
+3. Report the result: the deleted progress record ID.
 
-> **注意**：此操作不可恢复，建议在删除前先用 `+progress-get` 确认记录内容。
+> **Note**: This operation cannot be recovered. It is recommended to first use `+progress-get` to confirm the record content before deleting.
 
-## 输出
+<a id="输出"></a>
+## Output
 
-返回 JSON：
+Returns JSON:
 
 ```json
 {
@@ -40,7 +44,8 @@ lark-cli okr +progress-delete --progress-id 1234567890123456789 --dry-run
 }
 ```
 
-## 参考
+<a id="参考"></a>
+## References
 
-- [lark-okr](../index.md) -- 所有 OKR 命令(shortcut 和 API 接口)
-- [lark-shared](../../shared/index.md) -- 认证和全局参数
+- [lark-okr](../index.md) -- all OKR commands (shortcuts and API interfaces)
+- [lark-shared](../../shared/index.md) -- authentication and global parameters

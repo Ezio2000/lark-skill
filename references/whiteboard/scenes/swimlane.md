@@ -1,81 +1,91 @@
-# 泳道图（Swimlane）
+<a id="泳道图swimlane"></a>
+# Swimlane Diagram (Swimlane)
 
-适用于：跨角色/跨系统的端到端流程（用户/网关/服务/存储/回调）、多泳道协作流程、系统交互链路图。
+Applicable to: end-to-end processes across roles/systems (user/gateway/service/storage/callback), multi-swimlane collaborative processes, system interaction link diagrams.
 
-支持两种方向：
-- **水平泳道**：泳道为横向条带（自上而下排列），流程从左到右推进
-- **垂直泳道**：泳道为纵向列（自左向右排列），流程从上到下推进
+Supports two orientations:
+- **Horizontal swimlanes**: lanes are horizontal bands (arranged top to bottom), process advances from left to right
+- **Vertical swimlanes**: lanes are vertical columns (arranged left to right), process advances from top to bottom
 
-## Content 约束
+<a id="content-约束"></a>
+## Content Constraints
 
-- 泳道数（lanes）建议 3-7，超过 7 会显著降低可读性；如必须更多泳道，优先合并同类或拆成两张图
-- 阶段数（stages）建议 4-8；超过 8 优先合并相邻阶段或改成“代表性阶段”
-- 每个阶段在每条泳道中最多放 1 个“主步骤卡片”；如同一阶段需要多个步骤，放在同一格内做纵向堆叠（2-3 个为上限）
-- 节点文本 1-2 行为主；长文本用 `\n` 手动换行，避免单行超长导致卡片过宽
-- 仅画必要连线：泳道图的结构已经表达了“属于哪个角色/系统 + 发生顺序”，连线只用于表达跨泳道交互、关键因果关系或异步事件流
+- Number of lanes: 3-7 recommended; more than 7 significantly reduces readability; if more lanes are necessary, prioritize merging similar ones or splitting into two diagrams
+- Number of stages: 4-8 recommended; if more than 8, prioritize merging adjacent stages or switching to "representative stages"
+- Each stage can hold at most 1 "main step card" per lane; if multiple steps are needed in the same stage, stack them vertically within the same cell (2-3 is the upper limit)
+- Node text should be 1-2 lines; use `\n` for manual line breaks with long text, to avoid a single overly long line making the card too wide
+- Only draw necessary connections: the swimlane structure already expresses "which role/system it belongs to + order of occurrence"; connections are only used to express cross-lane interactions, key causal relationships, or asynchronous event flows
 
-## Layout 选型
+<a id="layout-选型"></a>
+## Layout Selection
 
-| 模式 | 适用条件 | 特征 |
+| Mode | Applicable Conditions | Characteristics |
 |------|---------|------|
-| **水平泳道** | 默认推荐；流程天然左→右推进 | lanes=行，stages=列；跨泳道同一阶段严格 x 对齐 |
-| **垂直泳道** | 用户明确要求竖版、或画布更适合纵向滚动阅读 | lanes=列，stages=行；跨泳道同一阶段严格 y 对齐 |
+| **Horizontal swimlanes** | Default recommendation; process naturally advances left→right | lanes=rows, stages=columns; same stage across lanes strictly x-aligned |
+| **Vertical swimlanes** | User explicitly requests portrait orientation, or canvas is better suited for vertical scrolling | lanes=columns, stages=rows; same stage across lanes strictly y-aligned |
 
-## Layout 规则
+<a id="layout-规则"></a>
+## Layout Rules
 
-### 通用规则（两种方向都适用）
+<a id="通用规则两种方向都适用"></a>
+### General Rules (applicable to both orientations)
 
-1. **网格对齐是第一优先级**：跨泳道同一阶段必须严格对齐（水平对齐 x；垂直对齐 y）。对齐通过“共享阶段标尺（stage ruler / stage slots）”实现，不靠肉眼估算，也不靠逐节点随意手写坐标
-2. **只生成真实节点**：为保证跨泳道阶段严格对齐，所有阶段统一保留透明的 **stage cell**；仅在真实阶段的 cell 内生成卡片节点，并按阶段索引映射到对应槽位
-3. **泳道底色**：为了增强层级感同时保持界面整洁，**强烈建议所有泳道容器统一使用极浅灰色背景**（如 `fillColor: "#F8F9FA"` 或 `"#FCFCFC"`）。边框使用浅灰色细虚线（`borderDash: "dashed"`, `borderWidth: 1`, `borderColor: "#DEE0E3"`）以明确边界。
-4. **步骤卡片**：使用 `rect`。为建立清晰的视觉层级，卡片**必须填充浅色背景**（参考 `elements/style.md` 中的浅色板，如极浅的主题色），边框使用对应的主题主色（`borderWidth: 1-2`），文字使用深色（如 `#1F2329`）以确保可读性。统一圆角；宽高以可读为先，避免过窄导致换行过多
-5. **间距**：只要存在 connector 连线，卡片之间的主轴间距必须满足 `gap >= 40`
+1. **Grid alignment is the first priority**: the same stage across lanes must be strictly aligned (horizontal alignment x; vertical alignment y). Alignment is achieved through "shared stage ruler / stage slots", not by visual estimation, nor by arbitrarily hand-writing coordinates per node
+2. **Only generate real nodes**: to ensure strict alignment of stages across lanes, all stages uniformly retain transparent **stage cells**; card nodes are only generated within cells of real stages, and mapped to corresponding slots by stage index
+3. **Lane background color**: to enhance the sense of hierarchy while keeping the interface clean, **it is strongly recommended that all lane containers uniformly use an extremely light gray background** (such as `fillColor: "#F8F9FA"` or `"#FCFCFC"`). Borders use light gray thin dashed lines (`borderDash: "dashed"`, `borderWidth: 1`, `borderColor: "#DEE0E3"`) to clearly define boundaries.
+4. **Step cards**: use `rect`. To establish a clear visual hierarchy, cards **must be filled with a light background color** (refer to the light palette in `elements/style.md`, such as an extremely light theme color), borders use the corresponding theme primary color (`borderWidth: 1-2`), and text uses a dark color (such as `#1F2329`) to ensure readability. Uniform corner radius; width and height prioritize readability, avoid being too narrow which causes excessive line wrapping
+5. **Spacing**: whenever connector lines exist, the main-axis spacing between cards must satisfy `gap >= 40`
 
-### 子节点对齐
+<a id="子节点对齐"></a>
+### Child Node Alignment
 
-- **同一阶段必须严格对齐**：所有泳道复用同一套 stage slots；不允许靠卡片自身宽度或肉眼估算来对齐
-- **卡片宽度一致**：同一泳道中的步骤卡片应保持统一宽度；推荐使用统一固定宽度，或严格复用同一槽位宽度
-- **统一使用 stack 容器**：有内容的阶段统一使用 `layout: "vertical"` 的 stack frame（纵向堆叠 1-3 张卡片）；空阶段不生成 stack/卡片，但保留透明 cell 保证对齐
-- **垂直居中但不影响对齐**：stage cell 默认 `alignItems: "stretch"`，可用 `justifyContent: "center"` 让卡片在 cell 内居中，以确保左右边界严格对齐
-- **不靠底色区分行/列**：阶段网格默认不需要背景色；如需“轻微”的行/列边界提示，优先给 stage cell 加 1px 细边框（`fillColor: "transparent"` 仍保持视觉透明）
+- **The same stage must be strictly aligned**: all lanes reuse the same set of stage slots; alignment by the card's own width or visual estimation is not allowed
+- **Consistent card width**: step cards within the same lane should maintain a uniform width; it is recommended to use a uniform fixed width, or strictly reuse the same slot width
+- **Uniformly use stack containers**: stages with content uniformly use the `layout: "vertical"` stack frame (vertically stacking 1-3 cards); empty stages do not generate stacks/cards, but retain transparent cells to ensure alignment
+- **Vertically centered but does not affect alignment**: stage cells default to `alignItems: "stretch"`; `justifyContent: "center"` can be used to center cards within the cell, to ensure strict alignment of left and right boundaries
+- **Do not rely on background color to distinguish rows/columns**: the stage grid does not need a background color by default; if a "slight" row/column boundary hint is needed, prioritize adding a 1px thin border to the stage cell (`fillColor: "transparent"` still remains visually transparent)
 
-### Flex 栅格模式（默认）
+<a id="flex-栅格模式默认"></a>
+### Flex Grid Mode (Default)
 
-- lane body 使用 Flex 布局：水平泳道用 `layout: "horizontal"`，垂直泳道用 `layout: "vertical"`
-- 为每个阶段生成一个 **stage cell**（占位单元格）；空阶段的 cell 透明但保留；cell 内用 `layout: "vertical"` 的 stack 承载 1-3 张卡片
-- 统一参数：`slotWidth: 180-220`（水平泳道 cell 宽度）、`slotHeight: 64-104`（垂直泳道 cell 高度建议档）、`gap: 40-56`（有连线时必须 ≥40）、`stackGap: 8`、`lanePadding: 16`
-- 对齐规则：所有泳道复用同一组 `slotWidth/slotHeight/gap`；同一阶段在各泳道上使用相同的 cell 索引保证严格对齐
-- 尺寸语义：lane body `width/height` 用 `"fit-content"`（Yoga 自适应）；卡片 `height: "fit-content"`；Flex 容器内不写子节点 `x/y`
-- 内容密度：卡片文字 1-2 行；同阶段堆叠上限 2-3；超过上限优先拆分到相邻阶段或缩短文本
+- lane body uses Flex layout: horizontal swimlanes use `layout: "horizontal"`, vertical swimlanes use `layout: "vertical"`
+- Generate one **stage cell** (placeholder cell) for each stage; cells of empty stages are transparent but retained; within the cell, use a `layout: "vertical"` stack to hold 1-3 cards
+- Unified parameters: `slotWidth: 180-220` (horizontal swimlane cell width), `slotHeight: 64-104` (vertical swimlane cell height recommended tier), `gap: 40-56` (must be ≥40 when connections exist), `stackGap: 8`, `lanePadding: 16`
+- Alignment rule: all lanes reuse the same set of `slotWidth/slotHeight/gap`; the same stage uses the same cell index across lanes to ensure strict alignment
+- Size semantics: lane body `width/height` uses `"fit-content"` (Yoga adaptive); cards `height: "fit-content"`; do not write child node `x/y` inside Flex containers
+- Content density: card text 1-2 lines; stacking limit per stage 2-3; if exceeding the limit, prioritize splitting to adjacent stages or shortening text
 
-### 跨泳道间距（lanesGap）
+<a id="跨泳道间距lanesgap"></a>
+### Cross-Lane Spacing (lanesGap)
 
-- 根容器承载所有泳道：水平泳道用 `layout: "vertical"`，垂直泳道用 `layout: "horizontal"`
-- 缩减跨泳道主轴间距 `lanesGap`（建议 `16-24`），以保持整体图表的紧凑性。避免 `lanesGap` 设置为 `0` 导致边框重叠变粗，也避免间距过大导致视觉涣散。
-- 每条泳道作为根容器的子 frame，内部再使用上述 Flex 栅格的 stage cell 布局
-- `lanesGap` 与 `lanePadding/stackGap` 独立；lane 内容增减不应影响跨泳道间距
-- 4px 基线对齐：`lanesGap`、`lanePadding`、cell 尺寸建议按 4 的倍数对齐
+- The root container holds all lanes: horizontal swimlanes use `layout: "vertical"`, vertical swimlanes use `layout: "horizontal"`
+- Reduce the cross-lane main-axis spacing `lanesGap` (recommended `16-24`), to keep the overall diagram compact. Avoid setting `lanesGap` to `0` which causes borders to overlap and become thicker, and also avoid excessive spacing which causes visual dispersion.
+- Each lane serves as a child frame of the root container, internally using the aforementioned Flex grid stage cell layout
+- `lanesGap` and `lanePadding/stackGap` are independent; changes in lane content should not affect cross-lane spacing
+- 4px baseline alignment: `lanesGap`, `lanePadding`, cell dimensions are recommended to align to multiples of 4
 
-### 水平泳道（lanes=行，stages=列）
+<a id="水平泳道lanes行stages列"></a>
+### Horizontal Swimlanes (lanes=rows, stages=columns)
 
-- 根容器：`layout: "vertical"`，`gap: lanesGap` 固定；`alignItems: "stretch"`，标题在最上方
-- 每条泳道：一个可见 frame（分组容器），内部用 `layout: "horizontal"` 分成两块：
-  - 左侧 lane label：固定宽度 text（如 100-140），垂直居中；左对齐（`textAlign: "left"`）；title 需要比步骤卡片更醒目，优先通过 `fontSize: 18-20` + `fontWeight: "bold"` + 与泳道边框一致的 `textColor` 实现
-  - 右侧 lane body：`layout: "horizontal"`，包含完整的阶段 **stage cell** 数组；cell 宽度固定为 `slotWidth`，相邻 cell 间 `gap` 统一；空阶段 cell 透明但保留
-- 步骤卡片：推荐统一卡片宽度（如 160-220），并在所有泳道复用同一组 `slotWidth / gap`，保证跨泳道阶段严格 x 对齐
+- Root container: `layout: "vertical"`, `gap: lanesGap` fixed; `alignItems: "stretch"`, title at the very top
+- Each lane: a visible frame (grouping container), internally split into two parts using `layout: "horizontal"`:
+  - Left lane label: fixed-width text (such as 100-140), vertically centered; left-aligned (`textAlign: "left"`); title needs to be more prominent than step cards, prioritize achieving this through `fontSize: 18-20` + `fontWeight: "bold"` + `textColor` consistent with the lane border
+  - Right lane body: `layout: "horizontal"`, containing the complete stage **stage cell** array; cell width fixed at `slotWidth`, spacing between adjacent cells `gap` uniform; empty stage cells transparent but retained
+- Step cards: recommended uniform card width (such as 160-220), and reuse the same set of `slotWidth / gap` across all lanes, to ensure strict x-alignment of stages across lanes
 
-### 垂直泳道（lanes=列，stages=行）
+<a id="垂直泳道lanes列stages行"></a>
+### Vertical Swimlanes (lanes=columns, stages=rows)
 
-- 根容器：`layout: "horizontal"`，`gap: lanesGap` 固定；`alignItems: "stretch"`，标题在最上方
-- 每条泳道：一个可见 frame（分组容器），内部 `layout: "vertical"`：
-  - 顶部 lane label：必须放在单独的 `lane label frame` 中，label frame 使用 `width: "fill-container"`、`alignItems: "center"`、`justifyContent: "center"`，并通过 `paddingTop` 留出与泳道上边的 gap（推荐 `12-16`，按 4px 基线取值，如 `padding: [12, 8, 8, 8]`）；内部 text 使用 `width: "fill-container"` + `textAlign: "center"`，确保 title 在整条泳道顶部**水平居中**
-  - lane body：`layout: "vertical"`，包含完整的阶段 **stage cell** 数组；cell 高度固定为 `slotHeight`，相邻 cell 间 `gap` 统一；空阶段 cell 透明但保留
-  - 内容居中对齐：stage cell 建议 `alignItems: "center"` + `justifyContent: "center"`，让卡片在每个 cell 内水平/垂直居中；卡片宽度不超过 `slotWidth`（或固定宽度），避免被 `"fill-container"` 拉伸导致“看起来不居中”
-- 步骤卡片：推荐统一卡片高度或统一 `slotHeight / gap`，保证跨泳道阶段严格 y 对齐
-- 泳道外层容器必须显式写 `fillColor: "#F8F9FA"`（极浅灰）、`borderDash: "dashed"`、`borderWidth: 1`、`borderColor: "#DEE0E3"`（统一浅灰色），否则会被编译为虚拟 frame 导致不渲染
-- 统一高度（Flex 自适应，可选）：根容器使用 `alignItems: "stretch"`，每个泳道外层 frame 使用 `height: "fill-container"`；泳道内部仍保持 lane label + lane body 的结构
+- Root container: `layout: "horizontal"`, `gap: lanesGap` fixed; `alignItems: "stretch"`, title at the very top
+- Each lane: a visible frame (grouping container), internally `layout: "vertical"`:
+  - Top lane label: must be placed in a separate `lane label frame`; the label frame uses `width: "fill-container"`, `alignItems: "center"`, `justifyContent: "center"`, and uses `paddingTop` to leave a gap from the top of the lane (recommended `12-16`, taking values on the 4px baseline, such as `padding: [12, 8, 8, 8]`); the internal text uses `width: "fill-container"` + `textAlign: "center"`, ensuring the title is **horizontally centered** at the top of the entire lane
+  - lane body: `layout: "vertical"`, containing the complete stage **stage cell** array; cell height fixed at `slotHeight`, spacing between adjacent cells `gap` uniform; empty stage cells transparent but retained
+  - Content center alignment: stage cells recommended `alignItems: "center"` + `justifyContent: "center"`, to center cards horizontally/vertically within each cell; card width should not exceed `slotWidth` (or fixed width), to avoid being stretched by `"fill-container"` causing it to "look off-center"
+- Step cards: recommended uniform card height or uniform `slotHeight / gap`, to ensure strict y-alignment of stages across lanes
+- The lane outer container must explicitly write `fillColor: "#F8F9FA"` (extremely light gray), `borderDash: "dashed"`, `borderWidth: 1`, `borderColor: "#DEE0E3"` (uniform light gray), otherwise it will be compiled as a virtual frame and fail to render
+- Uniform height (Flex adaptive, optional): the root container uses `alignItems: "stretch"`, each lane outer frame uses `height: "fill-container"`; the lane interior still maintains the lane label + lane body structure
 
-示例：
+Example:
 
 ```json
 {
@@ -147,37 +157,40 @@
 }
 ```
 
-### 泳道配色（默认色板）
+<a id="泳道配色默认色板"></a>
+### Swimlane Color Scheme (Default Palette)
 
-- **泳道背景**：所有泳道容器统一使用极浅灰色（如 `fillColor: "#F8F9FA"` 或 `"#FCFCFC"`），以增强物理容器的层级感，并突出内部的彩色卡片。
-- **泳道边框**：所有泳道外层容器统一使用浅灰色细虚线（`borderColor: "#DEE0E3"`, `borderWidth: 1`, `borderDash: "dashed"`）。
-- **泳道标题**：按 `elements/style.md` 经典色板为每条泳道分配不同的主题色，泳道 title 的 `textColor` 使用该主题色。
-- **内容节点（rect）**：采用“浅色底 + 主题色边框”策略。`fillColor` 使用与该泳道主题色对应的极浅色（如浅蓝、浅紫等），`borderColor` 使用对应的主题色，文字 `textColor` 统一使用深色 `#1F2329`。
-- **连线（connector）**：连线颜色固定为灰色 `#BBBFC4`，不随泳道颜色变化。当连线带有文字（`label`）时，为防止文字压在边框上难以阅读，必须为连线文字设置纯白背景（`labelFillColor: "#FFFFFF"`）遮挡底纹。
+- **Lane background**: all lane containers uniformly use extremely light gray (such as `fillColor: "#F8F9FA"` or `"#FCFCFC"`), to enhance the sense of hierarchy of the physical container and highlight the colored cards inside.
+- **Lane border**: all lane outer containers uniformly use light gray thin dashed lines (`borderColor: "#DEE0E3"`, `borderWidth: 1`, `borderDash: "dashed"`).
+- **Lane title**: assign a different theme color to each lane according to the `elements/style.md` classic palette; the lane title's `textColor` uses that theme color.
+- **Content nodes (rect)**: adopt a "light background + theme color border" strategy. `fillColor` uses an extremely light color corresponding to that lane's theme color (such as light blue, light purple, etc.), `borderColor` uses the corresponding theme color, and text `textColor` uniformly uses dark color `#1F2329`.
+- **Connections (connector)**: connection color is fixed to gray `#BBBFC4`, and does not change with lane colors. When a connection has text (`label`), to prevent the text from pressing on the border and being hard to read, a pure white background (`labelFillColor: "#FFFFFF"`) must be set for the connection text to mask the underlying pattern.
 
-提醒：避免创建“虚拟 frame”（见 `elements/schema.md` 的说明）。lane 外层必须具有可见属性以避免在编译时被跳过。
+Reminder: avoid creating "virtual frames" (see the explanation in `elements/schema.md`). The lane outer layer must have visible properties to avoid being skipped during compilation.
 
 
-## 连线规则（强制参考 connectors.md）
+<a id="连线规则强制参考-connectorsmd"></a>
+## Connection Rules (mandatory reference to connectors.md)
 
-泳道图中所有连线的选择与写法必须严格遵循 `elements/connectors.md`，尤其是：
-- `connector` 必须放在 `WBDocument.nodes` 顶层，不能嵌套在 `children`
-- 默认优先使用自动绕线：`lineShape: "polyline"` / `"rightAngle"`，且不写 `waypoints`
-- 未指定 `lineShape` 时默认使用 `"rightAngle"`
-- 只有在必要时才强制锚点方向；锚点选择必须与节点相对位置一致
-- 有连线时卡片间距必须满足 `gap >= 40`；如果连线包含文字（`label`），主轴间距必须 `gap >= 64`
-- 带文字的连线必须设置 `labelFillColor: "#FFFFFF"` 遮挡底纹
+The selection and writing of all connections in the swimlane diagram must strictly follow `elements/connectors.md`, especially:
+- `connector` must be placed at the top level of `WBDocument.nodes`, and cannot be nested inside `children`
+- By default, prioritize automatic routing: `lineShape: "polyline"` / `"rightAngle"`, and do not write `waypoints`
+- When `lineShape` is not specified, `"rightAngle"` is used by default
+- Only force anchor direction when necessary; anchor selection must be consistent with the relative position of the nodes
+- When connections exist, card spacing must satisfy `gap >= 40`; if the connection contains text (`label`), the main-axis spacing must be `gap >= 64`
+- Connections with text must set `labelFillColor: "#FFFFFF"` to mask the underlying pattern
 
-泳道图语境下的落地约束：
-- **默认不写锚点**，交给引擎自动推断；只有需要强制“左→右推进 / 上→下推进”时才写
-- 需要表达“异步/事件流/推送”（如 SSE/Chunk）时：使用 `lineStyle: "dashed"` 并配合 `label` 说明语义；其他参数仍按 connectors.md
-- 避免连接“仅用于布局且可能被优化掉的虚拟 frame”，尽量连接具体步骤卡片的节点 id（参考 `elements/schema.md` 的虚拟 frame 陷阱）
+Implementation constraints in the swimlane diagram context:
+- **By default, do not write anchors**, leave it to the engine to infer automatically; only write them when it is necessary to force "left→right progression / top→bottom progression"
+- When it is necessary to express "asynchronous/event flow/push" (such as SSE/Chunk): use `lineStyle: "dashed"` together with `label` to explain the semantics; other parameters still follow connectors.md
+- Avoid connecting to "virtual frames that are only used for layout and may be optimized away"; try to connect to the node ids of specific step cards (refer to the virtual frame trap in `elements/schema.md`)
 
-## 骨架示例
+<a id="骨架示例"></a>
+## Skeleton Example
 
-> 示例展示布局的结构与对齐方法；实际节点的样式满足当前布局规则的前提下参考 `elements/style.md`
+> The example demonstrates the structure and alignment method of the layout; for the actual node styles, refer to `elements/style.md` provided that they satisfy the current layout rules
 
-- 水平泳道示例：
+- Horizontal swimlane example:
 
 ```json
 {
@@ -352,20 +365,21 @@
 }
 ```
 
-- 垂直泳道示例：见上文“垂直泳道”
+- Vertical swimlane example: see "Vertical Swimlanes" above
 
-- 全泳道统一 `slotWidth/slotHeight/gap`，并为每个阶段生成占位 **stage cell**（空阶段 cell 透明但保留）
-- Flex 容器内不写子节点 `x/y`；对齐通过 cell 索引与统一尺寸实现
-- 只有真实阶段才在对应 cell 内生成卡片；空阶段不生成卡片但保留 cell 保证网格完整
-- 连线必须放在 `nodes` 顶层，并连接具体步骤卡片 id，不要连接 `lane-*-body` 这类布局容器
-- **水平泳道**：根容器用 `layout: "vertical"` 固定 `lanesGap`；lane body 用 `layout: "horizontal"`；cell 固定宽度 `slotWidth`；主轴 `gap` 统一
-- **垂直泳道**：根容器用 `layout: "horizontal"` 固定 `lanesGap`；lane body 用 `layout: "vertical"`；cell 固定高度 `slotHeight`；主轴 `gap` 统一
-- **泳道 title**：title 比步骤卡片更醒目，但仍只用字号、字重、文字色强调；不要给泳道 title 额外加背景条
+- All lanes uniformly use `slotWidth/slotHeight/gap`, and generate a placeholder **stage cell** for each stage (empty stage cells transparent but retained)
+- Do not write child node `x/y` inside Flex containers; alignment is achieved through cell index and uniform dimensions
+- Only real stages generate cards within the corresponding cell; empty stages do not generate cards but retain cells to ensure grid completeness
+- Connections must be placed at the top level of `nodes`, and connect to specific step card ids, do not connect to layout containers such as `lane-*-body`
+- **Horizontal swimlanes**: root container uses `layout: "vertical"` with fixed `lanesGap`; lane body uses `layout: "horizontal"`; cell fixed width `slotWidth`; main axis `gap` uniform
+- **Vertical swimlanes**: root container uses `layout: "horizontal"` with fixed `lanesGap`; lane body uses `layout: "vertical"`; cell fixed height `slotHeight`; main axis `gap` uniform
+- **Lane title**: title is more prominent than step cards, but still only emphasized through font size, font weight, and text color; do not add an extra background bar to the lane title
 
-## 陷阱
+<a id="陷阱"></a>
+## Pitfalls
 
-- **各泳道复用的 stage slots 不一致**：会导致同阶段错位；`slotWidth / slotHeight / gap` 必须全泳道统一
-- **把 connector 放进 children**：会导致 schema 报错或无法连线（见 connectors.md）
-- **把辅助容器画成可见元素**：lane body 或其他支撑 frame 必须保持 `fillColor: "transparent"`，除泳道分组容器外不要额外加边框
-- **手写 waypoints 过早**：先让引擎自动绕线；只有在必要时才通过 waypoints 接管
-- **连线过多**：按 connectors.md 的连线数量策略降采样，否则跨泳道线会互相遮挡导致不可读
+- **Inconsistent stage slots reused across lanes**: causes misalignment of the same stage; `slotWidth / slotHeight / gap` must be uniform across all lanes
+- **Putting connector inside children**: causes schema errors or inability to connect (see connectors.md)
+- **Drawing auxiliary containers as visible elements**: lane body or other supporting frames must remain `fillColor: "transparent"`; do not add extra borders except for the lane grouping container
+- **Hand-writing waypoints too early**: let the engine route automatically first; only take over through waypoints when necessary
+- **Too many connections**: downsample according to the connection count strategy in connectors.md, otherwise cross-lane lines will obscure each other and become unreadable

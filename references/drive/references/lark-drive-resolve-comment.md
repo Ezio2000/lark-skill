@@ -1,32 +1,36 @@
 # drive +resolve-comment
 
 
-把一条评论标记为已解决。反向操作——重新打开已解决评论——是独立命令 [`lark-drive-restore-comment.md`](lark-drive-restore-comment.md)。
+Mark a comment as resolved. The reverse operation—reopening a resolved comment—is a separate command [`lark-drive-restore-comment.md`](lark-drive-restore-comment.md).
 
-用户说“把这条评论标记为已处理 / 已完成 / 关闭”对应本命令。
+When a user says "mark this comment as handled / completed / closed", it corresponds to this command.
 
-## 命令
+<a id="命令"></a>
+## Command
 
 ```bash
-# 推荐：完整 URL + 评论 ID
+# Recommended: full URL + comment ID
 lark-cli drive +resolve-comment --url "https://example.larksuite.com/docx/<DOCX_TOKEN>" --comment-id '<id>'
 ```
 
-## 参数
+<a id="参数"></a>
+## Parameters
 
-| 参数 | 必填 | 说明 |
+| Parameter | Required | Description |
 |---|---|---|
-| `--url` | 与 `--token` 二选一 | 推荐入口。支持 doc/docx/sheet/file/slides/base/bitable/apps/wiki URL；apps 妙搭 URL 使用 `/page/<token>`；wiki URL 会自动解析到真实文档。 |
-| `--token` | 与 `--url` 二选一 | 裸 token 或 URL。裸 token 必须搭配 `--type`；wiki token 使用 `--type wiki`。 |
-| `--type` | 裸 token 时必填 | 传 token 对应类型：`doc`、`docx`、`sheet`、`file`、`slides`、`bitable`、`base`、`apps`、`wiki`。wiki token 使用 `wiki`；传 `base` 时，CLI 会按 `bitable` 类型处理。 |
-| `--comment-id` | 是 | 要解决的评论 ID；来自 `drive +list-comments` 的 `items[].comment_id` |
+| `--url` | Choose one of `--token` | Recommended entry point. Supports doc/docx/sheet/file/slides/base/bitable/apps/wiki URLs; apps Miaoda URLs use `/page/<token>`; wiki URLs are automatically resolved to the real document. |
+| `--token` | Choose one of `--url` | Bare token or URL. A bare token must be paired with `--type`; wiki tokens use `--type wiki`. |
+| `--type` | Required when using a bare token | Pass the type corresponding to the token: `doc`, `docx`, `sheet`, `file`, `slides`, `bitable`, `base`, `apps`, `wiki`. Wiki tokens use `wiki`; when `base` is passed, the CLI processes it as the `bitable` type. |
+| `--comment-id` | Yes | The comment ID to resolve; comes from the `items[].comment_id` of `drive +list-comments` |
 
-## 行为说明
+<a id="行为说明"></a>
+## Behavior Notes
 
-- 这是写操作。
-- 对同一条评论连续翻转解决状态可能触发服务端限流（HTTP 429）；连续调用之间留间隔或短暂延迟后重试。
+- This is a write operation.
+- Repeatedly toggling the resolved state of the same comment may trigger server-side rate limiting (HTTP 429); leave an interval between consecutive calls or retry after a short delay.
 
-## 输出
+<a id="输出"></a>
+## Output
 
 ```json
 {
@@ -39,6 +43,7 @@ lark-cli drive +resolve-comment --url "https://example.larksuite.com/docx/<DOCX_
 }
 ```
 
-## 参考
+<a id="参考"></a>
+## References
 
-- [lark-drive-restore-comment](lark-drive-restore-comment.md) -- 恢复（重新打开）评论
+- [lark-drive-restore-comment](lark-drive-restore-comment.md) -- Restore (reopen) a comment

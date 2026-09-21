@@ -1,64 +1,74 @@
 # minutes +apply-permission
 
-向妙记所有者发起查看或编辑权限申请。**写操作**，只在用户明确要求申请权限时才调用；调用后不代表立即获得权限，只是提交了一条申请。
+Initiate a request to the Minutes owner for view or edit permission. **Write operation**, only call it when the user explicitly asks to apply for permission; calling it does not mean permission is granted immediately, it only submits a request.
 
-本模块 对应 shortcut：`lark-cli minutes +apply-permission`（调用 `POST /open-apis/minutes/v1/minutes/{minute_token}/permissions/apply`）。支持 `--as user` / `--as bot`。
+This module corresponds to shortcut: `lark-cli minutes +apply-permission` (calls `POST /open-apis/minutes/v1/minutes/{minute_token}/permissions/apply`). Supports `--as user` / `--as bot`.
 
-## 命令
+<a id="命令"></a>
+## Command
 
 ```bash
-# 以 user 身份申请查看权限
+# Apply for view permission as user
 lark-cli minutes +apply-permission --minute-token obcnxxxxxxxxxxxxxxxxxxxx --perm view --as user
 
-# 以 bot 身份申请编辑权限
+# Apply for edit permission as bot
 lark-cli minutes +apply-permission --minute-token obcnxxxxxxxxxxxxxxxxxxxx --perm edit --as bot
 
-# 预览 API 调用
+# Preview the API call
 lark-cli minutes +apply-permission --minute-token obcnxxxxxxxxxxxxxxxxxxxx --perm view --dry-run
 ```
 
-## 参数
+<a id="参数"></a>
+## Parameters
 
-| 参数 | 必填 | 说明 |
+| Parameter | Required | Description |
 |------|------|------|
-| `--minute-token <token>` | 是 | 妙记 Token |
-| `--perm <view\|edit>` | 是 | 申请的权限：`view`（查看）或 `edit`（编辑） |
-| `--dry-run` | 否 | 预览 API 调用，不执行 |
+| `--minute-token <token>` | Yes | Minutes Token |
+| `--perm <view\|edit>` | Yes | The permission to apply for: `view` (view) or `edit` (edit) |
+| `--dry-run` | No | Preview the API call without executing |
 
-## user / bot 身份与权限语义
+<a id="user--bot-身份与权限语义"></a>
+## user / bot identity and permission semantics
 
-- **user**：以当前登录用户身份向妙记所有者申请。所有者在飞书客户端收到申请通知，同意后该用户获得对应权限。
-- **bot**：以应用身份向妙记所有者申请，代表"这个应用"而不是某个用户。同意后应用（bot）获得对应权限，不会让触发申请的用户本人获得权限。
-- 两种身份的申请互不代表：user 身份申请通过后 bot 仍然无权限，反之亦然。
+- **user**: Apply to the Minutes owner as the currently logged-in user. The owner receives a request notification in the Feishu client, and after approval that user obtains the corresponding permission.
+- **bot**: Apply to the Minutes owner as the application, representing "this application" rather than a specific user. After approval the application (bot) obtains the corresponding permission, and the user who triggered the request does not obtain the permission themselves.
+- The requests of the two identities do not represent each other: after a user-identity request is approved the bot still has no permission, and vice versa.
 
-## 核心约束
+<a id="核心约束"></a>
+## Core constraints
 
-### 1. 必须继承触发无权限错误的来源身份
+<a id="1-必须继承触发无权限错误的来源身份"></a>
+### 1. Must inherit the source identity that triggered the no-permission error
 
-`+apply-permission` 不是通用的"求权限"按钮：它申请的是**当前 `--as` 对应身份**的权限。如果是 `--as bot` 读取妙记时遇到无权限，就要用 `--as bot` 申请；如果是 `--as user` 遇到无权限，就用 `--as user` 申请。不要在申请时切换成另一个身份——那申请的是另一个主体的权限，解决不了原来那次调用的问题。
+`+apply-permission` is not a generic "request permission" button: it applies for the permission of **the identity corresponding to the current `--as`**. If `--as bot` encountered no permission while reading a Minutes, apply with `--as bot`; if `--as user` encountered no permission, apply with `--as user`. Do not switch to another identity when applying—that applies for the permission of a different subject and will not solve the problem of the original call.
 
-### 2. missing scope 与资源 ACL 是两类不同问题
+<a id="2-missing-scope-与资源-acl-是两类不同问题"></a>
+### 2. missing scope and resource ACL are two different kinds of problems
 
-- **missing scope**（当前身份完全没有 `minutes:permission:apply` / `minutes:minutes.basic:read` 等 scope）：这不是"没有这条妙记的权限"，`+apply-permission` 解决不了。`--as user` 用 `auth login --scope` 补权限；`--as bot` 去开发者后台开通，**禁止**对 bot 执行 `auth login`。完整规则见 [lark-shared](../../shared/index.md)。
-- **资源 ACL**（scope 都有，但对**这一条具体妙记**没有查看/编辑权限）：这才是 `+apply-permission` 要解决的场景。
+- **missing scope** (the current identity completely lacks scopes such as `minutes:permission:apply` / `minutes:minutes.basic:read`): this is not "no permission for this Minutes", and `+apply-permission` cannot solve it. `--as user` uses `auth login --scope` to add permission; `--as bot` goes to the developer console to enable it, and it is **forbidden** to execute `auth login` for the bot. For the complete rules see [lark-shared](../../shared/index.md).
+- **resource ACL** (all scopes are present, but there is no view/edit permission for **this specific Minutes**): this is the scenario `+apply-permission` is meant to solve.
 
-先看错误的 `error.subtype` 是 `missing_scope` 还是资源级别的权限拒绝，再决定要不要调用本命令。
+First check whether the error's `error.subtype` is `missing_scope` or a resource-level permission denial, then decide whether to call this command.
 
-### 3. 只有用户明确要求才发起申请
+<a id="3-只有用户明确要求才发起申请"></a>
+### 3. Only initiate a request when the user explicitly asks
 
-遇到无权限错误时，先把"当前身份对这条妙记没有权限"的事实告知用户；只有用户明确说"帮我申请查看/编辑权限"时才调用本命令。不要在检测到无权限后自动发起申请。
+When encountering a no-permission error, first inform the user of the fact that "the current identity has no permission for this Minutes"; only call this command when the user explicitly says "help me apply for view/edit permission". Do not automatically initiate a request after detecting no permission.
 
-### 4. 禁止通过切换身份绕过资源权限
+<a id="4-禁止通过切换身份绕过资源权限"></a>
+### 4. Do not bypass resource permissions by switching identities
 
-如果 `--as bot` 对某条妙记没有权限，不要改用 `--as user` 重新读取来"绕过"这个限制（除非用户明确同意切换身份继续任务）。申请权限和切换身份是两件不同的事：前者是解决 bot 自身权限不足，后者是换一个完全不同的主体去访问资源。
+If `--as bot` has no permission for a certain Minutes, do not switch to `--as user` to re-read in order to "bypass" this restriction (unless the user explicitly agrees to switch identities to continue the task). Applying for permission and switching identities are two different things: the former solves the bot's own insufficient permission, the latter switches to a completely different subject to access the resource.
 
-## 所需权限
+<a id="所需权限"></a>
+## Required permissions
 
-| 身份 | 所需权限 |
+| Identity | Required permission |
 |------|---------|
 | user / bot | `minutes:permission:apply` |
 
-## 输出结果
+<a id="输出结果"></a>
+## Output result
 
 ```json
 {
@@ -67,26 +77,29 @@ lark-cli minutes +apply-permission --minute-token obcnxxxxxxxxxxxxxxxxxxxx --per
 }
 ```
 
-| 字段 | 说明 |
+| Field | Description |
 |------|------|
-| `minute_token` | 妙记 Token |
-| `perm` | 申请的权限（`view` / `edit`） |
+| `minute_token` | Minutes Token |
+| `perm` | The permission applied for (`view` / `edit`) |
 
-## 如何获取 minute_token
+<a id="如何获取-minute_token"></a>
+## How to obtain minute_token
 
-| 来源 | 获取方式 |
+| Source | How to obtain |
 |------|---------|
-| 妙记 URL | 从 URL 末尾提取，如 `https://sample.feishu.cn/minutes/obcnxxxxxxxxxxxxxxxxxxxx` |
-| 妙记搜索 | `lark-cli minutes +search --query "关键词"` |
-| 会议产物查询 | `lark-cli vc +recording --meeting-ids <id>`，拿到 `minute_token`（沿用同一 `--as`） |
+| Minutes URL | Extract from the end of the URL, e.g. `https://sample.feishu.cn/minutes/obcnxxxxxxxxxxxxxxxxxxxx` |
+| Minutes search | `lark-cli minutes +search --query "关键词"` |
+| Meeting artifact query | `lark-cli vc +recording --meeting-ids <id>`, obtain `minute_token` (reuse the same `--as`) |
 
-## 常见错误与排查
+<a id="常见错误与排查"></a>
+## Common errors and troubleshooting
 
-| 错误现象 | 根本原因 | 解决方案 |
+| Error symptom | Root cause | Solution |
 |---------|---------|---------|
-| `--perm` 不是 `view`/`edit` | 参数值不合法 | 只能传 `view` 或 `edit` |
-| `missing required scope(s)` | 当前身份缺少 `minutes:permission:apply` | 见上方「missing scope 与资源 ACL」 |
-| 申请后仍无权限 | 所有者尚未同意 | 这是异步申请，需等待所有者处理；不代表命令执行失败 |
+| `--perm` is not `view`/`edit` | Invalid parameter value | Only `view` or `edit` can be passed |
+| `missing required scope(s)` | The current identity lacks `minutes:permission:apply` | See "missing scope and resource ACL" above |
+| Still no permission after applying | The owner has not yet approved | This is an asynchronous request, you need to wait for the owner to process it; it does not mean the command failed |
 
-## 相关场景
-- [生成和修改妙记](../scenes/create-and-edit-minutes.md)
+<a id="相关场景"></a>
+## Related scenarios
+- [Generate and modify Minutes](../scenes/create-and-edit-minutes.md)

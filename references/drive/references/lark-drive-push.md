@@ -2,108 +2,115 @@
 # drive +push
 
 
-把本地目录**单向、文件级**镜像到飞书云空间（云盘/云存储）的某个文件夹（本地 → Drive）。命令递归列出 `--folder-token` 下的远端清单，遍历 `--local-dir` 的所有常规文件，按相对路径在 Drive 上新建、覆盖或跳过；可选地（`--delete-remote --yes`）删除云端"本地没有"的 `type=file`。
+Mirror a local directory **one-way, at file level** to a folder in Feishu Drive (cloud drive/cloud storage) (local → Drive). The command recursively lists the remote manifest under `--folder-token`, traverses all regular files under `--local-dir`, and creates, overwrites, or skips them on Drive by relative path; optionally (`--delete-remote --yes`) it deletes `type=file` that "do not exist locally" in the cloud.
 
-> **"文件级镜像"≠"目录镜像"。** 命令只在文件维度收敛差异：本地多了文件就上传，本地少了文件且开了 `--delete-remote --yes` 就删远端文件。**远端只有的空目录、本地已删除的目录**都不会被收敛，云端目录树的多余结构不会被清理。如果需要"目录也要保持完全一致"，得自行先 `+status` 找差异、再手动处理多余目录。
+> **"File-level mirror" ≠ "directory mirror".** The command only converges differences at the file dimension: if there are extra local files, they are uploaded; if local files are missing and `--delete-remote --yes` is enabled, remote files are deleted. **Empty directories that exist only remotely, and directories already deleted locally** will not be converged, and redundant structure in the cloud directory tree will not be cleaned up. If you need "directories to stay fully consistent too", you must first use `+status` yourself to find differences, then manually handle the extra directories.
 
-输出按"动作"分类：
+Output is categorized by "action":
 
-| 字段 | 含义 |
+| Field | Meaning |
 |------|------|
-| `summary.uploaded` | 成功新建或覆盖的文件数 |
-| `summary.skipped` | 因 `--if-exists=skip` 或 `--if-exists=smart` 命中“无需传输”而跳过的文件数 |
-| `summary.failed` | 上传 / 覆盖 / 建目录 / 删除失败的条目数；**只要不为 0，命令就以非零状态退出**（结构化 `items[]` 仍在 stdout 上） |
-| `summary.deleted_remote` | 启用 `--delete-remote --yes` 时删除的云端文件数 |
-| `summary.aborted` | 命中终止性错误并停止后续批处理时为 `true` |
-| `items[]` | 每个条目的明细（`rel_path` / `file_token` / `action` / 覆盖时的 `version` / `size_bytes` / 失败时的 `error` / `hint` / `phase` / `error_class` / `code` / `subtype` / `retryable`） |
+| `summary.uploaded` | Number of files successfully created or overwritten |
+| `summary.skipped` | Number of files skipped because `--if-exists=skip` or `--if-exists=smart` hit "no transfer needed" |
+| `summary.failed` | Number of entries that failed to upload / overwrite / create directory / delete; **as long as it is not 0, the command exits with a non-zero status** (the structured `items[]` is still on stdout) |
+| `summary.deleted_remote` | Number of cloud files deleted when `--delete-remote --yes` is enabled |
+| `summary.aborted` | `true` when a terminal error is hit and subsequent batch processing stops |
+| `items[]` | Details for each entry (`rel_path` / `file_token` / `action` / `version` on overwrite / `size_bytes` / `error` on failure / `hint` / `phase` / `error_class` / `code` / `subtype` / `retryable`) |
 
-`items[].action` 取值：`uploaded` / `overwritten` / `skipped` / `folder_created` / `deleted_remote` / `already_deleted` / `failed` / `delete_failed`。
+`items[].action` values: `uploaded` / `overwritten` / `skipped` / `folder_created` / `deleted_remote` / `already_deleted` / `failed` / `delete_failed`.
 
-> 本地目录（包括空目录）会被镜像到 Drive；新建的子目录会以 `action: "folder_created"` 出现在 `items[]` 里，但**不计入** `summary.uploaded`（该字段只数文件）。已存在的远端目录复用其 token，不会重复 `create_folder`，也不会出现在 `items[]` 里。
+> Local directories (including empty directories) are mirrored to Drive; newly created subdirectories appear in `items[]` as `action: "folder_created"`, but are **not counted** in `summary.uploaded` (that field only counts files). Existing remote directories reuse their token, will not be `create_folder` again, and will not appear in `items[]`.
 
-## 远端同名文件冲突
+<a id="远端同名文件冲突"></a>
+## Remote same-name file conflicts
 
-如果 Drive 中多个条目映射到同一个 `rel_path`，默认直接失败（stderr 类型化错误信封：`error.type=validation`、`error.subtype=failed_precondition`，`error.params[]` 逐条列出冲突的 `rel_path` 及碰撞条目），且不会上传、覆盖或进入 `--delete-remote` 删除阶段。只有“多个 `type=file` 同名”的场景支持显式策略；`file-folder` 这类异构冲突始终直接失败。
+If multiple entries in Drive map to the same `rel_path`, the default is to fail directly (a typed error envelope on stderr: `error.type=validation`, `error.subtype=failed_precondition`, with `error.params[]` listing the conflicting `rel_path` and colliding entries one by one), and no upload, overwrite, or `--delete-remote` deletion phase is entered. Only the scenario of "multiple `type=file` with the same name" supports an explicit policy; heterogeneous conflicts such as `file-folder` always fail directly.
 
-| 策略 | 行为 |
+| Policy | Behavior |
 |------|------|
-| `fail` | 默认。返回所有冲突条目的完整信息，不写远端 |
-| `newest` | 只把本地文件与 `modified_time` 最新的远端文件对齐 |
-| `oldest` | 只把本地文件与 `created_time` 最早的远端文件对齐 |
+| `fail` | Default. Returns complete information for all conflicting entries, writes nothing remotely |
+| `newest` | Aligns the local file only with the `modified_time` latest remote file |
+| `oldest` | Aligns the local file only with the `created_time` earliest remote file |
 
-`+push` 不提供 `rename`：本地一个文件无法表达要覆盖多个远端对象。若用户想保留多个云端副本，应先显式整理云端文件，再重新 push。
+`+push` does not provide `rename`: a single local file cannot express overwriting multiple remote objects. If the user wants to keep multiple cloud copies, they should first explicitly organize the cloud files, then push again.
 
-## 命令
+<a id="命令"></a>
+## Command
 
 ```bash
-# 基础用法 —— 把本地 ./repo 推送到云端 fldcXXX
-# 默认 --if-exists=skip：已经存在的远端文件保持不动，只新增、不覆盖。
+# Basic usage — push local ./repo to cloud fldcXXX
+# Default --if-exists=skip: existing remote files are left untouched; only additions, no overwrites.
 lark-cli drive +push --local-dir ./repo --folder-token fldcnxxxxxxxxx
 
-# 重复同步时可用 smart 做增量优化：它会按 modified_time 跳过已对齐的远端文件；但如果远端更旧，仍会继续走覆盖路径
+# For repeated syncs, smart can be used for incremental optimization: it skips remote files that are already aligned based on modified_time; but if the remote is older, it still continues down the overwrite path
 lark-cli drive +push --local-dir ./repo --folder-token fldcnxxxxxxxxx \
   --if-exists smart
 
-# 显式覆盖远端同名文件（依赖 upload_all 的灰度协议字段，详见下文"覆盖语义"）
+# Explicitly overwrite remote files with the same name (depends on the upload_all gradual rollout protocol field; see "Overwrite semantics" below)
 lark-cli drive +push --local-dir ./repo --folder-token fldcnxxxxxxxxx \
   --if-exists overwrite
 
-# 云端已有多个同名二进制文件时，显式选择一个远端目标再覆盖
+# When the cloud already has multiple binary files with the same name, explicitly choose one remote target before overwriting
 lark-cli drive +push --local-dir ./repo --folder-token fldcnxxxxxxxxx \
   --if-exists overwrite --on-duplicate-remote newest
 
-# 文件级镜像同步：上传 / 覆盖 + 删除本地不存在的远端文件
-# （--delete-remote 必须搭配 --yes，否则会被 Validate 直接拒绝；
-#   且 Validate 阶段会动态检查 space:document:delete scope，缺权限会立刻失败，
-#   不会出现"上传成功了但是后面删除阶段挂了"的半同步状态）
+# File-level mirror sync: upload / overwrite + delete remote files that do not exist locally
+# (--delete-remote must be paired with --yes, otherwise it will be rejected directly by Validate;
+#   and the Validate stage dynamically checks the space:document:delete scope, so missing permission fails immediately,
+#   avoiding a half-synced state where "the upload succeeded but the later deletion stage failed")
 lark-cli drive +push --local-dir ./repo --folder-token fldcnxxxxxxxxx \
   --if-exists overwrite --delete-remote --yes
 ```
 
-## 参数
+<a id="参数"></a>
+## Parameters
 
-| 标志 | 必填 | 类型 | 说明 |
+| Flag | Required | Type | Description |
 |------|------|------|------|
-| `--local-dir` | 是 | path | 本地根目录（**必须是 cwd 的相对路径**；绝对路径或逃出 cwd 的相对路径会被 CLI 直接拒绝） |
-| `--folder-token` | 是 | string | 目标 Drive 文件夹 token |
-| `--if-exists` | 否 | enum | 远端文件已存在时的策略：`skip`（**默认**，安全）/ `smart`（用于重复增量同步；当远端 `modified_time` 已匹配或更新时跳过上传，否则继续走覆盖路径）/ `overwrite`（依赖灰度后端协议，详见"覆盖语义"） |
-| `--on-duplicate-remote` | 否 | enum | 云端多个条目映射到同一个 `rel_path` 时的策略：`fail`（默认）；如果冲突全是 `type=file`，还可选 `newest` / `oldest` |
-| `--delete-remote` | 否 | bool | 删除云端本地不存在的文件（文件级镜像；**不会**清理远端只有的目录）；**必须配合 `--yes`**，且 Validate 阶段会动态检查 `space:document:delete` scope |
-| `--yes` | 否 | bool | 确认 `--delete-remote`；不传时该破坏性操作在 Validate 阶段被拒绝 |
+| `--local-dir` | Yes | path | Local root directory (**must be a relative path from cwd**; absolute paths or relative paths escaping cwd are rejected directly by the CLI) |
+| `--folder-token` | Yes | string | Target Drive folder token |
+| `--if-exists` | No | enum | Policy when the remote file already exists: `skip` (**default**, safe) / `smart` (for repeated incremental syncs; skips upload when the remote `modified_time` already matches or is newer, otherwise continues down the overwrite path) / `overwrite` (depends on the gradual rollout backend protocol; see "Overwrite semantics") |
+| `--on-duplicate-remote` | No | enum | Policy when multiple cloud entries map to the same `rel_path`: `fail` (default); if the conflicts are all `type=file`, `newest` / `oldest` are also available |
+| `--delete-remote` | No | bool | Delete cloud files that do not exist locally (file-level mirror; does **not** clean up remote-only directories); **must be paired with `--yes`**, and the Validate stage dynamically checks the `space:document:delete` scope |
+| `--yes` | No | bool | Confirm `--delete-remote`; if not passed, this destructive operation is rejected at the Validate stage |
 
-## 上传与目录复刻范围
+<a id="上传与目录复刻范围"></a>
+## Upload and directory replication scope
 
-- **只上传 / 覆盖 / 删除 Drive `type=file`**。在线文档（`docx` / `sheet` / `bitable` / `mindnote` / `slides`）和快捷方式（`shortcut`）即使在同一 rel_path 下出现，也不会被覆盖或删除 —— 它们没有等价的本地二进制。
-- **本地目录结构整体被镜像**：所有子目录（含**空目录**）会按需在 Drive 上 `create_folder`；同名远端目录复用其 token，不重建。空目录不计入 `summary.uploaded`，但会在 `items[]` 里以 `folder_created` 形式留痕。
-- 已存在的远端文件按 `--if-exists` 决定 `overwrite` / `smart` / `skip`。其中 `smart` 是**增量优化模式**：只要远端 `modified_time` 在同等时间精度下已经等于或晚于本地 mtime，就跳过上传；时间戳缺失/非法时会退回安全路径继续上传，不会盲跳。**但如果远端更旧，`smart` 会继续走和 `overwrite` 相同的覆盖路径，因此也继承同样的 rollout / version 返回 caveat。** 想做 `keep-both` 这类的仍需自行改名再 push。
-- 云端同名冲突默认失败；只有“冲突全是 `type=file`”且传了 `--on-duplicate-remote newest|oldest` 时才会选择一个远端文件继续。启用 `--delete-remote` 时，未被选中的 duplicate sibling 也会被删除，最终远端只保留一个被选中的文件副本；只有在 `--if-exists=overwrite` 成功时，才能保证该副本内容与本地对齐。
+- **Only Drive `type=file` are uploaded / overwritten / deleted**. Online documents (`docx` / `sheet` / `bitable` / `mindnote` / `slides`) and shortcuts (`shortcut`) will not be overwritten or deleted even if they appear under the same rel_path — they have no equivalent local binary.
+- **The local directory structure is mirrored as a whole**: all subdirectories (including **empty directories**) are `create_folder` on Drive as needed; remote directories with the same name reuse their token and are not recreated. Empty directories are not counted in `summary.uploaded`, but leave a trace in `items[]` in the form of `folder_created`.
+- Existing remote files are decided by `--if-exists` as `overwrite` / `smart` / `skip`. Among these, `smart` is an **incremental optimization mode**: as long as the remote `modified_time` is already equal to or later than the local mtime at the same time precision, the upload is skipped; when the timestamp is missing/invalid, it falls back to the safe path and continues uploading, and will not blindly skip. **But if the remote is older, `smart` continues down the same overwrite path as `overwrite`, and therefore inherits the same rollout / version return caveat.** If you want to do something like `keep-both`, you still need to rename it yourself and push again.
+- Cloud same-name conflicts fail by default; only when "all conflicts are `type=file`" and `--on-duplicate-remote newest|oldest` is passed will one remote file be selected to continue. When `--delete-remote` is enabled, unselected duplicate siblings are also deleted, so ultimately only one selected file copy remains remotely; only when `--if-exists=overwrite` succeeds can that copy's content be guaranteed to align with the local file.
 
-## 覆盖语义
+<a id="覆盖语义"></a>
+## Overwrite semantics
 
-`--if-exists=overwrite` 走 `POST /open-apis/drive/v1/files/upload_all`，并在 form 中带上现有文件的 `file_token`，由后端原地更新内容并返回新版本号。`items[].version` 字段会回填该版本号。
+`--if-exists=overwrite` goes through `POST /open-apis/drive/v1/files/upload_all`, and includes the existing file's `file_token` in the form, so the backend updates the content in place and returns a new version number. The `items[].version` field is backfilled with that version number.
 
-`--if-exists=smart` 是给“重复跑同步”的场景增加的增量优化：当远端 `modified_time` 在同等时间精度下已经等于或晚于本地 mtime 时，命令会把该文件计为 `skipped`；时间戳缺失、非法或更旧时，则继续走正常上传/覆盖路径。**也就是说，只要 smart 判定“远端不够新”，它就会进入与 `--if-exists=overwrite` 相同的覆盖实现，因此在未 rollout version 字段的 tenant 上仍可能非零失败。**
+`--if-exists=smart` is an incremental optimization added for the "repeatedly run sync" scenario: when the remote `modified_time` is already equal to or later than the local mtime at the same time precision, the command counts that file as `skipped`; when the timestamp is missing, invalid, or older, it continues down the normal upload/overwrite path. **That is, as long as smart determines that "the remote is not new enough", it enters the same overwrite implementation as `--if-exists=overwrite`, so it may still fail non-zero on tenants where the version field has not been rolled out.**
 
-> **为什么默认是 `skip` 而不是 `overwrite`：** `upload_all` 接受 `file_token` 字段、并在响应里返回 `version` 是设计文档（Drive 同步盘）规定的协议；此后端尚在灰度发布。在还未开通该字段的 tenant 上，`--if-exists=overwrite` 会因"无 version 返回"而把对应文件标成 `failed`，整次 `+push` 也会因此非零退出。所以默认值故意定为 `skip`：第一次往一个已经有内容的目录里 push，不会因为协议没到位就把整次运行打挂；要真的覆盖远端，必须显式带 `--if-exists overwrite`。新建上传不依赖该字段，不受影响。
+> **Why the default is `skip` rather than `overwrite`:** `upload_all` accepting the `file_token` field and returning `version` in the response is the protocol specified by the design document (Drive sync folder); this backend is still in gradual rollout. On tenants where this field has not yet been enabled, `--if-exists=overwrite` will mark the corresponding file as `failed` due to "no version returned", and the entire `+push` will also exit non-zero because of this. So the default is deliberately set to `skip`: the first push into a directory that already has content will not fail the entire run just because the protocol is not in place; to actually overwrite remotely, you must explicitly pass `--if-exists overwrite`. New uploads do not depend on this field and are unaffected.
 
-大文件（>20MB）会自动切到三段式 `upload_prepare` / `upload_part` / `upload_finish`；该路径下 `version` 暂未在响应中返回，覆盖结果中 `items[].version` 会留空，但 `file_token` 与 `action: overwritten` 仍会正确产出。
+Large files (>20MB) automatically switch to the three-stage `upload_prepare` / `upload_part` / `upload_finish`; on this path `version` is not currently returned in the response, and `items[].version` will be left empty in the overwrite result, but `file_token` and `action: overwritten` are still produced correctly.
 
-## --delete-remote 的安全行为
+<a id="--delete-remote-的安全行为"></a>
+## Safe behavior of --delete-remote
 
-`--delete-remote` 是命令里**唯一的破坏性 flag**，会按"远端有但本地没有"逐个 `DELETE /open-apis/drive/v1/files/<token>?type=file` 清理云端副本。设计上把它跟 `--yes` 强绑定：
+`--delete-remote` is the **only destructive flag** in the command, and it cleans up cloud copies one by one via `DELETE /open-apis/drive/v1/files/<token>?type=file` for "present remotely but not locally". By design it is strongly bound to `--yes`:
 
-- `--delete-remote`（无 `--yes`）→ Validate 直接报错：`--delete-remote requires --yes`，不会发起任何列表 / 上传 / 删除请求。
-- `--delete-remote --yes` → Validate 阶段还会**动态做一次** `space:document:delete` 的 scope 预检：缺这条 scope 时整次运行立刻失败、不发任何上传请求，避免出现"上传都成功了，但删除阶段才报 missing_scope"的半同步状态。
-- `--delete-remote --yes`（且 scope 已授权）→ 正常执行：先把本地文件 push 上去，再扫一遍远端 `type=file` 列表，把不在本地清单里的逐个删除。**任何上传 / 覆盖 / 建目录失败时，整段 `--delete-remote` 阶段会被跳过**（stderr 上有提示），命令以非零状态退出，远端不会被破坏。
-- 删除阶段如果服务端返回 `1061007 file has been delete`，说明目标远端文件在本次 DELETE 前已经不存在；这已经满足 `--delete-remote` 的目标状态，输出会记为 `action: "already_deleted"`，不计入 `summary.failed`，也不计入 `summary.deleted_remote`。
-- 远端同名冲突且使用默认 `fail`，或冲突里混有 folder / 其他非 `type=file` 对象 → 在上传阶段前失败，删除阶段不会运行。
-- 不传 `--delete-remote` → `summary.deleted_remote` 永远是 0；命令对远端"多余"文件视而不见。
-- 在线文档（docx / sheet / bitable / ...）和快捷方式即使本地完全没有同名文件，也**不会**进入删除候选，因为它们从来不进 `summary.uploaded` 的对齐域。
-- **远端只有的空目录、本地已删除的目录**也不会被清理 —— 这是"文件级镜像"的语义边界，命令不会对目录结构做主动收敛。
+- `--delete-remote` (without `--yes`) → Validate reports an error directly: `--delete-remote requires --yes`, and no list / upload / delete request is initiated.
+- `--delete-remote --yes` → the Validate stage also **dynamically performs** a scope pre-check for `space:document:delete`: when this scope is missing, the entire run fails immediately and no upload request is sent, avoiding a half-synced state where "all uploads succeeded, but the deletion stage reports missing_scope".
+- `--delete-remote --yes` (and the scope is authorized) → executes normally: first pushes local files up, then scans the remote `type=file` list again and deletes one by one those not in the local manifest. **When any upload / overwrite / directory creation fails, the entire `--delete-remote` stage is skipped** (with a notice on stderr), the command exits with a non-zero status, and the remote is not damaged.
+- If during the deletion stage the server returns `1061007 file has been delete`, it means the target remote file no longer existed before this DELETE; this already satisfies the target state of `--delete-remote`, and the output records it as `action: "already_deleted"`, not counted in `summary.failed` nor in `summary.deleted_remote`.
+- Remote same-name conflicts with the default `fail`, or conflicts mixed with folder / other non-`type=file` objects → fail before the upload stage, and the deletion stage does not run.
+- If `--delete-remote` is not passed → `summary.deleted_remote` is always 0; the command ignores remote "extra" files.
+- Online documents (docx / sheet / bitable / ...) and shortcuts will **not** enter the deletion candidates even if there is no local file with the same name at all, because they never enter the alignment domain of `summary.uploaded`.
+- **Empty directories that exist only remotely, and directories already deleted locally** will also not be cleaned up — this is the semantic boundary of a "file-level mirror"; the command does not actively converge the directory structure.
 
-第 6 章里把 `+push --delete-remote` 标了 `high-risk-write`，CLI 这边的实现等价于"未传 `--yes` 时拒绝执行 + 动态 scope 预检"，符合该约束的精神。
+Chapter 6 marks `+push --delete-remote` as `high-risk-write`; the CLI implementation here is equivalent to "reject execution when `--yes` is not passed + dynamic scope pre-check", which conforms to the spirit of that constraint.
 
-## 输出 schema
+<a id="输出-schema"></a>
+## Output schema
 
 ```json
 {
@@ -127,66 +134,71 @@ lark-cli drive +push --local-dir ./repo --folder-token fldcnxxxxxxxxx \
 }
 ```
 
-`rel_path` 始终用 `/` 作为分隔符（跨平台一致）。
+`rel_path` always uses `/` as the separator (consistent across platforms).
 
-## 失败处理与 agent 行为
+<a id="失败处理与-agent-行为"></a>
+## Failure handling and agent behavior
 
-`+push` 的失败项带结构化字段，agent 必须优先读 `items[].error_class` / `phase` / `code`，不要只看自然语言 `error` 文本。`summary.aborted=true` 表示命令已经遇到终止性错误并停止后续批处理；这时**不要原样重试**，先修复根因。
+Failed items of `+push` carry structured fields; the agent must prioritize reading `items[].error_class` / `phase` / `code`, and must not only look at the natural-language `error` text. `summary.aborted=true` means the command has already hit a terminal error and stopped subsequent batch processing; at this point **do not retry as-is**; fix the root cause first.
 
-`retryable=true` 只表示修复根因或等待后可以再次尝试，不表示应该立即、无限重放整个 push；重试时采用有上限的指数退避和抖动。
+`retryable=true` only means that after fixing the root cause or waiting, it can be attempted again; it does not mean the entire push should be replayed immediately and indefinitely; when retrying, use bounded exponential backoff with jitter.
 
-常见终止性错误：
+Common terminal errors:
 
-| `error_class` | 常见 `code` | 含义 | Agent 应对 |
+| `error_class` | Common `code` | Meaning | Agent response |
 |---|---:|---|---|
-| `app_scope_missing` | `99991672` | 应用身份缺少 Drive / 文件夹相关 scope | 停止重试，引导开通错误里列出的应用身份权限，例如 `space:folder:create` 或 `drive:drive` |
-| `user_scope_missing` | `99991679` | 用户身份缺少授权 | 停止重试，走 `lark-cli auth login --scope ...` 补错误里列出的 scope |
-| `permission_denied` | `1061004` / HTTP 403 | 当前身份无权操作目标资源 | 停止重试，检查目标文件夹权限、身份类型（user / bot）和资源可见性 |
-| `invalid_api_parameters` | `1061002` | API 参数被服务端拒绝 | 停止重试，检查 `--folder-token`、覆盖模式、`file_token`、文件名和上传参数；不要对同一参数组合批量重试 |
-| `parent_node_missing` | `1061044` | 上传 / 建目录使用的父文件夹不存在或当前身份不可见 | 停止重试，检查 `--folder-token` 是否仍存在、是否有权限、父目录是否在 push 过程中被删除；不要继续上传同一目录树 |
-| `parent_sibling_limit` | `1062507` | 目标父文件夹单层子节点数量超过上限 | 停止重试，清理目标目录、换一个 `--folder-token`，或把上传内容拆到多个子目录 |
-| `quota_exceeded` | `1061101` / `1061061` | 租户或当前用户的 Drive 容量配额已满 | 停止重试，释放容量、调整目标位置或扩容后再执行 push |
-| `rate_limited` | `99991400` | 触发频控 | 停止当前批次，退避后再重试 |
-| `conflict` | `1061045` | 同一目标发生资源竞争 | 停止当前批次，避免并发操作同一目标；退避后有限重试 |
-| `server_error` | `1663` / `1061001` / `2200` / HTTP 5xx | Drive 服务端或网关异常 | 停止当前批次，稍后有限重试 |
+| `app_scope_missing` | `99991672` | The app identity lacks Drive / folder-related scopes | Stop retrying; guide the user to enable the app identity permissions listed in the error, such as `space:folder:create` or `drive:drive` |
+| `user_scope_missing` | `99991679` | The user identity lacks authorization | Stop retrying; use `lark-cli auth login --scope ...` to add the scopes listed in the error |
+| `permission_denied` | `1061004` / HTTP 403 | The current identity is not authorized to operate on the target resource | Stop retrying; check the target folder permissions, identity type (user / bot), and resource visibility |
+| `invalid_api_parameters` | `1061002` | API parameters were rejected by the server | Stop retrying; check `--folder-token`, overwrite mode, `file_token`, file names, and upload parameters; do not batch-retry the same parameter combination |
+| `parent_node_missing` | `1061044` | The parent folder used for upload / directory creation does not exist or is not visible to the current identity | Stop retrying; check whether `--folder-token` still exists, whether there is permission, and whether the parent directory was deleted during the push; do not continue uploading the same directory tree |
+| `parent_sibling_limit` | `1062507` | The number of single-level child nodes in the target parent folder exceeds the limit | Stop retrying; clean up the target directory, switch to another `--folder-token`, or split the uploaded content into multiple subdirectories |
+| `quota_exceeded` | `1061101` / `1061061` | The Drive capacity quota for the tenant or current user is full | Stop retrying; free up capacity, adjust the target location, or expand capacity before running push again |
+| `rate_limited` | `99991400` | Rate limiting triggered | Stop the current batch and retry after backoff |
+| `conflict` | `1061045` | Resource contention occurred on the same target | Stop the current batch, avoid concurrent operations on the same target; retry a limited number of times after backoff |
+| `server_error` | `1663` / `1061001` / `2200` / HTTP 5xx | Drive server or gateway exception | Stop the current batch and retry a limited number of times later |
 
-非终止但需要解释的状态：
+Non-terminal but needs-explanation statuses:
 
-- `file_size_limit` / `1061043`：文件超过 Drive 上传限制。不要继续尝试同一文件；改拆分或换存储方式。
-- `upload_size_mismatch` / `1062009`：本地文件在上传过程中发生变化，或声明大小与实际读取大小不一致。重新扫描本地文件后再 push。
-- `remote_not_found` / `1061007`：一般表示远端文件已不存在。删除阶段的 `1061007` 会被视为 `already_deleted` 成功项；其他阶段需重新列表确认远端状态。
+- `file_size_limit` / `1061043`: The file exceeds the Drive upload limit. Do not keep trying the same file; split it or switch storage method.
+- `upload_size_mismatch` / `1062009`: The local file changed during upload, or the declared size does not match the actual read size. Rescan local files before pushing again.
+- `remote_not_found` / `1061007`: Generally means the remote file no longer exists. `1061007` in the deletion stage is treated as a `already_deleted` success item; other stages need to re-list to confirm remote status.
 
-## 性能注意
+<a id="性能注意"></a>
+## Performance notes
 
-- 默认 `skip` 下，已存在的远端文件一律不碰；`overwrite` 下，重复跑会重传所有命中的同名文件；`smart` 下会按 `modified_time` 跳过已对齐的远端文件，但对“远端更旧”的文件仍会进入覆盖路径，因此它减少的是**不必要的重传**，不是把覆盖风险完全拿掉。
-- 想更精细地控制传输量，可以先 `+status` 找出 `new_local` 和 `modified`，再只对这些文件单独上传 / 覆盖；或者直接在整目录同步时使用 `--if-exists smart`。
-- 大文件会用三段式分片上传（不会把整个 body 读进内存），但本地磁盘和上行带宽需要够。
+- Under the default `skip`, existing remote files are never touched; under `overwrite`, repeated runs re-upload all matching same-name files; under `smart`, already-aligned remote files are skipped based on `modified_time`, but files where "the remote is older" still enter the overwrite path, so what it reduces is **unnecessary re-uploads**, not a complete removal of overwrite risk.
+- To control transfer volume more precisely, you can first use `+status` to find `new_local` and `modified`, then upload / overwrite only those files individually; or directly use `--if-exists smart` when syncing the whole directory.
+- Large files use three-stage chunked upload (the entire body is not read into memory), but local disk and upstream bandwidth need to be sufficient.
 
-## 所需 scope
+<a id="所需-scope"></a>
+## Required scopes
 
-| 操作 | scope | 是否在命令上预声明 |
+| Operation | scope | Pre-declared on the command |
 |------|-------|-------------------|
-| 列出文件夹 / 子目录 | `drive:drive.metadata:readonly` | ✅ 预声明 |
-| 上传 / 覆盖文件 | `drive:file:upload` | ✅ 预声明 |
-| 新建子目录（`create_folder`） | `space:folder:create` | ✅ 预声明 |
-| 删除文件（仅 `--delete-remote --yes`） | `space:document:delete` | ⚙️ 不在命令默认 Scopes 里，但在 `--delete-remote --yes` 时由 Validate 动态预检 |
+| List folders / subdirectories | `drive:drive.metadata:readonly` | ✅ Pre-declared |
+| Upload / overwrite files | `drive:file:upload` | ✅ Pre-declared |
+| Create subdirectories (`create_folder`) | `space:folder:create` | ✅ Pre-declared |
+| Delete files (only `--delete-remote --yes`) | `space:document:delete` | ⚙️ Not in the command's default Scopes, but dynamically pre-checked by Validate when `--delete-remote --yes` |
 
-`drive:drive` 在部分企业被策略禁用，所以 +push 故意只声明上面这几条细粒度 scope。
+`drive:drive` is disabled by policy in some enterprises, so +push deliberately declares only the fine-grained scopes above.
 
-> **关于 `space:document:delete`：** 框架的 scope 预检（`runner.go: checkShortcutScopes`）会在 `Validate` 和 `--dry-run` 之前就把命令上声明的 scope 全检查一遍；如果把删除 scope 也预声明，**普通上传或 dry-run** 都会因为没授权删除权限而被拦下来。所以这一项不放在命令的默认 Scopes 里，而是在 Validate 中**条件触发**：只有 `--delete-remote --yes` 同时打开时才会调用 `runtime.EnsureScopes([]string{"space:document:delete"})` 做一次动态前置校验。这样既保留了"普通上传不需要删除权限"的便利，又能在真要做镜像删除前把 scope 缺失暴露出来，避免出现"上传成功 → 删除阶段才挂"的半同步状态。
+> **About `space:document:delete`:** The framework's scope pre-check (`runner.go: checkShortcutScopes`) checks all scopes declared on the command before `Validate` and `--dry-run`; if the delete scope were also pre-declared, **ordinary uploads or dry-runs** would be blocked for lacking delete permission. So this item is not placed in the command's default Scopes, but is **conditionally triggered** in Validate: only when `--delete-remote --yes` are both enabled does it call `runtime.EnsureScopes([]string{"space:document:delete"})` to perform a dynamic pre-check. This preserves the convenience of "ordinary uploads do not need delete permission", while exposing missing scopes before actually performing mirror deletions, avoiding a half-synced state of "upload succeeded → deletion stage failed".
 >
-> 想一次性把权限补齐：`lark-cli auth login --scope "drive:drive.metadata:readonly drive:file:upload space:folder:create space:document:delete"`。
+> To fill in permissions all at once: `lark-cli auth login --scope "drive:drive.metadata:readonly drive:file:upload space:folder:create space:document:delete"`.
 
-## 范围限制
+<a id="范围限制"></a>
+## Scope limits
 
-`--local-dir` 只接受 cwd 内的相对路径。CLI 会先 `EvalSymlinks` 整条路径，再判断它是否仍落在 cwd 内 —— **指向 cwd 外的符号链接也会被拒**，"在 cwd 内放一条软链指向外面" 这条捷径走不通，会直接撞上 `unsafe file path`。
+`--local-dir` only accepts relative paths within cwd. The CLI first `EvalSymlinks` the entire path, then determines whether it still falls within cwd — **symbolic links pointing outside cwd are also rejected**; the shortcut of "placing a symlink inside cwd that points outside" does not work and will directly hit `unsafe file path`.
 
-如果用户想 push cwd 之外的目录，**不要 agent 自己 `cd` 绕过**。可以选：让用户在外部把 agent 工作目录切换到目标的祖先后重启会话；或者把目标整体物理移动 / 拷贝到 cwd 内（不是软链）；或者直接放弃这次同步，改用别的方式。
+If the user wants to push a directory outside cwd, **do not have the agent `cd` to bypass it**. Options: have the user switch the agent working directory to the target's ancestor externally and restart the session; or physically move / copy the target as a whole into cwd (not a symlink); or simply give up this sync and use another method.
 
-## 参考
+<a id="参考"></a>
+## References
 
-- [lark-drive](../index.md) —— 云空间（云盘/云存储）全部命令
-- [lark-shared](../../shared/index.md) —— 认证和全局参数
-- [lark-drive-status](lark-drive-status.md) —— 上传前先看差异（避免全量回写）
-- [lark-drive-pull](lark-drive-pull.md) —— Drive → 本地的对称命令
-- [lark-drive-upload](lark-drive-upload.md) —— 单文件按需上传
+- [lark-drive](../index.md) —— all commands for Drive (cloud drive/cloud storage)
+- [lark-shared](../../shared/index.md) —— authentication and global parameters
+- [lark-drive-status](lark-drive-status.md) —— check differences before uploading (avoid full write-back)
+- [lark-drive-pull](lark-drive-pull.md) —— the symmetric command for Drive → local
+- [lark-drive-upload](lark-drive-upload.md) —— on-demand single-file upload

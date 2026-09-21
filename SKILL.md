@@ -12,7 +12,7 @@ metadata:
 
 Read the relevant module's `index.md`, then only the operation references needed for the current task. Combine modules when the task crosses domains; do not preload the bundle. Scripts and assets are included locally. The old separate `lark-*` skills are not installation dependencies.
 
-User-facing documentation is in Chinese. This entrypoint and module guides are in English; detailed upstream references may still be Chinese during migration. Respond in the user's language; preserve identifiers, CLI flags, filenames, and literal user content.
+User-facing documentation is in Chinese. LLM-facing instructions, module guides, detailed references, and explanatory comments are in English. Respond in the user's language; preserve identifiers, CLI flags, filenames, compatibility anchors, and literal user content.
 
 ## Shared execution rules
 
@@ -24,7 +24,7 @@ User-facing documentation is in Chinese. This entrypoint and module guides are i
 - Exit `10` / `confirmation_required` requires the [confirmation-flag procedure](references/shared/references/lark-shared-high-risk-approval.md), not network or permission retries. Check whether the exact operation is already authorized.
 - Resource tokens, task GUIDs, document IDs, and meeting numbers are not interchangeable. Follow the selected module's identifier, pagination, batch-size, and timestamp rules. Present times in the user's timezone.
 - Local path support is command-specific. Some commands require cwd-relative paths; others support absolute paths. Reference links are relative to the containing file; module `scripts/` and `assets/` paths are relative to that module. Do not change the task cwd merely to locate a script.
-- Manage Python with uv. Installation, optional dependencies, and portable invocation are documented in the [Chinese README](README.md); load it only for setup or maintenance. Use temporary directories for intermediate artifacts and clean them after use.
+- Run bundled Python helpers with uv and Python 3.11+: `uv run --project "<lark-root>" --locked python "<absolute-script-path>"`. Add `--extra dataframe` before `python` for the Sheets DataFrame helper. Replace `<lark-root>` with the installed skill directory; `--project` selects dependencies without changing cwd. Do not use system Python or pip. Use temporary directories for intermediate artifacts and clean them after use.
 
 ## Task routing
 

@@ -1,5 +1,6 @@
-# IconPark 图标（兼容入口）
+<a id="iconpark-图标兼容入口"></a>
+# IconPark Icons (Compatibility Entry)
 
-本文档已迁移至 [`xml/iconpark.md`](xml/iconpark.md)。
+This document has been migrated to [`xml/iconpark.md`](xml/iconpark.md).
 
-此文件仅保留旧路径兼容性；后续引用请使用新路径。
+This file is retained only for legacy path compatibility; please use the new path for future references.

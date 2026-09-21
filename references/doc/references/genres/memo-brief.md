@@ -1,25 +1,29 @@
 # Genre Contract: Memo / Brief (`workplace.memo_brief`)
 
-## 体裁规则表（硬约束）
+<a id="体裁规则表硬约束"></a>
+## Genre Rules Table (Hard Constraints)
 
-| 规则项 | 规则 |
+| Rule Item | Rule |
 |-|-|
-| 写作风格 | 直接、克制、按具名读者控制信息密度，首屏给结论、状态或 ask，不设固定篇幅 |
-| 内容逻辑 | 先选信息、决策或会前三种模式之一，再按“核心事项 / ask → 必要事实 → 影响 / 取舍 → 风险 / 未知 → 动作”推进；只有真实选择才写选项 |
-| 事实 / 边界 | 事实、数字、立场、审批状态和时点均须可核验；未知与假设就近标记；Memo 只可作完整 Proposal 的决策封面，不替代其论证 |
-| 错误 | 首屏无结论或 ask、把完整 Proposal 压成摘要、编造审批 / 立场、用固定篇幅删证据、细节不解释影响，任一出现即失败 |
+| Writing Style | Direct, restrained, information density controlled for the named reader; lead with the conclusion, status, or ask; no fixed length |
+| Content Logic | First choose one of three modes—informational, decision, or pre-meeting—then proceed as "core matter / ask → necessary facts → impact / trade-offs → risks / unknowns → actions"; write options only when there are genuine choices |
+| Facts / Boundaries | Facts, numbers, positions, approval status, and timing must all be verifiable; mark unknowns and assumptions nearby; a Memo may serve only as the decision cover for a complete Proposal, not as a replacement for its argumentation |
+| Errors | Any of the following constitutes failure: no conclusion or ask on the first screen, compressing a complete Proposal into a summary, fabricating approvals / positions, deleting evidence to fit a fixed length, or failing to explain the impact of details |
 
-## 适用与消歧
+<a id="适用与消歧"></a>
+## Applicability and Disambiguation
 
-用于让具名内部读者快速知悉、判断或完成会前准备。请求批准完整方向、预算、资源或执行承诺走 `proposal.md`；按周期判断相对目标的位置走 `weekly-report.md`；“摘要 / 简报”单词本身不触发本体裁。
+Used to let a named internal reader quickly learn, judge, or complete pre-meeting preparation. Requests to approve a complete direction, budget, resources, or execution commitment go to `proposal.md`; periodic judgment of position relative to goals goes to `weekly-report.md`; the words "summary / brief" alone do not trigger this genre.
 
-## 子类型与证据
+<a id="子类型与证据"></a>
+## Subtypes and Evidence
 
-- 信息 Brief：变化 → 影响 → 当前状态 / 风险 → 下一步；无须行动时明确“仅供知悉”。
-- 决策 Memo：决定事项 / 时点 → 现状 → 真实选项及同口径影响 → 推荐与证据 → 明确决策入口。
-- 会前 Brief：会议目标 → 已核验的参与方立场 / 利益 → 要点与禁区 → 期望结果；未知立场不得补造。
-- 按需标读者、作者 / 责任团队、日期和信息截至时间。持续更新时说明相对上版的变化及下次更新点。
+- Informational Brief: change → impact → current status / risks → next steps; when no action is needed, state explicitly "for information only."
+- Decision Memo: decision matter / timing → current state → genuine options and their impacts on a consistent basis → recommendation and evidence → clear decision entry point.
+- Pre-meeting Brief: meeting objectives → verified participant positions / interests → key points and no-go areas → expected outcomes; unknown positions must not be fabricated.
+- Mark readers, author / responsible team, date, and information cutoff time as needed. When continuously updated, explain changes relative to the previous version and the next update point.
 
-## 结构与高质量写法
+<a id="结构与高质量写法"></a>
+## Structure and High-Quality Writing
 
-按重要性而非材料顺序组织，一个段落一个观点；关键判断不藏在附件。建议写清谁做什么、为什么以及怎样判断完成，并呈现足以改变判断的风险、反例和不确定性。缺关键事实时用`[关键结论待确认]`、`[数据口径待核]`等具体占位，或收窄为待核问题清单；仍要求据此批准时必须 `blocked`。
+Organize by importance rather than by order of materials; one point per paragraph; do not hide key judgments in attachments. It is recommended to state clearly who does what, why, and how completion will be judged, and to present risks, counterexamples, and uncertainties sufficient to change the judgment. When key facts are missing, use specific placeholders such as `[关键结论待确认]` and `[数据口径待核]`, or narrow it to a list of questions to be verified; if approval is still required on that basis, you must `blocked`.

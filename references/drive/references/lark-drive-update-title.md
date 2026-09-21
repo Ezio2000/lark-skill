@@ -1,47 +1,51 @@
 # drive +update-title
 
 
-重命名云空间（云盘/云存储）里的文件、文件夹、在线文档或知识库节点。
+Rename a file, folder, online document, or wiki node in cloud space (Drive/cloud storage).
 
-## 命令
+<a id="命令"></a>
+## Command
 
 ```bash
-# 推荐：传 URL（自动识别类型和 token）
+# Recommended: pass a URL (automatically detects type and token)
 lark-cli drive +update-title \
   --url 'https://example.larksuite.com/docx/<DOCX_TOKEN>' \
   --title '<NEW_TITLE>'
 
-# 裸 token 必须显式传 --type
+# A bare token must explicitly pass --type
 lark-cli drive +update-title \
   --token <FILE_TOKEN> \
   --type file \
   --title '<NEW_TITLE>.xlsx'
 
-# 知识库节点：传 /wiki/ URL 里的 node_token
+# Wiki node: pass the node_token from the /wiki/ URL
 lark-cli drive +update-title \
   --url 'https://example.larksuite.com/wiki/<NODE_TOKEN>' \
   --title '<NEW_TITLE>'
 ```
 
-## 参数
+<a id="参数"></a>
+## Parameters
 
-| 参数 | 必填 | 说明 |
+| Parameter | Required | Description |
 |------|------|------|
-| `--url` | 与 `--token` 二选一 | 目标 URL，支持 `/docx/`、`/sheets/`、`/base/`、`/bitable/`、`/slides/`、`/file/`、`/drive/folder/`、`/wiki/` |
-| `--token` | 与 `--url` 二选一 | 目标 token 或 URL；裸 token 必须配合 `--type` |
-| `--type` | 裸 token 时必填 | `docx`、`sheet`、`bitable`（`base` 为兼容别名）、`slides`、`file`、`folder`、`wiki`；传 URL 时可省略，显式传入时必须与 URL 类型一致 |
-| `--title` | 是 | 新标题，别名 `--new-title`；不能为空或纯空白，首尾空格会被去掉 |
-| `--on-extension-mismatch` | 否 | 仅 `--type file`：`keep`（默认，标题缺后缀时自动补上当前后缀，后缀不一致时报错）/ `allow`（跳过校验，原样提交）。传给其他 `--type` 会报错 |
+| `--url` | Choose one of `--token` | Target URL, supports `/docx/`, `/sheets/`, `/base/`, `/bitable/`, `/slides/`, `/file/`, `/drive/folder/`, `/wiki/` |
+| `--token` | Choose one of `--url` | Target token or URL; a bare token must be used with `--type` |
+| `--type` | Required when using a bare token | `docx`, `sheet`, `bitable` (`base` is a compatible alias), `slides`, `file`, `folder`, `wiki`; can be omitted when passing a URL, but if explicitly passed it must match the URL type |
+| `--title` | Yes | New title, alias `--new-title`; cannot be empty or pure whitespace, leading and trailing spaces are stripped |
+| `--on-extension-mismatch` | No | Only for `--type file`: `keep` (default, automatically appends the current suffix when the title lacks a suffix, errors when the suffix is inconsistent) / `allow` (skip validation, submit as-is). Passing it to other `--type` will error |
 
-## 行为说明
+<a id="行为说明"></a>
+## Behavior notes
 
-- **空标题会被拒绝**：CLI 拒绝空或纯空白的 `--title`
-- **`file` 类型会校验后缀**：`--type file` 的标题就是完整文件名。CLI 会比对 `--title` 与当前文件名的后缀：没有后缀时默认补上当前后缀（输出里用 `extension_appended` 说明），后缀不一致时拦截（`a.md` → `a.txt`）。要跳过校验加 `--on-extension-mismatch=allow`
-- **wiki 不解包**：`--type wiki` 用 `/wiki/` URL 里的 `wiki_token`，传底层文档 token 会 `981003`
-- **不支持旧版 doc 和思维笔记**：服务端不支持改这两类的标题（`type=doc` / `type=mindnote` 返回 `981002 params error`），CLI 在本地就拒绝，不会白发一次写请求
-- **不支持妙搭 apps**：要改妙搭应用标题，切换到 [`lark-apps`](../../apps/index.md) 业务域处理
+- **Empty titles are rejected**: the CLI rejects an empty or pure-whitespace `--title`
+- **`file` types validate the suffix**: the title of `--type file` is the complete file name. The CLI compares the suffix of `--title` with the current file name: when there is no suffix, it appends the current suffix by default (indicated in the output with `extension_appended`), and when the suffix is inconsistent it blocks (`a.md` → `a.txt`). To skip validation, add `--on-extension-mismatch=allow`
+- **wiki is not unwrapped**: `--type wiki` uses the `wiki_token` from the `/wiki/` URL; passing the underlying document token will `981003`
+- **Legacy doc and mind notes are not supported**: the server does not support changing the titles of these two types (`type=doc` / `type=mindnote` return `981002 params error`), and the CLI rejects them locally, so it will not waste a write request
+- **Miaoda apps are not supported**: to change a Miaoda app title, switch to the [`lark-apps`](../../apps/index.md) business domain to handle it
 
-## 输出
+<a id="输出"></a>
+## Output
 
 ```json
 {
@@ -53,7 +57,7 @@ lark-cli drive +update-title \
 }
 ```
 
-`--type file` 且未用 `allow` 时，额外返回改名前的文件名，改错了可以据此一条命令改回去；自动补了后缀还会带上 `extension_appended`：
+When `--type file` and `allow` is not used, the file name before renaming is additionally returned, so if the rename was wrong you can change it back with a single command based on it; if a suffix was automatically appended, `extension_appended` is also included:
 
 ```json
 {
@@ -64,14 +68,16 @@ lark-cli drive +update-title \
 }
 ```
 
-## 常见错误
+<a id="常见错误"></a>
+## Common errors
 
-| 错误码 | 含义 | 处理 |
+| Error code | Meaning | Handling |
 |---|---|---|
-| `99991672` / `99991679` | 缺失 scope | 按错误里的 `missing_scopes`、`hint` 申请/授权所需 scope 后重试 |
-| `99991400` | 命中接口限频 | 等待一段时间后重试；批量改名时保持串行并降低频率 |
+| `99991672` / `99991679` | Missing scope | Apply for/authorize the required scope according to `missing_scopes` and `hint` in the error, then retry |
+| `99991400` | Interface rate limit hit | Wait a while and retry; when renaming in batches, keep it serial and lower the frequency |
 
-## 参考
+<a id="参考"></a>
+## References
 
-- [lark-drive](../index.md) -- 云空间（云盘/云存储）全部命令
-- [lark-shared](../../shared/index.md) -- 认证和全局参数
+- [lark-drive](../index.md) -- all commands for cloud space (Drive/cloud storage)
+- [lark-shared](../../shared/index.md) -- authentication and global parameters

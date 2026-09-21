@@ -1,31 +1,35 @@
-# SVG 编辑路径
+<a id="svg-编辑路径"></a>
+# SVG Editing Path
 
-通过导出画板的 SVG → 编辑 SVG → 回写画板，实现对已有画板的可视化编辑。
+Implement visual editing of an existing whiteboard by exporting the whiteboard's SVG → editing the SVG → writing it back to the whiteboard.
 
 ---
 
-## ⚠️ 有损性警告
+<a id="️-有损性警告"></a>
+## ⚠️ Lossy Warning
 
-SVG 导出是**纯视觉快照**，再次导入后画板语义（思维导图层级/表格结构/连线绑定/容器类型/mention/节点 ID/锁定/评论）会丢失。
+SVG export is a **purely visual snapshot**; after re-importing, whiteboard semantics (mind map hierarchy/table structure/connector bindings/container types/mention/node ID/lock/comments) will be lost.
 
-**保留的信息**：形状几何（位置/大小/路径）、文本内容与基本格式（字号/粗体/斜体/对齐）、填充色/描边色/透明度（线性渐变降级为第一个 stop-color 纯色）、连接器路径形状与箭头样式、`<g>` 嵌套的基本分组关系（≥2 子元素时重建为 DirectFocusGroup）。
+**Information preserved**: shape geometry (position/size/path), text content and basic formatting (font size/bold/italic/alignment), fill color/stroke color/opacity (linear gradients are downgraded to a solid color using the first stop-color), connector path shape and arrow style, basic grouping relationships nested in `<g>` (rebuilt as a DirectFocusGroup when there are ≥2 child elements).
 
 ---
 
 ## Workflow
 
-### 0. 用户确认（强制）
+<a id="0-用户确认强制"></a>
+### 0. User Confirmation (Mandatory)
 
-执行任何编辑前，先判断**紧邻的上一条用户消息**是否已明确确认有损编辑：
+Before performing any edit, first determine whether the **immediately preceding user message** has explicitly confirmed the lossy edit:
 
-- **已确认**（含用户主动预授权，如"我知道有损，直接改"）→ 直接进入 Step 1，不再重复警告。
-- **未确认或回复含糊** → 原样向用户发出下面这句话，**然后立即结束本回合等待回复** —— 同一条消息内不得附带任何导出/编辑/写回命令或工具调用：
+- **Confirmed** (including proactive user pre-authorization, such as "I know it's lossy, just change it") → go directly to Step 1 without repeating the warning.
+- **Not confirmed or ambiguous reply** → send the following sentence to the user verbatim, **then immediately end this turn and wait for a reply** — no export/edit/write-back commands or tool calls may be included in the same message:
 
-> SVG 编辑只保证视觉层面对齐，画板语义（层级/节点类型/思维导图结构/表格结构/连线绑定/容器类型/mention 等）将不可恢复，是否继续？
+> SVG editing only guarantees visual-layer alignment; whiteboard semantics (hierarchy/node types/mind map structure/table structure/connector bindings/container types/mention, etc.) will be unrecoverable. Continue?
 
-这是**知情确认**（动手前让用户对语义丢失止损）；真正的破坏性写入在 Step 4 还会再经 `--overwrite` dry-run 确认一次，二者职责不同、都不可省。
+This is **informed confirmation** (letting the user cut losses on semantic loss before acting); the actual destructive write will also go through a `--overwrite` dry-run confirmation once more in Step 4. The two have different responsibilities and neither can be omitted.
 
-### 1. 导出当前画板 SVG
+<a id="1-导出当前画板-svg"></a>
+### 1. Export the Current Whiteboard SVG
 
 ```bash
 lark-cli whiteboard +export \
@@ -35,42 +39,45 @@ lark-cli whiteboard +export \
   --as user
 ```
 
-### 2. 编辑 SVG
+<a id="2-编辑-svg"></a>
+### 2. Edit the SVG
 
-在导出的 SVG 上进行修改。参考 [`svg.md` § 画板怎么处理 SVG](./svg.md#画板怎么处理-svg) 了解可识别元素与不支持的装饰特性。
+Make modifications on the exported SVG. Refer to [`svg.md` § How the Whiteboard Handles SVG](./svg.md#画板怎么处理-svg) to learn about recognizable elements and unsupported decorative features.
 
-**技术约束**：
-- 新增文字必须用 `<text>`（不是 `<path>`），容器宽度留够（CJK ≈ 1em / Latin ≈ 0.6em）
-- 避免 `skewX` / `skewY` / `matrix(...)` 变换
-- 禁止使用 `<radialGradient>` / `<filter>` / `<pattern>` / `<clipPath>` / `<mask>`
+**Technical constraints**:
+- New text must use `<text>` (not `<path>`), and leave enough container width (CJK ≈ 1em / Latin ≈ 0.6em)
+- Avoid `skewX` / `skewY` / `matrix(...)` transforms
+- Do not use `<radialGradient>` / `<filter>` / `<pattern>` / `<clipPath>` / `<mask>`
 
-**编辑原则**（区别于从零创作）：
+**Editing principles** (different from creating from scratch):
 
-- **风格一致**：新增/修改元素应匹配导出 SVG 中已有的配色、字号、线宽、间距风格，不引入突兀的视觉差异
-- **最小改动**：只修改用户要求的部分，不主动"优化"或重排无关区域
-- **结构稳定**：尽量保留原有 `<g>` 层级结构，避免不必要的重组导致分组关系变化
-- **连线协调**：连接器端点绑定已丢失，若移动了形状，必须手动同步调整视觉上连接到该形状的 connector path 端点坐标，否则连线会"断开"
-- **内部引用完整性**：不要随意删改 `<defs>` 中被 `url(#id)` 引用的元素（`<marker>`/`<linearGradient>` 等）或修改其 `id`，否则引用方会失效
+- **Consistent style**: newly added/modified elements should match the existing color scheme, font size, line width, and spacing style in the exported SVG, without introducing jarring visual differences
+- **Minimal changes**: only modify the parts the user requested; do not proactively "optimize" or rearrange unrelated areas
+- **Stable structure**: preserve the original `<g>` hierarchy as much as possible, avoiding unnecessary reorganization that changes grouping relationships
+- **Connector coordination**: connector endpoint bindings have been lost; if a shape is moved, you must manually and synchronously adjust the endpoint coordinates of the connector path visually connected to that shape, otherwise the connector will "break"
+- **Internal reference integrity**: do not arbitrarily delete or modify elements in `<defs>` that are referenced by `url(#id)` (`<marker>`/`<linearGradient>`, etc.) or modify their `id`, otherwise the referencing party will fail
 
-### 3. 渲染审查
+<a id="3-渲染审查"></a>
+### 3. Render Review
 
 ```bash
-# 渲染 PNG 预览
+# Render PNG preview
 npx -y @larksuite/whiteboard-cli@^0.2.13 -i <dir>/edited.svg -o <dir>/edited.png -f svg
 
-# 几何检查（text-overflow / node-overlap）
+# Geometry check (text-overflow / node-overlap)
 npx -y @larksuite/whiteboard-cli@^0.2.13 -i <dir>/edited.svg -f svg --check
 ```
 
-结合 PNG 视觉效果和 `--check` 报告进行调整，有问题则修改 SVG 后重新渲染（最多 2 轮）。
-- SVG 本地渲染预览时，画板中的图片因 session 原因无法正常显示，属于预期内的行为。
+Adjust based on the PNG visual effect and the `--check` report; if there are issues, modify the SVG and re-render (at most 2 rounds).
+- When previewing the SVG with local rendering, images in the whiteboard cannot display properly due to session reasons; this is expected behavior.
 
-### 4. 写回画板
+<a id="4-写回画板"></a>
+### 4. Write Back to the Whiteboard
 
-`--overwrite` 会清空原画板内容，确认后再执行
+`--overwrite` will clear the original whiteboard content; execute only after confirmation
 
 ```bash
-# dry-run 探测
+# dry-run probe
 lark-cli whiteboard +update \
   --whiteboard-token <TOKEN> \
   --source @<dir>/edited.svg \
@@ -78,7 +85,7 @@ lark-cli whiteboard +update \
   --idempotent-token <10+字符唯一串> \
   --overwrite --dry-run --as user
 
-# 用户确认后执行
+# Execute after user confirmation
 lark-cli whiteboard +update \
   --whiteboard-token <TOKEN> \
   --source @<dir>/edited.svg \

@@ -1,23 +1,24 @@
 # okr +indicator-update
 
 
-直接更新目标（Objective）或关键结果（Key Result）的指标当前值，无需手动查询指标 ID。
+Directly update the current value of an Objective or Key Result indicator, without needing to manually query the indicator ID.
 
-> **查询指标：** 如需查看指标详情，请使用原生 API：
-> - 目标指标：`lark-cli okr objective.indicators list --objective-id <id>`
-> - KR 指标：`lark-cli okr key_result.indicators list --key-result-id <id>`
+> **Querying indicators:** To view indicator details, use the native API:
+> - Objective indicator: `lark-cli okr objective.indicators list --objective-id <id>`
+> - KR indicator: `lark-cli okr key_result.indicators list --key-result-id <id>`
 
-## 推荐命令
+<a id="推荐命令"></a>
+## Recommended commands
 
 ```bash
-# 更新 Objective 的指标值
+# Update the Objective's indicator value
 lark-cli okr +indicator-update \
   --level objective \
   --id 7000000000000000001 \
   --value 75.5 \
   --as user
 
-# 更新 Key Result 的指标值
+# Update the Key Result's indicator value
 lark-cli okr +indicator-update \
   --level key-result \
   --id 7000000000000000002 \
@@ -25,28 +26,32 @@ lark-cli okr +indicator-update \
   --as user
 ```
 
-## 参数
+<a id="参数"></a>
+## Parameters
 
-| 参数         | 必填 | 默认值    | 说明                                                                 |
+| Parameter         | Required | Default    | Description                                                                 |
 |------------|----|--------|--------------------------------------------------------------------|
-| `--level`  | 是  | —      | 操作层级：`objective`（更新目标指标）\| `key-result`（更新 KR 指标） |
-| `--id`     | 是  | —      | 目标 ID 或 KR ID（int64 类型）                                       |
-| `--value`  | 是  | —      | 新的指标当前值（数字，范围：-99999999999 到 99999999999）              |
-| `--dry-run`| 否  | —      | 预览 API 调用而不实际执行                                            |
-| `--format` | 否  | `json` | 输出格式                                                             |
+| `--level`  | Yes  | —      | Operation level: `objective` (update Objective indicator) \| `key-result` (update KR indicator) |
+| `--id`     | Yes  | —      | Objective ID or KR ID (int64 type)                                       |
+| `--value`  | Yes  | —      | New current value of the indicator (number, range: -99999999999 to 99999999999)              |
+| `--dry-run`| No  | —      | Preview the API call without actually executing it                                            |
+| `--format` | No  | `json` | Output format                                                             |
 
-## 工作流程
+<a id="工作流程"></a>
+## Workflow
 
-1. 使用 `+cycle-list` 和 `+cycle-detail` 获取目标 ID 或 KR ID。
-2. 如需查看当前指标值，使用 `objective.indicators list` 或 `key_result.indicators list` 查询。
-  若当前量化指标没有 start_value/current_value/target_value/unit 这些字段，代表当前量化指标为未设置的默认初始进度。
-3. 执行 `+indicator-update` 指定层级、ID 和新值。 
-  使用 +indicator-update 为默认初始进度设置当前值会将该量化指标配置为默认的百分比模式。若用户不希望将指标设置为百分比，请使用原生 API 详细设置，参考 [lark-okr-indicators.md](lark-okr-indicators.md)
-4. 命令自动查询指标 ID 并更新当前值。
+1. Use `+cycle-list` and `+cycle-detail` to obtain the Objective ID or KR ID.
+2. To view the current indicator value, query using `objective.indicators list` or `key_result.indicators list`.
+  If the current quantitative indicator does not have the start_value/current_value/target_value/unit fields, it means the current quantitative indicator is an unset default initial progress.
+3. Execute `+indicator-update` specifying the level, ID, and new value.
+  Using +indicator-update to set a current value for the default initial progress will configure that quantitative indicator as the default percentage mode. If the user does not want the indicator to be set to a percentage, use the native API for detailed settings; refer to [lark-okr-indicators.md](lark-okr-indicators.md)
+4. The command automatically queries the indicator ID and updates the current value.
 
-## 输出
+<a id="输出"></a>
+## Output
 
-### JSON 格式
+<a id="json-格式"></a>
+### JSON format
 
 ```json
 {
@@ -60,22 +65,25 @@ lark-cli okr +indicator-update \
 }
 ```
 
-### 字段说明
+<a id="字段说明"></a>
+### Field descriptions
 
-| 字段             | 类型     | 说明                     |
+| Field             | Type     | Description                     |
 |----------------|--------|------------------------|
-| `indicator_id` | string | 被更新的指标 ID            |
-| `current_value`| number | 更新后的指标当前值           |
-| `level`        | string | 操作层级：`objective` / `key-result` |
-| `target_id`    | string | 目标或 KR 的 ID            |
+| `indicator_id` | string | The updated indicator ID            |
+| `current_value`| number | The updated current value of the indicator           |
+| `level`        | string | Operation level: `objective` / `key-result` |
+| `target_id`    | string | The ID of the Objective or KR            |
 
-## 注意事项
-- 仅更新 `current_value` 字段，`unit`、`start_value`、`target_value` 等其他字段保持不变
-  - 若需要这些字段进行修改，使用原生接口 indicators.patch
-- 指标的 `current_value_calculate_type` 必须为「手动更新」才能通过此命令修改。
+<a id="注意事项"></a>
+## Notes
+- Only the `current_value` field is updated; other fields such as `unit`, `start_value`, `target_value` remain unchanged
+  - If these fields need to be modified, use the native API indicators.patch
+- The indicator's `current_value_calculate_type` must be "manual update" in order to be modified through this command.
 
-## 参考
+<a id="参考"></a>
+## References
 
-- [OKR 指标更新 API](https://open.feishu.cn/api-explorer?from=op_doc_tab&apiName=patch&project=okr&resource=okr.indicator&version=v2)
-- [`lark-okr-progress-create.md`](./lark-okr-progress-create.md) — 创建进度记录
-- [`lark-okr-cycle-detail.md`](./lark-okr-cycle-detail.md) — 查询周期详情获取 ID
+- [OKR indicator update API](https://open.feishu.cn/api-explorer?from=op_doc_tab&apiName=patch&project=okr&resource=okr.indicator&version=v2)
+- [`lark-okr-progress-create.md`](./lark-okr-progress-create.md) — Create a progress record
+- [`lark-okr-cycle-detail.md`](./lark-okr-cycle-detail.md) — Query cycle details to obtain the ID

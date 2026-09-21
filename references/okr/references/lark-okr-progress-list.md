@@ -1,52 +1,56 @@
 # okr +progress-list
 
 
-获取目标（Objective）或关键结果（Key Result）的一页进展记录列表，支持外部控制翻页。
+Get a paginated list of progress records for an Objective or Key Result, with external control over pagination.
 
-## 推荐命令
+<a id="推荐命令"></a>
+## Recommended commands
 
 ```bash
-# 获取目标进展记录第一页 (默认页大小为 100，一般不用翻页)
+# Get the first page of Objective progress records (default page size is 100, generally no need to paginate)
 lark-cli okr +progress-list \
   --target-id 1234567890123456789 \
   --target-type objective
 
-# 获取下一页进展记录 
+# Get the next page of progress records
 lark-cli okr +progress-list \
   --target-id 1234567890123456789 \
   --target-type objective \
   --page-size 100 \
   --page-token "7000000000000000002"
 
-# 获取关键结果进展记录第一页
+# Get the first page of Key Result progress records
 lark-cli okr +progress-list \
   --target-id 9876543210987654321 \
   --target-type key_result
 ```
 
-## 参数
+<a id="参数"></a>
+## Parameters
 
-| 参数                    | 必填 | 默认值             | 说明                                             |
+| Parameter                    | Required | Default value             | Description                                             |
 |-------------------------|----|--------------------|--------------------------------------------------|
-| `--target-id`           | 是  | —                  | 目标 ID 或关键结果 ID（int64 类型，正整数）       |
-| `--target-type`         | 是  | —                  | 目标类型：`objective` \| `key_result`            |
-| `--user-id-type`        | 否  | `open_id`          | 用户 ID 类型：`open_id` \| `union_id` \| `user_id` |
-| `--department-id-type`  | 否  | `open_department_id` | 部门 ID 类型：`department_id` \| `open_department_id` |
-| `--page-size`           | 否  | `100`              | 每页数量，范围 `1-100`。                           |
-| `--page-token`          | 否  | `""`               | 上一次响应中的 `page_token`，留空表示第一页。        |
-| `--dry-run`             | 否  | —                  | 预览 API 调用而不实际执行。                       |
-| `--format`              | 否  | `json`             | 输出格式。                                        |
+| `--target-id`           | Yes  | —                  | Objective ID or Key Result ID (int64 type, positive integer)       |
+| `--target-type`         | Yes  | —                  | Target type: `objective` \| `key_result`            |
+| `--user-id-type`        | No  | `open_id`          | User ID type: `open_id` \| `union_id` \| `user_id` |
+| `--department-id-type`  | No  | `open_department_id` | Department ID type: `department_id` \| `open_department_id` |
+| `--page-size`           | No  | `100`              | Number per page, range `1-100`.                           |
+| `--page-token`          | No  | `""`               | The `page_token` from the previous response; leave empty to indicate the first page.        |
+| `--dry-run`             | No  | —                  | Preview the API call without actually executing it.                       |
+| `--format`              | No  | `json`             | Output format.                                        |
 
-## 工作流程
+<a id="工作流程"></a>
+## Workflow
 
-1. 使用 `+cycle-list` 和 `+cycle-detail` 获取目标或关键结果的 ID。
-2. 执行 `lark-cli okr +progress-list --target-id "..." --target-type objective --page-size 100`。
-3. 如果响应中 `has_more=true`，继续用返回的 `page_token` 调用下一页。
-4. 获取该目标或关键结果下的进展记录列表。
+1. Use `+cycle-list` and `+cycle-detail` to get the ID of the Objective or Key Result.
+2. Execute `lark-cli okr +progress-list --target-id "..." --target-type objective --page-size 100`.
+3. If the response contains `has_more=true`, continue by calling the next page with the returned `page_token`.
+4. Get the list of progress records under that Objective or Key Result.
 
-## 输出
+<a id="输出"></a>
+## Output
 
-返回 JSON：
+Returns JSON:
 
 ```json
 {
@@ -66,26 +70,28 @@ lark-cli okr +progress-list \
 }
 ```
 
-其中：
+Where:
 
-- `progress_list` — 进展记录数组
-- `has_more` 和 `page_token` 用于外部控制翻页；`has_more=true` 时，用 `--page-token` 原样传入本次返回的 `page_token` 获取下一页。
-- `content` 字段是 JSON 字符串，为 OKR ContentBlock 富文本格式。请参考 [lark-okr-contentblock.md](lark-okr-contentblock.md) 了解详细信息。
-- `progress_rate.status` 返回可读字符串：`normal`（正常）、`overdue`（逾期）、`done`（已完成）。
+- `progress_list` — array of progress records
+- `has_more` and `page_token` are used for external control of pagination; when `has_more=true`, pass the `page_token` returned this time as-is via `--page-token` to get the next page.
+- The `content` field is a JSON string in the OKR ContentBlock rich text format. Please refer to [lark-okr-contentblock.md](lark-okr-contentblock.md) for details.
+- `progress_rate.status` returns a readable string: `normal` (normal), `overdue` (overdue), `done` (completed).
 
-## 与 +progress-get 的区别
+<a id="与-progress-get-的区别"></a>
+## Difference from +progress-get
 
-| 命令             | 用途                               | API 版本 |
+| Command             | Purpose                               | API version |
 |------------------|------------------------------------|----------|
-| `+progress-list` | 分页获取某个目标/关键结果的进展记录 | v2       |
-| `+progress-get`  | 根据进展记录 ID 获取单条记录        | v1       |
+| `+progress-list` | Paginated retrieval of progress records for an Objective/Key Result | v2       |
+| `+progress-get`  | Get a single record by progress record ID        | v1       |
 
-`+progress-list` 返回的 `progress_list` 数组中每条记录的结构与 `+progress-get` 返回的 `progress` 结构相同。
+The structure of each record in the `progress_list` array returned by `+progress-list` is the same as the `progress` structure returned by `+progress-get`.
 
-## 参考
+<a id="参考"></a>
+## References
 
-- [lark-okr](../index.md) -- 所有 OKR 命令(shortcut 和 API 接口)
-- [ContentBlock 格式](lark-okr-contentblock.md) -- 进展内容使用的富文本格式
-- [lark-okr-progress-get](lark-okr-progress-get.md) -- 根据 ID 获取单条进展记录
-- [lark-okr-progress-create](lark-okr-progress-create.md) -- 创建进展记录
-- [lark-shared](../../shared/index.md) -- 认证和全局参数
+- [lark-okr](../index.md) -- all OKR commands (shortcuts and API interfaces)
+- [ContentBlock format](lark-okr-contentblock.md) -- the rich text format used for progress content
+- [lark-okr-progress-get](lark-okr-progress-get.md) -- get a single progress record by ID
+- [lark-okr-progress-create](lark-okr-progress-create.md) -- create a progress record
+- [lark-shared](../../shared/index.md) -- authentication and global parameters

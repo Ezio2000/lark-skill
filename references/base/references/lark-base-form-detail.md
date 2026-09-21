@@ -1,35 +1,38 @@
 # base +form-detail
 
-通过表单分享 token 读取表单详情。只读操作，适合在提交表单前解析题目结构、必填项、显示条件和附件提交所需的 Base token。
+Read form details via a form share token. This is a read-only operation, suitable for parsing the question structure, required fields, display conditions, and the Base token needed for attachment submission before submitting a form.
 
-## 何时使用
+<a id="何时使用"></a>
+## When to use
 
-- 用户给出 `/share/base/form/{shareToken}` 表单分享链接，先提取最后一段作为 `--share-token`。
-- 准备调用 `+form-submit` 前，必须先用 `+form-detail` 读取 `questions[]`。
-- 只知道分享链接、还不知道 `base-token` / `table-id` / `form-id` 时，用 `+form-detail`；已在 Base 内部管理表单时，才用 `+form-get`。
+- The user provides a `/share/base/form/{shareToken}` form share link; first extract the last segment as the `--share-token`.
+- Before preparing to call `+form-submit`, you must first use `+form-detail` to read the `questions[]`.
+- When you only know the share link and do not yet know the `base-token` / `table-id` / `form-id`, use `+form-detail`; only when the form is already managed inside a Base, use `+form-get`.
 
 ```bash
 lark-cli base +form-detail --share-token <share_token> --format pretty
 ```
 
-## 读取重点
+<a id="读取重点"></a>
+## Key fields to read
 
-`+form-detail` 返回的关键字段：
+Key fields returned by `+form-detail`:
 
-| 字段 | 用途 |
+| Field | Purpose |
 |---|---|
-| `base_token` | 表单所属 Base；提交附件时必须传给 `+form-submit --base-token` |
-| `questions[].id` | 题目标识，通常对应字段 ID |
-| `questions[].title` | 提交时使用的字段名/题目名，以真实返回为准 |
-| `questions[].type` | 决定值格式；提交结构见 [form-submit](lark-base-form-submit.md) |
-| `questions[].required` | 判断必填项 |
-| `questions[].filter` | 判断题目是否对当前提交可见；被隐藏的问题不要填写 |
+| `base_token` | The Base to which the form belongs; must be passed to `+form-submit --base-token` when submitting attachments |
+| `questions[].id` | Question identifier, usually corresponding to the field ID |
+| `questions[].title` | Field name/question name used at submission; rely on the actual returned value |
+| `questions[].type` | Determines the value format; for the submission structure, see [form-submit](lark-base-form-submit.md) |
+| `questions[].required` | Determines required fields |
+| `questions[].filter` | Determines whether a question is visible for the current submission; do not fill in hidden questions |
 
-题目除固定字段外，会按类型携带动态配置，例如 `select.options` / `select.multiple`、`number.style`、`datetime.style.format`、`user.multiple`、`link.link_table`、`formula.expression`、`lookup.from/select/where/aggregate`。提交前按返回结构构造值，不要猜题目类型或选项。
+In addition to fixed fields, questions carry dynamic configuration by type, such as `select.options` / `select.multiple`, `number.style`, `datetime.style.format`, `user.multiple`, `link.link_table`, `formula.expression`, `lookup.from/select/where/aggregate`. Construct values according to the returned structure before submitting; do not guess the question type or options.
 
-## filter 显示条件
+<a id="filter-显示条件"></a>
+## filter display conditions
 
-`questions[].filter` 控制题目显示/隐藏：
+`questions[].filter` controls question display/hiding:
 
 ```json
 {
@@ -41,17 +44,18 @@ lark-cli base +form-detail --share-token <share_token> --format pretty
 }
 ```
 
-- `conjunction` 为 `and` / `or`，表示条件全部满足或任一满足。
-- `conditions[].field_name` 引用其他题目的 `title`。
-- `conditions[].operator` 常见为 `is`、`isNot`、`contains`、`doesNotContain`、`isEmpty`、`isNotEmpty`、`isGreater`、`isGreaterEqual`、`isLess`、`isLessEqual`。
-- `isEmpty` / `isNotEmpty` 不需要 `value`。
-- 附件题目的 filter 只适合 `isEmpty` / `isNotEmpty`。
+- `conjunction` is `and` / `or`, meaning all conditions are met or any condition is met.
+- `conditions[].field_name` references the `title` of another question.
+- `conditions[].operator` is commonly `is`, `isNot`, `contains`, `doesNotContain`, `isEmpty`, `isNotEmpty`, `isGreater`, `isGreaterEqual`, `isLess`, `isLessEqual`.
+- `isEmpty` / `isNotEmpty` do not require `value`.
+- The filter for attachment questions is only suitable for `isEmpty` / `isNotEmpty`.
 
-如果当前已填写值不满足某题目的 `filter`，该题目视为隐藏，不应放入 `+form-submit --json.fields` 或 `--json.attachments`。
+If the currently filled-in values do not satisfy a question's `filter`, that question is considered hidden and should not be included in `+form-submit --json.fields` or `--json.attachments`.
 
-## 与 form-submit 的关系
+<a id="与-form-submit-的关系"></a>
+## Relationship with form-submit
 
-提交普通字段：
+Submitting ordinary fields:
 
 ```bash
 lark-cli base +form-submit \
@@ -59,7 +63,7 @@ lark-cli base +form-submit \
   --json '{"fields":{"姓名":"张三","评分":5}}'
 ```
 
-提交附件字段：
+Submitting attachment fields:
 
 ```bash
 lark-cli base +form-submit \
@@ -68,4 +72,4 @@ lark-cli base +form-submit \
   --json '{"fields":{"姓名":"张三"},"attachments":{"附件":["./report.pdf"]}}'
 ```
 
-附件字段不要写进 `fields`；放在顶层 `attachments`，值为本地文件路径数组。
+Attachment fields should not be written into `fields`; put them in the top-level `attachments`, with the value being an array of local file paths.

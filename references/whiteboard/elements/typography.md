@@ -1,48 +1,53 @@
-# 排版规则
+<a id="排版规则"></a>
+# Typography Rules
 
-## 字号层级表
+<a id="字号层级表"></a>
+## Font Size Hierarchy Table
 
-| 层级 | 字号 | 用途 | 对齐 |
+| Level | Font Size | Purpose | Alignment |
 |------|------|------|------|
-| H1 | 24-28 | 图表标题（每图一个） | center |
-| H2 | 18-20 | 分区/层标签 | right（侧标签）或 center（顶部标签） |
-| H3 | 15-16 | 分组标题、卡片标题 | center 或 left |
-| Body | 14 | 正文、节点文字 | center（短标签）或 left（长文本） |
-| Caption | 13 | 辅助说明、注解 | left |
+| H1 | 24-28 | Diagram title (one per diagram) | center |
+| H2 | 18-20 | Section/layer label | right (side label) or center (top label) |
+| H3 | 15-16 | Group title, card title | center or left |
+| Body | 14 | Body text, node text | center (short labels) or left (long text) |
+| Caption | 13 | Supplementary notes, annotations | left |
 
-规则：
-- 同张图不超过 3 个字号层级
-- 同级节点 fontSize 必须完全相同
-- 相邻层级字号差 >= 4px
+Rules:
+- A single diagram must not exceed 3 font size levels
+- Nodes at the same level must have exactly the same fontSize
+- Font size difference between adjacent levels >= 4px
 
 ---
 
-## 对齐规则
+<a id="对齐规则"></a>
+## Alignment Rules
 
-Shape 节点默认 `textAlign: 'center'` + `verticalAlign: 'middle'`（与 CSS 相反）。如需左对齐须显式声明。
+Shape nodes default to `textAlign: 'center'` + `verticalAlign: 'middle'` (opposite of CSS). Left alignment must be explicitly declared if needed.
 
-| 内容类型 | 对齐方式 |
+| Content Type | Alignment |
 |---------|---------|
-| 短文本（<=15 字） | center |
-| 长文本（>15 字） | left |
-| 侧标签（层名、分区名） | right |
-| 图表标题 | center |
-| 多行描述/段落 | left |
+| Short text (<=15 characters) | center |
+| Long text (>15 characters) | left |
+| Side label (layer name, section name) | right |
+| Diagram title | center |
+| Multi-line description/paragraph | left |
 
 ---
 
-## 图表标题
+<a id="图表标题"></a>
+## Diagram Title
 
-用独立 text 节点，不要用 frame 的 `title` 属性。
+Use a standalone text node, do not use the frame's `title` property.
 
-- Flex 布局：放在最外层 frame 的第一个 child，`width: "fill-container"`
-- 绝对定位：width 设为图表整体宽度，`textAlign: "center"`
+- Flex layout: place as the first child of the outermost frame, `width: "fill-container"`
+- Absolute positioning: set width to the overall diagram width, `textAlign: "center"`
 
 ---
 
-## 标题和描述拆成两个节点
+<a id="标题和描述拆成两个节点"></a>
+## Split Title and Description into Two Nodes
 
-一个卡片内展示名称和描述时，用 frame 包两个 text 节点，不要塞进同一个 shape：
+When displaying a name and description within a card, use a frame to wrap two text nodes, do not cram them into the same shape:
 
 ```json
 {
@@ -60,14 +65,16 @@ Shape 节点默认 `textAlign: 'center'` + `verticalAlign: 'middle'`（与 CSS �
 
 ---
 
-## 图标+文字组合
+<a id="图标文字组合"></a>
+## Icon + Text Combination
 
-icon + text 纵向排列时：icon 宽高 36-48px，下方文字 fontSize 12-13，外层 frame gap 4-8。icon 比文字大 2-3 倍时视觉比例最佳。
+When icon + text are arranged vertically: icon width and height 36-48px, text below fontSize 12-13, outer frame gap 4-8. The visual proportion is best when the icon is 2-3 times larger than the text.
 
 ---
 
-## 尺寸规则
+<a id="尺寸规则"></a>
+## Sizing Rules
 
-含文字节点 `height` 必须用 `'fit-content'`。写死高度会截断文字。
+Nodes containing text `height` must use `'fit-content'`. Hardcoding the height will truncate the text.
 
-所有节点必须显式声明 `width` 和 `height`。
+All nodes must explicitly declare `width` and `height`.

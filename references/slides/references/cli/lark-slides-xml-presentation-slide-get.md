@@ -1,5 +1,6 @@
-# slides +xml-get（单页读取兼容入口）
+<a id="slides-xml-get单页读取兼容入口"></a>
+# slides +xml-get (single-slide read compatibility entry point)
 
-本文档已合并至 [lark-slides-xml-presentations-get.md](lark-slides-xml-presentations-get.md)。
+This document has been merged into [lark-slides-xml-presentations-get.md](lark-slides-xml-presentations-get.md).
 
-此文件保留已发布路径兼容性；后续引用请使用该正式 reference。
+This file is retained for compatibility with the published path; for future references, use that official reference.

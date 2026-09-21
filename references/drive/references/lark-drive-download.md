@@ -2,40 +2,43 @@
 # drive +download
 
 
-从飞书云空间（云盘/云存储）下载文件到本地。下载对象是 Drive **文件**（上传的 PDF/zip/图片/音视频等文件），以及支持 Wiki URL / Wiki token。
+Download files from Feishu Drive (cloud drive/cloud storage) to local. The download targets are Drive **files** (uploaded PDF/zip/image/audio/video files, etc.), and Wiki URL / Wiki token are also supported.
 
-## 命令
+<a id="命令"></a>
+## Command
 
 ```bash
-# 下载到指定路径
+# Download to a specified path
 lark-cli drive +download --file-token boxbc_xxx --output ./report.pdf
 
-# 只提供 token，默认保存到当前目录
+# Provide only the token; by default saves to the current directory
 lark-cli drive +download --file-token boxbc_xxx
 
-# 直接传 URL，CLI 自动解析类型和 token
+# Pass the URL directly; the CLI automatically parses the type and token
 lark-cli drive +download --url "https://example.feishu.cn/file/<FILE_TOKEN>" --output ./report.pdf
 
-# Wiki URL 也可直接传，CLI 会先解析到底层 obj_token/obj_type（obj_type 必须是 file）
+# A Wiki URL can also be passed directly; the CLI will first resolve it to the underlying obj_token/obj_type (obj_type must be file)
 lark-cli drive +download --url "https://example.feishu.cn/wiki/<WIKI_NODE_TOKEN>" --output ./report.pdf
 
-# 只有裸 Wiki node token 时，显式传 --wiki-token，让 CLI 先解析底层文件
+# When you only have a bare Wiki node token, explicitly pass --wiki-token to let the CLI first resolve the underlying file
 lark-cli drive +download --wiki-token "<WIKI_NODE_TOKEN>" --output ./report.pdf
 ```
 
-## 参数
+<a id="参数"></a>
+## Parameters
 
-| 参数 | 必填 | 说明 |
+| Parameter | Required | Description |
 |------|------|------|
-| `--file-token` | 条件必填 | Drive 文件 token；与 `--url` / `--wiki-token` 三选一 |
-| `--url` | 条件必填 | 飞书文件 URL 或 Wiki URL；CLI 自动解析类型和 token |
-| `--wiki-token` | 条件必填 | 裸 Wiki node token；CLI 先解析到底层 Drive 文件 |
-| `--output` | 否 | 本地输出路径；不传时默认保存到当前目录 |
-| `--overwrite` | 否 | 覆盖已存在的输出文件；不传时目标已存在会报错 |
+| `--file-token` | Conditionally required | Drive file token; choose one of three with `--url` / `--wiki-token` |
+| `--url` | Conditionally required | Feishu file URL or Wiki URL; the CLI automatically parses the type and token |
+| `--wiki-token` | Conditionally required | Bare Wiki node token; the CLI first resolves it to the underlying Drive file |
+| `--output` | No | Local output path; if not passed, saves to the current directory by default |
+| `--overwrite` | No | Overwrite an existing output file; if not passed, an error is reported when the target already exists |
 
-## URL 解析
+<a id="url-解析"></a>
+## URL Parsing
 
-从飞书文件 URL 提取 token：
+Extract the token from a Feishu file URL:
 
 ```
 https://xxx.feishu.cn/drive/file/boxbc_xxx
@@ -43,19 +46,22 @@ https://xxx.feishu.cn/drive/file/boxbc_xxx
                                   file_token
 ```
 
-Wiki URL / 裸 Wiki node token 会先解析到底层文档，解析后会在输出里附带 `wiki_token` 和 `wiki_node`（含底层 `obj_token`/`obj_type`）。
+A Wiki URL / bare Wiki node token is first resolved to the underlying document, and after resolution the output includes `wiki_token` and `wiki_node` (including the underlying `obj_token`/`obj_type`).
 
-## 关键约束
+<a id="关键约束"></a>
+## Key Constraints
 
-- Wiki 节点解析后的 `obj_type` 必须是 `file`；不确定 token 类型时，先用 `lark-cli drive +inspect --url <TOKEN> --type wiki` 检查。
+- After a Wiki node is resolved, `obj_type` must be `file`; when unsure of the token type, first check with `lark-cli drive +inspect --url <TOKEN> --type wiki`.
 
-## 排障
+<a id="排障"></a>
+## Troubleshooting
 
-- 如果返回 `permission_denied`，或最终下载返回 `HTTP 403`，按错误 `hint` 使用 `lark-cli drive +preview --file-token <FILE_TOKEN> --type source_file --output <path>` 获取预览产物。
-- 如果返回限流错误，停止立即重试，稍后按指数退避重试。
-- 如果目标（或 Wiki 解析出的底层文档）是 `docx` / `sheet` / `bitable` / `slides` 等在线文档，`+download` 无法直接下载，会返回 typed validation error；改用 [lark-drive-export](lark-drive-export.md) 渲染成 pdf / xlsx / pptx / markdown 等格式。
+- If `permission_denied` is returned, or the final download returns `HTTP 403`, use `lark-cli drive +preview --file-token <FILE_TOKEN> --type source_file --output <path>` according to the error `hint` to obtain the preview artifact.
+- If a rate limit error is returned, stop retrying immediately and retry later with exponential backoff.
+- If the target (or the underlying document resolved from the Wiki) is an online document such as `docx` / `sheet` / `bitable` / `slides`, `+download` cannot download it directly and will return a typed validation error; instead use [lark-drive-export](lark-drive-export.md) to render it into pdf / xlsx / pptx / markdown and other formats.
 
-## 参考
+<a id="参考"></a>
+## References
 
-- [lark-drive](../index.md) -- 云空间（云盘/云存储）全部命令
-- [lark-shared](../../shared/index.md) -- 认证和全局参数
+- [lark-drive](../index.md) -- all commands for Drive (cloud drive/cloud storage)
+- [lark-shared](../../shared/index.md) -- authentication and global parameters

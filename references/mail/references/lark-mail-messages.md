@@ -1,51 +1,54 @@
 # mail +messages
 
 
-通过传入逗号分隔的 `message_id` 列表，一次性读取多封邮件的完整内容。
+Read the full content of multiple emails at once by passing a comma-separated list of `message_id`.
 
-超过 20 个 ID 可以直接传入 CLI；CLI 会按 20 个 ID 自动拆批并合并输出，不需要手动拆批，也不要逐封循环调用 `+message`。
+More than 20 IDs can be passed directly to the CLI; the CLI automatically splits them into batches of 20 and merges the output, so there is no need to split batches manually, and do not call `+message` in a per-email loop.
 
-本 shortcut 是 `mail +message` 的批量版本。每个返回的 `messages[]` 项使用与 `+message` 相同的归一化结构：安全元数据字段直接透传，正文和辅助字段由 shortcut 派生。
+This shortcut is the batch version of `mail +message`. Each returned `messages[]` item uses the same normalized structure as `+message`: safe metadata fields are passed through directly, while the body and auxiliary fields are derived by the shortcut.
 
-优先使用本 shortcut，因为：
-- 正文字段已 base64url 解码
-- 每条邮件的输出结构已归一化
-- 不可用的 message ID 会被显式列出
+Prefer this shortcut because:
+- The body field is already base64url-decoded
+- The output structure of each email is already normalized
+- Unavailable message IDs are explicitly listed
 
-本模块 对应 shortcut `lark-cli mail +messages`；每条返回的邮件使用与 `+message` 相同的规则归一化输出。
+This module corresponds to shortcut `lark-cli mail +messages`; each returned email is normalized and output using the same rules as `+message`.
 
-## 命令
+<a id="命令"></a>
+## Command
 
 ```bash
-# 读取多封邮件（默认包含 HTML 正文）
+# Read multiple emails (includes HTML body by default)
 lark-cli mail +messages --message-ids <id1>,<id2>,<id3>
 
-# 仅纯文本正文（更小的负载，适合 AI 处理）
+# Plain text body only (smaller payload, suitable for AI processing)
 lark-cli mail +messages --message-ids <id1>,<id2>,<id3> --html=false
 
-# 指定邮箱
+# Specify mailbox
 lark-cli mail +messages --mailbox user@example.com --message-ids <id1>,<id2>
 
-# JSON 输出
+# JSON output
 lark-cli mail +messages --message-ids <id1>,<id2> --format json
 
 # Dry Run
 lark-cli mail +messages --message-ids <id1>,<id2> --dry-run
 ```
 
-## 参数
+<a id="参数"></a>
+## Parameters
 
-| 参数 | 必填 | 默认值 | 说明 |
+| Parameter | Required | Default | Description |
 |------|------|--------|------|
-| `--message-ids <id1>,<id2>,<id3>` | 是 | — | 逗号分隔的邮件 ID 列表；超过 20 个 ID 时 CLI 自动按 20 拆批并合并输出 |
-| `--mailbox <email>` | 否 | 当前用户 | 邮箱地址（`user_mailbox_id`） |
-| `--html` | 否 | true | 是否返回 HTML 正文（`false` 仅返回纯文本，减少带宽） |
-| `--format <mode>` | 否 | json | 输出格式：`json`（默认）/ `pretty` / `table` / `ndjson` / `csv` |
-| `--dry-run` | 否 | — | 仅打印请求，不执行 |
+| `--message-ids <id1>,<id2>,<id3>` | Yes | — | Comma-separated list of email IDs; when there are more than 20 IDs, the CLI automatically splits into batches of 20 and merges the output |
+| `--mailbox <email>` | No | Current user | Email address (`user_mailbox_id`) |
+| `--html` | No | true | Whether to return the HTML body (`false` returns plain text only, reducing bandwidth) |
+| `--format <mode>` | No | json | Output format: `json` (default) / `pretty` / `table` / `ndjson` / `csv` |
+| `--dry-run` | No | — | Print the request only, do not execute |
 
-## 返回值
+<a id="返回值"></a>
+## Return Value
 
-成功时返回 `{"ok": true, "data": ...}` 结构，`data` 字段包含：
+On success, returns a `{"ok": true, "data": ...}` structure, where the `data` field contains:
 
 ```json
 {
@@ -57,51 +60,56 @@ lark-cli mail +messages --message-ids <id1>,<id2> --dry-run
 }
 ```
 
-顶层字段：
+Top-level fields:
 
-| 字段 | 说明 |
+| Field | Description |
 |------|------|
-| `messages` | 返回的邮件列表，顺序与请求的 `--message-ids` 一致，排除 API 未返回的 ID |
-| `total` | 成功返回的邮件数量 |
-| `unavailable_message_ids` | 请求了但 Mail API 未返回详情的 ID 列表 |
+| `messages` | The returned email list, in the same order as the requested `--message-ids`, excluding IDs not returned by the API |
+| `total` | The number of emails successfully returned |
+| `unavailable_message_ids` | The list of IDs that were requested but for which the Mail API did not return details |
 
-每个 `messages[]` 项使用与 [`mail +message`](./lark-mail-message.md#返回值) 相同的结构。完整字段列表参见 [`+message` 字段说明](./lark-mail-message.md#字段说明) 和 [`+message` security_level](./lark-mail-message.md#security_level)。
+Each `messages[]` item uses the same structure as [`mail +message`](./lark-mail-message.md#返回值). For the full field list, see [`+message` field descriptions](./lark-mail-message.md#字段说明) and [`+message` security_level](./lark-mail-message.md#security_level).
 
-> 注意：使用 `--format json` 获取结构化输出。所有 JSON 输出统一包裹在 `{"ok": true, "data": ...}` 结构中。
+> Note: Use `--format json` to get structured output. All JSON output is uniformly wrapped in a `{"ok": true, "data": ...}` structure.
 
-## 注意事项
+<a id="注意事项"></a>
+## Notes
 
-- **JSON 输出可直接使用**，可直接读取，无需额外编码转换。
-- 只需读取一封邮件时请使用 `+message`。
-- CLI 每 20 个 ID 拆成一次调用并合并输出，不需要为大列表手动拆请求。
-- JSON 输出中 `messages[].body_html` 里的 `<` / `>` 可能显示为 `\u003c` / `\u003e`（JSON 安全转义，内容不变，`jq -r` 可还原）。
-- `mail +messages` 仅返回附件元数据。如后续步骤需要下载 URL，请针对特定的 `message_id` 和 `attachment_ids` 调用原生附件 URL API。
-- 与 `+message` 一样，普通附件和内嵌图片都出现在 `messages[].attachments[]` 中，使用同一个 `user_mailbox.message.attachments download_url` API。
+- **JSON output can be used directly** and can be read directly without additional encoding conversion.
+- When you only need to read a single email, use `+message`.
+- The CLI splits into one call per 20 IDs and merges the output, so there is no need to manually split requests for large lists.
+- In JSON output, `<` / `>` within `messages[].body_html` may appear as `\u003c` / `\u003e` (JSON-safe escaping; the content is unchanged and `jq -r` can restore it).
+- `mail +messages` returns attachment metadata only. If a later step needs a download URL, call the native attachment URL API for the specific `message_id` and `attachment_ids`.
+- As with `+message`, both regular attachments and inline images appear in `messages[].attachments[]`, using the same `user_mailbox.message.attachments download_url` API.
 
-## 典型场景
+<a id="典型场景"></a>
+## Typical Scenarios
 
-### 批量摘要多封已知邮件
+<a id="批量摘要多封已知邮件"></a>
+### Batch-summarize multiple known emails
 
 ```bash
-# 一次性读取多封邮件
+# Read multiple emails at once
 lark-cli mail +messages --message-ids <id1>,<id2>,<id3> --html=false --format json
 
-# 让 LLM 分析 .data.messages[].body_plain_text 并生成分组摘要
+# Have the LLM analyze .data.messages[].body_plain_text and generate a grouped summary
 ```
 
-### 对比多封邮件内容后决策
+<a id="对比多封邮件内容后决策"></a>
+### Make a decision after comparing the content of multiple emails
 
 ```bash
-# 获取多封邮件的归一化输出
+# Get the normalized output of multiple emails
 lark-cli mail +messages --message-ids <id1>,<id2> --html=false --format json
 
-# 检查 subject/from/body_preview 或 body_plain_text，对比意图和下一步操作
+# Check subject/from/body_preview or body_plain_text to compare intent and next actions
 ```
 
-## 相关命令
+<a id="相关命令"></a>
+## Related Commands
 
-- `lark-cli mail +message` — 读取单封邮件
-- `lark-cli mail +thread` — 读取会话中所有邮件
-- `lark-cli mail +reply` — 回复邮件
-- `lark-cli mail +forward` — 转发邮件
-- `lark-cli mail user_mailbox.message.attachments download_url` — 按需获取邮件附件/图片下载 URL
+- `lark-cli mail +message` — Read a single email
+- `lark-cli mail +thread` — Read all emails in a conversation
+- `lark-cli mail +reply` — Reply to an email
+- `lark-cli mail +forward` — Forward an email
+- `lark-cli mail user_mailbox.message.attachments download_url` — Get email attachment/image download URLs on demand

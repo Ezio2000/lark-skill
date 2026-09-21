@@ -1,66 +1,73 @@
 # vc +meeting-list-active
 
-列出当前进行中的会议，用来发现 `+meeting-events` 需要的长数字 `meeting_id`。
+List ongoing meetings, used to discover the long numeric `meeting_id` needed by `+meeting-events`.
 
-本模块 对应 shortcut：`lark-cli vc +meeting-list-active`（调用 `GET /open-apis/vc/v1/bots/user_active_meeting`）。
+This module corresponds to shortcut: `lark-cli vc +meeting-list-active` (calls `GET /open-apis/vc/v1/bots/user_active_meeting`).
 
-## 命令
+<a id="命令"></a>
+## Command
 
 ```bash
-# 查询当前登录用户正在参加的会议
+# Query the meeting that the currently logged-in user is attending
 lark-cli vc +meeting-list-active --as user --format json
 
-# 查询指定用户当前参加、且应用机器人也在会中的会议
+# Query the meeting that the specified user is currently attending and in which the app bot is also present
 lark-cli vc +meeting-list-active --as bot --user-id ou_xxx --format json
 ```
 
-## 参数
+<a id="参数"></a>
+## Parameters
 
-| 参数 | 必填 | 说明 |
+| Parameter | Required | Description |
 |------|------|------|
-| `--user-id <id>` | 应用身份必填 | 目标用户 open_id，格式为 `ou_...`。用户身份不传；应用身份直接透传给接口，不接受 internal user_id 或数字 ID |
+| `--user-id <id>` | Required for app identity | Target user open_id, in the format `ou_...`. Do not pass it for user identity; for app identity it is passed through directly to the API, and internal user_id or numeric ID is not accepted |
 
-## 身份语义
+<a id="身份语义"></a>
+## Identity semantics
 
-不要向用户暴露内部身份缩写；对用户只说“用户身份”或“应用身份”。
+Do not expose internal identity abbreviations to users; refer to them only as "user identity" or "app identity".
 
-| 身份 | 命令 | 返回范围 | 后续事件读取 |
+| Identity | Command | Return scope | Subsequent event reading |
 | ---- | ---- | -------- | ------------ |
-| 用户身份 | `--as user` | 当前登录用户正在参加的会议 | 继续 `+meeting-events --as user` |
-| 应用身份 | `--as bot --user-id <user_open_id>` | 目标用户正在参加、且应用机器人也在会中的会议 | 继续 `+meeting-events --as bot` |
+| User identity | `--as user` | Meetings that the currently logged-in user is attending | Continue with `+meeting-events --as user` |
+| App identity | `--as bot --user-id <user_open_id>` | Meetings that the target user is attending and in which the app bot is also present | Continue with `+meeting-events --as bot` |
 
-硬规则：`meeting_id` 从哪种身份路径拿到，后续 `+meeting-events` 就沿用哪种身份。不要把应用身份拿到的 `meeting_id` 改用用户身份读事件，也不要把用户身份拿到的 `meeting_id` 强制切到应用身份。
+Hard rule: whichever identity path `meeting_id` was obtained through, subsequent `+meeting-events` must use the same identity. Do not switch a `meeting_id` obtained through app identity to user identity for reading events, and do not force a `meeting_id` obtained through user identity to switch to app identity.
 
-应用身份返回空，不代表目标用户不在任何会议中，只能说明没有找到“目标用户在会中且应用机器人也在会中”的当前会。
+An empty return for app identity does not mean the target user is not in any meeting; it only means that no current meeting was found in which "the target user is in the meeting and the app bot is also in the meeting".
 
-## 多会议选择
+<a id="多会议选择"></a>
+## Multiple meeting selection
 
-- 如果返回多个会议，不要自动挑第一个。
-- 向用户展示每个候选的 `meeting_title` / `meeting_no` / `meeting_id`，等待用户选择。
-- 选择后用同一身份执行 `+meeting-events` 读取事件。
+- If multiple meetings are returned, do not automatically pick the first one.
+- Show the user each candidate's `meeting_title` / `meeting_no` / `meeting_id`, and wait for the user to choose.
+- After selection, use the same identity to execute `+meeting-events` to read events.
 
-## 9 位会议号匹配
+<a id="9-位会议号匹配"></a>
+## 9-digit meeting number matching
 
-用户提供 9 位会议号但没有明确要求应用机器人入会时，把会议号当作 active meeting 的筛选条件，而不是写操作指令。
+When the user provides a 9-digit meeting number but does not explicitly request the app bot to join the meeting, treat the meeting number as a filter condition for the active meeting, not as a write operation instruction.
 
-匹配规则：
+Matching rules:
 
-- 在返回会议中匹配 `meeting_no == <9位会议号>`。
-- 匹配到唯一会议：取该项的长数字 `meeting_id`，后续用同一身份调用 `+meeting-events`。
-- 匹配到多个会议：展示候选，让用户选择。
-- 没有匹配：说明当前身份没有发现该会议号对应的 active meeting；不要自动调用 `+meeting-join`，除非用户明确要求应用机器人入会。
+- Match `meeting_no == <9位会议号>` among the returned meetings.
+- Exactly one meeting matched: take that item's long numeric `meeting_id`, then use the same identity to call `+meeting-events`.
+- Multiple meetings matched: show the candidates and let the user choose.
+- No match: explain that the current identity did not find an active meeting corresponding to that meeting number; do not automatically call `+meeting-join` unless the user explicitly requests the app bot to join the meeting.
 
-## 常见错误与排查
+<a id="常见错误与排查"></a>
+## Common errors and troubleshooting
 
-| 错误现象 | 根本原因 | 解决方案 |
+| Error symptom | Root cause | Solution |
 |---------|---------|---------|
-| `--user-id is required when --as bot` | 应用身份未传目标用户 | 传入目标用户 open_id |
-| 用户身份返回空列表 | 当前登录用户没有可见的进行中会议 | 确认用户是否在会中，或是否切错身份 |
-| 用户身份无权限 / 不可见 | 当前登录用户没有可见的进行中会议，或当前身份无法读取该会议 | 不要反复执行 `auth login`。确认用户是否在会中、是否切错 profile；用户明确要查询应用机器人可见的会议时，再拿目标用户 open_id 执行 `+meeting-list-active --as bot --user-id <user_open_id>` |
-| 应用身份返回空列表 | 没有满足“目标用户在会中且应用机器人也在会中”的当前会 | 先让应用机器人入会，或确认 `user_id` 和会议状态 |
-| `--user-id` 格式错误 | 传入了 internal user_id 或其他非 `ou_...` 值 | 改传目标用户 open_id |
-| 应用身份权限不足 | 应用权限、租户安装或权限可访问的数据范围未配置完整 | 不要执行 `auth login`。请应用开发者开通 `vc:meeting.bot.join:write`；再检查应用发布/安装和权限可访问的数据范围；配置正确仍失败时，保留错误码和 `log_id`，按服务端权限异常排查 |
+| `--user-id is required when --as bot` | App identity did not pass the target user | Pass the target user open_id |
+| User identity returns an empty list | The currently logged-in user has no visible ongoing meetings | Confirm whether the user is in a meeting, or whether the wrong identity was used |
+| User identity has no permission / not visible | The currently logged-in user has no visible ongoing meetings, or the current identity cannot read that meeting | Do not repeatedly execute `auth login`. Confirm whether the user is in a meeting and whether the wrong profile was used; only when the user explicitly wants to query meetings visible to the app bot, use the target user open_id to execute `+meeting-list-active --as bot --user-id <user_open_id>` |
+| App identity returns an empty list | There is no current meeting satisfying "the target user is in the meeting and the app bot is also in the meeting" | First have the app bot join the meeting, or confirm `user_id` and the meeting status |
+| `--user-id` format error | An internal user_id or another non-`ou_...` value was passed | Pass the target user open_id instead |
+| Insufficient app identity permission | App permissions, tenant installation, or the data scope accessible with the permission is not fully configured | Do not execute `auth login`. Ask the app developer to enable `vc:meeting.bot.join:write`; then check app publishing/installation and the data scope accessible with the permission; if it still fails after correct configuration, keep the error code and `log_id`, and troubleshoot as a server-side permission exception |
 
-## 相关场景
-- [会中事件与会中互动](../scenes/live-meeting-interact.md)
-- [应用机器人参会与会中互动](../scenes/live-meeting-attend.md)
+<a id="相关场景"></a>
+## Related scenarios
+- [In-meeting events and in-meeting interactions](../scenes/live-meeting-interact.md)
+- [App bot meeting participation and in-meeting interactions](../scenes/live-meeting-attend.md)

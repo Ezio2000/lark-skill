@@ -1,14 +1,15 @@
 # calendar +update
 
 
-更新既有日程字段，或独立增量添加/移除参会人和会议室。
+Update existing calendar event fields, or independently add/remove attendees and meeting rooms incrementally.
 
-`+update` 支持三类互相独立的动作：更新日程字段、添加参会人/会议室、移除参会人/会议室。它们可以单独执行，也可以在同一次命令中组合执行。
+`+update` supports three mutually independent actions: updating event fields, adding attendees/meeting rooms, and removing attendees/meeting rooms. They can be executed separately or combined in the same command.
 
-## 推荐命令
+<a id="推荐命令"></a>
+## Recommended commands
 
 ```bash
-# 更新标题、描述、时间
+# Update title, description, time
 lark-cli calendar +update \
   --event-id "<EVENT_ID>" \
   --summary "产品评审" \
@@ -16,17 +17,17 @@ lark-cli calendar +update \
   --start "2026-03-12T14:00+08:00" \
   --end "2026-03-12T15:00+08:00"
 
-# 增量添加参会人和会议室
+# Incrementally add attendees and meeting rooms
 lark-cli calendar +update \
   --event-id "<EVENT_ID>" \
   --add-attendee-ids "ou_aaa,ou_bbb,omm_room"
 
-# 移除参会人和会议室
+# Remove attendees and meeting rooms
 lark-cli calendar +update \
   --event-id "<EVENT_ID>" \
   --remove-attendee-ids "ou_aaa,omm_room"
 
-# 同时更新日程信息、移除旧会议室、添加新会议室
+# Simultaneously update event information, remove old meeting rooms, and add new meeting rooms
 lark-cli calendar +update \
   --event-id "<EVENT_ID>" \
   --summary "产品评审" \
@@ -36,71 +37,76 @@ lark-cli calendar +update \
   --add-attendee-ids "omm_new_room"
 ```
 
-参数：
+Parameters:
 
-| 参数 | 必填 | 说明 |
+| Parameter | Required | Description |
 |------|------|------|
-| `--event-id <id>` | 是 | 要更新的日程 ID。重复性日程请根据操作范围选择 ID，详见 [重复性日程操作规范](lark-calendar-recurring.md) |
-| `--calendar-id <id>` | 否 | 日历 ID（省略则使用 `primary`） |
-| `--summary <text>` | 否 | 新日程标题。仅在显式传入 `--summary` 时更新；若传空字符串，会把标题清空 |
-| `--description <markdown>` | 否 | 新日程描述，统一使用此字段，格式为 **Markdown**（加粗、斜体、下划线 `<u>...</u>`、删除线、链接 `[文本](url)`、标题 `# `~`### `（最多三级）、引用 `> `、有序/无序列表、GFM 表格 `\| 列1 \| 列2 \|` + 分隔行 `\| --- \| --- \|`、以及图片 `![图片名](图片URL)`（标准 Markdown 图片语法：远程 URL 原样使用；**本地图片路径**（相对路径、且位于当前工作目录内）会自动上传到云盘并在端上内联渲染——绝对路径或工作目录之外的路径会报错；端上已有图片读回为 Markdown 图片）。飞书文档 URL（裸链接或 `[文本](url)`）会自动解析为内联文档，端上展示文档标题。支持 `@文件路径` 或 `-`（stdin）读取。仅在显式传入时更新；传空字符串 `""` 会清空描述。**禁止**用 `***文本***` 同时表示加粗+斜体（端上会残留 `*`）；应嵌套书写，如 `**<u>*~~文本~~*</u>**` 或 `*<u>**~~文本~~**</u>*`。 |
-| `--start <time>` | 否 | 新开始时间（ISO 8601，**必须带时区偏移**，如 `2026-03-12T14:00+08:00`；不带偏移会按进程时区解析致偏移）。更新日程时间时必须同时传 `--end` |
-| `--end <time>` | 否 | 新结束时间（ISO 8601，**必须带时区偏移**）。更新日程时间时必须同时传 `--start` |
-| `--rrule <rrule>` | 否 | 新重复规则（RFC5545）。**不要使用 COUNT；如需限制次数，推算后转为 UNTIL** |
-| `--add-attendee-ids <id_list>` | 否 | 增量添加参会人/会议室，逗号分隔。支持用户 `ou_`、群组 `oc_`、会议室 `omm_` |
-| `--remove-attendee-ids <id_list>` | 否 | 增量移除参会人/会议室，逗号分隔。支持用户 `ou_`、群组 `oc_`、会议室 `omm_` |
-| `--notify` | 否 | 是否发送更新通知，默认 `true`。可用 `--notify=false` 静默更新 |
-| `--dry-run` | 否 | 预览 API 调用，不执行 |
+| `--event-id <id>` | Yes | The event ID to update. For recurring events, choose the ID based on the operation scope; see [Recurring Event Operation Guidelines](lark-calendar-recurring.md) |
+| `--calendar-id <id>` | No | Calendar ID (if omitted, `primary` is used) |
+| `--summary <text>` | No | New event title. Only updated when `--summary` is explicitly passed; if an empty string is passed, the title will be cleared |
+| `--description <markdown>` | No | New event description, always use this field, format is **Markdown** (bold, italic, underline `<u>...</u>`, strikethrough, link `[文本](url)`, heading `# `~`### ` (up to three levels), quote `> `, ordered/unordered lists, GFM table `\| 列1 \| 列2 \|` + separator row `\| --- \| --- \|`, and images `![图片名](图片URL)` (standard Markdown image syntax: remote URLs are used as-is; **local image paths** (relative paths within the current working directory) are automatically uploaded to Drive and rendered inline on the client—absolute paths or paths outside the working directory will error; images already on the client are read back as Markdown images). Feishu document URLs (bare links or `[文本](url)`) are automatically resolved as inline documents, and the document title is displayed on the client. Supports `@文件路径` or `-` (stdin) for reading. Only updated when explicitly passed; passing an empty string `""` will clear the description. **Do not** use `***文本***` to represent bold+italic simultaneously (it will leave residual `*` on the client); instead nest them, e.g. `**<u>*~~文本~~*</u>**` or `*<u>**~~文本~~**</u>*`. |
+| `--start <time>` | No | New start time (ISO 8601, **must include timezone offset**, e.g. `2026-03-12T14:00+08:00`; without an offset it will be parsed in the process timezone causing a shift). When updating event time, `--end` must also be passed |
+| `--end <time>` | No | New end time (ISO 8601, **must include timezone offset**). When updating event time, `--start` must also be passed |
+| `--rrule <rrule>` | No | New recurrence rule (RFC5545). **Do not use COUNT; if a count limit is needed, convert to UNTIL after calculation** |
+| `--add-attendee-ids <id_list>` | No | Incrementally add attendees/meeting rooms, comma-separated. Supports users `ou_`, groups `oc_`, meeting rooms `omm_` |
+| `--remove-attendee-ids <id_list>` | No | Incrementally remove attendees/meeting rooms, comma-separated. Supports users `ou_`, groups `oc_`, meeting rooms `omm_` |
+| `--notify` | No | Whether to send update notifications, default `true`. Use `--notify=false` for silent update |
+| `--dry-run` | No | Preview the API call without executing |
 
-至少需要提供一个动作：`--summary`、`--description`、`--start/--end`、`--rrule`、`--add-attendee-ids` 或 `--remove-attendee-ids`。
+At least one action must be provided: `--summary`, `--description`, `--start/--end`, `--rrule`, `--add-attendee-ids`, or `--remove-attendee-ids`.
 
-## 使用规则
+<a id="使用规则"></a>
+## Usage rules
 
-- `--add-attendee-ids` 是**增量添加**，不是替换最终参与人列表。不要用它表达“只保留这些人”。
-- 对 `--summary`、`--description`，CLI 以“是否显式传入该 flag”判断是否更新，而不是以“值是否为空”判断；如果显式传入空字符串，会把对应字段清空。
-- 日程描述统一走 `--description`（按 Markdown 富文本处理）。
-- 行内同时加粗和斜体时，**禁止**写 `***文本***`（端上会残留 `*`）；必须让 `**` 与 `*` 各自成对嵌套，例如 `**<u>*~~文本~~*</u>**` 或 `*<u>**~~文本~~**</u>*`。
-- 只想增删参会人或会议室时，不需要同时传 `--summary`、`--start`、`--end` 等日程字段。
-- 只想修改标题、描述、时间或重复规则时，不需要同时传 `--add-attendee-ids` 或 `--remove-attendee-ids`。
-- 如需替换某个参与人、群组或会议室，使用 `--remove-attendee-ids <旧ID>` + `--add-attendee-ids <新ID>`。
-- bot 可作为合法参会人添加，无需剔除。
-- 会议室是 resource attendee，必须使用 `omm_` ID 添加到参会人列表，不能脱离日程单独预定。
-- 更新重复性日程时，必须先确定操作范围（仅此次/全部/此次及后续），然后按 [重复性日程操作规范](lark-calendar-recurring.md) 执行。
-- 当同一次命令组合多个动作时，执行顺序为“日程字段 -> 移除参会人 -> 添加参会人”。若中途失败，不会自动回滚已成功步骤；错误信息会说明已完成的步骤。
-**⚠️ 高风险操作**: 修改时间时必须先读取原日程时长并计算新 end。如果 end 计算错误，会导致日程时长变化，用户会直接感知，禁止擅自改变原日程的时长。
-**不得擅自附加 `--skip-room-check` 重试**：将错误信息（含会议室 ID 与原因）原样透传给用户，说明本次更新会导致会议室预定失败，明确询问是否仍要继续；用户确认后再带 `--skip-room-check` 重新执行。
+- `--add-attendee-ids` is **incremental addition**, not replacing the final attendee list. Do not use it to express "keep only these people".
+- For `--summary` and `--description`, the CLI determines whether to update based on "whether the flag is explicitly passed", not on "whether the value is empty"; if an empty string is explicitly passed, the corresponding field will be cleared.
+- Event descriptions always go through `--description` (processed as Markdown rich text).
+- When applying both bold and italic inline, **do not** write `***文本***` (it will leave residual `*` on the client); `**` and `*` must each be paired and nested, e.g. `**<u>*~~文本~~*</u>**` or `*<u>**~~文本~~**</u>*`.
+- When only adding or removing attendees or meeting rooms, there is no need to also pass event fields such as `--summary`, `--start`, `--end`.
+- When only modifying the title, description, time, or recurrence rule, there is no need to also pass `--add-attendee-ids` or `--remove-attendee-ids`.
+- To replace an attendee, group, or meeting room, use `--remove-attendee-ids <旧ID>` + `--add-attendee-ids <新ID>`.
+- A bot can be added as a valid attendee without needing to be excluded.
+- A meeting room is a resource attendee and must be added to the attendee list using the `omm_` ID; it cannot be booked independently of an event.
+- When updating a recurring event, the operation scope must first be determined (this instance only/all/this and following), then follow the [Recurring Event Operation Guidelines](lark-calendar-recurring.md).
+- When multiple actions are combined in the same command, the execution order is "event fields -> remove attendees -> add attendees". If a failure occurs midway, successfully completed steps will not be automatically rolled back; the error message will indicate which steps were completed.
+**⚠️ High-risk operation**: When modifying time, you must first read the original event duration and calculate the new end. If the end is calculated incorrectly, the event duration will change, which the user will directly perceive; do not arbitrarily change the original event duration.
+**Do not arbitrarily append `--skip-room-check` retry**: Pass the error message (including meeting room ID and reason) through to the user as-is, explain that this update will cause the meeting room booking to fail, and explicitly ask whether to continue; after user confirmation, re-execute with `--skip-room-check`.
 
-预检失败（如接口 404 或返回错误）会降级放行：向 stderr 打一条 warning 后继续执行，避免因新接口不稳定阻塞正常更新。
+Pre-check failures (such as API 404 or returned errors) will degrade to allow-through: print a warning to stderr and continue execution, to avoid blocking normal updates due to new API instability.
 
-## 高级用法（完整 API 命令）
+<a id="高级用法完整-api-命令"></a>
+## Advanced usage (full API command)
 
-`+update` 只覆盖标题、描述、时间、重复规则，以及参会人/会议室的增量添加或移除。
+`+update` only covers title, description, time, recurrence rule, and incremental addition or removal of attendees/meeting rooms.
 
-如需更新 `location`（地理位置，不含会议室位置）、`visibility`（日程公开范围）、自定义 `reminders`（提醒设置）、自定义 `attendee_ability`（参与人权限）、自定义 `free_busy_status`（日程忙闲状态）、`color`（颜色）、附件、视频会议信息、全天日程，或在新增参会人时配置可选参加状态 等高级参数，请改用完整的 API 命令。建议先通过 `lark-cli schema calendar.events.patch`、`lark-cli schema calendar.event.attendees.create`、`lark-cli schema calendar.event.attendees.batch_delete` 查看完整参数定义。
+To update `location` (location, excluding meeting room location), `visibility` (event visibility), custom `reminders` (reminder settings), custom `attendee_ability` (attendee permissions), custom `free_busy_status` (event busy/free status), `color` (color), attachments, video conference information, all-day events, or advanced parameters such as configuring optional attendance status when adding attendees, use the full API command instead. It is recommended to first view the full parameter definitions via `lark-cli schema calendar.events.patch`, `lark-cli schema calendar.event.attendees.create`, `lark-cli schema calendar.event.attendees.batch_delete`.
 
-> 完整 API 命令的时间参数是 **Unix 秒字符串**（非 ISO 8601）。换算时**禁止依赖容器默认时区**（常为 UTC，会导致 8 小时偏移），必须显式指定目标时区。
+> The time parameters of the full API command are **Unix second strings** (not ISO 8601). When converting, **do not rely on the container default timezone** (often UTC, which causes an 8-hour shift); the target timezone must be explicitly specified.
 
-## 预约/改约会议室场景
+<a id="预约改约会议室场景"></a>
+## Booking/rescheduling meeting room scenarios
 
-如果用户要“改会议时间”“换会议室”“给现有日程加会议室”，必须先阅读 [`lark-calendar-schedule-meeting.md`](lark-calendar-schedule-meeting.md) 并按其中工作流处理：
+If the user wants to "change meeting time", "switch meeting rooms", or "add a meeting room to an existing event", you must first read [`lark-calendar-schedule-meeting.md`](lark-calendar-schedule-meeting.md) and handle it according to the workflow therein:
 
-- 明确时间且需要会议室：先 `+room-find`，再按需 `+freebusy`，用户确认后再 `+update`。
-- 模糊时间或无时间：先 `+suggestion`，如需会议室再批量 `+room-find`，用户确认后再 `+update`。
-- 面临时间方案或会议室方案选择时，必须先展示候选方案并等待用户确认。
+- Clear time and meeting room needed: first `+room-find`, then `+freebusy` as needed, and after user confirmation `+update`.
+- Vague time or no time: first `+suggestion`, then batch `+room-find` if a meeting room is needed, and after user confirmation `+update`.
+- When facing a choice of time options or meeting room options, you must first present the candidate options and wait for user confirmation.
 
-## 参会人类型
+<a id="参会人类型"></a>
+## Attendee types
 
-| 前缀 | 类型 | 说明 |
+| Prefix | Type | Description |
 |------|------|------|
-| `ou_` | user | 飞书用户 open_id |
-| `oc_` | chat | 飞书群组 |
-| `omm_` | resource | 会议室 |
+| `ou_` | user | Feishu user open_id |
+| `oc_` | chat | Feishu group |
+| `omm_` | resource | Meeting room |
 
 > [!CAUTION]
-> 这是**写入操作**。执行前必须确认用户意图，特别是移除参会人/会议室或移动会议时间。
+> This is a **write operation**. Before executing, you must confirm the user's intent, especially when removing attendees/meeting rooms or moving meeting time.
 
-## 参考
+<a id="参考"></a>
+## References
 
-- [lark-calendar](../index.md) -- skill 入口与路由
-- [lark-calendar-schedule-meeting](lark-calendar-schedule-meeting.md) -- 预约/改约会议与会议室工作流
-- [lark-calendar-room-find](lark-calendar-room-find.md) -- 查找可用会议室
+- [lark-calendar](../index.md) -- skill entry and routing
+- [lark-calendar-schedule-meeting](lark-calendar-schedule-meeting.md) -- booking/rescheduling meetings and meeting room workflow
+- [lark-calendar-room-find](lark-calendar-room-find.md) -- find available meeting rooms

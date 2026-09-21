@@ -1,4 +1,5 @@
-# 知识整理工作流：Planning
+<a id="知识整理工作流planning"></a>
+# Knowledge Organization Workflow: Planning
 
 Loaded by states: `PLAN_GENERATION`, `EXEC_CONFIRM`.
 
@@ -61,7 +62,7 @@ Rules:
 Example:
 
 ```text
-计划生成进度：已处理 <processed_count>/<resource_count> 项资源，生成 <plan_item_count> 项计划，其中创建 <create_count> 项、移动 <move_count> 项。继续计算父子目录移动顺序，不会执行创建或移动。
+Plan generation progress: processed <processed_count>/<resource_count> resources, generated <plan_item_count> plan items, of which <create_count> are creations and <move_count> are moves. Continuing to compute parent-child directory move order; no creations or moves will be executed.
 ```
 
 ## PlanItem
@@ -132,10 +133,10 @@ Action display map:
 
 | Internal Enum | User-Facing Label |
 |---------------|-------------------|
-| `keep` | 保持不变 |
-| `create_folder` | 创建文件夹 |
-| `create_node` | 创建知识库节点 |
-| `move` | 移动到目标目录 |
+| `keep` | Keep unchanged |
+| `create_folder` | Create folder |
+| `create_node` | Create Wiki node |
+| `move` | Move to target directory |
 
 `needs_review=true` is a review state, not an action. A review item MUST still use `action=move` when its target is the manual confirmation target.
 
@@ -155,9 +156,9 @@ Confidence display map:
 
 | Internal Enum | User-Facing Label |
 |---------------|-------------------|
-| `high` | 高，证据明确 |
-| `medium` | 中，有依据但建议确认 |
-| `low` | 低，需要人工确认 |
+| `high` | High, evidence is clear |
+| `medium` | Medium, has basis but confirmation is recommended |
+| `low` | Low, requires manual confirmation |
 
 ### Plan Pagination
 
@@ -171,33 +172,33 @@ Confidence display map:
 ### Target Tree And Plan Overview
 
 ```text
-建议目标目录结构
+Suggested target directory structure
 
 <target_tree>
 
-移动 / 创建计划总览
+Move / create plan overview
 
-本次计划共 <total_count> 项：
-- 创建目录 / 节点：<create_count> 项
-- 移动资源：<move_count> 项（其中来源目录本体：<source_container_move_count> 项）
-- 保持不变：<keep_count> 项
-- 待人工确认：<review_count> 项
-- 高置信度：<high_count> 项
-- 中置信度：<medium_count> 项
-- 低置信度：<low_count> 项
+This plan has <total_count> items in total:
+- Directories / nodes to create: <create_count> items
+- Resources to move: <move_count> items (of which source container bodies: <source_container_move_count> items)
+- Keep unchanged: <keep_count> items
+- Pending manual confirmation: <review_count> items
+- High confidence: <high_count> items
+- Medium confidence: <medium_count> items
+- Low confidence: <low_count> items
 
-你可以选择：
-1. 查看第 1 页明细
-2. 只看将创建的目录 / 节点
-3. 只看待人工确认项
-4. 只看高置信度移动项
-5. 进入下一步：确认执行计划
+You can choose:
+1. View page 1 details
+2. View only directories / nodes to be created
+3. View only items pending manual confirmation
+4. View only high-confidence move items
+5. Proceed to the next step: confirm the execution plan
 ```
 
 If `total_count > 500`, say:
 
 ```text
-计划较大，我先只展示总览。
+The plan is large, so I will show only the overview first.
 ```
 
 ### Plan Revision Protocol
@@ -229,49 +230,49 @@ Internal rules:
 User-facing output:
 
 ```text
-已按你的修改重新生成完整计划。
+The complete plan has been regenerated according to your changes.
 
-已应用的修改：
+Applied changes:
 - <correction item 1>
 - <correction item 2>
 
-当前完整计划：
-- 创建目录 / 节点：<create_count> 项
-- 移动资源：<move_count> 项
-- 保持不变：<keep_count> 项
-- 待人工确认：<review_count> 项
+Current complete plan:
+- Directories / nodes to create: <create_count> items
+- Resources to move: <move_count> items
+- Keep unchanged: <keep_count> items
+- Pending manual confirmation: <review_count> items
 
-说明：后续执行默认基于这份完整修正版计划，不是只执行刚才的修正项。
+Note: subsequent execution is based on this complete revised plan by default, not only the changes just made.
 
-你可以选择：
-1. 查看修正版计划总览
-2. 查看本次修改涉及的资源
-3. 进入下一步：确认执行计划
-4. 继续调整
+You can choose:
+1. View the revised plan overview
+2. View the resources involved in this change
+3. Proceed to the next step: confirm the execution plan
+4. Continue adjusting
 ```
 
 If the user explicitly asks to execute only the corrected items, ask for confirmation before execution:
 
 ```text
-你明确要求只执行本次修改涉及的 <count> 项。其余计划项不会执行。
-请确认是否只执行这些项？
+You explicitly requested to execute only the <count> items involved in this change. The remaining plan items will not be executed.
+Please confirm whether to execute only these items?
 ```
 
 ### Plan Detail Page
 
 ```text
-移动 / 创建计划，第 <page>/<total_pages> 页，每页 20 项
+Move / create plan, page <page>/<total_pages>, 20 items per page
 
-| 序号 | 当前位置 | 标题 | 类型 | 目标位置 | 动作 | 原因 | 置信度 | 待确认原因 |
+| No. | Current Location | Title | Type | Target Location | Action | Reason | Confidence | Reason Pending Confirmation |
 |------|----------|------|------|----------|------|------|--------|------------|
 
-还有 <remaining_pages> 页未展示。
+<remaining_pages> more pages are not displayed.
 
-你可以回复：
-1. 继续看下一页
-2. 只看待人工确认项
-3. 只看低置信度项
-4. 进入下一步：确认执行计划
+You can reply:
+1. Continue to the next page
+2. View only items pending manual confirmation
+3. View only low-confidence items
+4. Proceed to the next step: confirm the execution plan
 ```
 
 ## State: EXEC_CONFIRM
@@ -281,11 +282,11 @@ Entry: user asks to view execution confirmation or continue toward execution.
 MUST:
 
 1. Show write-operation summary:
-   - 将创建哪些目录 / 节点
-   - 将移动哪些资源
-   - 将移动哪些来源目录本体（如有）
-   - 哪些资源仍需人工确认
-   - 预计影响范围
+   - Which directories / nodes will be created
+   - Which resources will be moved
+   - Which source container bodies will be moved (if any)
+   - Which resources still require manual confirmation
+   - Estimated impact scope
 2. Use `active_plan_items` from the latest complete plan.
 3. Show `Permission Inheritance Notice`.
 4. Ask for execution scope using `Execution Confirmation`.
@@ -297,7 +298,7 @@ MUST:
 Before execution confirmation, MUST show this notice:
 
 ```text
-权限提示：移动资源后，资源权限可能随目标位置变化，可见范围或协作权限可能变化。本 workflow 不会自动修改权限。
+Permission notice: after resources are moved, resource permissions may change with the target location, and the visible scope or collaboration permissions may change. This workflow will not automatically modify permissions.
 ```
 
 ### Execution Confirmation
@@ -309,28 +310,28 @@ Execution confirmation options MUST be numbered by currently available choices. 
 If a plan detail page is currently active:
 
 ```text
-请确认执行范围：
+Please confirm the execution scope:
 
-1. 执行完整计划：<total_count> 项
-2. 只执行当前页：<current_page_count> 项
-3. 只执行高置信度项：<high_confidence_count> 项
-4. 暂不执行，只保留方案
+1. Execute the complete plan: <total_count> items
+2. Execute only the current page: <current_page_count> items
+3. Execute only high-confidence items: <high_confidence_count> items
+4. Do not execute for now; keep only the plan
 
-本 workflow 只执行已确认范围内的创建、移动和必要的单资源权限申请；不会重命名任何资源。
+This workflow only executes creations, moves, and necessary single-resource permission requests within the confirmed scope; it will not rename any resource.
 ```
 
 If no plan detail page is currently active:
 
 ```text
-请确认执行范围：
+Please confirm the execution scope:
 
-1. 执行完整计划：<total_count> 项
-2. 只执行高置信度项：<high_confidence_count> 项
-3. 暂不执行，只保留方案
+1. Execute the complete plan: <total_count> items
+2. Execute only high-confidence items: <high_confidence_count> items
+3. Do not execute for now; keep only the plan
 
-如需只执行某一页，请先查看计划明细页。
+If you need to execute only a certain page, please view the plan detail page first.
 
-本 workflow 只执行已确认范围内的创建、移动和必要的单资源权限申请；不会重命名任何资源。
+This workflow only executes creations, moves, and necessary single-resource permission requests within the confirmed scope; it will not rename any resource.
 ```
 
 If there is no pagination, still state the total number of plan items covered by confirmation.

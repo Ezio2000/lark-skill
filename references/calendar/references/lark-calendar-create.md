@@ -2,84 +2,89 @@
 # calendar +create
 
 
-创建日程并按需邀请参会人。
+Create a calendar event and invite attendees as needed.
 
-## 推荐命令
+<a id="推荐命令"></a>
+## Recommended commands
 
 ```bash
-# 创建日程 + 邀请参会人（ISO 8601 时间）
+# Create a calendar event + invite attendees (ISO 8601 time)
 lark-cli calendar +create \
   --summary "产品评审" \
   --start "2026-03-12T14:00+08:00" \
   --end "2026-03-12T15:00+08:00" \
   --attendee-ids ou_aaa,ou_bbb
 
-# 无参会人
+# No attendees
 lark-cli calendar +create \
   --summary "午餐" \
   --start "2026-03-12T12:00+08:00" \
   --end "2026-03-12T13:00+08:00"
 
-# 指定日历
+# Specify a calendar
 lark-cli calendar +create --summary "..." --start "..." --end "..." \
   --calendar-id cal_xxx
 ```
 
-参数：
+Parameters:
 
-| 参数 | 必填 | 说明 |
+| Parameter | Required | Description |
 |------|------|------|
-| `--summary <text>` | 否 | 日程标题。注意：标题中不应该出现时间、地点、人物信息 |
-| `--start <time>` | 是 | 开始时间（ISO 8601，**必须带时区偏移**，如 `2026-03-12T14:00+08:00`；不带偏移会按进程时区解析致偏移） |
-| `--end <time>` | 是 | 结束时间（ISO 8601，**必须带时区偏移**） |
-| `--description <markdown>` | 否 | 日程描述，统一使用此字段，格式为 **Markdown**。提供会议议程、活动内容、注意事项或链接等。支持加粗、斜体、下划线（`<u>...</u>`）、删除线、链接 `[文本](url)`、标题（`# ` 到 `### `，最多三级）、引用（`> `）、有序/无序列表、GFM 表格（`\| 列1 \| 列2 \|` + 分隔行 `\| --- \| --- \|`）、以及图片 `![图片名](图片URL)`（标准 Markdown 图片语法：远程 URL 原样使用；**本地图片路径**（相对路径、且位于当前工作目录内）会自动上传到云盘并在端上内联渲染——绝对路径或工作目录之外的路径会报错；端上已有图片读回为 Markdown 图片）。飞书文档 URL（直接粘贴裸链接，或写成 `[文本](url)`）会自动解析为内联文档，端上展示文档标题而非裸链接。支持 `@文件路径` 或 `-`（stdin）读取。**禁止**用 `***文本***` 同时表示加粗+斜体（端上会残留 `*`）；应嵌套书写，如 `**<u>*~~文本~~*</u>**` 或 `*<u>**~~文本~~**</u>*`。|
-| `--attendee-ids <id_list>` | 否 | 参与人 ID 列表（逗号分隔）。支持用户（`ou_`）、群组（`oc_`）和会议室（`omm_`）。AI 提取时请务必保留对应前缀。bot 可作为合法参会人，无需剔除 |
-| `--calendar-id <id>` | 否 | 日历 ID（省略则使用主日历） |
-| `--rrule <rrule>` | 否 | 重复日程的重复性规则，规则设置方式参考rfc5545。示例值："FREQ=DAILY;INTERVAL=1;UNTIL=<具体日期>" |
-| `--meeting-owner-id <ou_>` | 否 | 设置 VC 会议 owner。仅以应用（bot）身份在应用日历上操作时生效（需 `--as bot`）；owner 必须为本租户用户身份的 open_id（`ou_`） |
-| `--dry-run` | 否 | 预览 API 调用，不执行 |
+| `--summary <text>` | No | Event title. Note: the title should not contain time, location, or person information |
+| `--start <time>` | Yes | Start time (ISO 8601, **must include a timezone offset**, e.g. `2026-03-12T14:00+08:00`; without an offset it will be parsed according to the process timezone, causing an offset) |
+| `--end <time>` | Yes | End time (ISO 8601, **must include a timezone offset**) |
+| `--description <markdown>` | No | Event description, always use this field, in **Markdown** format. Provide the meeting agenda, activity content, notes, or links, etc. Supports bold, italic, underline (`<u>...</u>`), strikethrough, links `[文本](url)`, headings (`# ` to `### `, up to three levels), quotes (`> `), ordered/unordered lists, GFM tables (`\| 列1 \| 列2 \|` + separator row `\| --- \| --- \|`), and images `![图片名](图片URL)` (standard Markdown image syntax: remote URLs are used as-is; **local image paths** (relative paths located within the current working directory) are automatically uploaded to Drive and rendered inline on the client—absolute paths or paths outside the working directory will error; images already on the client are read back as Markdown images). Feishu document URLs (paste the bare link directly, or write it as `[文本](url)`) are automatically resolved as inline documents, and the client displays the document title instead of the bare link. Supports `@文件路径` or `-` (stdin) for reading. **Do not** use `***文本***` to represent bold+italic at the same time (the client will leave residual `*`); instead nest them, e.g. `**<u>*~~文本~~*</u>**` or `*<u>**~~文本~~**</u>*`.|
+| `--attendee-ids <id_list>` | No | List of attendee IDs (comma-separated). Supports users (`ou_`), groups (`oc_`), and meeting rooms (`omm_`). When AI extracts these, be sure to preserve the corresponding prefix. A bot can be a valid attendee and does not need to be removed |
+| `--calendar-id <id>` | No | Calendar ID (if omitted, the primary calendar is used) |
+| `--rrule <rrule>` | No | Recurrence rule for a recurring event; for how to set the rule, refer to rfc5545. Example value: "FREQ=DAILY;INTERVAL=1;UNTIL=<specific date>" |
+| `--meeting-owner-id <ou_>` | No | Set the VC meeting owner. Only takes effect when operating on an app calendar with an app (bot) identity (requires `--as bot`); the owner must be the open_id (`ou_`) of a user identity in this tenant |
+| `--dry-run` | No | Preview the API call without executing it |
 
-> 当用户表达'每周 X'、'每周重复'、'连续 N 周'时，必须使用 rrule 创建重复性日程，而非创建多个独立日程
-> `--description` 行内同时加粗和斜体时，**禁止**写 `***文本***`（端上会残留 `*`）；必须让 `**` 与 `*` 各自成对嵌套，例如 `**<u>*~~文本~~*</u>**` 或 `*<u>**~~文本~~**</u>*`。
-> 自动设置 `attendee_ability: "can_modify_event"`，参会人可查看彼此并编辑日程。
-> 自动设置 `free_busy_status: "busy"`，默认日程忙闲状态为忙碌。
-> 自动设置 `reminders: [{"minutes": 5}]`，默认日程开始前 5 分钟提醒。
-> 自动设置 `vchat: {"vc_type": "vc"}`，默认日程包含飞书视频会议。如需其他视频会议类型或不含视频会议，请使用完整 API 命令。
-> 失败保护：若添加参会人失败（如 open_id 错误），CLI 会自动删除刚创建的空日程（回滚，不通知参会人）。
-> 审批会议室：`+create` 不暴露低频字段 `attendees[].approval_reason`。如果会议室要求审批，请使用用户身份先创建日程，再用完整 API `calendar event.attendees create --as user` 添加会议室并传 `approval_reason`。
+> When the user expresses 'every week on X', 'repeat weekly', or 'for N consecutive weeks', you must use rrule to create a recurring event, rather than creating multiple independent events
+> When a `--description` line is both bold and italic at the same time, **do not** write `***文本***` (the client will leave residual `*`); you must let `**` and `*` each be nested in pairs, for example `**<u>*~~文本~~*</u>**` or `*<u>**~~文本~~**</u>*`.
+> Automatically set `attendee_ability: "can_modify_event"`, so attendees can see each other and edit the event.
+> Automatically set `free_busy_status: "busy"`, with the default event busy/free status set to busy.
+> Automatically set `reminders: [{"minutes": 5}]`, with a reminder 5 minutes before the event starts by default.
+> Automatically set `vchat: {"vc_type": "vc"}`, with the event including a Feishu video meeting by default. If you need another video meeting type or no video meeting, use the full API command.
+> Failure protection: if adding attendees fails (e.g. an incorrect open_id), the CLI automatically deletes the empty event that was just created (rollback, without notifying attendees).
+> Meeting room approval: `+create` does not expose the low-frequency field `attendees[].approval_reason`. If a meeting room requires approval, first create the event using a user identity, then use the full API `calendar event.attendees create --as user` to add the meeting room and pass `approval_reason`.
 
-## 高级用法（完整 API 命令）
+<a id="高级用法完整-api-命令"></a>
+## Advanced usage (full API command)
 
-> 优先策略：创建日程优先走 `+create`。遇到 `+create` 不支持的高级参数（如 `location`（地理位置，不含会议室位置）、`visibility`（日程公开范围）、自定义 `reminders`（提醒设置）、自定义 `attendee_ability`（参与人权限）、自定义 `free_busy_status`（日程忙闲状态）、参与人可选参加状态或全天日程等），**优先先用 `+create` 创建成功，再用完整 API update 对这些字段做编辑补齐**，而非整体改用完整 API 从零创建。
+> Preferred strategy: for creating events, prefer `+create`. When encountering advanced parameters not supported by `+create` (such as `location` (geographic location, excluding meeting room location), `visibility` (event visibility), custom `reminders` (reminder settings), custom `attendee_ability` (attendee permissions), custom `free_busy_status` (event busy/free status), attendee optional participation status, or all-day events, etc.), **prefer to first create successfully with `+create`, then use the full API update to edit and fill in these fields**, rather than switching entirely to the full API to create from scratch.
 
-**注意**：
-- 全天日程的开始日期和结束日期必须分别是日程开始的第一天和结束的最后一天。如果只有一天的话，开始日期和结束日期是相同。
+**Note**:
+- For an all-day event, the start date and end date must be the first day the event starts and the last day it ends, respectively. If it is only one day, the start date and end date are the same.
 
 ```bash
-## 添加需要审批的会议室（approval_reason 最大 200 字符）
+## Add a meeting room that requires approval (approval_reason max 200 characters)
 lark-cli calendar event.attendees create \
   --as user \
   --params '{"calendar_id":"<CALENDAR_ID>","event_id":"<EVENT_ID>"}' \
   --data '{"attendees": [{"type": "resource", "room_id": "omm_xxx", "approval_reason": "申请原因"}]}'
+```
 
-完整 API 命令的关键差异和处理策略：
-- 时间参数是 **Unix 秒字符串**（非 ISO 8601）。换算时**禁止依赖容器默认时区**（常为 UTC，会导致 8 小时偏移），必须显式指定目标时区。
-- 全天日程的开始日期和结束日期必须分别是日程开始的第一天和结束的最后一天；单日全天日程两者相同。
-- 手动拆成“创建日程 + 添加参会人”两步时，若第二步失败，建议删除刚创建的空日程，避免遗留无参会人的日程。
+Key differences and handling strategies for the full API command:
+- The time parameter is a **Unix seconds string** (not ISO 8601). When converting, **do not rely on the container's default timezone** (often UTC, which causes an 8-hour offset); you must explicitly specify the target timezone.
+- For an all-day event, the start date and end date must be the first day the event starts and the last day it ends, respectively; for a single-day all-day event, the two are the same.
+- When manually splitting into the two steps of "create event + add attendees", if the second step fails, it is recommended to delete the empty event that was just created, to avoid leaving behind an event with no attendees.
 
-## 参会人类型
+<a id="参会人类型"></a>
+## Attendee types
 
-| `type` | `user_id` 格式 | 说明 |
+| `type` | `user_id` format | Description |
 |--------|---------------|------|
-| `user` | `ou_xxx`（open_id） | 飞书用户 |
-| `group` | `oc_xxx` | 飞书群组 |
-| `resource` | `omm_xxx` | 会议室 |
-| `third_party` | 邮箱地址 | 外部参会人 |
+| `user` | `ou_xxx` (open_id) | Feishu user |
+| `group` | `oc_xxx` | Feishu group |
+| `resource` | `omm_xxx` | Meeting room |
+| `third_party` | Email address | External attendee |
 
 > [!CAUTION]
-> 这是**写入操作** -- 执行前必须确认用户意图。
+> This is a **write operation** -- you must confirm the user's intent before executing.
 
-## 参考
+<a id="参考"></a>
+## References
 
-- [lark-calendar](../index.md) -- skill 入口与路由
-- [lark-calendar-suggestion](lark-calendar-suggestion.md) -- 根据非明确时间或一段时间范围，推荐多个可用时间块方案
+- [lark-calendar](../index.md) -- skill entry point and routing
+- [lark-calendar-suggestion](lark-calendar-suggestion.md) -- recommend multiple available time block options based on an unspecified time or a time range

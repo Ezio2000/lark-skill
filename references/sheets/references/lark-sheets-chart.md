@@ -1,76 +1,79 @@
 # Lark Sheet Chart
 
-## 真对象硬约束
+<a id="真对象硬约束"></a>
+## Real Object Hard Constraints
 
-当用户要求"画个图 / 数据可视化 / 趋势图 / 对比图 / 占比图"时，**必须**通过图表创建命令创建真实的图表对象。**禁止**用本地脚本调 matplotlib / seaborn 生成图片再插入到表格代替——静态图片无法随源数据更新，且失去交互能力。判断标准：最终对象必须能被 `+chart-list` 返回；基础单图可先用创建调用返回的完整 `snapshot` 验证，批量创建必须按受影响的 sheet 回读列表。
+When the user asks to "draw a chart / visualize data / trend chart / comparison chart / proportion chart", you **must** create a real chart object via the chart creation command. **Do not** use a local script calling matplotlib / seaborn to generate an image and then insert it into the sheet as a substitute — static images cannot update with the source data and lose interactivity. The criterion: the final object must be returnable by `+chart-list`; for a basic single chart, you may first verify using the complete `snapshot` returned by the creation call, and for batch creation you must read back the list per affected sheet.
 
-## 使用场景
+<a id="使用场景"></a>
+## Usage Scenarios
 
-读写图表对象。基础创建和常用更新优先用语义 shortcut，只在高级配置时使用原始 snapshot：
+Read and write chart objects. For basic creation and common updates, prefer the semantic shortcuts, and only use the raw snapshot for advanced configuration:
 
-| 操作需求 | 使用工具 | 说明 |
+| Operation need | Tool to use | Description |
 |---------|---------|------|
-| 查看已有图表 | `+chart-list` | 获取图表的类型、数据源和样式配置 |
-| 按类型和范围创建基础图 | `+chart-create-basic` | 支持 column/bar/line/area/pie/scatter/combo/radar/bubble/waterfall/pareto、行/列方向与整图配色；无需构造 snapshot |
-| 更新标题、轴、图例、标签、堆叠、平滑或整图配色 | `+chart-config-update` | CLI 读取当前快照并只回写配置 patch |
-| 修正已有图表的数据范围或方向 | `+chart-data-update` | CLI 读取当前快照并只回写 data patch，保留其它配置 |
-| 批量创建多个独立图表 | `+batch-chart-create` | 保留成功图表，并逐项返回失败原因；只重试失败项 |
-| 批量更新多个独立图表 | `+batch-chart-update` | 逐图读取当前快照并生成 partial properties |
-| 高级创建/更新、删除图表 | `+chart-{create\|update\|delete}` | 按系列/数据点精细设置等高级需求才使用原始 properties；更新只提交必要的局部 properties |
+| View existing charts | `+chart-list` | Get the chart's type, data source, and style configuration |
+| Create a basic chart by type and range | `+chart-create-basic` | Supports column/bar/line/area/pie/scatter/combo/radar/bubble/waterfall/pareto, row/column direction, and whole-chart color scheme; no need to construct a snapshot |
+| Update title, axes, legend, labels, stacking, smoothing, or whole-chart color scheme | `+chart-config-update` | The CLI reads the current snapshot and writes back only the configuration patch |
+| Correct the data range or direction of an existing chart | `+chart-data-update` | The CLI reads the current snapshot and writes back only the data patch, preserving other configuration |
+| Batch create multiple independent charts | `+batch-chart-create` | Preserves successful charts and returns the failure reason item by item; retry only the failed items |
+| Batch update multiple independent charts | `+batch-chart-update` | Reads the current snapshot per chart and generates partial properties |
+| Advanced create/update, delete charts | `+chart-{create\|update\|delete}` | Use raw properties only for advanced needs such as fine-grained per-series/per-data-point settings; for updates, submit only the necessary partial properties |
 
-## 统一决策顺序
+<a id="统一决策顺序"></a>
+## Unified Decision Order
 
-明确目标后，始终按以下顺序选入口，不从原始 snapshot 起步：
+Once the goal is clear, always choose the entry point in the following order, and do not start from the raw snapshot:
 
-1. 普通单图创建 → `+chart-create-basic`；
-2. 多张独立图创建 → `+batch-chart-create`；
-3. 已有图的数据源 / 方向 / 系列变化 → `+chart-data-update`；
-4. 已有图的标题 / 轴 / 图例 / 标签 / 堆叠 / 平滑 / 整图配色变化 → `+chart-config-update`；
-5. 只有上述语义 shortcut 无法表达的单系列、单数据点或高级字段，才使用 `+chart-create` / `+chart-update` 的原始 `properties`。
+1. Ordinary single chart creation → `+chart-create-basic`;
+2. Multiple independent chart creation → `+batch-chart-create`;
+3. Data source / direction / series changes to an existing chart → `+chart-data-update`;
+4. Title / axes / legend / labels / stacking / smoothing / whole-chart color scheme changes to an existing chart → `+chart-config-update`;
+5. Only for single-series, single-data-point, or advanced fields that the above semantic shortcuts cannot express, use the raw `properties` of `+chart-create` / `+chart-update`.
 
-进入高级入口前先写明“哪个用户要求无法由哪个语义参数表达”。答不出来就退回语义 shortcut。不要因为语义调用失败一次就改走原始 snapshot；先根据明确错误修正参数。
+Before entering the advanced entry point, first write down "which user requirement cannot be expressed by which semantic parameter". If you cannot answer, fall back to the semantic shortcut. Do not switch to the raw snapshot just because a semantic call failed once; first correct the parameters based on the explicit error.
 
-普通创建、数据源修正和常用配置更新不要构造原始 snapshot。
+For ordinary creation, data source correction, and common configuration updates, do not construct a raw snapshot.
 
-典型工作流：先确认表头、精确数据范围和图表配置，运行 `uv run python scripts/lark_chart_size_advisor.py` 取得建议尺寸，再将返回的 `data.create_flags.width` / `height` 原样传给 `+chart-create-basic`；创建时尽量在同次调用中带上已知标题/轴/标签内容要求，标签位置只有用户明确指定时才传。创建后用返回的完整 `snapshot` 检查范围、方向与系列，再按需用 `+chart-list` 验证。已有图表的数据范围或方向错误时用 `+chart-data-update`，常用配置修正用 `+chart-config-update`。只有用户要求单个系列、数据点或高级引擎字段时，才读取现有 snapshot 并调 `+chart-update --properties`。不要为了常用配置先输出整份 schema，也不要删除重建已经创建成功的图表。
+Typical workflow: first confirm the headers, the exact data range, and the chart configuration, run `uv run python scripts/lark_chart_size_advisor.py` to get the suggested size, then pass the returned `data.create_flags.width` / `height` as-is to `+chart-create-basic`; when creating, include known title/axis/label content requirements in the same call whenever possible, and pass label position only when the user explicitly specifies it. After creation, use the returned complete `snapshot` to check the range, direction, and series, then verify with `+chart-list` as needed. When the data range or direction of an existing chart is wrong, use `+chart-data-update`; for common configuration corrections, use `+chart-config-update`. Only when the user requests a single series, data point, or advanced engine field should you read the existing snapshot and call `+chart-update --properties`. Do not output the entire schema first for common configuration, and do not delete and recreate a chart that was already created successfully.
 
-**多图表工作流**：先完成所有辅助数据和表头，列出每张目标图的类型、精确数据范围、标题和落点；确认清单后，用一次 `+batch-chart-create` 批量创建。它的每个 operation 直接填写 `+chart-create-basic` flags，CLI 内部固定按 `+chart-create-basic` 执行，不要再套 `shortcut` / `input`。图表之间独立时允许部分成功：按返回的逐项结果定位失败图表，只重试失败项。批量 create 的逐项结果不返回完整 snapshot；批次后每个受影响的 sheet 各调用一次 `+chart-list`。已经成功创建的图表有数据源或配置差异时，用 `+batch-chart-update` 批量执行对应的语义更新，不要删除重建。
+**Multi-chart workflow**: First complete all auxiliary data and headers, and list each target chart's type, exact data range, title, and placement; after confirming the list, use one `+batch-chart-create` to batch create. Each of its operations directly fills in the `+chart-create-basic` flags; the CLI internally always executes by `+chart-create-basic`, so do not wrap it again with `shortcut` / `input`. When charts are independent of each other, partial success is allowed: locate the failed charts based on the returned per-item results, and retry only the failed items. The per-item results of a batch create do not return the complete snapshot; after the batch, call `+chart-list` once for each affected sheet. When already successfully created charts have data source or configuration differences, use `+batch-chart-update` to batch execute the corresponding semantic updates; do not delete and recreate.
 
-**图表错误处理工作流（必须按顺序）**：
-1. **基础单图走快路径**：sheet、范围、类型和落点都明确时，直接调用 `+chart-create-basic`，并检查返回的完整 `snapshot`；不要为了预览而固定多做一次 `--dry-run`。
-2. **以下情况创建前必须 `--dry-run`**：批量创建、多范围或跨子表数据源、包含“每个 / 分别 / 逐一”等数量词、落点不确定，或确实需要原始高级配置。检查数量、sheet、范围、类型和落点；输出中的 `tool_name` / `operation` / `basic_chart` / `properties` 是 CLI 翻译后的内部 MCP body，**只能读，不能复制回 operations**。
-3. 批量执行后同时检查 `succeeded`、`failed` 和逐项 `results[index]`；命令退出成功或顶层 `ok=true` 不代表每张图都成功。单图则检查返回的 `snapshot`。
-4. 有失败时保留成功图表，按原始 `index` 重新生成只包含失败项的新 operations。禁止复用原始整批 payload，否则会重复创建已经成功的图表。
-5. 批量成功后每个受影响 sheet 只调用一次 `+chart-list`，核对总数、标题、范围、方向与系列；基础单图的返回 `snapshot` 完整且符合预期时不再重复 list，只有响应不完整、后续又更新或结果存疑时再 list。
-6. 快照不符合预期时原地修复：数据源、方向、维度/系列、分离表头用 `+chart-data-update`；标题、轴、图例、标签、堆叠、平滑、配色用 `+chart-config-update`；只有高级字段才用 `+chart-update --properties` 的最小局部 patch。不要删除重建。
+**Chart error handling workflow (must be followed in order)**:
+1. **Basic single charts take the fast path**: when the sheet, range, type, and placement are all clear, directly call `+chart-create-basic` and check the returned complete `snapshot`; do not add an extra `--dry-run` just for preview.
+2. **In the following cases you must `--dry-run` before creating**: batch creation, multiple ranges or cross-subsheet data sources, containing quantifiers such as "each / respectively / one by one", uncertain placement, or a genuine need for raw advanced configuration. Check the count, sheet, range, type, and placement; the `tool_name` / `operation` / `basic_chart` / `properties` in the output are the CLI-translated internal MCP body, and **can only be read, not copied back into operations**.
+3. After batch execution, check `succeeded`, `failed`, and the per-item `results[index]` at the same time; a successful command exit or a top-level `ok=true` does not mean every chart succeeded. For a single chart, check the returned `snapshot`.
+4. When there are failures, preserve the successful charts and regenerate new operations containing only the failed items based on the original `index`. Do not reuse the original full batch payload, otherwise charts that already succeeded will be created again.
+5. After a successful batch, call `+chart-list` only once per affected sheet, and verify the total count, titles, ranges, directions, and series; when the returned `snapshot` of a basic single chart is complete and as expected, do not list again, and only list again when the response is incomplete, there are subsequent updates, or the result is in doubt.
+6. When the snapshot does not match expectations, fix it in place: for data source, direction, dimensions/series, and separated headers use `+chart-data-update`; for title, axes, legend, labels, stacking, smoothing, and color scheme use `+chart-config-update`; only for advanced fields use the minimal partial patch of `+chart-update --properties`. Do not delete and recreate.
 
-**失败归因与恢复**：
-- 参数校验失败：只根据 stderr 指出的未知 flag、缺失字段或 operations 结构修正一次；不要把 `--dry-run` 展示的内部 body 复制回命令。
-- 批量部分失败：保留成功项，只重试 `failed` 对应的原始 index；重试前断言新 operations 数量等于失败数。
-- 执行成功但结果不符：以返回 snapshot / `+chart-list` 为准，在原图上走语义更新；不要因标题、范围或配色不对就删除重建。
-- 返回空输出或无法确认：检查退出码和 stderr，并做一次对象回读；仍无法确认时如实报告，禁止声称已完成。
-- 同一种修正再次失败：停止改猜 schema、MCP body 或完整 snapshot。若语义 shortcut 能表达就回到语义入口；否则保留原对象并报告明确错误。
+**Failure attribution and recovery**:
+- Parameter validation failure: correct only once based on the unknown flag, missing field, or operations structure indicated by stderr; do not copy the internal body displayed by `--dry-run` back into the command.
+- Batch partial failure: preserve the successful items and retry only the original index corresponding to `failed`; before retrying, assert that the number of new operations equals the number of failures.
+- Execution succeeded but the result does not match: take the returned snapshot / `+chart-list` as authoritative and perform semantic updates on the original chart; do not delete and recreate just because the title, range, or color scheme is wrong.
+- Empty output returned or cannot be confirmed: check the exit code and stderr, and do one object read-back; if still unconfirmable, report truthfully and do not claim completion.
+- The same correction fails again: stop guessing at the schema, MCP body, or complete snapshot. If a semantic shortcut can express it, return to the semantic entry point; otherwise preserve the original object and report the explicit error.
 
-**图片图表 → 真图表迁移（“把截图 / 贴图换成真图表”类任务）**：
-1. 先用 `+float-image-list` 读取待替换浮动图片的 ID、位置、尺寸和数量，并确认每张图片与目标真图表的对应关系；不得把 logo、说明图或无法确认对应关系的图片当成待替换图表。
-2. 用户要求“配色 / 样式与原图一致”时，必须先使用可用的图像理解能力视觉检查原图，确认图表类型、标题、系列配色、图例、标签、堆叠方式、位置和尺寸；`+float-image-list` 只用于获取对象信息，不能代替视觉检查。对无法确认的样式不得凭空猜测。
-3. 优先用 `+chart-create-basic` / `+batch-chart-create` 的语义参数复刻已确认的类型、标题、配色、图例、标签和堆叠方式，并尽量按原图位置与尺寸落图。普通整图配色使用 `--colors` / `--color-palette`；只有原图明确包含语义 shortcut 无法表达的单系列或单数据点样式时，才使用原始 `properties`。
-4. 建好真图表后，必须先用创建返回的完整 `snapshot` 或 `+chart-list` 确认图表数量、标题、数据源、系列和位置正确，再按 [Lark Sheet Float Image](./lark-sheets-float-image.md) 的高风险删除流程用 `+float-image-delete` 删除与其一一对应的原浮动图片。
-5. 删除后再调用一次 `+float-image-list`，确认被替换图片已消失，其它图片未受影响。
+**Image chart → real chart migration (tasks like "replace screenshots / pasted images with real charts")**:
+1. First use `+float-image-list` to read the ID, position, size, and count of the floating images to be replaced, and confirm the correspondence between each image and the target real chart; do not treat logos, explanatory images, or images whose correspondence cannot be confirmed as charts to be replaced.
+2. When the user requests "color scheme / style consistent with the original image", you must first use the available image understanding capability to visually inspect the original image and confirm the chart type, title, series color scheme, legend, labels, stacking method, position, and size; `+float-image-list` is only used to obtain object information and cannot replace visual inspection. Do not guess at styles that cannot be confirmed.
+3. Prefer using the semantic parameters of `+chart-create-basic` / `+batch-chart-create` to replicate the confirmed type, title, color scheme, legend, labels, and stacking method, and place the chart according to the original image's position and size as much as possible. For ordinary whole-chart color schemes use `--colors` / `--color-palette`; only when the original image clearly contains single-series or single-data-point styles that the semantic shortcuts cannot express should you use the raw `properties`.
+4. After building the real chart, you must first use the complete `snapshot` or `+chart-list` returned by creation to confirm that the chart count, titles, data sources, series, and positions are correct, then follow the high-risk deletion process of [Lark Sheet Float Image](./lark-sheets-float-image.md) to use `+float-image-delete` to delete the original floating images that correspond one-to-one with them.
+5. After deletion, call `+float-image-list` once more to confirm that the replaced images have disappeared and that other images are unaffected.
 
-**数量词必须展开**：用户说“每个 / 每天 / 分别 / 逐一 / 各一张图”时，先从数据中数出实体数 `N`，把这 `N` 张图逐项写进清单，再加上其它汇总图得到目标总数 `M`；一个包含全部实体的多系列图不能替代这 `N` 张独立图。批次前断言 operations 中恰有 `M` 个图表创建，批次后 `+chart-list` 断言图表总数、逐图标题与实体集合一致。**图表类型和维度也要逐图断言**：用户点名的图表类型（折线 / 柱状 / 堆积 / 饼）、横轴取哪一列、按哪一列分组，动手前写成清单，画完逐项核回来——多张单维度图不能替代一张按维度分组的图，反之亦然。
+**Quantifiers must be expanded**: When the user says "each / every day / respectively / one by one / one chart each", first count the number of entities `N` from the data, write these `N` charts into the list item by item, then add other summary charts to get the target total `M`; a single multi-series chart containing all entities cannot replace these `N` independent charts. Before the batch, assert that there are exactly `M` chart creations in operations; after the batch, `+chart-list` assert that the total chart count, per-chart titles, and entity set are consistent. **Chart types and dimensions must also be asserted per chart**: the chart type the user names (line / column / stacked / pie), which column the horizontal axis takes, and which column to group by — write these into the list before starting, and verify them item by item after drawing — multiple single-dimension charts cannot replace one chart grouped by dimension, and vice versa.
 
-**范围与系列前置校验（创建前必做）**：清单中同时记录每张图的表头范围、纳入维度、明确排除维度、数据方向和预期系列数。每张图只支持一个类别 / X 轴维度（`dim1`），不支持把多个字段作为多级横轴；当前每张图**最多 50 个数值系列**；按列组织时通常为“所选数值列数”，按行组织时通常为“所选数值行数”。创建时就用 `+chart-create-basic --dim1-index ... --dim2-indexes ...` 显式选择类别与不超过 50 个数值系列；如果业务要求展示超过 50 个系列，应先建立紧凑汇总表或 Top-N，而不是反复删除重建。创建前根据实际表头确认索引和边界，不凭字母猜范围；创建后范围、方向或系列数不符时，使用 `+chart-data-update` 修正，CLI 会读取当前快照、重建 `refs` / `dim1` / `dim2.series` 并只提交 data patch，不要删除后重建。
+**Range and series pre-validation (must be done before creation)**: In the list, simultaneously record each chart's header range, included dimensions, explicitly excluded dimensions, data direction, and expected series count. Each chart supports only one category / X-axis dimension (`dim1`), and does not support using multiple fields as a multi-level horizontal axis; currently each chart supports **at most 50 numeric series**; when organized by column it is usually "the number of selected numeric columns", and when organized by row it is usually "the number of selected numeric rows". At creation time, use `+chart-create-basic --dim1-index ... --dim2-indexes ...` to explicitly select the category and no more than 50 numeric series; if the business requires displaying more than 50 series, you should first build a compact summary table or Top-N, rather than repeatedly deleting and recreating. Before creation, confirm the indices and boundaries based on the actual headers, and do not guess the range by letters; after creation, if the range, direction, or series count does not match, use `+chart-data-update` to correct it — the CLI will read the current snapshot, rebuild `refs` / `dim1` / `dim2.series`, and submit only the data patch; do not delete and recreate.
 
-**尺寸建议（创建前必做）**：确认 `--chart-type`、`--data-range`、数据方向、dim1/dim2、标题、图例和标签策略后，先运行尺寸建议器。有分离表头时同时传 `--header-range`。
+**Size suggestion (must be done before creation)**: After confirming `--chart-type`, `--data-range`, data direction, dim1/dim2, title, legend, and label strategy, first run the size suggester. When there are separated headers, also pass `--header-range`.
 
-硬下限如下；建议器不可用时也不得低于此值：
+The hard lower bounds are as follows; even when the suggester is unavailable, you must not go below these values:
 
-| 图表类型 | 最小宽度 × 高度（px） |
+| Chart type | Minimum width × height (px) |
 |---|---:|
-| 柱形图、折线图、面积图及其它默认类型 | `640 × 400` |
-| 条形图、组合图 | `720 × 420` |
-| 饼图 | `720 × 440` |
+| Column chart, line chart, area chart, and other default types | `640 × 400` |
+| Bar chart, combo chart | `720 × 420` |
+| Pie chart | `720 × 440` |
 
 ```bash
 uv run python scripts/lark_chart_size_advisor.py "<表格 URL 或 spreadsheet token>" \
@@ -80,265 +83,269 @@ uv run python scripts/lark_chart_size_advisor.py "<表格 URL 或 spreadsheet to
   --data-labels value --legend-position bottom --title "销售额对比"
 ```
 
-运行建议器时，参数必须与后续创建保持一致：创建命令显式设置 `--aggregate-categories` 时传入同一值，组合图同步传入 `--series-types`；创建命令不传 `--data-labels` 时，建议器也按 `none` 估算，需要标签时两边都显式传入同一值。将返回的 `data.create_flags.width` / `height` 原样用于创建命令（包括 `--dry-run`），不要凭经验改小；`data.minimum_size` 仅表示兜底下限。若 `data.size_alone_is_insufficient=true`，先按 `data.layout_advice` 调整图表结构或标签策略，再用新配置重新计算尺寸。建议器只负责创建前预估，图表创建后仍须运行质量检查器。
+When running the suggester, the parameters must be consistent with the subsequent creation: when the creation command explicitly sets `--aggregate-categories`, pass the same value; for combo charts, also pass `--series-types`; when the creation command does not pass `--data-labels`, the suggester also estimates by `none`, and when labels are needed, both sides explicitly pass the same value. Use the returned `data.create_flags.width` / `height` as-is in the creation command (including `--dry-run`), and do not reduce them based on experience; `data.minimum_size` only represents the fallback lower bound. If `data.size_alone_is_insufficient=true`, first adjust the chart structure or label strategy according to `data.layout_advice`, then recalculate the size with the new configuration. The suggester is only responsible for pre-creation estimation; after the chart is created, the quality checker must still be run.
 
-**坐标轴语义与范围**：所有带坐标轴的图表都要在清单中记录每条轴对应的字段语义、类别轴 / 连续轴类型、单位以及主副轴归属，不能只核对轴标题。Y 轴显示范围默认交给图表引擎；用户未明确要求固定范围时，不传 `--y-axis-min` / `--y-axis-max`，需要固定范围时必须同时传上下界，重点只处理确有必要收紧的连续数值 X 轴。堆积图的峰值来自同一类别内系列累加，组合图还要按左右轴分别计算；不得直接把数据源单列的最小值 / 最大值当成 Y 轴边界。瀑布图的显示范围取决于逐项累计后的全部中间值、小计和总计，不得主动传 `--y-axis-min` / `--y-axis-max`；只有用户明确指定固定范围时才能例外，且必须覆盖所有累计节点。其它图表只有在用户明确要求或视觉验收证明自动范围不可读时，才按图表类型的实际绘制值计算并设置 Y 轴范围。多图对比时，先判断“范围 / 尺度一致”指绝对边界相同，还是跨度和刻度可比；对比同一指标时保持值轴口径一致，不同单位或量级的指标不强行共用边界。
+**Axis semantics and range**: For all charts with axes, record in the list the field semantics corresponding to each axis, the category-axis / continuous-axis type, the unit, and the primary/secondary axis assignment; do not check only the axis titles. The Y-axis display range is by default left to the chart engine; when the user does not explicitly require a fixed range, do not pass `--y-axis-min` / `--y-axis-max`, and when a fixed range is needed you must pass both upper and lower bounds, focusing only on continuous numeric X axes that genuinely need tightening. The peak of a stacked chart comes from the accumulation of series within the same category, and a combo chart must also be calculated separately by left and right axes; do not directly treat the minimum / maximum of a single column in the data source as the Y-axis boundary. The display range of a waterfall chart depends on all intermediate values, subtotals, and totals after item-by-item accumulation, and you must not proactively pass `--y-axis-min` / `--y-axis-max`; the only exception is when the user explicitly specifies a fixed range, and it must cover all accumulation nodes. For other charts, only when the user explicitly requires it or visual acceptance proves the automatic range is unreadable should you calculate and set the Y-axis range based on the chart type's actual plotted values. When comparing multiple charts, first determine whether "consistent range / scale" means identical absolute boundaries or comparable span and ticks; when comparing the same metric, keep the value axis consistent, and do not force metrics with different units or magnitudes to share boundaries.
 
-**横向类别行配方**：当日期/月份等类别横向排列在一行、目标数值在另一行时，把“类别行 + 数值行”一起放进 `--data-range` 并传 `--data-direction row`，例如 `--data-range "'Sheet1'!A1:M1,'Sheet1'!A3:M3" --data-direction row`。此时类别行属于数据映射，**不要**传给 `--header-range`。`--header-range` 仅表示与纯数据分离的“维度/系列名称”：column 方向必须是一行，row 方向必须是一列。row 方向却传入多列表头，通常说明把类别行误当成了分离表头。
+**Horizontal category row recipe**: When categories such as dates/months are arranged horizontally in one row and the target values are in another row, put the "category row + value row" together into `--data-range` and pass `--data-direction row`, for example `--data-range "'Sheet1'!A1:M1,'Sheet1'!A3:M3" --data-direction row`. In this case the category row belongs to the data mapping, and **do not** pass it to `--header-range`. `--header-range` only represents "dimension/series names" separated from pure data: the column direction must be one row, and the row direction must be one column. Passing a multi-column header in the row direction usually indicates that the category row was mistaken for a separated header.
 
-**整图配色优先走语义参数**：统一主题或系列配色用 `--color-palette` / `--colors`，已有图用 `+chart-config-update`；优先继承原表主题，同一指标跨图保持同色，组合图用同色系柱形、高对比折线和中性辅助线。`--colors` 会循环复用，明确逐系列配色时颜色数须与系列数一致。颜色过多难以区分时优先 Top-N 或拆图；单系列/数据点配色才使用原始 snapshot。
+**Prefer semantic parameters for whole-chart color schemes**: For unified theme or series color schemes use `--color-palette` / `--colors`, and for existing charts use `+chart-config-update`; prefer inheriting the original sheet theme, keep the same metric the same color across charts, and for combo charts use same-color-family columns, high-contrast lines, and neutral auxiliary lines. `--colors` will cycle and reuse, and when explicitly coloring per series, the number of colors must match the number of series. When there are too many colors to distinguish, prefer Top-N or splitting charts; only for single-series/single-data-point coloring should you use the raw snapshot.
 
-## 需求→图表类型映射（创建前必查）
+<a id="需求图表类型映射创建前必查"></a>
+## Requirement → Chart Type Mapping (must check before creation)
 
-| 用户说 | 图表类型 | 备注 |
+| User says | Chart type | Notes |
 |--------|---------|------|
-| "占比"、"比例"、"各XX占多少" | 饼图（pie） | 单维度占比首选 |
-| "对比"、"各XX的YY" | 柱形图（column，纵向） | 多类别数值对比；横向条形用 `bar` |
-| "趋势"、"变化"、"走势" | 折线图（line） | 时间序列首选 |
-| "趋势与量级"、"累计变化"、"区间规模" | 面积图（area） | 用面积强调趋势与数值量级 |
-| "堆积"、"组成构成" | 堆积柱形图（column + stack） | 多系列累加 |
-| "簇状堆积柱形图" | 堆积柱形图（column + stack） | 当前不支持原生簇状堆积；将簇状维度拆分到横轴类别，用堆积柱状图实现类似效果 |
-| "分布"、"相关性" | 散点图（scatter） | 两变量关系 |
-| "气泡大小"、"三变量关系"、"分组散点" | 气泡图（bubble） | x/y 决定位置，size 决定气泡大小，group 决定分组 |
-| "逐项增减"、"变动贡献"、"从期初到期末" | 瀑布图（waterfall） | 展示正负变化及总计/小计；通常选一个分类列和一个增减值列 |
-| "主要原因"、"累计占比"、"80/20" | 排列图（pareto） | 降序柱形 + 累计百分比曲线；只允许一个数值系列 |
+| "proportion", "ratio", "how much each XX accounts for" | Pie chart (pie) | First choice for single-dimension proportion |
+| "comparison", "YY of each XX" | Column chart (column, vertical) | Multi-category numeric comparison; for horizontal bars use `bar` |
+| "trend", "change", "movement" | Line chart (line) | First choice for time series |
+| "trend and magnitude", "cumulative change", "interval scale" | Area chart (area) | Use area to emphasize trend and numeric magnitude |
+| "stacked", "composition" | Stacked column chart (column + stack) | Multi-series accumulation |
+| "clustered stacked column chart" | Stacked column chart (column + stack) | Native clustered stacking is currently not supported; split the cluster dimension into horizontal axis categories and use a stacked column chart to achieve a similar effect |
+| "distribution", "correlation" | Scatter chart (scatter) | Relationship between two variables |
+| "bubble size", "three-variable relationship", "grouped scatter" | Bubble chart (bubble) | x/y determine position, size determines bubble size, group determines grouping |
+| "item-by-item increase/decrease", "change contribution", "from beginning to end of period" | Waterfall chart (waterfall) | Shows positive and negative changes and totals/subtotals; usually select one category column and one increase/decrease value column |
+| "main causes", "cumulative proportion", "80/20" | Pareto chart (pareto) | Descending columns + cumulative percentage curve; only one numeric series is allowed |
 
-**多图表需求**：当用户同时提到多种分析（如"统计占比 + 对比数量"），必须创建多个图表，每个对应一种类型，不要只做一个。
+**Multi-chart requirements**: When the user mentions multiple analyses at the same time (such as "count proportions + compare quantities"), you must create multiple charts, each corresponding to one type; do not make only one.
 
-**常见配置错误（必须注意）**：
-- **图表类型选择错误**：用户说"堆积柱形图 / 百分比堆积"时，用 `+chart-create-basic --stack normal|percent` 或 `+chart-config-update --stack normal|percent`；用户说"占比 / 比例"时，优先考虑饼图或百分比堆积图。注意 `column` 是纵向柱形图、`bar` 是横向条形图，"对比 / 各 XX" 类纵向柱默认用 `column`；面积图原生支持 `snapshot.plotArea.plot.type="area"`，别因速查表没列就判"不支持"。
-- **数据标签开关**：普通基础图先按拟开启 `--data-labels value` 运行尺寸建议器，再用建议宽高创建；不要仅凭数据点或系列数预先传 `none`。若使用建议尺寸后仍过密，依次改为关键点 / 末值 / 异常值的稀疏标签、Top-N 或拆图；用户明确要求隐藏全部标签时才传 `none`。已有图用 `+chart-config-update --data-labels`，不要为常用标签配置构造原始 `labels` 对象。高级配置中 `plotArea.plot.labels` 对象的存在性即开关：创建时关闭标签应省略该字段，更新时删除已有全局标签传 `labels: null`，不能用全部字段置为 `false` 代替。多个系列的数据标签展示要求不同时，禁止传全局 `--data-labels`，应在创建后读取完整 `plotArea.plot.series`，仅给需要标签的系列设置 `labels`，再用 `+chart-update --properties` 整段回写该数组。
-- **辅助线与单点标签**：用户要求基准线、目标线、阈值线、平均线或上下限时，先在源数据旁新增一列重复目标值作为辅助线；如果只需要在线尾或某个关键位置显示一个标签，再新增一列稀疏标点数据，仅在目标行写入同一数值，其余单元格保持真正空白。数据准备完成后创建组合图：辅助值列用 `line`，稀疏标点列用 `scatter`，省略全局 `--data-labels`，并传 `--aggregate-categories=false` 关闭“汇总相同类别”；已有图用 `+chart-config-update --aggregate-categories=false`。随后读取完整系列数组，只给稀疏标点系列设置数值标签，辅助线系列必须省略 `labels`；原数据系列是否设置标签按用户要求决定。不得用重复值辅助线的全系列标签模拟单点标签，也不得用 0 代替空白标点，否则聚合会把空标点物化为每个类别的数据点，导致标签重复出现。
-- **常量系列标签**：目标线、阈值线和上下限等重复常量系列默认不显示逐点标签；名称和值放在系列名、图例、标题或单个稀疏标记中。创建后若质量检查器提示“常量系列重复标签”，移除该系列标签或改成只有一个非空点的稀疏标记。
-- **数据标签位置**：只有用户明确要求且已有标签时才传 `--data-label-position`；它只调整已有标签的位置，不会单独开启标签。需要同时显示标签时一并传 `--data-labels`；未明确位置时省略，让图表按类型自动选择。标签位置只控制摆放方式，不能实现仅显示末点或关键点。普通非堆叠柱形图显示数据标签位置一般传 `outside`。
-- **数据源范围与系列名来源要对齐**：
-  - 默认让 `--data-range` 包含真正的表头行 / 列；表头上方的合并大标题必须跳过。
-  - 数据和语义表头分离时，`--data-range` 只传纯数据，`--header-range` 传对应的一行（column）或一列（row）表头。范围可以是不连续多范围，也支持来自多个子表；不要因为跨子表就退回原始 snapshot。
-  - 横向类别行属于 `--data-range`，不是 `--header-range`；按行组织时传 `--data-direction row`。
-- **数据源必须是数值 / 日期型**：图表只渲染数值型单元格。用 `+cells-set` 构造数据源时，给数字 / 日期单元格设 `cell_styles.number_format`，不要留成纯文本，否则该系列渲染为空。
-- **数值 / 日期显示异常**：坐标轴沿用源单元格格式。日期显示成序列号、大数值显示成科学计数法时，修正源数据的 `cell_styles.number_format`，不要给图表轴构造未定义的 format 字段。
-- **轴口径错误**：用户要"占比 / 比例"时，用饼图或 `--stack percent`，并核对数据源与标签确实表达百分比，不要交付仍以原始计数为纵轴的图。
-- **组合图系列被压扁**：创建前比较各系列的单位和典型值 / 峰值量级；单位不同、相差约一个数量级以上，或折线贴近 X 轴时，不得把所有系列都放左轴。用 `--series-y-axes` 将会被压扁的系列（常见为百分比、比率或小量级折线）放到右轴，并用左右轴标题明确各自单位；`--series-types` / `--series-y-axes` 必须与 `--dim2-indexes` 逐项对齐。
-- **饼图标签截断**：饼图默认传 `--legend-position bottom`，并使用比普通单图更宽的画布；创建时同时传 `--width` / `--height`。宽度主要为左右两侧最长标签留白，不因类别数量线性增加；类别过多时改用 Top-N 或条形图，不能靠无限加宽或截断标签交付。
-- **对象语义验证**：基础单图先核对返回的完整 `snapshot`；批量创建、响应不完整、后续又更新或结果存疑时，再按受影响的 sheet 调一次 `+chart-list`。这里只核对数量、数据源、方向、系列和配置，不能代替交付前的布局检查。
+**Common configuration errors (must pay attention)**:
+- **Wrong chart type selection**: When the user says "stacked column chart / percentage stacked", use `+chart-create-basic --stack normal|percent` or `+chart-config-update --stack normal|percent`; when the user says "proportion / ratio", prefer a pie chart or percentage stacked chart. Note that `column` is a vertical column chart and `bar` is a horizontal bar chart; for "comparison / each XX" type vertical columns, use `column` by default; area charts natively support `snapshot.plotArea.plot.type="area"`, so do not judge it as "unsupported" just because the quick reference table does not list it.
+- **Data label toggle**: For ordinary basic charts, first run the size suggester with `--data-labels value` intended to be enabled, then create with the suggested width and height; do not preemptively pass `none` based only on the number of data points or series. If it is still too dense after using the suggested size, switch in order to sparse labels for key points / last values / outliers, Top-N, or split charts; only pass `none` when the user explicitly requires hiding all labels. For existing charts use `+chart-config-update --data-labels`, and do not construct a raw `labels` object for common label configuration. In advanced configuration, the existence of the `plotArea.plot.labels` object is itself the toggle: when creating with labels off, omit the field; when updating, delete the existing global labels by passing `labels: null`, and do not substitute by setting all fields to `false`. When multiple series have different data label display requirements, do not pass the global `--data-labels`; instead, after creation read the complete `plotArea.plot.series`, set `labels` only for the series that need labels, then write back the entire array with `+chart-update --properties`.
+- **Auxiliary lines and single-point labels**: When the user requests a baseline, target line, threshold line, average line, or upper/lower limits, first add a column next to the source data repeating the target value as the auxiliary line; if a label only needs to be shown at the end of the line or at a key position, then add a column of sparse marker data, writing the same value only in the target row and keeping the remaining cells truly blank. After data preparation is complete, create a combo chart: use `line` for the auxiliary value column and `scatter` for the sparse marker column, omit the global `--data-labels`, and pass `--aggregate-categories=false` to turn off "aggregate same categories"; for existing charts use `+chart-config-update --aggregate-categories=false`. Then read the complete series array and set numeric labels only for the sparse marker series; the auxiliary line series must omit `labels`; whether to set labels for the original data series is decided according to the user's request. Do not simulate single-point labels with full-series labels on a repeated-value auxiliary line, and do not use 0 in place of blank markers, otherwise aggregation will materialize the blank markers as data points for each category, causing labels to appear repeatedly.
+- **Constant series labels**: Repeated constant series such as target lines, threshold lines, and upper/lower limits do not display per-point labels by default; put the name and value in the series name, legend, title, or a single sparse marker. After creation, if the quality checker reports "constant series repeated labels", remove that series' labels or change it to a sparse marker with only one non-empty point.
+- **Data label position**: Pass `--data-label-position` only when the user explicitly requires it and labels already exist; it only adjusts the position of existing labels and does not enable labels on its own. When labels need to be displayed at the same time, pass `--data-labels` as well; when the position is not specified, omit it and let the chart choose automatically by type. Label position only controls the placement method and cannot achieve showing only the last point or key points. For ordinary non-stacked column charts, generally pass `outside` for the data label position.
+- **Data source range and series name source must align**:
+  - By default, let `--data-range` include the real header row / column; a merged large title above the header must be skipped.
+  - When data and semantic headers are separated, pass only pure data to `--data-range`, and pass the corresponding one row (column) or one column (row) header to `--header-range`. The range can be non-contiguous multiple ranges and also supports coming from multiple subsheets; do not fall back to the raw snapshot just because it crosses subsheets.
+  - A horizontal category row belongs to `--data-range`, not `--header-range`; when organized by row, pass `--data-direction row`.
+- **Data source must be numeric / date type**: Charts only render numeric cells. When using `+cells-set` to construct a data source, set `cell_styles.number_format` for numeric / date cells, and do not leave them as plain text, otherwise that series will render as empty.
+- **Numeric / date display anomalies**: Axes inherit the source cell format. When dates display as serial numbers or large numbers display in scientific notation, fix the source data's `cell_styles.number_format`, and do not construct an undefined format field for the chart axis.
+- **Wrong axis semantics**: When the user wants "proportion / ratio", use a pie chart or `--stack percent`, and verify that the data source and labels genuinely express percentages; do not deliver a chart that still uses raw counts as the vertical axis.
+- **Combo chart series flattened**: Before creation, compare the units and typical values / peak magnitudes of each series; when the units differ, differ by about one order of magnitude or more, or a line is close to the X axis, do not put all series on the left axis. Use `--series-y-axes` to put the series that would be flattened (commonly percentages, ratios, or small-magnitude lines) on the right axis, and clarify their respective units with left and right axis titles; `--series-types` / `--series-y-axes` must align item by item with `--dim2-indexes`.
+- **Pie chart label truncation**: For pie charts, pass `--legend-position bottom` by default, and use a wider canvas than ordinary single charts; at creation time also pass `--width` / `--height`. The width mainly leaves whitespace for the longest labels on the left and right sides, and does not increase linearly with the number of categories; when there are too many categories, switch to Top-N or a bar chart, and do not deliver by infinitely widening or truncating labels.
+- **Object semantic verification**: For basic single charts, first verify the returned complete `snapshot`; for batch creation, incomplete responses, subsequent updates, or doubtful results, then call `+chart-list` once per affected sheet. This only verifies the count, data source, direction, series, and configuration, and cannot replace the layout check before delivery.
 
-> **⚠️ 硬性规则：当用户通过列标题名称（而非列索引）指定横轴/纵轴系列时，必须先读取表格首行（表头）来确定列名与列索引的对应关系，再设置普通图表的 `--dim1-index` / `--dim2-indexes` 或气泡图的角色索引。**
-> 例如用户说"横轴为车型系列，纵轴为 Q1-Q4 的销量"，不能猜测列索引；先用 `+cells-get` 读取数据源范围的表头，再将确认后的 1-based 索引传给 `+chart-create-basic`。
+> **⚠️ Hard rule: when the user specifies the horizontal-axis/vertical-axis series by column header name (rather than column index), you must first read the first row of the sheet (the header) to determine the mapping between column names and column indexes, then set the `--dim1-index` / `--dim2-indexes` of a regular chart or the role indexes of a bubble chart.**
+> For example, if the user says "the horizontal axis is the vehicle model series, and the vertical axis is the Q1-Q4 sales", you must not guess the column indexes; first use `+cells-get` to read the header of the data source range, then pass the confirmed 1-based indexes to `+chart-create-basic`.
 
-## ⚠️ chart 数据源引用 pivot 时必须排除总计行
+<a id="️-chart-数据源引用-pivot-时必须排除总计行"></a>
+## ⚠️ When a chart data source references a pivot, the total row must be excluded
 
-当 chart 要基于刚创建的 pivot 产物画图时，**禁止凭猜写 `refs`**。pivot 默认启用 `show_row_grand_total` / `show_col_grand_total`，产物最后一行/一列通常是"总计"。如果 `refs` 把总计行一并框进去：
-- **柱形图**末尾会多一根天文数字柱子（=所有数据求和），把其他柱子压扁到看不见
-- **饼图**会多一个"总计"扇区占 33%+，真实类别的比例完全失真
+When a chart is to be drawn based on a just-created pivot output, **it is forbidden to write `refs` based on guesswork**. A pivot enables `show_row_grand_total` / `show_col_grand_total` by default, and the last row/column of the output is usually "Total". If `refs` includes the total row as well:
+- **Column chart**: an extra astronomically large bar appears at the end (= the sum of all data), flattening the other bars until they are invisible
+- **Pie chart**: an extra "Total" sector takes up 33%+, and the proportions of the real categories are completely distorted
 
-**正确流程**：
-1. `+pivot-create create` 返回 `sheet_id` + `pivot_table_id`
-2. 调 `+csv-get(sheet_id, 'A1:E30')` 或 `+pivot-list` 读 pivot 产物的**实际数据范围**
-3. 识别并排除"总计"/"小计"行（通常最后一行；嵌套 pivot 还要排除中间层小计）
-4. 用 `+chart-create-basic` 创建图表，`--data-range` 精确到数据行（如 pivot 占 A1:D9、总计在 row9 → chart 用 `A1:D8`）
+**Correct process**:
+1. `+pivot-create create` returns `sheet_id` + `pivot_table_id`
+2. Call `+csv-get(sheet_id, 'A1:E30')` or `+pivot-list` to read the **actual data range** of the pivot output
+3. Identify and exclude the "Total"/"Subtotal" row (usually the last row; for a nested pivot, also exclude intermediate-level subtotals)
+4. Use `+chart-create-basic` to create the chart, with `--data-range` precise down to the data rows (e.g., if the pivot occupies A1:D9 and the total is in row9 → the chart uses `A1:D8`)
 
-## 图表位置选择（创建前必做）
+<a id="图表位置选择创建前必做"></a>
+## Chart position selection (mandatory before creation)
 
-凭感觉挑列号/行号会被 API 拒（`position is out of sheet range`）。按以下四步走：
+Picking column numbers/row numbers by feel will be rejected by the API (`position is out of sheet range`). Follow these four steps:
 
-1. **查尺寸**：`+workbook-info` 拿该 sheet 的 `row_count` / `column_count`（下文记为 rowCount / columnCount；`+sheet-info` 只返回布局，不含行列总数）。
-2. **估跨度**：默认单元格 **105 px 宽 × 27 px 高**，`needCols = ceil(width/105)`，`needRows = ceil(height/27)`。
-3. **校验**：`position.row + needRows ≤ rowCount` 且 `col_idx + needCols ≤ columnCount`（`position.row` 为 **0-based**：首行 = `row:0`，与 A1 区间 / `+dim-insert --position` 的 1-based 行号不同；col 按 A=0、B=1、…、Z=25、AA=26… 换算）。
-4. **不够就先扩表**，二选一，禁止硬塞越界位置：
-   - **优先**放数据下方空区：`position = {row: data_end_row + 2, col: "A"}`；
-   - 否则先调 `+dim-insert`（`references/lark-sheets-sheet-structure.md`）扩行/列，再 create。
+1. **Check dimensions**: `+workbook-info` to get the sheet's `row_count` / `column_count` (referred to below as rowCount / columnCount; `+sheet-info` returns only the layout, not the total row/column counts).
+2. **Estimate the span**: by default a cell is **105 px wide × 27 px high**, `needCols = ceil(width/105)`, `needRows = ceil(height/27)`.
+3. **Validate**: `position.row + needRows ≤ rowCount` and `col_idx + needCols ≤ columnCount` (`position.row` is **0-based**: the first row = `row:0`, which differs from the 1-based row numbers of A1 ranges / `+dim-insert --position`; col is converted as A=0, B=1, …, Z=25, AA=26…).
+4. **If there is not enough room, expand the sheet first**; choose one of the two options, and do not force an out-of-bounds position:
+   - **Preferred**: place it in the empty area below the data: `position = {row: data_end_row + 2, col: "A"}`;
+   - Otherwise, first call `+dim-insert` (`references/lark-sheets-sheet-structure.md`) to expand rows/columns, then create.
 
-⚠️ **图表落点禁止压在已有数据矩形内**——必须落在数据区**右侧或下方的空白**，否则图表浮层会遮挡原始数据被判失败（反例：折线图落在数据区中间，遮挡了下方原始数据）。
+⚠️ **The chart placement must not overlap an existing data rectangle** — it must fall in the blank area to the **right of or below** the data area; otherwise the chart overlay will obscure the original data and be judged a failure (counterexample: a line chart placed in the middle of the data area, obscuring the original data below).
 
-**示例**：21 列 sheet 放 600×400 图 → `needCols=6, needRows=15`
-- ❌ `{row: 0, col: "W"}` — col=22 越界
-- ✅ `{row: 42, col: "A"}` — 放数据下方
-- ✅ 先 `+dim-insert --position V --count 6`（在 V 列前插 6 列，即 U 列之后），再放图到 `{row: 0, col: "V"}`
+**Example**: a 21-column sheet with a 600×400 chart → `needCols=6, needRows=15`
+- ❌ `{row: 0, col: "W"}` — col=22 is out of bounds
+- ✅ `{row: 42, col: "A"}` — place it below the data
+- ✅ First `+dim-insert --position V --count 6` (insert 6 columns before column V, i.e., after column U), then place the chart at `{row: 0, col: "V"}`
 
-**标题与轴文案**：优先沿用用户明确指定的文案；未指定时，只根据已读取的表头生成简洁自然语言。图表标题概括对象、指标及必要的趋势/对比关系；副标题仅补充已确认的时间范围或统计口径，无必要则省略；X 轴写类别或时间维度，Y 轴写指标名，单位明确时可附单位。禁止把单元格引用、公式、内部 ID、占位符、未解析文字、乱码或空括号写入标题，也不得臆造时间、单位和业务口径。
+**Title and axis text**: prefer the text explicitly specified by the user; when unspecified, generate concise natural language based only on the headers that have been read. The chart title summarizes the object, the metric, and the necessary trend/comparison relationship; the subtitle supplements only the confirmed time range or statistical scope, and is omitted when unnecessary; the X axis states the category or time dimension, and the Y axis states the metric name, with the unit appended when it is clear. It is forbidden to write cell references, formulas, internal IDs, placeholders, unresolved text, garbled characters, or empty parentheses into the title, and it is also forbidden to fabricate time, units, or business scope.
 
-## 交付前验收（任何图表改动后必做）
+<a id="交付前验收任何图表改动后必做"></a>
+## Pre-delivery acceptance (mandatory after any chart change)
 
-完成本次所有图表创建或更新后，再逐图核对以下项；全部通过才算完成：
+After completing all chart creations or updates in this task, check the following items chart by chart; only when all pass is the task complete:
 
-1. **数量**：图表数 = 用户明确要求的数量（"每个 / 分别 / 逐一"等数量词已逐项展开为独立图，不用一张多系列图代替）。
-2. **文案与展示项**：回读图表标题、副标题和坐标轴标题，确认语义准确且无乱码、占位符或空括号；图例按用户要求展示或隐藏，普通基础图的数据标签默认展示；密集时按“建议尺寸 → 稀疏标签 → Top-N / 拆图”处理。辅助系列不得用全点重复标签模拟单点或末点。带坐标轴的图表还要回读每条轴的字段语义、类型、单位、最小值 / 最大值、刻度以及主副轴归属；多图对比时再核对边界、跨度和口径是否符合用户的可比性要求。
-3. **图表质量**：图表创建、配置更新、数据更新或位置调整后，每个受影响子表运行一次 `uv run python scripts/lark_chart_quality_check.py "<表格 URL 或 spreadsheet token>" --worksheet-id "<reference_id>"`，无需先用 `ls` 探测脚本。检查器覆盖几何重叠、遮挡内容、越界、最小尺寸、数值源格式、全零/空系列和常量系列重复标签。动态数值源只采样每系列前 50 点，每张图累计最多读取 2000 个源单元格（含表头和系列间空隙）；`numeric_source_samples` 给出实际范围与采样点数，不续读剩余数据。仅采样为全零/常量但未覆盖完整系列时列为不可验证，不能据此修改整个系列。`data.passed=true` 且退出码为 `0` 表示已完成检查范围内无问题，不能视为未采样数据也正常。退出码 `2` 表示检查成功发现问题，按返回的修复建议调整后重跑；退出码 `1`、网络超时或无有效 JSON 时只重试一次，仍失败则明确报告质量检查未完成，禁止用人工估算代替。
+1. **Count**: the number of charts = the number explicitly requested by the user (quantity words such as "each / respectively / one by one" have been expanded item by item into independent charts, not replaced by a single multi-series chart).
+2. **Text and display items**: read back the chart title, subtitle, and axis titles to confirm the semantics are accurate and there are no garbled characters, placeholders, or empty parentheses; the legend is shown or hidden as requested by the user, and data labels are shown by default for regular basic charts; when dense, handle it as "suggested size → sparse labels → Top-N / split charts". Auxiliary series must not use all-point repeated labels to simulate a single point or the last point. For charts with axes, also read back each axis's field semantics, type, unit, minimum / maximum, scale, and primary/secondary axis assignment; when comparing multiple charts, further check whether the boundaries, spans, and scope meet the user's comparability requirements.
+3. **Chart quality**: after chart creation, configuration update, data update, or position adjustment, run `uv run python scripts/lark_chart_quality_check.py "<表格 URL 或 spreadsheet token>" --worksheet-id "<reference_id>"` once for each affected sub-sheet, without first using `ls` to probe the script. The checker covers geometric overlap, obscured content, out-of-bounds, minimum size, numeric source format, all-zero/empty series, and repeated labels on constant series. For dynamic numeric sources, only the first 50 points of each series are sampled, and at most 2000 source cells are read cumulatively per chart (including headers and gaps between series); `numeric_source_samples` gives the actual range and the number of sampled points, and does not continue reading the remaining data. If only the sample is all-zero/constant but does not cover the complete series, it is listed as unverifiable, and the entire series must not be modified based on that. `data.passed=true` with exit code `0` means no problems were found within the checked range, and it must not be taken to mean that unsampled data is also fine. Exit code `2` means the check succeeded in finding problems; adjust according to the returned fix suggestions and rerun; for exit code `1`, a network timeout, or no valid JSON, retry only once, and if it still fails, clearly report that the quality check was not completed; it is forbidden to substitute manual estimation.
 
 ## Shortcuts
 
-| Shortcut | Risk | 分组 |
+| Shortcut | Risk | Group |
 | --- | --- | --- |
-| `+chart-list` | read | 对象 |
-| `+chart-create-basic` | write | 对象 |
-| `+chart-config-update` | write | 对象 |
-| `+chart-data-update` | write | 对象 |
-| `+chart-create` | write | 对象 |
-| `+chart-update` | write | 对象 |
-| `+chart-delete` | high-risk-write | 对象 |
+| `+chart-list` | read | Object |
+| `+chart-create-basic` | write | Object |
+| `+chart-config-update` | write | Object |
+| `+chart-data-update` | write | Object |
+| `+chart-create` | write | Object |
+| `+chart-update` | write | Object |
+| `+chart-delete` | high-risk-write | Object |
 
 ## Flags
 
 ### `+chart-list`
 
-_公共四件套 · 系统：`--dry-run`_
+_Common four-piece set · System: `--dry-run`_
 
-| Flag | Type | 必填 | 说明 |
+| Flag | Type | Required | Description |
 | --- | --- | --- | --- |
-| `--chart-id` | string | optional | 指定单个图表 reference_id 过滤 |
+| `--chart-id` | string | optional | Filter by a single chart reference_id |
 
 ### `+chart-create-basic`
 
-_公共四件套 · 系统：`--dry-run`_
+_Common four-piece set · System: `--dry-run`_
 
-| Flag | Type | 必填 | 说明 |
+| Flag | Type | Required | Description |
 | --- | --- | --- | --- |
-| `--chart-type` | string | required | 图表类型（可选值：`column` / `bar` / `line` / `area` / `pie` / `scatter` / `combo` / `radar` / `bubble` / `waterfall` / `pareto`） |
-| `--data-range` | string | required | 数据范围；未传 --header-range 时须包含表头，传入时只传纯数据；支持逗号分隔及跨子表多范围 |
-| `--header-range` | string | optional | 可选的分离表头范围；column 方向须为一行、row 方向须为一列，表头数须等于数据维度数 |
-| `--data-direction` | string | optional | 数据系列方向；column 表示首列为类别，row 表示首行为类别（可选值：`column` / `row`）（默认 `column`） |
-| `--aggregate-categories` | bool | optional | 是否汇总相同类别；稀疏标点或需要保留逐行数据点时使用 --aggregate-categories=false，省略时沿用图表默认行为 |
-| `--x-axis-numbers-as` | string | optional | 横轴数字的解释方式；text 将数字视为等间距文本类别，values 按连续数值及真实间距绘制（可选值：`text` / `values`）（默认 `text`） |
-| `--x-axis-min` | float64 | optional | 连续数值 X 轴的显示范围下界；需同时使用 --x-axis-numbers-as values |
-| `--x-axis-max` | float64 | optional | 连续数值 X 轴的显示范围上界；需同时使用 --x-axis-numbers-as values |
-| `--y-axis-min` | float64 | optional | 左 Y 轴的显示范围下界；默认省略，仅在用户明确要求固定范围时与 --y-axis-max 同时传；不得直接使用数据源单列最小值，且必须小于上界 |
-| `--y-axis-max` | float64 | optional | 左 Y 轴的显示范围上界；默认省略，仅在用户明确要求固定范围时与 --y-axis-min 同时传；须按图表实际绘制值计算，且必须大于下界 |
-| `--dim1-index` | int | optional | 唯一类别/X 轴维度在数据范围中的 1-based 索引；默认 1；不支持多个字段组成多级横轴 |
-| `--dim2-indexes` | string | optional | 值/Y 轴系列的 1-based 索引列表，逗号分隔；不能包含 dim1，最多 50 个。气泡图旧调用按 `x,y[,group][,size]` 顺序传 2–4 个，新调用优先使用角色索引；饼图和排列图只传 1 个 |
-| `--series-types` | string | optional | 仅组合图；按 --dim2-indexes 顺序指定系列类型，逗号分隔，可选 column、line、area、scatter，数量必须与数值系列一致 |
-| `--series-y-axes` | string | optional | 仅组合图；先比较系列单位和量级，将会被压扁的系列放到 right 轴；按 --dim2-indexes 顺序传 left 或 right，数量必须与数值系列一致 |
-| `--key-index` | int | optional | 仅气泡图：标识/名称维度的 1-based 索引；与 dim1/dim2 索引互斥，默认 1 |
-| `--x-index` | int | optional | 仅气泡图：X 值维度的 1-based 索引；须与 --y-index 一起提供 |
-| `--y-index` | int | optional | 仅气泡图：Y 值维度的 1-based 索引；须与 --x-index 一起提供 |
-| `--group-index` | int | optional | 仅气泡图：可选分组维度的 1-based 索引 |
-| `--size-index` | int | optional | 仅气泡图：可选气泡大小维度的 1-based 索引 |
-| `--title` | string | optional | 图表标题 |
-| `--subtitle` | string | optional | 图表副标题 |
-| `--legend-position` | string | optional | 图例位置；饼图默认 bottom，hidden 隐藏图例（可选值：`top` / `bottom` / `left` / `right` / `hidden`） |
-| `--x-axis-title` | string | optional | X 轴标题 |
-| `--y-axis-title` | string | optional | 左 Y 轴标题 |
-| `--secondary-y-axis-title` | string | optional | 右 Y 轴标题 |
-| `--x-axis-label-angle` | int | optional | X 轴标签旋转角度（可选值：`-90` / `-45` / `0` / `45` / `90`） |
-| `--y-axis-label-angle` | int | optional | 左 Y 轴标签旋转角度（可选值：`-90` / `-45` / `0` / `45` / `90`） |
-| `--data-labels` | string | optional | 数据标签内容；普通基础图默认传 value，不要仅因数据点或系列较多而省略，仅用户明确要求隐藏全部标签时传 none；value、category、percentage 可按 value_category_percentage 顺序组成任意非空组合；series 显示系列名称（可选值：`none` / `value` / `category` / `percentage` / `value_category` / `value_percentage` / `category_percentage` / `value_category_percentage` / `series`） |
-| `--data-label-position` | string | optional | 普通非堆叠柱形图显示标签时一般传 outside；其它场景仅当用户明确指定时传入；只调整已有数据标签的位置，不会单独开启标签（可选值：`auto` / `top` / `bottom` / `left` / `right` / `center` / `inside` / `outside`） |
-| `--stack` | string | optional | 堆叠模式（可选值：`none` / `normal` / `percent`） |
-| `--stacked` | bool | optional | 兼容别名；等价于 --stack normal（隐藏 flag：不在 `--help` 列出，但可正常传入） |
-| `--smooth` | bool | optional | 是否使用平滑曲线；显式关闭使用 --smooth=false |
-| `--color-palette` | string | optional | 预设整图配色主题；与 --colors 互斥（可选值：`brandColorSeries@v2` / `rainbowColorSeries@v2` / `complementaryColorSeries@v2` / `converseColorSeries@v2` / `primaryColorSeries@v2` / `singleColorSeries-B-@v2` / `singleColorSeries-W-@v2` / `singleColorSeries-G-@v2` / `singleColorSeries-Y-@v2` / `singleColorSeries-O-@v2` / `singleColorSeries-R-@v2` / `singleColorSeries-D-@v2`） |
-| `--colors` | string_slice | optional | 自定义整图系列颜色，逗号分隔且至少 2 个十六进制色值；与 --color-palette 互斥 |
-| `--anchor-cell` | string | optional | 可选图表锚点单元格，如 F2；省略时放到数据范围右侧 |
-| `--width` | int | optional | 可选图表宽度；必须与 --height 同时传；饼图及长类别标签场景应适量加宽以避免截断 |
-| `--height` | int | optional | 可选图表高度；必须与 --width 同时传 |
+| `--chart-type` | string | required | Chart type (possible values: `column` / `bar` / `line` / `area` / `pie` / `scatter` / `combo` / `radar` / `bubble` / `waterfall` / `pareto`) |
+| `--data-range` | string | required | Data range; when --header-range is not passed, it must include the header; when it is passed, pass only pure data; supports comma separation and multiple ranges across sub-sheets |
+| `--header-range` | string | optional | Optional separate header range; in the column direction it must be one row, and in the row direction it must be one column; the number of headers must equal the number of data dimensions |
+| `--data-direction` | string | optional | Data series direction; column means the first column is the category, row means the first row is the category (possible values: `column` / `row`) (default `column`) |
+| `--aggregate-categories` | bool | optional | Whether to aggregate identical categories; use --aggregate-categories=false for sparse punctuation or when row-by-row data points need to be preserved; when omitted, the chart's default behavior is used |
+| `--x-axis-numbers-as` | string | optional | How to interpret numbers on the horizontal axis; text treats numbers as equally spaced text categories, values plots them as continuous numeric values with their real spacing (possible values: `text` / `values`) (default `text`) |
+| `--x-axis-min` | float64 | optional | Lower bound of the display range of a continuous numeric X axis; must be used together with --x-axis-numbers-as values |
+| `--x-axis-max` | float64 | optional | Upper bound of the display range of a continuous numeric X axis; must be used together with --x-axis-numbers-as values |
+| `--y-axis-min` | float64 | optional | Lower bound of the display range of the left Y axis; omitted by default, and passed together with --y-axis-max only when the user explicitly requests a fixed range; must not directly use the minimum value of a single data source column, and must be less than the upper bound |
+| `--y-axis-max` | float64 | optional | Upper bound of the display range of the left Y axis; omitted by default, and passed together with --y-axis-min only when the user explicitly requests a fixed range; must be calculated based on the values actually plotted by the chart, and must be greater than the lower bound |
+| `--dim1-index` | int | optional | 1-based index of the unique category/X-axis dimension within the data range; default 1; multiple fields forming a multi-level horizontal axis are not supported |
+| `--dim2-indexes` | string | optional | Comma-separated list of 1-based indexes of the value/Y-axis series; must not include dim1, at most 50. For legacy bubble chart calls, pass 2–4 in the order of `x,y[,group][,size]`; for new calls, prefer role indexes; for pie charts and permutation charts, pass only 1 |
+| `--series-types` | string | optional | Combination charts only; specify the series types in the order of --dim2-indexes, comma-separated, with possible values column, line, area, scatter; the count must match the numeric series |
+| `--series-y-axes` | string | optional | Combination charts only; first compare the units and magnitudes of the series, and put the series that would be flattened on the right axis; pass left or right in the order of --dim2-indexes; the count must match the numeric series |
+| `--key-index` | int | optional | Bubble charts only: 1-based index of the identifier/name dimension; mutually exclusive with the dim1/dim2 indexes; default 1 |
+| `--x-index` | int | optional | Bubble charts only: 1-based index of the X value dimension; must be provided together with --y-index |
+| `--y-index` | int | optional | Bubble charts only: 1-based index of the Y value dimension; must be provided together with --x-index |
+| `--group-index` | int | optional | Bubble charts only: 1-based index of the optional grouping dimension |
+| `--size-index` | int | optional | Bubble charts only: 1-based index of the optional bubble size dimension |
+| `--title` | string | optional | Chart title |
+| `--subtitle` | string | optional | Chart subtitle |
+| `--legend-position` | string | optional | Legend position; pie charts default to bottom, hidden hides the legend (possible values: `top` / `bottom` / `left` / `right` / `hidden`) |
+| `--x-axis-title` | string | optional | X-axis title |
+| `--y-axis-title` | string | optional | Left Y-axis title |
+| `--secondary-y-axis-title` | string | optional | Right Y-axis title |
+| `--x-axis-label-angle` | int | optional | X-axis label rotation angle (possible values: `-90` / `-45` / `0` / `45` / `90`) |
+| `--y-axis-label-angle` | int | optional | Left Y-axis label rotation angle (possible values: `-90` / `-45` / `0` / `45` / `90`) |
+| `--data-labels` | string | optional | Data label content; for regular basic charts, pass value by default, and do not omit it merely because there are many data points or series; pass none only when the user explicitly requests hiding all labels; value, category, and percentage can form any non-empty combination in the order value_category_percentage; series displays the series name (possible values: `none` / `value` / `category` / `percentage` / `value_category` / `value_percentage` / `category_percentage` / `value_category_percentage` / `series`) |
+| `--data-label-position` | string | optional | For regular non-stacked column charts, generally pass outside when labels are shown; in other scenarios, pass it only when the user explicitly specifies it; it only adjusts the position of existing data labels and does not enable labels on its own (possible values: `auto` / `top` / `bottom` / `left` / `right` / `center` / `inside` / `outside`) |
+| `--stack` | string | optional | Stacking mode (possible values: `none` / `normal` / `percent`) |
+| `--stacked` | bool | optional | Compatibility alias; equivalent to --stack normal (hidden flag: not listed in `--help`, but can be passed normally) |
+| `--smooth` | bool | optional | Whether to use a smooth curve; explicitly disable with --smooth=false |
+| `--color-palette` | string | optional | Preset color theme for the whole chart; mutually exclusive with --colors (possible values: `brandColorSeries@v2` / `rainbowColorSeries@v2` / `complementaryColorSeries@v2` / `converseColorSeries@v2` / `primaryColorSeries@v2` / `singleColorSeries-B-@v2` / `singleColorSeries-W-@v2` / `singleColorSeries-G-@v2` / `singleColorSeries-Y-@v2` / `singleColorSeries-O-@v2` / `singleColorSeries-R-@v2` / `singleColorSeries-D-@v2`) |
+| `--colors` | string_slice | optional | Custom colors for the whole chart series, comma-separated and at least 2 hexadecimal color values; mutually exclusive with --color-palette |
+| `--anchor-cell` | string | optional | Optional chart anchor cell, such as F2; when omitted, it is placed to the right of the data range |
+| `--width` | int | optional | Optional chart width; must be passed together with --height; for pie charts and scenarios with long category labels, widen appropriately to avoid truncation |
+| `--height` | int | optional | Optional chart height; must be passed together with --width |
 
 ### `+chart-config-update`
 
-_公共四件套 · 系统：`--dry-run`_
+_Common four-piece set · System: `--dry-run`_
 
-| Flag | Type | 必填 | 说明 |
+| Flag | Type | Required | Description |
 | --- | --- | --- | --- |
-| `--chart-id` | string | required | 目标图表 reference_id |
-| `--title` | string | optional | 图表标题 |
-| `--subtitle` | string | optional | 图表副标题 |
-| `--legend-position` | string | optional | 图例位置；hidden 隐藏图例（可选值：`top` / `bottom` / `left` / `right` / `hidden`） |
-| `--x-axis-title` | string | optional | X 轴标题 |
-| `--y-axis-title` | string | optional | 左 Y 轴标题 |
-| `--secondary-y-axis-title` | string | optional | 右 Y 轴标题 |
-| `--x-axis-label-angle` | int | optional | X 轴标签旋转角度（可选值：`-90` / `-45` / `0` / `45` / `90`） |
-| `--y-axis-label-angle` | int | optional | 左 Y 轴标签旋转角度（可选值：`-90` / `-45` / `0` / `45` / `90`） |
-| `--x-axis-min` | float64 | optional | 连续数值 X 轴的显示范围下界；必须小于 --x-axis-max |
-| `--x-axis-max` | float64 | optional | 连续数值 X 轴的显示范围上界；必须大于 --x-axis-min |
-| `--y-axis-min` | float64 | optional | 左 Y 轴的显示范围下界；默认省略，仅在用户明确要求固定范围时与 --y-axis-max 同时传；不得直接使用数据源单列最小值，且必须小于上界 |
-| `--y-axis-max` | float64 | optional | 左 Y 轴的显示范围上界；默认省略，仅在用户明确要求固定范围时与 --y-axis-min 同时传；须按图表实际绘制值计算，且必须大于下界 |
-| `--data-labels` | string | optional | 数据标签内容；value、category、percentage 可按 value_category_percentage 顺序组成任意非空组合；series 显示系列名称，none 隐藏标签（可选值：`none` / `value` / `category` / `percentage` / `value_category` / `value_percentage` / `category_percentage` / `value_category_percentage` / `series`） |
-| `--data-label-position` | string | optional | 仅当用户明确指定时传入；只调整已有数据标签的位置，不会单独开启标签；省略时按图表类型自动优化数据标签位置（可选值：`auto` / `top` / `bottom` / `left` / `right` / `center` / `inside` / `outside`） |
-| `--aggregate-categories` | bool | optional | 是否汇总相同类别；稀疏标点或需要保留逐行数据点时使用 --aggregate-categories=false，省略时保留当前设置 |
-| `--stack` | string | optional | 堆叠模式（可选值：`none` / `normal` / `percent`） |
-| `--stacked` | bool | optional | 兼容别名；等价于 --stack normal（隐藏 flag：不在 `--help` 列出，但可正常传入） |
-| `--smooth` | bool | optional | 是否使用平滑曲线；显式关闭使用 --smooth=false |
-| `--color-palette` | string | optional | 预设整图配色主题；与 --colors 互斥（可选值：`brandColorSeries@v2` / `rainbowColorSeries@v2` / `complementaryColorSeries@v2` / `converseColorSeries@v2` / `primaryColorSeries@v2` / `singleColorSeries-B-@v2` / `singleColorSeries-W-@v2` / `singleColorSeries-G-@v2` / `singleColorSeries-Y-@v2` / `singleColorSeries-O-@v2` / `singleColorSeries-R-@v2` / `singleColorSeries-D-@v2`） |
-| `--colors` | string_slice | optional | 自定义整图系列颜色，逗号分隔且至少 2 个十六进制色值；与 --color-palette 互斥 |
+| `--chart-id` | string | required | Target chart reference_id |
+| `--title` | string | optional | Chart title |
+| `--subtitle` | string | optional | Chart subtitle |
+| `--legend-position` | string | optional | Legend position; hidden hides the legend (possible values: `top` / `bottom` / `left` / `right` / `hidden`) |
+| `--x-axis-title` | string | optional | X-axis title |
+| `--y-axis-title` | string | optional | Left Y-axis title |
+| `--secondary-y-axis-title` | string | optional | Right Y-axis title |
+| `--x-axis-label-angle` | int | optional | X-axis label rotation angle (possible values: `-90` / `-45` / `0` / `45` / `90`) |
+| `--y-axis-label-angle` | int | optional | Left Y-axis label rotation angle (possible values: `-90` / `-45` / `0` / `45` / `90`) |
+| `--x-axis-min` | float64 | optional | Lower bound of the display range of a continuous numeric X axis; must be less than --x-axis-max |
+| `--x-axis-max` | float64 | optional | Upper bound of the display range of a continuous numeric X axis; must be greater than --x-axis-min |
+| `--y-axis-min` | float64 | optional | Lower bound of the display range of the left Y axis; omitted by default, and passed together with --y-axis-max only when the user explicitly requests a fixed range; must not directly use the minimum value of a single data source column, and must be less than the upper bound |
+| `--y-axis-max` | float64 | optional | Upper bound of the display range of the left Y axis; omitted by default, and passed together with --y-axis-min only when the user explicitly requests a fixed range; must be calculated based on the values actually plotted by the chart, and must be greater than the lower bound |
+| `--data-labels` | string | optional | Data label content; value, category, and percentage can form any non-empty combination in the order value_category_percentage; series displays the series name, none hides labels (possible values: `none` / `value` / `category` / `percentage` / `value_category` / `value_percentage` / `category_percentage` / `value_category_percentage` / `series`) |
+| `--data-label-position` | string | optional | Pass only when the user explicitly specifies it; it only adjusts the position of existing data labels and does not enable labels on its own; when omitted, the data label position is automatically optimized by chart type (possible values: `auto` / `top` / `bottom` / `left` / `right` / `center` / `inside` / `outside`) |
+| `--aggregate-categories` | bool | optional | Whether to aggregate identical categories; use --aggregate-categories=false for sparse punctuation or when row-by-row data points need to be preserved; when omitted, the current setting is retained |
+| `--stack` | string | optional | Stacking mode (possible values: `none` / `normal` / `percent`) |
+| `--stacked` | bool | optional | Compatibility alias; equivalent to --stack normal (hidden flag: not listed in `--help`, but can be passed normally) |
+| `--smooth` | bool | optional | Whether to use a smooth curve; explicitly disable with --smooth=false |
+| `--color-palette` | string | optional | Preset color theme for the whole chart; mutually exclusive with --colors (possible values: `brandColorSeries@v2` / `rainbowColorSeries@v2` / `complementaryColorSeries@v2` / `converseColorSeries@v2` / `primaryColorSeries@v2` / `singleColorSeries-B-@v2` / `singleColorSeries-W-@v2` / `singleColorSeries-G-@v2` / `singleColorSeries-Y-@v2` / `singleColorSeries-O-@v2` / `singleColorSeries-R-@v2` / `singleColorSeries-D-@v2`) |
+| `--colors` | string_slice | optional | Custom colors for the whole chart series, comma-separated and at least 2 hexadecimal color values; mutually exclusive with --color-palette |
 
 ### `+chart-data-update`
 
-_公共四件套 · 系统：`--dry-run`_
+_Common four-piece set · System: `--dry-run`_
 
-| Flag | Type | 必填 | 说明 |
+| Flag | Type | Required | Description |
 | --- | --- | --- | --- |
-| `--chart-id` | string | required | 目标图表 reference_id |
-| `--data-range` | string | required | 新数据范围；未传 --header-range 时须包含表头，传入或原图已使用分离表头时只传纯数据；支持逗号分隔及跨子表多范围 |
-| `--header-range` | string | optional | 可选的分离表头范围；提供后自动使用 detached 表头映射，省略时保留原图已有的 detached 映射 |
-| `--data-direction` | string | optional | 数据系列方向；省略时沿用现有图表方向（可选值：`column` / `row`） |
-| `--dim1-index` | int | optional | 唯一类别/X 轴维度在数据范围中的 1-based 索引；省略时使用第 1 个维度；不支持多个字段组成多级横轴 |
-| `--dim2-indexes` | string | optional | 值/Y 轴系列在数据范围中的 1-based 索引，逗号分隔；省略时使用除 dim1 外的全部维度 |
-| `--key-index` | int | optional | 仅气泡图：标识/名称维度的 1-based 索引；与 dim1/dim2 索引互斥，默认 1 |
-| `--x-index` | int | optional | 仅气泡图：X 值维度的 1-based 索引；须与 --y-index 一起提供 |
-| `--y-index` | int | optional | 仅气泡图：Y 值维度的 1-based 索引；须与 --x-index 一起提供 |
-| `--group-index` | int | optional | 仅气泡图：可选分组维度的 1-based 索引 |
-| `--size-index` | int | optional | 仅气泡图：可选气泡大小维度的 1-based 索引 |
+| `--chart-id` | string | required | Target chart reference_id |
+| `--data-range` | string | required | New data range; when --header-range is not passed, it must include the header; when passed or when the original chart already uses a detached header, pass only pure data; supports comma-separated and multi-range across sub-sheets |
+| `--header-range` | string | optional | Optional detached header range; when provided, the detached header mapping is used automatically; when omitted, the original chart's existing detached mapping is preserved |
+| `--data-direction` | string | optional | Data series direction; when omitted, the existing chart direction is used (optional values: `column` / `row`) |
+| `--dim1-index` | int | optional | 1-based index of the unique category/X-axis dimension in the data range; when omitted, the 1st dimension is used; multiple fields forming a multi-level horizontal axis are not supported |
+| `--dim2-indexes` | string | optional | 1-based index of the value/Y-axis series in the data range, comma-separated; when omitted, all dimensions except dim1 are used |
+| `--key-index` | int | optional | Bubble chart only: 1-based index of the identifier/name dimension; mutually exclusive with dim1/dim2 indices, defaults to 1 |
+| `--x-index` | int | optional | Bubble chart only: 1-based index of the X value dimension; must be provided together with --y-index |
+| `--y-index` | int | optional | Bubble chart only: 1-based index of the Y value dimension; must be provided together with --x-index |
+| `--group-index` | int | optional | Bubble chart only: 1-based index of the optional group dimension |
+| `--size-index` | int | optional | Bubble chart only: 1-based index of the optional bubble size dimension |
 
 ### `+chart-create`
 
-_公共四件套 · 系统：`--dry-run`_
+_Common four-piece set · System: `--dry-run`_
 
-| Flag | Type | 必填 | 说明 |
+| Flag | Type | Required | Description |
 | --- | --- | --- | --- |
-| `--properties` | string + File + Stdin（复合 JSON） | required | 图表完整配置 JSON。顶层字段为 `position` / `offset` / `size` / `snapshot`（无顶层 `data`，也无再嵌一层 `properties`）；图表数据配置在 `snapshot.data` 下（含 `refs` / `headerMode` / `dim1` / `dim2`）；必须至少含 `snapshot.data.dim1.serie.index` 或 `dim2.series[].index` 之一，否则 server 拒。结构嵌套深，完整结构跑 `--print-schema --flag-name properties` |
-| `--print-example` | string | optional | 打印指定图表类型的最小可用 `--properties` 模板后直接退出（`area` / `bar` / `bubble` / `column` / `combo` / `line` / `pareto` / `pie` / `radar` / `scatter` / `waterfall`）。纯本地执行，不需要 locator flag、不发网络请求；传入未知类型时列出全部可用类型 |
+| `--properties` | string + File + Stdin (composite JSON) | required | Complete chart configuration JSON. Top-level fields are `position` / `offset` / `size` / `snapshot` (no top-level `data`, and no further nested `properties`); chart data configuration is under `snapshot.data` (including `refs` / `headerMode` / `dim1` / `dim2`); it must contain at least one of `snapshot.data.dim1.serie.index` or `dim2.series[].index`, otherwise the server rejects it. The structure is deeply nested; for the complete structure run `--print-schema --flag-name properties` |
+| `--print-example` | string | optional | Print the minimal usable `--properties` template for the specified chart type and then exit directly (`area` / `bar` / `bubble` / `column` / `combo` / `line` / `pareto` / `pie` / `radar` / `scatter` / `waterfall`). Purely local execution, no locator flag needed, no network request sent; when an unknown type is passed, all available types are listed |
 
 ### `+chart-update`
 
-_公共四件套 · 系统：`--dry-run`_
+_Common four-piece set · System: `--dry-run`_
 
-| Flag | Type | 必填 | 说明 |
+| Flag | Type | Required | Description |
 | --- | --- | --- | --- |
-| `--chart-id` | string | required | 目标图表 reference_id |
-| `--properties` | string + File + Stdin（复合 JSON） | required | 图表配置补丁 JSON；默认只传变化字段，未传字段保持不变；普通对象递归合并，数组整体替换 |
+| `--chart-id` | string | required | Target chart reference_id |
+| `--properties` | string + File + Stdin (composite JSON) | required | Chart configuration patch JSON; by default only changed fields are passed, and fields not passed remain unchanged; ordinary objects are merged recursively, arrays are replaced as a whole |
 
 ### `+chart-delete`
 
-_公共四件套 · 系统：`--yes`、`--dry-run`_
+_Common four-piece set · System: `--yes`, `--dry-run`_
 
-| Flag | Type | 必填 | 说明 |
+| Flag | Type | Required | Description |
 | --- | --- | --- | --- |
-| `--chart-id` | string | required | 目标图表 reference_id |
+| `--chart-id` | string | required | Target chart reference_id |
 
 ## Schemas
 
-> 复合 JSON flag 字段速查（只列顶层 + 一层嵌套）。深层结构看下方 `## Examples`，或用 `--print-schema` 读完整 JSON Schema（用法见 index.md「公共 flag 速查」与「Agent 使用提示」）。
+> Composite JSON flag field quick reference (only top level + one level of nesting is listed). For deeper structures see `## Examples` below, or use `--print-schema` to read the complete JSON Schema (usage see index.md "Common flag quick reference" and "Agent usage tips").
 
 ### `+chart-create` `--properties` / `+chart-update` `--properties`
 
-_创建/更新的图表属性_
+_Chart properties for create/update_
 
-**顶层字段**：
-- `position` (object?) — 必填 { row: number, col: string }
-- `offset` (object?) — 可选 { row_offset?: number, col_offset?: number }
-- `size` (object?) — 必填 { width: number, height: number }
-- `snapshot` (oneOf?) — 图表快照配置
+**Top-level fields**:
+- `position` (object?) — required { row: number, col: string }
+- `offset` (object?) — optional { row_offset?: number, col_offset?: number }
+- `size` (object?) — required { width: number, height: number }
+- `snapshot` (oneOf?) — chart snapshot configuration
 
 ## Examples
 
-公共四件套：所有 shortcut 顶部排列 `--url` / `--spreadsheet-token` / `--sheet-id` / `--sheet-name`（XOR 规则同 `+csv-get`）。
+Common four-piece set: all shortcuts have `--url` / `--spreadsheet-token` / `--sheet-id` / `--sheet-name` arranged at the top (XOR rules same as `+csv-get`).
 
 ### `+chart-list`
 
-输出契约：返回按工作表分组的图表列表，每个图表含 `chart_id` / `position` / `details.snapshot` 等。
+Output contract: returns a list of charts grouped by worksheet, each chart containing `chart_id` / `position` / `details.snapshot`, etc.
 
 ### `+chart-create-basic`
 
-默认使用第 1 个维度作为类别/X 轴，其余维度作为数值系列；普通图表可用 1-based 的 `--dim1-index` 和逗号分隔的 `--dim2-indexes` 精确选择。组合图默认首个数值系列为左轴柱、其余为右轴折线；创建前仍要比较各系列单位和量级，避免折线或小量级系列因共用左轴而贴近 X 轴。需要其它组合时，用 `--series-types` 和 `--series-y-axes` 按 `--dim2-indexes` 的顺序逐项指定系列类型与左右轴；系列类型可选 `column`、`line`、`area`、`scatter`，两组参数的数量都必须与最终数值系列数一致。横轴数字默认按等间距文本类别处理；只有数字之间的真实间距需要影响图形位置时，才传 `--x-axis-numbers-as values` 使用连续数轴。气泡图改用 `--key-index`、`--x-index`、`--y-index` 和可选的 `--group-index` / `--size-index`，其中 x/y 必须同时提供，key 默认 1；角色索引不能与 dim1/dim2 索引混用。旧气泡图的 dim1/dim2 位置调用仍兼容。饼图和排列图只允许一个数值系列；组合图至少需要两个数值系列；所有图表最多选择 50 个数值系列。饼图默认将图例放在底部，并根据类别标签长度适量增加 `--width`（同时传 `--height`）。默认让 `--data-range` 包含真实表头；只有“维度/系列名称”与纯数据分离时，才让 `--data-range` 只传纯数据，并用 `--header-range` 传对应的一行（column）或一列（row）表头。类别维度与数值维度不连续时，范围参数可传逗号分隔的多范围，也支持来自多个子表；沿数据点轴对齐的跨子表范围会保留独立引用，同一子表内错行、错列或重叠时合并为最小包围矩形，跨子表范围无法对齐时会报错。单独调用成功后返回完整 `snapshot`，可直接检查创建结果并继续修改。参数名使用 `--anchor-cell` 和 `--data-labels`。兼容调用中，`--type` / `--range` 会分别按 `--chart-type` / `--data-range` 处理，`--x-axis` / `--y-axis` 会按轴标题处理；新调用仍优先使用规范参数名。
+By default, the 1st dimension is used as the category/X-axis, and the remaining dimensions are used as value series; for ordinary charts, you can precisely select using the 1-based `--dim1-index` and the comma-separated `--dim2-indexes`. For combination charts, by default the first value series is a left-axis column and the rest are right-axis lines; before creating, still compare the units and magnitudes of each series to avoid lines or small-magnitude series being pressed close to the X-axis because they share the left axis. When other combinations are needed, use `--series-types` and `--series-y-axes` to specify the series type and left/right axis item by item in the order of `--dim2-indexes`; series types can be `column`, `line`, `area`, `scatter`, and the counts of both parameter groups must match the final number of value series. Horizontal-axis numbers are by default treated as equally spaced text categories; only when the true spacing between numbers needs to affect the graphical positions should you pass `--x-axis-numbers-as values` to use a continuous numeric axis. Bubble charts instead use `--key-index`, `--x-index`, `--y-index`, and the optional `--group-index` / `--size-index`, where x/y must be provided together, and key defaults to 1; role indices cannot be mixed with dim1/dim2 indices. The old bubble chart dim1/dim2 positional calls remain compatible. Pie charts and permutation charts allow only one value series; combination charts require at least two value series; all charts can select at most 50 value series. Pie charts place the legend at the bottom by default and appropriately increase `--width` according to the length of category labels (pass `--height` at the same time). By default, let `--data-range` include the real header; only when the "dimension/series names" are separated from the pure data should you let `--data-range` pass only pure data and use `--header-range` to pass the corresponding one-row (column) or one-column (row) header. When category dimensions and value dimensions are not contiguous, the range parameter can pass comma-separated multiple ranges, and ranges from multiple sub-sheets are also supported; cross-sub-sheet ranges aligned along the data point axis retain independent references, while misaligned rows, misaligned columns, or overlaps within the same sub-sheet are merged into the minimal bounding rectangle, and cross-sub-sheet ranges that cannot be aligned will report an error. A successful standalone call returns the complete `snapshot`, so you can directly inspect the creation result and continue modifying. Parameter names use `--anchor-cell` and `--data-labels`. In compatible calls, `--type` / `--range` are handled as `--chart-type` / `--data-range` respectively, and `--x-axis` / `--y-axis` are handled as axis titles; new calls should still prefer the canonical parameter names.
 
-**连续数值 X 轴的可读性**：`--x-axis-numbers-as values` 会保留数字的真实间距，但未指定范围时可能自动包含 0。如果数据集中在远离 0 的窄区间，数据点会挤在图表一侧；此时应保留 `values`，创建时用 `--x-axis-min` / `--x-axis-max` 收紧范围，已有图表用 `+chart-config-update` 修正，不要改成 `text` 掩盖问题。两个边界可单独设置；同时设置时 min 必须小于 max。
+**Readability of a continuous numeric X-axis**: `--x-axis-numbers-as values` preserves the true spacing of numbers, but when no range is specified it may automatically include 0. If the data is concentrated in a narrow interval far from 0, the data points will be squeezed to one side of the chart; in this case you should keep `values`, tighten the range at creation time with `--x-axis-min` / `--x-axis-max`, and for existing charts correct it with `+chart-config-update`; do not change it to `text` to mask the problem. The two boundaries can be set separately; when set together, min must be less than max.
 
 ```bash
-# 柱形图：默认放在数据范围右侧
+# Column chart: placed to the right of the data range by default
 lark-cli sheets +chart-create-basic --url "..." --sheet-name "Sheet1" \
   --chart-type column --data-range "'Sheet1'!A1:C10" \
   --title "销售额对比" --x-axis-title "品类" --y-axis-title "销售额" \
   --legend-position bottom --data-labels value
 
-# 双轴组合图：月度目标、实际完成为左轴柱，完成率为右轴折线
+# Dual-axis combination chart: monthly target and actual completion as left-axis columns, completion rate as a right-axis line
 lark-cli sheets +chart-create-basic --url "..." --sheet-name "Sheet1" \
   --chart-type combo --data-range "'Sheet1'!A1:D13" \
   --dim1-index 1 --dim2-indexes 2,3,4 \
@@ -346,7 +353,7 @@ lark-cli sheets +chart-create-basic --url "..." --sheet-name "Sheet1" \
   --title "价格与效率" --y-axis-title "价格" --secondary-y-axis-title "效率" \
   --anchor-cell F2 --width 720 --height 420
 
-# 辅助线只显示一个标签：C 列为重复目标值，D 列仅目标位置有值、其余单元格为空
+# Reference line shows only one label: column C contains repeated target values, column D has values only at target positions and is empty in the remaining cells
 lark-cli sheets +chart-create-basic --url "..." --sheet-name "Sheet1" \
   --chart-type combo --data-range "'Sheet1'!A1:D7" \
   --dim1-index 1 --dim2-indexes 2,3,4 \
@@ -354,35 +361,35 @@ lark-cli sheets +chart-create-basic --url "..." --sheet-name "Sheet1" \
   --aggregate-categories=false \
   --title "趋势与目标线" --anchor-cell F2 --width 720 --height 420
 
-# 先从创建结果或 +chart-list 取得完整 series 数组，再整段回写；辅助线系列不设置 labels
+# First obtain the complete series array from the creation result or +chart-list, then write it back as a whole; the reference line series does not set labels
 lark-cli sheets +chart-update --url "..." --sheet-id "$SID" --chart-id "chrXXX" \
   --properties '{"snapshot":{"plotArea":{"plot":{"series":[{"index":2,"comboType":"line","labels":{"value":true}},{"index":3,"comboType":"line"},{"index":4,"comboType":"scatter","labels":{"value":true}}]}}}}'
 
-# 气泡图：x、y 必填，group、size 可选
+# Bubble chart: x and y are required, group and size are optional
 lark-cli sheets +chart-create-basic --url "..." --sheet-name "Sheet1" \
   --chart-type bubble --data-range "'Sheet1'!A1:E20" \
   --key-index 1 --x-index 2 --y-index 3 --group-index 4 --size-index 5 \
   --title "客户分布"
 
-# 数值散点图：保留真实 X 间距，同时收紧远离 0 的显示范围
+# Numeric scatter chart: preserve the true X spacing while tightening the display range far from 0
 lark-cli sheets +chart-create-basic --url "..." --sheet-name "Sheet1" \
   --chart-type scatter --data-range "'Sheet1'!A1:B20" \
   --x-axis-numbers-as values --x-axis-min 237 --x-axis-max 239
 
-# 表头与数据分离：data-range 只传纯数据，header-range 按相同维度顺序传表头
+# Header separated from data: data-range passes only pure data, header-range passes the header in the same dimension order
 lark-cli sheets +chart-create-basic --url "..." --sheet-name "Sheet1" \
   --chart-type line \
   --data-range "'Sheet1'!A2:A10,'Sheet1'!K2:L10" \
   --header-range "'Sheet1'!A1,'Sheet1'!K1:L1"
 
-# 横向类别行 + 一行数值：类别行也属于 data-range，不要放进 header-range
+# Horizontal category row + one row of values: the category row also belongs to data-range, do not put it into header-range
 lark-cli sheets +chart-create-basic --url "..." --sheet-name "Sheet1" \
   --chart-type line \
   --data-range "'Sheet1'!A1:M1,'Sheet1'!A3:M3" \
   --data-direction row --dim1-index 1 --dim2-indexes 2
 ```
 
-多张基础图一次创建。先把所有数据准备完成，再生成 `ops.json`：
+Create multiple basic charts at once. First prepare all the data, then generate `ops.json`:
 
 ```json
 [
@@ -408,9 +415,9 @@ lark-cli sheets +batch-chart-create --url "..." --operations @ops.json
 lark-cli sheets +chart-list --url "..." --sheet-name "Sheet1"
 ```
 
-为了兼容旧调用，CLI 仍能读取历史 `{shortcut:"+chart-create-basic",input:{...}}` 结构，但新任务直接填写上面的扁平 `+chart-create-basic` flags。
+For compatibility with old calls, the CLI can still read the historical `{shortcut:"+chart-create-basic",input:{...}}` structure, but new tasks should directly fill in the flat `+chart-create-basic` flags above.
 
-批量修正已有图表时，operations 只放配置或数据更新；CLI 会先读取每张目标图的当前快照，再把对应 partial properties 合并进一次 `batch_update`：
+When batch-correcting existing charts, operations should contain only configuration or data updates; the CLI first reads the current snapshot of each target chart, then merges the corresponding partial properties into a single `batch_update`:
 
 ```json
 [
@@ -425,17 +432,17 @@ lark-cli sheets +batch-chart-update --url "..." --operations @updates.json
 
 ### `+chart-data-update`
 
-当创建后发现漏列、范围过宽、辅助分类列发生变化、系列选择错误或数据方向错误时，只更新数据源，保留标题、配色、图例和落点。更新必须指定 `--chart-id`；范围、方向、普通 dim1/dim2 索引及气泡图角色索引的语义与 `+chart-create-basic` 相同。`--data-direction` 省略时沿用现有图表方向。默认让新范围包含表头；原图已经使用 detached 表头且表头不变时可省略 `--header-range`，工具会保留现有映射。工具返回更新后的 `data` 和实际采用的 `normalized_data_ranges`。
+When after creation you find a missing column, an overly wide range, a change in an auxiliary category column, an incorrect series selection, or an incorrect data direction, update only the data source and preserve the title, color scheme, legend, and placement. The update must specify `--chart-id`; the semantics of range, direction, ordinary dim1/dim2 indices, and bubble chart role indices are the same as `+chart-create-basic`. When `--data-direction` is omitted, the existing chart direction is used. By default, let the new range include the header; if the original chart already uses a detached header and the header is unchanged, `--header-range` can be omitted, and the tool will preserve the existing mapping. The tool returns the updated `data` and the actually adopted `normalized_data_ranges`.
 
 ```bash
-# 把遗漏的最后一列纳入原折线图，保留标题、配色、图例和落点
+# Include the omitted last column in the original line chart, preserving the title, color scheme, legend, and placement
 lark-cli sheets +chart-data-update --url "..." --sheet-id "$SID" --chart-id "chrXXX" \
   --data-range "'Sheet1'!A1:M6"
 ```
 
 ### `+chart-config-update`
 
-只传需要改的字段，成功后返回更新后的 `viewModel`。`--data-labels` 支持 `value`、`category`、`percentage` 的任意非空组合，组合值按 `value_category_percentage` 顺序拼接；另可用 `series` 显示系列名称、用 `none` 删除数据标签。多个系列需要不同标签策略时不要使用这个全局参数，按上文的辅助列与高级系列配置流程处理。`--legend-position hidden` 隐藏图例；显式关闭平滑曲线时使用 `--smooth=false`。为减少参数重试，`--stacked` 自动按 `--stack normal` 处理，`percentage,value` 或 `value,percentage` 自动按 `value_percentage` 处理，`--x-axis` / `--y-axis` 自动按 `--x-axis-title` / `--y-axis-title` 处理；新调用仍优先使用规范参数。
+Pass only the fields that need to be changed; on success, return the updated `viewModel`. `--data-labels` supports any non-empty combination of `value`, `category`, `percentage`, and the combined values are concatenated in the order of `value_category_percentage`; additionally, `series` can be used to show series names, and `none` can be used to delete data labels. When multiple series need different label strategies, do not use this global parameter; handle it according to the auxiliary column and advanced series configuration process above. `--legend-position hidden` hides the legend; to explicitly turn off smooth curves, use `--smooth=false`. To reduce parameter retries, `--stacked` is automatically handled as `--stack normal`, `percentage,value` or `value,percentage` is automatically handled as `value_percentage`, and `--x-axis` / `--y-axis` is automatically handled as `--x-axis-title` / `--y-axis-title`; new calls should still prefer the canonical parameters.
 
 ```bash
 lark-cli sheets +chart-config-update --url "..." --sheet-id "$SID" --chart-id "chrXXX" \
@@ -448,57 +455,59 @@ lark-cli sheets +chart-config-update --url "..." --sheet-id "$SID" --chart-id "c
 
 ### `+chart-create`
 
-基础图表优先使用 `+chart-create-basic`。仅当语义 shortcut 无法表达单系列、单数据点或高级引擎字段时，才使用 `+chart-create`。高级创建需要结构完整的 snapshot；先用 `+chart-create --print-example <type>` 取得对应图表类型的最小结构，再只修改任务需要的字段。不要先打印或阅读整份大 schema。
+For basic charts, prefer `+chart-create-basic`. Use `+chart-create` only when the semantic shortcut cannot express a single series, a single data point, or advanced engine fields. Advanced creation requires a structurally complete snapshot; first use `+chart-create --print-example <type>` to obtain the minimal structure for the corresponding chart type, then modify only the fields needed by the task. Do not print or read the entire large schema first.
 
 ### `+chart-update`
 
-标题、轴、图例、标签、堆叠、平滑、配色和相同类别汇总优先使用 `+chart-config-update`，数据范围和方向使用 `+chart-data-update`。只有高级字段才使用 `+chart-update`；不要为常见修改构造 raw properties。
+For titles, axes, legends, labels, stacking, smoothing, color schemes, and aggregation of identical categories, prefer `+chart-config-update`; for data range and direction, use `+chart-data-update`. Use `+chart-update` only for advanced fields; do not construct raw properties for common modifications.
 
-`+chart-update` 支持真正的局部更新：只传实际变化的字段，未传字段保持不变，不要复制并回写完整 snapshot。
+`+chart-update` supports true partial updates: pass only the fields that actually change, and fields not passed remain unchanged; do not copy and write back the complete snapshot.
 
-- `snapshot` 内普通对象递归合并；
-- `refs` / `axes` / `series` 等数组整体替换。只改数组中的一项时，先从 `+chart-list` 读取当前完整数组，修改后只回写该数组；
-- `snapshot.data.isStaticData` 不能通过 update 改变；需要切换静态 / 非静态数据时删除后重建；
-- 只调整尺寸时直接传 `size`，不需要传 `snapshot`；
-- 执行前用 `--dry-run` 检查目标 sheet、chart_id 和最小 patch，执行后用 `+chart-list --chart-id <id>` 核对实际 snapshot。
+- Ordinary objects inside `snapshot` are merged recursively;
+- Arrays such as `refs` / `axes` / `series` are replaced as a whole. When changing only one item in an array, first read the current complete array from `+chart-list`, then write back only that array after modification;
+- `snapshot.data.isStaticData` cannot be changed through update; when you need to switch between static / non-static data, delete and recreate;
+- When adjusting only the size, pass `size` directly; there is no need to pass `snapshot`;
+- Before execution, use `--dry-run` to check the target sheet, chart_id, and minimal patch; after execution, use `+chart-list --chart-id <id>` to verify the actual snapshot.
 
 ```bash
-# 只调整尺寸；无需携带 snapshot
+# Adjust size only; no need to carry a snapshot
 lark-cli sheets +chart-update --url "..." --sheet-id "$SID" --chart-id "chrXXX" \
   --properties '{"size":{"width":640,"height":400}}'
 ```
 
-#### 高级 `properties` 边界
+<a id="高级-properties-边界"></a>
+#### Advanced `properties` boundaries
 
-- 只查询本次要改的子树，不先打印完整大 schema：
+- Query only the subtree to be changed this time; do not print the complete large schema first:
   ```bash
   lark-cli sheets +chart-update --print-schema \
     --flag-name properties.snapshot.plotArea.axes
   ```
-- `--dry-run` 输出中的 `tool_name` / `operation` / `basic_chart` / `properties` 是 CLI 翻译后的内部请求，只用于检查，不能复制回 operations 或再次当作 MCP body 提交。
-- `--data-range` 本身支持逗号分隔的多个范围和跨子表范围。仅因数据不连续或跨子表，不构成手写 raw data 映射的理由。
-- raw data 使用 inline 表头时，`refs` 包含真正表头且不写 `nameRef`；只有 `refs` 只覆盖纯数据、真正表头位于范围外时才用 detached：显式设置 `headerMode='detached'`，并让 `dim1.serie.nameRef` 与每个 `dim2.series[].nameRef` 指向对应表头单元格。
-- raw 堆叠字段位于 `snapshot.plotArea.plot.extra.stack`；普通任务仍使用 `--stack normal|percent`。`plotArea.plot.labels` 对象的存在性就是开关，关闭标签时省略整个对象；普通任务使用 `--data-labels none`。
-- `axes[].label` 不接受 `format` / `number_format`。日期、百分比和数值格式应修改源单元格的 `cell_styles.number_format`。
+- `--dry-run` in the output, `tool_name` / `operation` / `basic_chart` / `properties` are internal requests after CLI translation, used only for inspection, and cannot be copied back into operations or submitted again as an MCP body.
+- `--data-range` itself supports comma-separated multiple ranges and cross-sub-sheet ranges. Data being non-contiguous or spanning sub-sheets alone is not a reason to hand-write a raw data mapping.
+- When raw data uses an inline header, `refs` includes the real header and does not write `nameRef`; only when `refs` covers only pure data and the real header is outside the range should you use detached: explicitly set `headerMode='detached'`, and make `dim1.serie.nameRef` and each `dim2.series[].nameRef` point to the corresponding header cell.
+- The raw stacking field is located at `snapshot.plotArea.plot.extra.stack`; ordinary tasks still use `--stack normal|percent`. The existence of the `plotArea.plot.labels` object is itself the switch; when turning off labels, omit the entire object; ordinary tasks use `--data-labels none`.
+- `axes[].label` does not accept `format` / `number_format`. For date, percentage, and numeric formats, modify the source cell's `cell_styles.number_format`.
 
 ### `+chart-delete`
 
-示例：
+Example:
 
 ```bash
-# dry-run 先看会删什么（sheet 定位必填）
+# dry-run first see what will be deleted (sheet locator required)
 lark-cli sheets +chart-delete --url "https://example.feishu.cn/sheets/shtXXX" --sheet-id "$SID" \
   --chart-id "chrXXX" --dry-run
 
-# 真正执行
+# Actually execute
 lark-cli sheets +chart-delete --url "https://example.feishu.cn/sheets/shtXXX" --sheet-id "$SID" \
   --chart-id "chrXXX" --yes
 ```
 
-### Validate / DryRun / Execute 约束
+<a id="validate--dryrun--execute-约束"></a>
+### Validate / DryRun / Execute constraints
 
-- `Validate`：XOR 公共四件套；`+chart-data-update` 要求 `--chart-id` 和 `--data-range`，并校验 `--dim1-index` / `--dim2-indexes` 是正整数索引；`+chart-create` / `+chart-update` 的 `--properties` 必须能解析为合法 JSON；`+chart-delete`（high-risk-write）校验 `--yes` 或 `--dry-run` 至少一个。
-- `DryRun`：`+chart-data-update` / `+chart-create` / `+chart-update` 输出"将要 POST 的 body 模板"；`+chart-delete` 输出"将要删除的 chart_id 及隶属 sheet"，零网络副作用。
-- `Execute`：`+chart-create-basic` 成功后返回完整 `snapshot`，可直接验证；批量创建、响应不完整、后续更新或结果存疑时，再按受影响 sheet 调用一次 `+chart-list` 比对结果。
+- `Validate`: XOR common four-piece set; `+chart-data-update` requires `--chart-id` and `--data-range`, and validates that `--dim1-index` / `--dim2-indexes` are positive integer indices; the `--properties` of `+chart-create` / `+chart-update` must be parseable as valid JSON; `+chart-delete` (high-risk-write) validates that at least one of `--yes` or `--dry-run` is present.
+- `DryRun`: `+chart-data-update` / `+chart-create` / `+chart-update` output the "body template to be POSTed"; `+chart-delete` outputs the "chart_id to be deleted and the sheet it belongs to", with zero network side effects.
+- `Execute`: after `+chart-create-basic` succeeds, it returns the complete `snapshot`, which can be verified directly; for batch creation, incomplete responses, subsequent updates, or questionable results, call `+chart-list` once per affected sheet to compare the results.
 
-> `+chart-create` / `+chart-update` 是 write 级别，按需可用 `--dry-run` 预览，不要求 `--yes`。只有 `+chart-delete`（high-risk-write）必须 `--yes`。
+> `+chart-create` / `+chart-update` are write level; as needed, `--dry-run` can be used to preview, and `--yes` is not required. Only `+chart-delete` (high-risk-write) requires `--yes`.

@@ -1,51 +1,52 @@
 # markdown +patch
 
 
-对 Drive 中已有的原生 Markdown 文件做局部文本替换，并返回是否实际写入了新版本。
+Perform local text replacement on an existing native Markdown file in Drive, and return whether a new version was actually written.
 
-## 命令
+<a id="命令"></a>
+## Command
 
 ```bash
-# 字面量替换
+# Literal replacement
 lark-cli markdown +patch \
   --file-token boxcnxxxx \
   --pattern 'hello markdown' \
   --content 'hello patched'
 
-# 正则替换（RE2）
+# Regex replacement (RE2)
 lark-cli markdown +patch \
   --file-token boxcnxxxx \
   --regex \
   --pattern 'hello (.+)' \
   --content 'hi $1'
 
-# 正则 pattern 含特殊字符时要显式转义
+# When the regex pattern contains special characters, escape them explicitly
 lark-cli markdown +patch \
   --file-token boxcnxxxx \
   --regex \
   --pattern 'version \\(1\\.0\\)' \
   --content 'version (2.0)'
 
-# 删除匹配内容
+# Delete matched content
 lark-cli markdown +patch \
   --file-token boxcnxxxx \
   --pattern ' debug' \
   --content ''
 
-# --pattern / --content 也支持 @file
+# --pattern / --content also support @file
 lark-cli markdown +patch \
   --file-token boxcnxxxx \
   --pattern @./pattern.txt \
   --content @./replacement.md
 
-# 从 stdin 读取 replacement
+# Read replacement from stdin
 printf 'hi patched\n' | \
   lark-cli markdown +patch \
     --file-token boxcnxxxx \
     --pattern 'hello markdown' \
     --content -
 
-# 预览底层编排
+# Preview the underlying orchestration
 lark-cli markdown +patch \
   --file-token boxcnxxxx \
   --pattern 'hello markdown' \
@@ -53,36 +54,38 @@ lark-cli markdown +patch \
   --dry-run
 ```
 
-## 参数
+<a id="参数"></a>
+## Parameters
 
-| 参数 | 必填 | 说明 |
+| Parameter | Required | Description |
 |------|------|------|
-| `--file-token` | 是 | 目标 Markdown 文件 token |
-| `--pattern` | 是 | 要匹配的文本；默认按字面量处理；支持直接传字符串、`@file`、`-`（stdin） |
-| `--content` | 是 | 替换后的内容；支持直接传字符串、`@file`、`-`（stdin）；允许空字符串 `''`，表示删除匹配内容 |
-| `--regex` | 否 | 将 `--pattern` 按 Go RE2 正则解释；`--content` 支持 `$1` 这类分组替换；如果需要字面 `$`，请写成 `$$` |
+| `--file-token` | Yes | Target Markdown file token |
+| `--pattern` | Yes | Text to match; treated as a literal by default; supports passing a string directly, `@file`, `-` (stdin) |
+| `--content` | Yes | Replacement content; supports passing a string directly, `@file`, `-` (stdin); an empty string `''` is allowed, meaning delete the matched content |
+| `--regex` | No | Interpret `--pattern` as a Go RE2 regex; `--content` supports group replacements such as `$1`; if you need a literal `$`, write it as `$$` |
 
-## 关键约束
+<a id="关键约束"></a>
+## Key constraints
 
-- 当前只支持**单组** `--pattern` / `--content`
-- `--pattern` 必须显式传入且不能为空字符串
-- `--content` 必须显式传入，但允许为空字符串
-- 未加 `--regex` 时，行为等价于对整份 Markdown 文本执行 `strings.ReplaceAll`
-- 加了 `--regex` 时，行为等价于对整份 Markdown 文本执行 RE2 全量替换；`--content` 里的 `$1`、`${name}` 会按 Go regexp replacement template 解释，字面 `$` 请写成 `$$`
-- 替换后的最终 Markdown 不能为空；如果 patch 结果是空字符串，CLI 会直接报错，不会上传空文件，因为 Drive 不支持零字节 Markdown，且空文件通常是误操作
-- `0` 命中时命令仍然成功返回，但不会上传新版本
+- Currently only **a single group** of `--pattern` / `--content` is supported
+- `--pattern` must be passed explicitly and cannot be an empty string
+- `--content` must be passed explicitly, but an empty string is allowed
+- Without `--regex`, the behavior is equivalent to performing `strings.ReplaceAll` on the entire Markdown text
+- With `--regex`, the behavior is equivalent to performing a full RE2 replacement on the entire Markdown text; `$1` and `${name}` in `--content` are interpreted according to the Go regexp replacement template; for a literal `$`, write it as `$$`
+- The final Markdown after replacement cannot be empty; if the patch result is an empty string, the CLI will error out directly and will not upload an empty file, because Drive does not support zero-byte Markdown, and an empty file is usually a mistake
+- When `0` matches, the command still returns successfully, but no new version is uploaded
 
 ## Good / Bad
 
 ```bash
-# BAD: pattern 含正则特殊字符但未转义，容易匹配错误位置
+# BAD: the pattern contains regex special characters but they are not escaped, making it easy to match the wrong position
 lark-cli markdown +patch \
   --file-token boxcnxxxx \
   --regex \
   --pattern 'version (1.0)' \
   --content 'version (2.0)'
 
-# GOOD: 显式转义括号和点号
+# GOOD: explicitly escape the parentheses and the dot
 lark-cli markdown +patch \
   --file-token boxcnxxxx \
   --regex \
@@ -90,16 +93,18 @@ lark-cli markdown +patch \
   --content 'version (2.0)'
 ```
 
-## 实现边界
+<a id="实现边界"></a>
+## Implementation boundaries
 
-- 该命令的内部语义是：**download -> local replace -> overwrite upload**
-- 它不是服务端原子 patch；如果有人在你下载后、上传前更新了同一文件，本次 patch 仍可能覆盖那次中间修改
-- 它不会返回详细匹配位置，只返回命中数量
-- `--dry-run` 会同时展示两种可能的上传路径：`upload_all`（小文件）和 `upload_prepare/upload_part/upload_finish`（大文件分片上传）
+- The internal semantics of this command are: **download -> local replace -> overwrite upload**
+- It is not a server-side atomic patch; if someone updates the same file after you download it and before you upload, this patch may still overwrite that intermediate modification
+- It does not return detailed match positions, only the number of hits
+- `--dry-run` will show both possible upload paths at the same time: `upload_all` (small files) and `upload_prepare/upload_part/upload_finish` (large file multipart upload)
 
-## 返回值
+<a id="返回值"></a>
+## Return value
 
-命中并写入新版本：
+Matched and wrote a new version:
 
 ```json
 {
@@ -116,7 +121,7 @@ lark-cli markdown +patch \
 }
 ```
 
-未命中：
+No match:
 
 ```json
 {
@@ -133,27 +138,30 @@ lark-cli markdown +patch \
 }
 ```
 
-其中：
+Where:
 
-- `updated` 表示本次是否真的上传了新版本
-- `mode` 为 `literal` 或 `regex`
-- `match_count` 是匹配次数
-- `version` 只有在 `updated=true` 时才会有值
-- `size_bytes_before` / `size_bytes_after` 分别是替换前后的 Markdown 大小
+- `updated` indicates whether a new version was actually uploaded this time
+- `mode` is `literal` or `regex`
+- `match_count` is the number of matches
+- `version` only has a value when `updated=true`
+- `size_bytes_before` / `size_bytes_after` are the Markdown sizes before and after replacement, respectively
 
-## 适用场景
+<a id="适用场景"></a>
+## Applicable scenarios
 
-- 只需要替换一小段 Markdown 文本，而不想自己手动 `fetch -> edit -> overwrite`
-- 需要基于正则做简单批量替换
-- 需要判断“这次是否真的改到了内容”
+- You only need to replace a small section of Markdown text without manually `fetch -> edit -> overwrite` yourself
+- You need to do simple batch replacement based on regex
+- You need to determine "whether the content was actually changed this time"
 
-## 不适用场景
+<a id="不适用场景"></a>
+## Not applicable scenarios
 
-- 需要 rename / move / delete / permission / comment 管理：切到 [`lark-drive`](../../drive/index.md)
-- 需要多组 patch 一次完成：当前不支持，改为多次调用 `markdown +patch`
-- 需要真正原子更新：当前能力不提供
+- You need rename / move / delete / permission / comment management: switch to [`lark-drive`](../../drive/index.md)
+- You need multiple groups of patches done in one go: currently not supported; instead call `markdown +patch` multiple times
+- You need a truly atomic update: the current capability does not provide this
 
-## 参考
+<a id="参考"></a>
+## References
 
-- [lark-markdown](../index.md) — Markdown 域总览
-- [lark-shared](../../shared/index.md) — 认证和全局参数
+- [lark-markdown](../index.md) — Markdown domain overview
+- [lark-shared](../../shared/index.md) — authentication and global parameters

@@ -1,38 +1,42 @@
-# slides +delete-slide（按 slide_id 删除单页）
+<a id="slides-delete-slide按-slide_id-删除单页"></a>
+# slides +delete-slide (delete a single slide by slide_id)
 
-从演示文稿删除**一页**，按 `slide_id` 指定。只改一页里的局部内容用 [`+replace-slide`](lark-slides-replace-slide.md)，不要删了重建。
+Delete **one slide** from a presentation, specified by `slide_id`. To change only part of the content within a single slide, use [`+replace-slide`](lark-slides-replace-slide.md); do not delete and recreate.
 
-`--presentation` 接受 token / `/slides/` URL / `/wiki/` URL，页面 ID 通过 `--slide-id` 传入。
+`--presentation` accepts a token / `/slides/` URL / `/wiki/` URL, and the slide ID is passed via `--slide-id`.
 
-> `--slide-id` 只接受单个 ID —— 不支持逗号分隔的列表（`+screenshot` 的 `--slide-id` 支持，这个不支持），也不支持按页号删。
+> `--slide-id` accepts only a single ID — comma-separated lists are not supported (`+screenshot`'s `--slide-id` supports them, this one does not), and deleting by page number is also not supported.
 
-## 命令
+<a id="命令"></a>
+## Command
 
 ```bash
-# 直接传 xml_presentation_id
+# Pass xml_presentation_id directly
 lark-cli slides +delete-slide --as user \
   --presentation "$PRES_ID" \
   --slide-id "$SID"
 
-# slides URL / wiki URL 都可以（wiki 会自动解析并校验 obj_type=slides）
+# Both slides URL / wiki URL work (wiki is automatically resolved and validated with obj_type=slides)
 lark-cli slides +delete-slide --as user \
   --presentation "https://xxx.feishu.cn/wiki/wikcnXXXXXX" \
   --slide-id "$SID"
 
-# 删之前先确认打到哪份 PPT、哪一页
+# Before deleting, first confirm which PPT and which slide you are targeting
 lark-cli slides +delete-slide --presentation "$PRES_ID" --slide-id "$SID" --dry-run
 ```
 
-## 参数
+<a id="参数"></a>
+## Parameters
 
-| 参数 | 必需 | 说明 |
+| Parameter | Required | Description |
 |------|------|------|
-| `--presentation` | 是 | `xml_presentation_id`、`/slides/` URL 或 `/wiki/` URL |
-| `--slide-id` | 是 | 要删除的页面 ID |
-| `--revision-id` | 否 | 演示文稿版本号，默认 `-1`（最新）；传具体版本号做乐观锁 |
-| `--dry-run` | 否 | 打印将要发起的请求，不删除 |
+| `--presentation` | Yes | `xml_presentation_id`, `/slides/` URL, or `/wiki/` URL |
+| `--slide-id` | Yes | ID of the slide to delete |
+| `--revision-id` | No | Presentation version number, defaults to `-1` (latest); pass a specific version number for optimistic locking |
+| `--dry-run` | No | Print the request that will be sent, without deleting |
 
-## 成功输出
+<a id="成功输出"></a>
+## Success output
 
 ```json
 {
@@ -43,23 +47,26 @@ lark-cli slides +delete-slide --presentation "$PRES_ID" --slide-id "$SID" --dry-
 }
 ```
 
-## 怎么拿 `slide_id`
+<a id="怎么拿-slide_id"></a>
+## How to get `slide_id`
 
-`slide_id` 是服务端短 ID，**不能从 XML 里推导**。两个来源：
+`slide_id` is a server-side short ID and **cannot be derived from the XML**. Two sources:
 
-1. `+create` / `+add-slide` 的返回值里存下来；
-2. 事后回读：`slides +xml-get --presentation "$PRES_ID" --output .lark-slides/plan/<deck>/readback.xml`。
+1. Save it from the return value of `+create` / `+add-slide`;
+2. Read it back afterward: `slides +xml-get --presentation "$PRES_ID" --output .lark-slides/plan/<deck>/readback.xml`.
 
-删错页的代价高于多跑一次回读 —— 不确定就先回读 + `+screenshot` 看一眼再删。
+The cost of deleting the wrong slide is higher than running one extra read-back — if unsure, read back first + take a look with `+screenshot` before deleting.
 
-## 删错了怎么办
+<a id="删错了怎么办"></a>
+## What to do if you deleted the wrong one
 
-删除在原地不可撤销，但可以走历史版本回滚：`+history-list` 找 `history_version_id` → `+history-revert`（只接受 `history_version_id`，不能传 `revision_id`）→ `+history-revert-status` 轮询。命令用法见 [lark-slides-history.md](lark-slides-history.md)。
+Deletion is irreversible in place, but you can roll back via historical versions: `+history-list` to find `history_version_id` → `+history-revert` (only accepts `history_version_id`, cannot pass `revision_id`) → `+history-revert-status` polling. For command usage, see [lark-slides-history.md](lark-slides-history.md).
 
-## 常见错误
+<a id="常见错误"></a>
+## Common errors
 
-| 现象 | 原因 | 解决 |
+| Symptom | Cause | Solution |
 |------|------|------|
-| `--slide-id cannot be empty` | 传了空串或纯空格 | 检查变量有没有取到值 |
-| 3350001 `invalid param` | `slide_id` 写错或该页已被删 | `+xml-get` 回读确认 `slide_id` 还在 |
-| 403 / 权限不足 | 当前身份对这份 PPT 没有编辑权限 | 检查是否拥有 `slides:presentation:update` 或 `slides:presentation:write_only` scope；wiki 链接另需 `wiki:node:read`；`--as bot` 还要求该 bot 对目标 PPT 有编辑权限 |
+| `--slide-id cannot be empty` | An empty string or pure whitespace was passed | Check whether the variable actually got a value |
+| 3350001 `invalid param` | `slide_id` is wrong or the slide has already been deleted | `+xml-get` read back to confirm `slide_id` still exists |
+| 403 / insufficient permissions | The current identity does not have edit permission on this PPT | Check whether you have the `slides:presentation:update` or `slides:presentation:write_only` scope; a wiki link additionally requires `wiki:node:read`; `--as bot` also requires that the bot has edit permission on the target PPT |

@@ -1,8 +1,10 @@
-# 标题 `header`
+<a id="标题-header"></a>
+# Header `header`
 
-卡片顶部标题区（主/副标题、后缀标签、图标、主题色）。**Card 2.0**。挂在卡片根的 `header` 键下，不在 `body.elements` 内，单卡仅一个。
+The title area at the top of the card (main/subtitle, suffix tags, icon, theme color). **Card 2.0**. It is attached under the `header` key at the card root, not inside `body.elements`, and there is only one per card.
 
-## 最小示例
+<a id="最小示例"></a>
+## Minimal example
 
 ```json
 {
@@ -13,22 +15,24 @@
 }
 ```
 
-## 字段
+<a id="字段"></a>
+## Fields
 
-| 字段 | 必填 | 类型 | 说明 |
+| Field | Required | Type | Description |
 |---|---|---|---|
-| `title` | 是 | Object | 主标题，`{tag:"plain_text"\|"lark_md", content}`，最多 4 行 |
-| `subtitle` | 否 | Object | 副标题，同 title，最多 1 行；只配副标题会按主标题展示 |
-| `template` | 否 | String | 主题色枚举，见下；默认 `default` |
-| `text_tag_list` | 否 | Array | 后缀标签，最多 3 个，每项 `{tag:"text_tag", text:{tag:"plain_text",content}, color}` |
-| `i18n_text_tag_list` | 否 | Object | 多语言后缀标签；与 `text_tag_list` 二选一，同配以多语言为准 |
-| `icon` | 否 | Object | 前缀图标（同 `div.icon`） |
-| `padding` | 否 | String | 内边距，默认 12px，[0,99]px |
+| `title` | Yes | Object | Main title, `{tag:"plain_text"\|"lark_md", content}`, up to 4 lines |
+| `subtitle` | No | Object | Subtitle, same as title, up to 1 line; if only the subtitle is configured, it is displayed as the main title |
+| `template` | No | String | Theme color enum, see below; default `default` |
+| `text_tag_list` | No | Array | Suffix tags, up to 3, each item `{tag:"text_tag", text:{tag:"plain_text",content}, color}` |
+| `i18n_text_tag_list` | No | Object | Multilingual suffix tags; choose one of this and `text_tag_list`, and if both are configured, the multilingual one takes precedence |
+| `icon` | No | Object | Prefix icon (same as `div.icon`) |
+| `padding` | No | String | Inner padding, default 12px, [0,99]px |
 
-**template 枚举**（13 色）：`blue` / `wathet` / `turquoise` / `green` / `yellow` / `orange` / `red` / `carmine` / `violet` / `purple` / `indigo` / `grey` / `default`。
+**template enum** (13 colors): `blue` / `wathet` / `turquoise` / `green` / `yellow` / `orange` / `red` / `carmine` / `violet` / `purple` / `indigo` / `grey` / `default`.
 
-**标签 color 枚举**：`neutral`/`blue`/`turquoise`/`lime`/`orange`/`violet`/`indigo`/`wathet`/`green`/`yellow`/`red`/`purple`/`carmine`。深浅档位及 RGBA 见 `../resource/colors.md`。
+**Tag color enum**: `neutral`/`blue`/`turquoise`/`lime`/`orange`/`violet`/`indigo`/`wathet`/`green`/`yellow`/`red`/`purple`/`carmine`. For light/dark levels and RGBA, see `../resource/colors.md`.
 
-## 选色建议
+<a id="选色建议"></a>
+## Color selection suggestions
 
-按场景选 template 颜色见 `../lark-im-card-style.md` 意图表。常见语义：green=成功/完成，orange=警告，red=错误/危险，grey=失效/归档，blue=通用信息。
+For choosing template colors by scenario, see the intent table in `../lark-im-card-style.md`. Common semantics: green=success/completed, orange=warning, red=error/danger, grey=disabled/archived, blue=general information.

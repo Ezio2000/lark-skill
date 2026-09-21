@@ -1,50 +1,55 @@
 # mail +decline-receipt
 
 
-关闭收到邮件的已读回执请求 banner，**但不向发件人发送回执**。**本命令仅在对方邮件请求了已读回执（`READ_RECEIPT_REQUEST` 标签，系统 ID `-607`）时使用**。对齐飞书客户端上已读回执 banner 右侧的"不发送"按钮。
+Close the read receipt request banner for a received email, **but do not send a receipt to the sender**. **This command is only used when the other party's email requested a read receipt (`READ_RECEIPT_REQUEST` label, system ID `-607`)**. It aligns with the "Don't send" button to the right of the read receipt banner in the Feishu client.
 
-本模块 对应 shortcut：`lark-cli mail +decline-receipt`。
+This module corresponds to shortcut: `lark-cli mail +decline-receipt`.
 
-## 使用时机
+<a id="使用时机"></a>
+## When to use
 
-决策分支：拉信看到 `READ_RECEIPT_REQUEST` 标签 → **必须先问用户**：
+Decision branch: when fetching mail and seeing the `READ_RECEIPT_REQUEST` label → **you must first ask the user**:
 
-- 用户愿意告知对方"已读" → `+send-receipt`
-- 用户不愿意告知但想消掉提示 → `+decline-receipt`（本命令）
-- 用户既不想回执也不关心 banner → 什么都不做
+- The user is willing to tell the other party "read" → `+send-receipt`
+- The user is unwilling to tell them but wants to dismiss the prompt → `+decline-receipt` (this command)
+- The user neither wants to send a receipt nor cares about the banner → do nothing
 
-## 命令
+<a id="命令"></a>
+## Command
 
 ```bash
-# 标准用法
+# Standard usage
 lark-cli mail +decline-receipt --message-id <message-id>
 
-# 指定邮箱（公共邮箱场景）
+# Specify mailbox (shared mailbox scenario)
 lark-cli mail +decline-receipt --mailbox shared@example.com --message-id <message-id>
 
-# Dry Run（不真改）
+# Dry Run (no actual changes)
 lark-cli mail +decline-receipt --message-id <message-id> --dry-run
 ```
 
-## 参数
+<a id="参数"></a>
+## Parameters
 
-| 参数 | 必填 | 默认 | 说明 |
+| Parameter | Required | Default | Description |
 |------|------|------|------|
-| `--message-id <id>` | 是 | — | 请求了已读回执的原邮件 message ID |
-| `--mailbox <email>` | 否 | `me` | 邮件归属的邮箱 |
-| `--dry-run` | 否 | — | 仅打印请求，不执行 |
+| `--message-id <id>` | Yes | — | Message ID of the original email that requested a read receipt |
+| `--mailbox <email>` | No | `me` | Mailbox that owns the email |
+| `--dry-run` | No | — | Only print the request, do not execute |
 
-> 注意本命令没有 `--yes` —— 它只是移除一个本地 label，不对外发信，Risk 级别是 `write` 而非 `high-risk-write`。
+> Note that this command has no `--yes` — it only removes a local label and does not send any external email. Its Risk level is `write` rather than `high-risk-write`.
 
-## 行为细节
+<a id="行为细节"></a>
+## Behavior details
 
-- 先 `fetchFullMessage` 拉一遍原邮件校验：若 `label_ids` 中不含 `READ_RECEIPT_REQUEST`（也不含数字 `-607`），直接返回 `already_cleared: true`，**不发请求**，幂等。
-- 标签存在时调 `PUT /user_mailboxes/<mailbox>/messages/<id>/modify`（`user_mailbox.message.modify`），body `{"remove_label_ids":["READ_RECEIPT_REQUEST"]}`。
-- **不发任何外发邮件**：等价于飞书客户端"不发送"按钮——只清除本地标签，发件人不会收到任何通知。
+- First `fetchFullMessage` to fetch the original email for validation: if `label_ids` does not contain `READ_RECEIPT_REQUEST` (nor the numeric `-607`), directly return `already_cleared: true`, **without sending a request**; idempotent.
+- When the label exists, call `PUT /user_mailboxes/<mailbox>/messages/<id>/modify` (`user_mailbox.message.modify`), with body `{"remove_label_ids":["READ_RECEIPT_REQUEST"]}`.
+- **Does not send any outgoing email**: equivalent to the "Don't send" button in the Feishu client — it only clears the local label, and the sender receives no notification.
 
-## 返回值
+<a id="返回值"></a>
+## Return value
 
-标签已清除（无副作用）：
+Label already cleared (no side effects):
 
 ```json
 {
@@ -58,7 +63,7 @@ lark-cli mail +decline-receipt --message-id <message-id> --dry-run
 }
 ```
 
-本次真正移除了标签：
+The label was actually removed this time:
 
 ```json
 {
@@ -71,44 +76,49 @@ lark-cli mail +decline-receipt --message-id <message-id> --dry-run
 }
 ```
 
-## 典型场景
+<a id="典型场景"></a>
+## Typical scenarios
 
-### 场景 1：用户选择不发回执
+<a id="场景-1用户选择不发回执"></a>
+### Scenario 1: The user chooses not to send a receipt
 
 ```bash
-# 1. 拉信
+# 1. Fetch the email
 lark-cli mail +message --message-id msg-1 --format json | jq '.data.label_ids'
 # → ["UNREAD", "READ_RECEIPT_REQUEST"]
 
-# 2. 向用户提示：
-#    "这封来自 alice@example.com 的邮件请求已读回执。主题：《周报》。
-#     要不要回一封告诉对方你已阅读？
-#     也可以选择：不发送回执，但关闭这条提示。"
+# 2. Prompt the user:
+#    "This email from alice@example.com requests a read receipt. Subject: 《Weekly Report》.
+#     Would you like to reply to tell the other party you have read it?
+#     You can also choose: don't send a receipt, but close this prompt."
 
-# 3. 用户选了"不发送" → 
+# 3. The user chose "Don't send" →
 lark-cli mail +decline-receipt --message-id msg-1
 ```
 
-### 场景 2：幂等重跑
+<a id="场景-2幂等重跑"></a>
+### Scenario 2: Idempotent rerun
 
 ```bash
-# 第一次移除标签
+# Remove the label the first time
 lark-cli mail +decline-receipt --message-id msg-1
 # → {"declined": true}
 
-# 再跑一次 —— 不会报错，也不会再发 modify 请求
+# Run it again — it will not error, and it will not send another modify request
 lark-cli mail +decline-receipt --message-id msg-1
 # → {"declined": false, "already_cleared": true}
 ```
 
-## 不要这样做
+<a id="不要这样做"></a>
+## Don't do this
 
-- ❌ 替用户自动 decline —— 违反隐私规则的对称面：不回执的"沉默"也属于用户选择
-- ❌ 拿 `+decline-receipt` 当"标记已读"——它只移 `READ_RECEIPT_REQUEST` 一个标签，不改 `UNREAD`
-- ❌ 在没有 `READ_RECEIPT_REQUEST` 标签的邮件上调用 —— 虽然幂等返回 `already_cleared`，但多发一次 GET 无意义
+- ❌ Automatically decline on the user's behalf — the mirror side of the privacy rule: the "silence" of not sending a receipt is also the user's choice
+- ❌ Use `+decline-receipt` as "mark as read" — it only removes one label, `READ_RECEIPT_REQUEST`, and does not change `UNREAD`
+- ❌ Call it on an email without the `READ_RECEIPT_REQUEST` label — although it idempotently returns `already_cleared`, sending an extra GET is meaningless
 
-## 相关命令
+<a id="相关命令"></a>
+## Related commands
 
-- `lark-cli mail +send-receipt` — 同意回执（发一封系统样式的已读回执邮件）
-- `lark-cli mail +message` — 拉单封邮件（在 `label_ids` 里检查 `READ_RECEIPT_REQUEST`）
-- `lark-cli mail +send --request-receipt` — 反向：**请求**别人回执
+- `lark-cli mail +send-receipt` — agree to the receipt (sends a system-style read receipt email)
+- `lark-cli mail +message` — fetch a single email (check `READ_RECEIPT_REQUEST` in `label_ids`)
+- `lark-cli mail +send --request-receipt` — the reverse: **request** a receipt from someone else

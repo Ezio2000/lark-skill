@@ -2,99 +2,103 @@
 # mail +triage
 
 
-查看收件箱邮件摘要（date / from / subject / message_id），用于快速浏览和决定读哪封邮件。
+View inbox email summaries (date / from / subject / message_id) for quick browsing and deciding which email to read.
 
-## 用法
+<a id="用法"></a>
+## Usage
 
 ```bash
-# 默认：收件箱邮件（默认 20 条，默认table 格式）
+# Default: inbox emails (default 20 items, default table format)
 lark-cli mail +triage
 
-# 查看收件箱未读
+# View unread inbox
 lark-cli mail +triage --filter '{"folder":"inbox","is_unread":true}'
 lark-cli mail +triage --folder INBOX --is-unread
 lark-cli mail +triage --filter is_unread
 
-# 全文搜索
+# Full-text search
 lark-cli mail +triage --query "合同审批"
 
-# 按发件人 / 主题搜索
+# Search by sender / subject
 lark-cli mail +triage --filter '{"from":["boss@example.com"],"subject":"季度报告"}'
 
-# 按时间范围搜索（如"上周的邮件"）
+# Search by time range (e.g. "last week's emails")
 lark-cli mail +triage --query "项目评审" --filter '{"time_range":{"start_time":"2026-03-16T00:00:00+08:00","end_time":"2026-03-22T23:59:59+08:00"}}'
 
-# 指定文件夹
+# Specify folder
 lark-cli mail +triage --filter '{"folder":"sent"}'
 lark-cli mail +triage --filter folder=sent
 lark-cli mail +triage --folder sent
 
-# 系统标签（可通过 folder 或 label 传入，搜索时自动转为 folder）
+# System labels (can be passed via folder or label, automatically converted to folder during search)
 lark-cli mail +triage --filter '{"folder":"flagged"}'
 lark-cli mail +triage --filter '{"label":"important"}'
 lark-cli mail +triage --filter '{"label":"重要邮件"}'
 
-# json/data 格式可配合 jq 处理
+# json/data format can be used with jq for processing
 lark-cli mail +triage --format json | jq '.messages[].subject'
 
-# 分页：先取 10 条，再用 page_token 翻页
+# Pagination: fetch 10 items first, then use page_token to paginate
 lark-cli mail +triage --max 10 --format json
-# 输出中包含 page_token，传入下一次请求
+# Output includes page_token, pass it in the next request
 lark-cli mail +triage --page-token 'list:FfccvoqPd...' --max 10 --format json
 
-# --page-size 是 --max 的别名
+# --page-size is an alias for --max
 lark-cli mail +triage --page-size 10
 ```
 
-## 参数
+<a id="参数"></a>
+## Parameters
 
-| 参数 | 默认 | 说明 |
+| Parameter | Default | Description |
 |------|------|------|
-| `--filter <filter>` | — | 筛选条件（见下方字段说明） |
-| `--folder <name-or-id>` | — | 文件夹名称或系统文件夹 ID 筛选；等价于设置 `filter.folder` |
-| `--folder-id <id>` | — | 明确的文件夹 ID 筛选；等价于设置 `filter.folder_id` |
-| `--is-unread` | — | 只看未读；等价于设置 `filter.is_unread=true` |
-| `--query <text>` | — | 全文搜索关键词 |
-| `--format <mode>` | `table` | `table` / `json` / `data`（`json` 和 `data` 均输出含分页信息的对象） |
-| `--max <n>` | `20` | 最大返回条数（1-400），内部自动分页拉取 |
-| `--page-size <n>` | — | `--max` 的别名；重复指定时后出现的值生效 |
-| `--page-token <token>` | — | 上一次响应返回的分页令牌，传入后从该位置继续拉取。令牌带 `search:` 或 `list:` 前缀，标识来源路径，不可混用 |
-| `--labels` | — | table 格式时额外显示 labels 列 |
-| `--mailbox <id>` | `me` | 邮箱地址 |
+| `--filter <filter>` | — | Filter conditions (see field descriptions below) |
+| `--folder <name-or-id>` | — | Filter by folder name or system folder ID; equivalent to setting `filter.folder` |
+| `--folder-id <id>` | — | Filter by explicit folder ID; equivalent to setting `filter.folder_id` |
+| `--is-unread` | — | Show unread only; equivalent to setting `filter.is_unread=true` |
+| `--query <text>` | — | Full-text search keyword |
+| `--format <mode>` | `table` | `table` / `json` / `data` (both `json` and `data` output an object containing pagination info) |
+| `--max <n>` | `20` | Maximum number of results to return (1-400), internally auto-paginates |
+| `--page-size <n>` | — | Alias for `--max`; when specified multiple times, the last value takes effect |
+| `--page-token <token>` | — | Pagination token returned from the previous response; when passed in, fetching continues from that position. The token has a `search:` or `list:` prefix indicating the source path, and they cannot be mixed |
+| `--labels` | — | In table format, additionally display the labels column |
+| `--mailbox <id>` | `me` | Email address |
 
-### `--filter` 支持的字段
+<a id="--filter-支持的字段"></a>
+### Fields supported by `--filter`
 
-`--filter` 有三种写法：
+`--filter` has three forms:
 
-- JSON 对象：`--filter '{"folder":"INBOX","is_unread":true}'`，用于组合多个字段或传数组/对象字段
-- 单个 `key=value`：`--filter folder=INBOX`、`--filter is_unread=true`
-- 裸未读快捷写法：`--filter is_unread`
+- JSON object: `--filter '{"folder":"INBOX","is_unread":true}'`, used to combine multiple fields or pass array/object fields
+- Single `key=value`: `--filter folder=INBOX`, `--filter is_unread=true`
+- Bare unread shortcut: `--filter is_unread`
 
-多个筛选条件请使用 JSON 对象，`folder=INBOX,is_unread=true` 这种逗号拼接的 key=value 不支持。
+For multiple filter conditions, use a JSON object; the comma-joined key=value form like `folder=INBOX,is_unread=true` is not supported.
 
-| 字段 | 类型 | 说明 |
+| Field | Type | Description |
 |------|------|------|
-| `folder` | string | 文件夹名称筛选。系统文件夹固定值：`inbox`/`sent`/`draft`/`trash`/`spam`/`archive`/`priority`/`flagged`/`other`/`scheduled`，也支持自定义文件夹名称。子文件夹需用 `parent_name/child_name` 格式，可通过 folder list 接口查看 |
-| `folder_id` | string | 文件夹 ID，优先级高于 `folder`。系统值：`INBOX`/`SENT`/`DRAFT`/`TRASH`/`SPAM`/`ARCHIVED`，自定义文件夹为数字 ID |
-| `label` | string | 自定义标签名称筛选。子标签需用 `parent_name/child_name` 格式，可通过 label list 接口查看 |
-| `label_id` | string | 标签 ID，优先级高于 `label`。自定义标签为数字 ID |
-| `is_unread` | boolean | 是否未读 |
-| `from` | string[] | 发件人 |
-| `to` | string[] | 收件人 |
-| `subject` | string | 主题关键词 |
-| `has_attachment` | boolean | 是否有附件 |
-| `time_range` | object | 时间范围 `{"start_time":"2026-01-01T00:00:00+08:00","end_time":"..."}` |
+| `folder` | string | Folder name filter. Fixed values for system folders: `inbox`/`sent`/`draft`/`trash`/`spam`/`archive`/`priority`/`flagged`/`other`/`scheduled`, custom folder names are also supported. Subfolders must use the `parent_name/child_name` format, which can be viewed via the folder list API |
+| `folder_id` | string | Folder ID, takes priority over `folder`. System values: `INBOX`/`SENT`/`DRAFT`/`TRASH`/`SPAM`/`ARCHIVED`, custom folders use numeric IDs |
+| `label` | string | Custom label name filter. Sub-labels must use the `parent_name/child_name` format, which can be viewed via the label list API |
+| `label_id` | string | Label ID, takes priority over `label`. Custom labels use numeric IDs |
+| `is_unread` | boolean | Whether unread |
+| `from` | string[] | Sender |
+| `to` | string[] | Recipient |
+| `subject` | string | Subject keyword |
+| `has_attachment` | boolean | Whether it has attachments |
+| `time_range` | object | Time range `{"start_time":"2026-01-01T00:00:00+08:00","end_time":"..."}` |
 
-> **系统标签说明**：`IMPORTANT`/`FLAGGED`/`OTHER` 可通过 `folder` 或 `label` 传入（也支持中文别名 `重要邮件`/`已加旗标`/`其他邮件`、搜索名 `priority`/`flagged`/`other`）。搜索时自动转为 folder 字段，列表时自动转为 label_id。label list 接口不返回这三个系统标签。
+> **System label notes**: `IMPORTANT`/`FLAGGED`/`OTHER` can be passed via `folder` or `label` (Chinese aliases `重要邮件`/`已加旗标`/`其他邮件` and search names `priority`/`flagged`/`other` are also supported). During search they are automatically converted to the folder field, and during listing they are automatically converted to label_id. The label list API does not return these three system labels.
 >
-> **⚠️ 注意**：查询未读可用 `--is-unread`、`--filter is_unread`、`--filter is_unread=true` 或 JSON 写法 `"is_unread":true`。
-可运行 `mail +triage --print-filter-schema` 查看完整字段说明。
+> **⚠️ Note**: To query unread, use `--is-unread`, `--filter is_unread`, `--filter is_unread=true`, or the JSON form `"is_unread":true`.
+You can run `mail +triage --print-filter-schema` to view the complete field descriptions.
 
-## 输出
+<a id="输出"></a>
+## Output
 
 ### `--format json` / `--format data`
 
-两者输出格式相同，均为含分页信息的对象：
+Both have the same output format, an object containing pagination info:
 
 ```json
 {
@@ -115,31 +119,34 @@ lark-cli mail +triage --page-size 10
 }
 ```
 
-- `mailbox_id`：当前邮箱标识，用于传递给 `mail +message --mailbox` 以保持公共邮箱上下文
-- `has_more`：是否还有下一页
-- `page_token`：传入 `--page-token` 可获取下一页；为空字符串表示已到末尾
-- token 前缀 `search:` / `list:` 标识来源 API 路径，不可混用
+- `mailbox_id`: Current mailbox identifier, used to pass to `mail +message --mailbox` to maintain shared mailbox context
+- `has_more`: Whether there is a next page
+- `page_token`: Pass to `--page-token` to get the next page; an empty string means the end has been reached
+- Token prefix `search:` / `list:` identifies the source API path, and they cannot be mixed
 
-### `table` 格式
+<a id="table-格式"></a>
+### `table` format
 
-`page_token` 信息输出在 stderr，自动携带 `--query`/`--filter`/`--folder`/`--folder-id`/`--is-unread`/`--mailbox` 参数方便续页：
+`page_token` information is output to stderr, automatically carrying `--query`/`--filter`/`--folder`/`--folder-id`/`--is-unread`/`--mailbox` parameters for easy continuation:
 ```text
 15 message(s)
-next page: mail +triage --query '合同审批' --page-token 'search:abc123...'
+next page: mail +triage --query 'Contract Approval' --page-token 'search:abc123...'
 tip: read full content: single message use mail +message --message-id <id>; multiple messages use mail +messages --message-ids <id1>,<id2>,<id3>
 ```
 
-公共邮箱场景下，`--mailbox` 会自动出现在续页和 tip 中：
+In shared mailbox scenarios, `--mailbox` automatically appears in the continuation and tip:
 ```text
-next page: mail +triage --mailbox 'shared@example.com' --query '合同审批' --page-token 'search:abc123...'
+next page: mail +triage --mailbox 'shared@example.com' --query 'Contract Approval' --page-token 'search:abc123...'
 tip: read full content: single message use mail +message --mailbox 'shared@example.com' --message-id <id>; multiple messages use mail +messages --mailbox 'shared@example.com' --message-ids <id1>,<id2>,<id3>
 ```
 
-### 搜索分页注意事项
+<a id="搜索分页注意事项"></a>
+### Search pagination notes
 
-搜索路径（使用 `--query` 或 `from`/`to`/`subject` 等 filter）的分页结果在**同一翻页链内**保持一致（无重复、无丢失）。但不同 `--max` 值发起的独立搜索可能返回不同排序，这是搜索 API 的固有行为。列表路径（仅 `folder`/`label` 筛选）无此限制。
+Pagination results for the search path (using `--query` or filters such as `from`/`to`/`subject`) remain consistent **within the same pagination chain** (no duplicates, no omissions). However, independent searches initiated with different `--max` values may return different orderings; this is inherent behavior of the search API. The list path (only `folder`/`label` filters) has no such limitation.
 
-## 参考
+<a id="参考"></a>
+## References
 
-- [lark-mail](../index.md) — 邮箱域总览
-- [lark-mail-watch](lark-mail-watch.md) — 实时监听新邮件
+- [lark-mail](../index.md) — Mail domain overview
+- [lark-mail-watch](lark-mail-watch.md) — Real-time monitoring of new emails

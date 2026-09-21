@@ -1,27 +1,32 @@
-# Genre Contract: Execution Plan / 执行计划 (`workplace.execution_plan`)
+<a id="genre-contract-execution-plan--执行计划-workplaceexecution_plan"></a>
+# Genre Contract: Execution Plan (`workplace.execution_plan`)
 
-## 体裁规则表（硬约束）
+<a id="体裁规则表硬约束"></a>
+## Genre Rules Table (Hard Constraints)
 
-| 规则项 | 规则 |
+| Rule Item | Rule |
 |-|-|
-| 写作风格 | 以交付和判断为单位，具体、紧凑、可推进；计划可信度来自依赖、产能和验收闭环，不来自章节数量或精确到没有依据的日期 |
-| 内容逻辑 | 从已批准结果、成功标准、范围和约束出发，按“交付物 / 工作流 → 依赖与关键路径 → 带退出条件的里程碑 → owner / 接口 / 资源 → 风险触发与备选 → 治理、变更与验收”推进 |
-| 事实 / 边界 | 区分已确认承诺、估算、假设和待定项；时间、owner、预算、产能、权限、依赖与验收方须可追溯且算术相容；未批准方向不得写成承诺，关键资源或安全前提未知时收窄计划或 `blocked` |
-| 错误 | 任务清单冒充计划、活动无交付物 / 完成定义、里程碑只是日期、排期不服从依赖与产能、所有事项同优先级、接口或验收方缺失、风险无预警信号 / 动作 / owner、变更后不更新基线，任一出现即失败 |
+| Writing Style | Organized around deliverables and judgments, specific, compact, and actionable; plan credibility comes from dependencies, capacity, and a closed acceptance loop, not from the number of sections or dates precise beyond any basis |
+| Content Logic | Start from approved outcomes, success criteria, scope, and constraints, and proceed through "deliverables / workflows → dependencies and critical path → milestones with exit conditions → owner / interfaces / resources → risk triggers and alternatives → governance, change, and acceptance" |
+| Facts / Boundaries | Distinguish confirmed commitments, estimates, assumptions, and pending items; time, owner, budget, capacity, authority, dependencies, and acceptance parties must be traceable and arithmetically consistent; unapproved directions must not be written as commitments, and when key resources or safety prerequisites are unknown, narrow the plan or `blocked` |
+| Errors | A task list masquerading as a plan, activities without deliverables / definitions of done, milestones that are only dates, schedules that do not obey dependencies and capacity, all items at the same priority, missing interfaces or acceptance parties, risks without warning signals / actions / owners, or failure to update the baseline after changes—any one of these constitutes failure |
 
-## 适用与消歧
+<a id="适用与消歧"></a>
+## Applicability and Disambiguation
 
-用于方向和目标已定后，组织一次性项目、迁移、发布、活动战役、专项治理或跨团队变更。主要任务仍是选择方向、申请预算 / 资源或授权时走 `proposal.md`；比较策略选项且不形成批准入口走 `business-analysis.md`；发布已授权规则 / 通知走 `formal-doc.md`；重复确定路径走 `sop-tutorial.md`；报当前状态走 `weekly-report.md`。
+Used after direction and goals are set, to organize a one-time project, migration, release, campaign, special governance effort, or cross-team change. When the main task is still choosing direction, requesting budget / resources, or authorization, use `proposal.md`; when comparing strategic options without forming an approval entry point, use `business-analysis.md`; when publishing authorized rules / notices, use `formal-doc.md`; when repeating a determined path, use `sop-tutorial.md`; when reporting current status, use `weekly-report.md`.
 
-“项目计划、执行方案、实施计划、营销策划”只作召回词。营销策划若仍在决定打法或预算，按上述 Proposal / Business Analysis 消歧；只有已定打法的协同落地走本合同。
+"Project plan, execution plan, implementation plan, marketing plan" serve only as recall terms. If a marketing plan is still deciding tactics or budget, disambiguate according to the Proposal / Business Analysis above; only coordinated execution of already-determined tactics falls under this contract.
 
-## 可执行性与证据
+<a id="可执行性与证据"></a>
+## Executability and Evidence
 
-- 先写可验收结果、范围 / 非范围、约束和最迟决策点；再按交付物而非部门名称拆工作包。每个关键工作包说明 owner、输入 / 输出、依赖、完成定义和验收方。
-- 标出关键路径、可并行项、阶段入口 / 退出条件与资源瓶颈；日期由依赖、产能和必要审批 / 制作 / 校准时间推导。无法推导时用相对时间、区间或具体占位，不补造精确排期。
-- 风险写预警信号、影响、预防 / 响应动作、决策 owner 和备选路径；备选必须说明何时切换及切换后的安全或业务终态，不写“加强沟通”。
-- 治理只保留会产生判断的节奏：接口、升级条件、决策权、范围 / 基线变更和重新验收。密集对应关系可用一张排期、依赖或责任表，但表格不能替代关键路径和取舍说明。
+- First write the acceptable outcomes, scope / non-scope, constraints, and latest decision points; then break down work packages by deliverable rather than by department name. Each key work package states its owner, inputs / outputs, dependencies, definition of done, and acceptance party.
+- Mark the critical path, parallelizable items, phase entry / exit conditions, and resource bottlenecks; dates are derived from dependencies, capacity, and necessary approval / production / calibration time. When derivation is impossible, use relative time, ranges, or specific placeholders, and do not fabricate precise schedules.
+- For risks, write warning signals, impact, prevention / response actions, decision owner, and alternative paths; alternatives must state when to switch and the safety or business end state after switching, and must not say "strengthen communication."
+- Governance retains only the cadences that produce judgments: interfaces, escalation conditions, decision rights, scope / baseline changes, and re-acceptance. Dense correspondences may use a single schedule, dependency, or responsibility table, but tables cannot replace the critical path and trade-off explanations.
 
-## 高质量写法
+<a id="高质量写法"></a>
+## High-Quality Writing
 
-让每个目标能一路回链到交付物、里程碑和工作包，让每个日期能回链依赖与产能，让每个风险能回链触发后的动作。资源不足时缩范围、分阶段或设决策门，不用“全渠道、全覆盖、同步推进”制造伪可行性。
+Let every goal trace back all the way to deliverables, milestones, and work packages; let every date trace back to dependencies and capacity; let every risk trace back to actions after triggering. When resources are insufficient, narrow scope, phase the work, or set decision gates, rather than manufacturing false feasibility with "all channels, full coverage, advance in parallel."

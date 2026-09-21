@@ -1,51 +1,58 @@
-# 矩形树图 (Treemap)
+<a id="矩形树图-treemap"></a>
+# Treemap
 
-## Content 约束
+<a id="content-约束"></a>
+## Content Constraints
 
-- 分类 3-5 个，每个分类下子项 2-4 个
-- 总面积比例需预先计算：每个矩形面积 = 父矩形面积 * (本项数值 / 同级总数值)
-- 每个叶子节点标签必须包含数值（如 "{{LABEL}} ({{VALUE}})"）
+- 3-5 categories, with 2-4 sub-items under each category
+- Total area proportions must be pre-calculated: each rectangle's area = parent rectangle's area * (this item's value / total value of siblings)
+- Each leaf node label must include the value (e.g., "{{LABEL}} ({{VALUE}})")
 
-## Layout 选型
+<a id="layout-选型"></a>
+## Layout Selection
 
-- **脚本生成坐标**（推荐）：Treemap 需要精确的面积比例计算，用 .cjs 脚本递归切分矩形，脚本输出 JSON 文件后调用 `npx -y @larksuite/whiteboard-cli@^0.2.13` 渲染
-- 不适合手动心算坐标
+- **Script-generated coordinates** (recommended): Treemap requires precise area proportion calculations. Use a .cjs script to recursively split rectangles, and after the script outputs a JSON file, call `npx -y @larksuite/whiteboard-cli@^0.2.13` to render
+- Not suitable for manually calculating coordinates in your head
 
-## Layout 规则
+<a id="layout-规则"></a>
+## Layout Rules
 
-- 使用交替切分法（Slice-and-Dice）：奇数层水平切分 width，偶数层垂直切分 height
-- 父矩形内必须为标题预留 30-40px 顶部空间，子矩形从 y + 35 开始放置
-- 子节点必须完全落在父矩形范围内
-- 水平切分时：子 width = 父 width * (子数值 / 父总数值)，子 x 依次累加
-- 垂直切分时：子 height = (父 height - 35) * (子数值 / 父总数值)，子 y 依次累加（注意扣除父标签预留的 35px）
+- Use the slice-and-dice method: odd levels split width horizontally, even levels split height vertically
+- Within the parent rectangle, 30-40px of top space must be reserved for the title, and child rectangles start at y + 35
+- Child nodes must fall entirely within the parent rectangle's bounds
+- When splitting horizontally: child width = parent width * (child value / parent total value), and child x accumulates sequentially
+- When splitting vertically: child height = (parent height - 35) * (child value / parent total value), and child y accumulates sequentially (note the 35px reserved for the parent label is deducted)
 
-### 面积比例计算规则
+<a id="面积比例计算规则"></a>
+### Area Proportion Calculation Rules
 
-1. **面积与数值严格成正比**：任何层级的节点，其矩形面积 `width * height` 必须与数值成比例
-2. **奇数层水平切分**（如第一层分类）：
-   - 父矩形的 `height` 和 `y` 坐标传给所有子节点（扣除标签预留空间后）
-   - 按子节点数值占父节点的比例切分父矩形的 `width`：`子width = 父width * (子数值 / 父总数值)`
-   - 子节点的 `x` 坐标依次向右累加
-3. **偶数层垂直切分**（如第二层子项）：
-   - 父矩形的 `width` 和 `x` 坐标传给所有子节点
-   - 按子节点数值占父节点的比例切分父矩形的 `height`：`子height = 父height * (子数值 / 父总数值)`
-   - 子节点的 `y` 坐标依次向下累加
-4. **层层递归**：不断交替水平和垂直切分方向，直到所有叶子节点都被分配了精确的坐标和宽高
+1. **Area is strictly proportional to value**: For nodes at any level, their rectangle area `width * height` must be proportional to the value
+2. **Odd levels split horizontally** (e.g., the first-level categories):
+   - The parent rectangle's `height` and `y` coordinates are passed to all child nodes (after deducting the space reserved for the label)
+   - Split the parent rectangle's `width` according to each child node's value proportion of the parent node: `子width = 父width * (子数值 / 父总数值)`
+   - Child nodes' `x` coordinates accumulate sequentially to the right
+3. **Even levels split vertically** (e.g., the second-level sub-items):
+   - The parent rectangle's `width` and `x` coordinates are passed to all child nodes
+   - Split the parent rectangle's `height` according to each child node's value proportion of the parent node: `子height = 父height * (子数值 / 父总数值)`
+   - Child nodes' `y` coordinates accumulate sequentially downward
+4. **Recursion level by level**: Continuously alternate the horizontal and vertical split directions until all leaf nodes have been assigned precise coordinates and width/height
 
-### 父标签预留空间
+<a id="父标签预留空间"></a>
+### Space Reserved for Parent Label
 
-每个非叶子节点的矩形，顶部必须预留 30-40px 放置分类标签。子矩形从父矩形的 `y + 35` 开始放置，可用高度为 `父height - 35`。
+For every non-leaf node's rectangle, 30-40px must be reserved at the top for the category label. Child rectangles start at the parent rectangle's `y + 35`, and the available height is `父height - 35`.
 
-示例：父矩形 `{ x: 40, y: 40, height: 700 }`，则：
-- 父标签放在 `y: 46`（留 6px 上边距）
-- 子矩形从 `y: 75` 开始放置（40 + 35）
-- 子矩形可用高度为 `700 - 35 = 665`
+Example: parent rectangle `{ x: 40, y: 40, height: 700 }`, then:
+- The parent label is placed at `y: 46` (leaving a 6px top margin)
+- Child rectangles start at `y: 75` (40 + 35)
+- The available height for child rectangles is `700 - 35 = 665`
 
-## 骨架示例
+<a id="骨架示例"></a>
+## Skeleton Example
 
-2 层 treemap：3 个分类（硬件 40、软件 35、服务 25），各含 2 个子项。
+2-level treemap: 3 categories (Hardware 40, Software 35, Services 25), each containing 2 sub-items.
 
-根矩形 1100x700，第一层水平切分 width，第二层垂直切分 height。
+Root rectangle 1100x700, the first level splits width horizontally, the second level splits height vertically.
 
 ```json
 {
@@ -198,18 +205,19 @@
 }
 ```
 
-面积比例验证（第一层水平切分 width）：
-- 硬件 40/100 * 1100 = 440，软件 35/100 * 1100 = 385，服务 25/100 * 1100 = 275
-- 子矩形从 y=75 开始，可用高度 665
+Area proportion verification (first level splits width horizontally):
+- Hardware 40/100 * 1100 = 440, Software 35/100 * 1100 = 385, Services 25/100 * 1100 = 275
+- Child rectangles start at y=75, available height 665
 
-## 陷阱
+<a id="陷阱"></a>
+## Pitfalls
 
-- **父标签被子矩形遮挡**（最严重）：子矩形必须从 y + 35（相对父矩形顶部）开始放置，为父分类标签留出空间
-- **分类标签不可见**：分类标签 text 节点必须在其子矩形 rect 节点之前添加（z-index 靠后的节点在上层）
-- **面积比例不正确**：必须用脚本预先计算比例，不要心算
-- **缺少配色区分**：不同顶层分类必须用不同背景色（从色板选取），所有子节点继承对应色系
+- **Parent label obscured by child rectangles** (most severe): Child rectangles must start at y + 35 (relative to the parent rectangle's top) to leave space for the parent category label
+- **Category label not visible**: The category label text node must be added before its child rectangle rect nodes (nodes later in z-index are on top)
+- **Incorrect area proportions**: Proportions must be pre-calculated with a script; do not calculate them in your head
+- **Lack of color differentiation**: Different top-level categories must use different background colors (selected from the palette), and all child nodes inherit the corresponding color scheme
 
-此场景必须用 .cjs 脚本生成。Agent 使用时只需修改 `data` 树，其余坐标与矩形面积自动递归计算。
+This scene must be generated with a .cjs script. When using it, the Agent only needs to modify the `data` tree, and the remaining coordinates and rectangle areas are automatically calculated recursively.
 
 ```javascript
 const { writeFileSync } = require('fs');

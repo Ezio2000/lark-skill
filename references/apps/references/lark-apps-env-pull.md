@@ -1,36 +1,41 @@
 # apps +env-pull
 
 
-把妙搭应用 dev 启动期环境变量拉取到本地项目根的 `.env.local`。身份固定 `--as user`；scope `spark:app:read`。`--app-id` 必填，目标项目根默认当前工作目录（`--project-path` 可指定）。
+Pull Miaoda app dev startup environment variables to the `.env.local` at the local project root. Identity is fixed to `--as user`; scope is `spark:app:read`. `--app-id` is required; the target project root defaults to the current working directory (`--project-path` can specify it).
 
-这个命令是 dev-only 的本地恢复工具：内部固定 `POST env_vars`，body 为 `env=dev`。它没有 `--env` flag，也不管理线上环境变量。
+This command is a dev-only local recovery tool: internally it fixes `POST env_vars`, and the body is `env=dev`. It has no `--env` flag, and it does not manage online environment variables.
 
-## 何时别用（核心反模式）
+<a id="何时别用核心反模式"></a>
+## When not to use it (core anti-pattern)
 
-**通常不需要手动跑**——脚手架的 `npm run dev` 在起本地开发时会自动后台拉取（非阻塞）。手动再跑会重复做同样的事，并用服务端返回值覆盖 `.env.local` 里的同名 key；本地无关行和注释会保留。
+**Usually you do not need to run it manually**—the scaffold's `npm run dev` automatically pulls in the background when starting local development (non-blocking). Running it manually again does the same thing again, and overwrites keys with the same name in `.env.local` with the server-returned values; unrelated local lines and comments are preserved.
 
-只在这些兜底场景用：
+Use it only in these fallback scenarios:
 
-- 不通过 `npm run dev` 启动（直接跑 `node` / IDE debug）。
-- `.env.local` 被改坏 / 删除，想重新同步。
+- Not starting via `npm run dev` (running `node` / IDE debug directly).
+- `.env.local` was broken / deleted, and you want to resync.
 
-## 行为
+<a id="行为"></a>
+## Behavior
 
-- **合并、不清空**：写入 `.env.local` 时保留你手写的内容与注释——命中的 key 替换值，新 key 追加，不整体覆盖。
-- **安全护栏**：返回的 envelope **不会回显任何 env key / value**（防止 token / 数据库凭据泄漏到日志或 CI 输出）。要看实际值请直接读 `.env.local`。
+- **Merge, do not clear**: when writing to `.env.local`, your handwritten content and comments are preserved—matched keys have their values replaced, new keys are appended, and there is no full overwrite.
+- **Safety guardrail**: the returned envelope **does not echo any env key / value** (to prevent tokens / database credentials from leaking into logs or CI output). To see the actual values, read `.env.local` directly.
 
-## 示例
+<a id="示例"></a>
+## Examples
 
 ```bash
 lark-cli apps +env-pull --app-id <app_id>
 ```
 
-## 失败处理
+<a id="失败处理"></a>
+## Failure handling
 
-`missing_scope`（没拿到 `spark:app:read`）时，按 lark-shared 引导 `lark-cli auth login --domain apps`。其余失败优先转述 `error.hint` / `error.message`。
+For `missing_scope` (did not get `spark:app:read`), follow lark-shared to guide `lark-cli auth login --domain apps`. For other failures, prioritize relaying `error.hint` / `error.message`.
 
-## 参考
+<a id="参考"></a>
+## References
 
-- [lark-apps](../index.md) — 妙搭应用全部命令 + 心智模型
-- [lark-apps-local-dev](lark-apps-local-dev.md) — 本地应用开发端到端流程
-- [lark-shared](../../shared/index.md) — 认证和全局参数
+- [lark-apps](../index.md) — all Miaoda app commands + mental model
+- [lark-apps-local-dev](lark-apps-local-dev.md) — end-to-end local app development workflow
+- [lark-shared](../../shared/index.md) — authentication and global parameters

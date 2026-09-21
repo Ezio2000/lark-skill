@@ -1,8 +1,10 @@
-# 图片 `img`
+<a id="图片-img"></a>
+# Image `img`
 
-展示图片。需先调上传图片接口拿 `img_key`。**Card 2.0**。
+Displays an image. You must first call the upload image API to get `img_key`. **Card 2.0**.
 
-## 最小示例
+<a id="最小示例"></a>
+## Minimal example
 
 ```json
 {
@@ -12,23 +14,25 @@
 }
 ```
 
-## 字段
+<a id="字段"></a>
+## Fields
 
-| 字段 | 必填 | 类型 | 默认 | 说明 |
+| Field | Required | Type | Default | Description |
 |---|---|---|---|---|
-| `tag` | 是 | String | / | 固定 `img` |
-| `img_key` | 是 | String | / | 图片 key，上传图片接口获取 |
-| `alt` | 是 | Object | / | hover 说明，`{tag:"plain_text", content:""}`，不需要传空 |
-| `title` | 否 | Object | / | 图片标题，plain_text 对象 |
-| `scale_type` | 否 | String | crop_center | `crop_center` / `crop_top` / `fit_horizontal`（不裁剪） |
-| `size` | 否 | String | / | 仅 `crop_*` 生效：`stretch`/`large`(160)/`medium`(80)/`small`(40)/`tiny`(16)，或 `"100px 100px"` |
-| `corner_radius` | 否 | String | / | 圆角，`[0,∞]px` 或 `[0,100]%` |
-| `transparent` | 否 | Boolean | false | 是否透明底 |
-| `preview` | 否 | Boolean | true | 点击是否放大；配 `card_link` 跳转时设 false |
-| `margin` | 否 | String | 0 | 外边距 [-99,99]px |
-| `element_id` | 否 | String | / | 唯一标识，字母开头 ≤20 字符 |
+| `tag` | Yes | String | / | Fixed `img` |
+| `img_key` | Yes | String | / | Image key, obtained from the upload image API |
+| `alt` | Yes | Object | / | hover description, `{tag:"plain_text", content:""}`, do not pass an empty value |
+| `title` | No | Object | / | Image title, plain_text object |
+| `scale_type` | No | String | crop_center | `crop_center` / `crop_top` / `fit_horizontal` (no cropping) |
+| `size` | No | String | / | Only takes effect for `crop_*`: `stretch`/`large`(160)/`medium`(80)/`small`(40)/`tiny`(16), or `"100px 100px"` |
+| `corner_radius` | No | String | / | Corner radius, `[0,∞]px` or `[0,100]%` |
+| `transparent` | No | Boolean | false | Whether the background is transparent |
+| `preview` | No | Boolean | true | Whether clicking enlarges the image; set to false when paired with `card_link` for navigation |
+| `margin` | No | String | 0 | Outer margin [-99,99]px |
+| `element_id` | No | String | / | Unique identifier, starts with a letter, ≤20 characters |
 
-## 易错点
+<a id="易错点"></a>
+## Common pitfalls
 
-- 通栏效果：2.0 不再支持 `size: stretch_without_padding`，改用负 `margin`（如 `"4px -12px"`）。
-- 上传规范：≤10M、尺寸 ≤1500×3000px、高:宽 ≤16:9。
+- Full-width effect: 2.0 no longer supports `size: stretch_without_padding`; use a negative `margin` instead (such as `"4px -12px"`).
+- Upload specifications: ≤10M, dimensions ≤1500×3000px, height:width ≤16:9.

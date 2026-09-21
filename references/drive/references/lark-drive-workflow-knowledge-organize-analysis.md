@@ -1,4 +1,5 @@
-# 知识整理工作流：Analysis
+<a id="知识整理工作流analysis"></a>
+# Knowledge Organization Workflow: Analysis
 
 Loaded by states: `CONTENT_READ`, `ISSUE_ANALYSIS`, `RULE_GENERATION`.
 
@@ -33,11 +34,11 @@ Exit: low-confidence items are classified or marked `needs_review=true`.
 
 Low-confidence resources include:
 
-- 标题为空
-- 标题为 `test` / `测试` / 纯数字 / 无意义短词
-- 标题、路径、类型之间没有足够分类线索
-- 同一标题或相似标题出现在多个候选分类中
-- 用户要求按项目 / 客户 / 业务线归类，但标题和路径没有明确项目 / 客户 / 业务线名称
+- Empty title
+- Title is `test` / `测试` / pure numbers / meaningless short words
+- Insufficient classification clues among title, path, and type
+- The same title or similar titles appear in multiple candidate classifications
+- The user requests classification by project / customer / business line, but the title and path do not contain a clear project / customer / business line name
 
 | Condition | Agent MUST Do | Agent MUST NOT Do |
 |-----------|---------------|-------------------|
@@ -71,7 +72,7 @@ Batching rules:
 When `low_confidence_total > 100`, output this notice before reading:
 
 ```text
-低置信度资源较多，共 <low_confidence_total> 项。我会分批做轻量读取并定期汇报进度；不会读取全文，也不会执行移动或创建。
+There are many low-confidence resources, <low_confidence_total> in total. I will perform lightweight reads in batches and report progress periodically; I will not read the full text, nor will I perform moves or creations.
 ```
 
 ### Low-Confidence Read Summary
@@ -79,15 +80,15 @@ When `low_confidence_total > 100`, output this notice before reading:
 Use this as progress / final summary output. Do not ask the user to continue unless a blocker occurs.
 
 ```text
-低置信度内容读取进度
+Low-confidence content read progress
 
-- 低置信度资源总数：<low_confidence_total>
-- 已读取：<read_done>/<low_confidence_total>
-- 已补充证据并完成分类：<classified_count>
-- 暂入待人工确认：<needs_review_count>
-- 失败：<failed_count>
+- Total low-confidence resources: <low_confidence_total>
+- Read: <read_done>/<low_confidence_total>
+- Evidence supplemented and classification completed: <classified_count>
+- Temporarily placed in pending manual confirmation: <needs_review_count>
+- Failed: <failed_count>
 
-继续分析整理问题。
+Continue analyzing organization issues.
 ```
 
 Output this summary:
@@ -112,11 +113,11 @@ Rules:
 Examples:
 
 ```text
-分析进度：正在归纳整理问题，已处理 <processed_count>/<resource_count> 项资源，已识别 <problem_type_count> 类问题。继续生成整理思路，不会执行移动或创建。
+Analysis progress: summarizing organization issues, processed <processed_count>/<resource_count> resources, identified <problem_type_count> types of issues. Continuing to generate the organization approach; will not perform moves or creations.
 ```
 
 ```text
-规则生成进度：正在生成分类规则和目标目录，已归类 <classified_count> 项，待人工确认 <needs_review_count> 项。继续生成完整计划前置数据。
+Rule generation progress: generating classification rules and target directories, classified <classified_count> items, <needs_review_count> items pending manual confirmation. Continuing to generate the prerequisite data for the complete plan.
 ```
 
 ## State: ISSUE_ANALYSIS
@@ -136,13 +137,13 @@ Problem rules:
 
 | Problem | Detection Rule |
 |---------|----------------|
-| 根目录堆积 | 根目录直接资源过多，或超过总资源的明显比例 |
-| 同类文件分散 | 标题 / 类型相似的资源分布在多个无关路径 |
-| 命名不统一 | 同类资源日期、客户、项目命名格式明显不一致 |
-| 临时内容过多 | 标题 / 路径含 `临时`、`测试`、`tmp`、`draft`、`转移`、`未整理` |
-| 空目录 | 目录类节点无后代资源 |
-| 重复目录 | 目录名归一化后相同或高度相似 |
-| 过旧归档内容 | 旧年份资源仍散落在活跃目录 |
+| Root directory accumulation | Too many direct resources in the root directory, or exceeding an obvious proportion of total resources |
+| Similar files scattered | Resources with similar titles / types are distributed across multiple unrelated paths |
+| Inconsistent naming | Date, customer, and project naming formats for similar resources are obviously inconsistent |
+| Too much temporary content | Title / path contains `临时`, `测试`, `tmp`, `draft`, `转移`, `未整理` |
+| Empty directories | Directory-type nodes have no descendant resources |
+| Duplicate directories | Directory names are identical or highly similar after normalization |
+| Overly old archived content | Resources from old years are still scattered in active directories |
 
 MUST output evidence count or example paths. Do not output only abstract judgment.
 
@@ -157,40 +158,40 @@ MUST output evidence count or example paths. Do not output only abstract judgmen
 ### Inventory And Organization Approach Decision
 
 ```text
-盘点与整理思路
+Inventory and organization approach
 
-盘点结果：
-| 指标 | 数量 |
+Inventory results:
+| Metric | Count |
 |------|------|
-| 总资源数 |  |
-| 各类型资源数 |  |
-| 一级目录数量 |  |
-| 根目录直接资源数 |  |
-| 空目录数量 |  |
-| 低置信度资源数 |  |
-| 已完成低置信度读取 |  |
-| 待人工确认 |  |
+| Total resources |  |
+| Resources by type |  |
+| Number of first-level directories |  |
+| Direct resources in root directory |  |
+| Number of empty directories |  |
+| Number of low-confidence resources |  |
+| Low-confidence reads completed |  |
+| Pending manual confirmation |  |
 | partial |  |
 
-共发现 <problem_type_count> 类问题，当前展示第 <page>/<total_pages> 页。
+<problem_type_count> types of issues were found in total; currently showing page <page>/<total_pages>.
 
-| 问题 | 证据数量 | 样例路径 | 说明 |
+| Problem | Evidence Count | Example Paths | Description |
 |------|----------|----------|------|
 
-整理思路：
+Organization approach:
 - <approach item 1>
 - <approach item 2>
-- 对证据不足、读取失败或权限不足的资源放入"待人工确认"
-- 如存在不再复用的来源目录，内容迁出后将目录本体收起到 `待人工确认/待清理旧目录`，避免整理后一级目录仍杂乱
-- 不删除、不重命名、不修改权限
+- Place resources with insufficient evidence, read failures, or insufficient permissions into "pending manual confirmation"
+- If there are source directories that will no longer be reused, after their contents are moved out, collect the directory itself into `待人工确认/待清理旧目录`, to avoid the first-level directories still being cluttered after organization
+- Do not delete, do not rename, do not modify permissions
 
-是否基于这个整理思路生成目标目录和移动 / 创建计划？
+Generate the target directories and the move / create plan based on this organization approach?
 
-你可以选择：
-1. 基于这个思路生成目标目录和计划
-2. 调整整理思路
-3. 查看问题详情
-4. 取消本次整理
+You can choose:
+1. Generate the target directories and plan based on this approach
+2. Adjust the organization approach
+3. View problem details
+4. Cancel this organization
 ```
 
 ## State: RULE_GENERATION

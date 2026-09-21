@@ -1,89 +1,97 @@
 # drive reactions
 
 
-处理文档评论 / 回复上的 reaction（点赞、表情、各表情数量、谁点了什么、添加/删除表情）。这个场景不常见，但规则比较集中：查询时只有在用户明确需要 reaction 信息时才在 `drive +list-comments` / `+batch-query-comments` / `+list-replies` 上带 `--need-reaction`；写入优先使用 `drive +react-reply`（命令参数细节见 [`lark-drive-react-reply.md`](lark-drive-react-reply.md)），操作对象始终是 `reply_id`。本文是跨切面专题，集中放 reaction 的查询规则、语义联想和完整枚举。
+Handle reactions (likes, emojis, per-emoji counts, who reacted with what, adding/removing emojis) on document comments / replies. This scenario is uncommon, but the rules are fairly concentrated: when querying, only include `--need-reaction` on `drive +list-comments` / `+batch-query-comments` / `+list-replies` when the user explicitly needs reaction information; for writes, prefer `drive +react-reply` (see [`lark-drive-react-reply.md`](lark-drive-react-reply.md) for command parameter details), and the operation target is always `reply_id`. This document is a cross-cutting topic that consolidates the query rules, semantic associations, and complete enumeration for reactions.
 
 > [!IMPORTANT]
-> **`reaction_type` 只能使用本文下方“完整 `reaction_type` 列表”中定义的枚举值。**
-> 不要自由填写、不要根据自然语言临时编造、也不要把列表里的 mixed-case 值改写成别的大小写形式。需要写入时，只能从下方枚举中原样选择并传参。
+> **`reaction_type` can only use the enum values defined in the "Complete `reaction_type` List" below.**
+> Do not fill in values freely, do not improvise based on natural language, and do not rewrite the mixed-case values in the list into any other casing. When writing, you may only select and pass values exactly as they appear in the enumeration below.
 
-## 何时使用
+<a id="何时使用"></a>
+## When to Use
 
-- 用户明确要求查看评论 / 回复上的 reaction（表情）。
-- 用户要统计某条评论卡片有哪些表情、各表情数量，或要看谁点了什么。
-- 用户要给评论或回复添加 / 删除 reaction。
+- The user explicitly asks to view reactions (emojis) on a comment / reply.
+- The user wants to count which emojis are on a comment card, the count of each emoji, or see who reacted with what.
+- The user wants to add / remove a reaction on a comment or reply.
 
-## 查询规则
+<a id="查询规则"></a>
+## Query Rules
 
-- `drive +list-comments`、`drive +batch-query-comments`、`drive +list-replies` 都支持 `--need-reaction`。
-- `--need-reaction` 只在用户明确需要 reaction 信息时再带；如果用户只关心评论正文、回复正文、评论数 / 回复数，默认不要加。
-- 遍历评论卡片并顺带拿 reaction：使用 `drive +list-comments --need-reaction`。
-- 已知评论 ID，批量查看 reaction：使用 `drive +batch-query-comments --need-reaction`。
-- 某张评论卡片下继续翻页拉 reply reaction：使用 `drive +list-replies --need-reaction`，每一页都要持续带。
-- 返回形状：`items[].reactions[]` 为 `{reaction_key, count, ahead_users[]}`；**`count=0` 的条目是已删除 reaction 的残留，统计与判断是否存在都要按 `count>0` 过滤**。
+- `drive +list-comments`, `drive +batch-query-comments`, and `drive +list-replies` all support `--need-reaction`.
+- Only include `--need-reaction` when the user explicitly needs reaction information; if the user only cares about comment body, reply body, comment count / reply count, do not include it by default.
+- To iterate over comment cards and fetch reactions along the way: use `drive +list-comments --need-reaction`.
+- When the comment ID is known, to view reactions in bulk: use `drive +batch-query-comments --need-reaction`.
+- To continue paginating and pull reply reactions under a comment card: use `drive +list-replies --need-reaction`, and keep including it on every page.
+- Return shape: `items[].reactions[]` is `{reaction_key, count, ahead_users[]}`; **entries in `count=0` are remnants of deleted reactions, so both counting and determining existence must filter by `count>0`**.
 
-## 查询示例
+<a id="查询示例"></a>
+## Query Examples
 
 ```bash
-# 遍历评论卡片，并把 reaction 一起拿回来
+# Iterate over comment cards and fetch reactions along with them
 lark-cli drive +list-comments --url '<DOC_URL>' --need-reaction
 
-# 已知 comment_id，批量查询评论卡片 reaction
+# Given a comment_id, query comment card reactions in bulk
 lark-cli drive +batch-query-comments --url '<DOC_URL>' --comment-ids '<COMMENT_ID>' --need-reaction
 
-# 继续翻某张评论卡片下的 replies，并把 reaction 一起拿回来
+# Continue paginating replies under a comment card and fetch reactions along with them
 lark-cli drive +list-replies --url '<DOC_URL>' --comment-id '<COMMENT_ID>' --need-reaction
 ```
 
-## 写入规则
+<a id="写入规则"></a>
+## Write Rules
 
-- 添加 / 删除 reaction 优先使用 `drive +react-reply`；命令参数、目标定位和 dry-run 见 [`lark-drive-react-reply.md`](lark-drive-react-reply.md)。
-- 操作对象是 `reply_id`（来自 `drive +list-replies` 的 `items[].reply_id`），不是 `comment_id`。
-- 如果用户说要给"这条评论"加 / 删 reaction，取该评论卡片根回复（第一页 `items[0]`）的 `reply_id` 再操作。
-- add / delete 幂等：重复添加已有 reaction、删除不存在的 reaction 都会成功返回且无副作用；delete 只取消当前身份自己加的 reaction。
-- **服务端不校验 `reaction_type`：任意字符串都会被接受并持久化成一条损坏的 reaction**；`+react-reply --emoji` 会按平台枚举做本地校验兜底，直接调原生命令时必须自行保证取值合法。
-- 原生 `drive file.comment.reply.reactions update_reaction` 只在需要 shortcut 未暴露的字段时兜底使用，`--params` 带 `file_token`/`file_type`，`--data` 传 `action=add|delete`、`reply_id`、`reaction_type`。
+- For adding / removing reactions, prefer `drive +react-reply`; for command parameters, target location, and dry-run, see [`lark-drive-react-reply.md`](lark-drive-react-reply.md).
+- The operation target is `reply_id` (the `items[].reply_id` from `drive +list-replies`), not `comment_id`.
+- If the user says to add / remove a reaction on "this comment", take the `reply_id` of the comment card's root reply (the first page's `items[0]`) and then operate.
+- add / delete are idempotent: repeatedly adding an existing reaction or deleting a nonexistent reaction both return success with no side effects; delete only removes reactions added by the current identity itself.
+- **The server does not validate `reaction_type`: any string will be accepted and persisted as a corrupted reaction**; `+react-reply --emoji` performs local validation against the platform enumeration as a fallback, and when calling the native command directly you must ensure the value is valid yourself.
+- The native `drive file.comment.reply.reactions update_reaction` is only used as a fallback when you need fields not exposed by the shortcut; `--params` takes `file_token`/`file_type`, and `--data` passes `action=add|delete`, `reply_id`, `reaction_type`.
 
-## 写入示例
+<a id="写入示例"></a>
+## Write Examples
 
 ```bash
-# 给某条 reply 添加一个点赞 reaction
+# Add a like reaction to a reply
 lark-cli drive +react-reply --url '<DOC_URL>' \
   --reply-id '<REPLY_ID>' --emoji THUMBSUP --action add
 
-# 删除某条 reply 上已有的 DONE reaction（wiki URL 自动解包）
+# Remove an existing DONE reaction on a reply (wiki URL is automatically unwrapped)
 lark-cli drive +react-reply --url '<WIKI_URL>' \
   --reply-id '<REPLY_ID>' --emoji DONE --action delete
 
-# 原生命令兜底（注意：原生路径没有本地枚举校验）
+# Native command fallback (note: the native path has no local enum validation)
 lark-cli drive file.comment.reply.reactions update_reaction \
   --params '{"file_token":"<DOC_TOKEN>","file_type":"docx"}' \
   --data '{"action":"add","reply_id":"<REPLY_ID>","reaction_type":"THUMBSUP"}'
 ```
 
 > [!CAUTION]
-> `update_reaction` 是写入操作。执行前必须确认用户意图，不要默认替用户点表情。
+> `update_reaction` is a write operation. You must confirm the user's intent before executing; do not react with an emoji on the user's behalf by default.
 
-## `reaction_type` 使用规则
+<a id="reaction_type-使用规则"></a>
+## `reaction_type` Usage Rules
 
-- `reaction_type` 必须传平台定义的枚举字符串，大小写敏感；`drive +react-reply` 的 `--emoji` 会本地校验（原生命令不校验、服务端也不校验）。
-- 不要擅自把 mixed-case 值改成全大写，例如 `Yes`、`No`、`Get`、`EatingFood`、`CheckMark`、`CrossMark` 都要按原值传。
-- **不要编造列表外的 `reaction_type`，也不要把自然语言描述臆造成平台未定义的新枚举**。
-- 如果用户给的是自然语言语义（如“点赞”“在处理中”“确认一下”），可以在下方枚举列表内选择语义最接近的现有值；如果是近似映射，应在执行时明确告知用户。
+- `reaction_type` must be passed the platform-defined enum string, and it is case-sensitive; `drive +react-reply`'s `--emoji` performs local validation (the native command does not validate, and neither does the server).
+- Do not arbitrarily change mixed-case values to all uppercase; for example, `Yes`, `No`, `Get`, `EatingFood`, `CheckMark`, and `CrossMark` must all be passed as their original values.
+- **Do not invent `reaction_type` outside the list, and do not fabricate natural-language descriptions into new enums undefined by the platform**.
+- If the user provides natural-language semantics (such as "like", "in progress", "confirm"), you may choose the closest existing value from the enumeration list below; if it is an approximate mapping, you should clearly inform the user when executing.
 
-## 常见语义联想
+<a id="常见语义联想"></a>
+## Common Semantic Associations
 
-- `Yes`：确认 / 同意 / 批准。
-- `No`：拒绝 / 不同意 / 否定。
-- `DONE`：已完成 / 已处理。
-- `Typing`：正在输入 / 正在处理中 / 正在跟进（近似语义）。
-- `OK`：好的 / 收到 / 确认一下。
-- `THUMBSUP`：点赞 / 认可。
-- `LGTM`：看起来没问题 / 可以继续。
+- `Yes`: confirm / agree / approve.
+- `No`: reject / disagree / deny.
+- `DONE`: completed / handled.
+- `Typing`: typing / in progress / following up (approximate semantics).
+- `OK`: OK / received / confirm.
+- `THUMBSUP`: like / approve.
+- `LGTM`: looks fine / can continue.
 
-## 完整 `reaction_type` 列表
+<a id="完整-reaction_type-列表"></a>
+## Complete `reaction_type` List
 
-以下枚举按当前 Drive 评论 reaction 指引维护，使用时请保持原样：
+The following enumeration is maintained according to the current Drive comment reaction guidance; keep it as-is when using:
 
 ```text
 ANGRY, APPLAUSE, ATTENTION, AWESOME, BEAR, BEER, BETRAYED, BIGKISS
@@ -107,8 +115,9 @@ OKR, Drumstick, BubbleTea, Loudspeaker, Pin, Coffee, Alarm, Trophy
 Music, Typing, Pepper, CheckMark, CrossMark
 ```
 
-## 参考
+<a id="参考"></a>
+## References
 
-- [lark-drive](../index.md) -- 云空间（云盘/云存储）全部命令
-- [lark-drive-react-reply](lark-drive-react-reply.md) -- `+react-reply` 命令参数
-- [lark-shared](../../shared/index.md) -- 认证和全局参数
+- [lark-drive](../index.md) -- all commands for cloud space (cloud drive/cloud storage)
+- [lark-drive-react-reply](lark-drive-react-reply.md) -- `+react-reply` command parameters
+- [lark-shared](../../shared/index.md) -- authentication and global parameters

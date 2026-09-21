@@ -1,53 +1,58 @@
-# Mermaid 图表路径
+<a id="mermaid-图表路径"></a>
+# Mermaid Diagram Path
 
-本场景与 DSL 路径互斥。
+This scenario is mutually exclusive with the DSL path.
 
-| | DSL 路径 | Mermaid 路径 |
+| | DSL Path | Mermaid Path |
 |---|---|---|
-| 中间格式 | JSON（WBDocument） | Mermaid 文本（.mmd 文件） |
-| 布局控制 | 精确控制（x/y 坐标、Flex） | 由 parser-kit 自动布局 |
-| 视觉定制 | 完全可控（颜色、字号、圆角等） | 有限（Mermaid 语法） |
-| 参考模块 | elements/ + 对应 scene | 仅本文件 |
+| Intermediate format | JSON (WBDocument) | Mermaid text (.mmd file) |
+| Layout control | Precise control (x/y coordinates, Flex) | Automatic layout by parser-kit |
+| Visual customization | Fully controllable (color, font size, corner radius, etc.) | Limited (Mermaid syntax) |
+| Reference modules | elements/ + corresponding scene | This file only |
 
-## 适用条件
+<a id="适用条件"></a>
+## Applicable Conditions
 
-满足以下任一条件时使用：
-- 用户明确要求 "用 Mermaid" 或 "输出 Mermaid"
-- 用户直接粘贴了 Mermaid 语法文本
-- 图表类型为思维导图、时序图、类图、饼图（自动路由）
+Use when any of the following conditions is met:
+- The user explicitly requests "use Mermaid" or "output Mermaid"
+- The user directly pastes Mermaid syntax text
+- The diagram type is a mind map, sequence diagram, class diagram, or pie chart (automatic routing)
 
-## 思维导图 (Mindmap)
+<a id="思维导图-mindmap"></a>
+## Mindmap
 
 ```mermaid
 mindmap
-  root((主题))
-    分支A
-      子项A1
-      子项A2
-    分支B
-      子项B1
-    分支C
+  root((Topic))
+    BranchA
+      SubitemA1
+      SubitemA2
+    BranchB
+      SubitemB1
+    BranchC
 ```
 
-## 时序图 (Sequence Diagram)
+<a id="时序图-sequence-diagram"></a>
+## Sequence Diagram
 
 ```mermaid
 sequenceDiagram
-    participant A as 浏览器
-    participant B as 服务器
-    participant C as 数据库
-    A->>B: 请求数据
-    B->>C: 查询
-    C-->>B: 返回结果
-    B-->>A: 响应数据
+    participant A as Browser
+    participant B as Server
+    participant C as Database
+    A->>B: Request data
+    B->>C: Query
+    C-->>B: Return result
+    B-->>A: Respond data
 ```
 
-消息类型：
-- `->>` 实线箭头（同步请求）
-- `-->>` 虚线箭头（响应/异步）
-- `-x` 带 x 箭头（失败）
+Message types:
+- `->>` solid arrow (synchronous request)
+- `-->>` dashed arrow (response/asynchronous)
+- `-x` arrow with x (failure)
 
-## 类图 (Class Diagram)
+<a id="类图-class-diagram"></a>
+## Class Diagram
 
 ```mermaid
 classDiagram
@@ -62,69 +67,75 @@ classDiagram
     Animal <|-- Dog
 ```
 
-## 饼图 (Pie Chart)
+<a id="饼图-pie-chart"></a>
+## Pie Chart
 
 ```mermaid
-pie title 分布
-    "类别A" : 40
-    "类别B" : 30
-    "类别C" : 20
-    "类别D" : 10
+pie title Distribution
+    "CategoryA" : 40
+    "CategoryB" : 30
+    "CategoryC" : 20
+    "CategoryD" : 10
 ```
 
-## 流程图 (Flowchart)
+<a id="流程图-flowchart"></a>
+## Flowchart
 
 > [!WARNING]
-> **流程图不推荐使用 Mermaid 路径！**
-> 带复杂分支、复合节点、高保真卡片样式的流程图应优先走 **DSL 路径**（参见 `scenes/flowchart.md`）。只有用户明确给出 Mermaid 代码，或场景本身就是极简文字流程时，才走此路径。
+> **The Mermaid path is not recommended for flowcharts!**
+> Flowcharts with complex branches, composite nodes, and high-fidelity card styles should preferentially use the **DSL path** (see `scenes/flowchart.md`). Use this path only when the user explicitly provides Mermaid code, or when the scenario itself is a minimal text flow.
 
-适用于：极简的文字节点判断业务流。
+Applicable to: minimal text-node business flow judgment.
 
 ```mermaid
 flowchart TD
-    A([开始]) --> B{条件判断}
-    B -->|是| C[处理步骤]
-    B -->|否| D[另一步骤]
-    C --> E([结束])
+    A([Start]) --> B{Condition check}
+    B -->|Yes| C[Processing step]
+    B -->|No| D[Another step]
+    C --> E([End])
     D --> E
 ```
 
-### 约束与规范
+<a id="约束与规范"></a>
+### Constraints and Specifications
 
-- **节点文字 ≤ 8 字**（超过必须缩写，必要时加图例说明）
-- 判断节点（菱形）只写条件关键词，不写长描述
-- 步骤数 ≤ 12（超过需合并步骤或拆分为子流程）
-- 遵循标准流程图符号：开始/结束用体育场形状或圆形 `A([开始])`，判断用菱形 `B{判断}`，步骤用矩形 `C[步骤]`
+- **Node text ≤ 8 characters** (must be abbreviated if exceeded; add a legend explanation when necessary)
+- Decision nodes (diamonds) should only contain condition keywords, not long descriptions
+- Number of steps ≤ 12 (merge steps or split into subflows if exceeded)
+- Follow standard flowchart symbols: use stadium shape or circle `A([开始])` for start/end, diamond `B{判断}` for decisions, rectangle `C[步骤]` for steps
 
-### 语法参考
+<a id="语法参考"></a>
+### Syntax Reference
 
-方向：`TD`（上到下）、`LR`（左到右）、`BT`（下到上）、`RL`（右到左）
+Direction: `TD` (top to bottom), `LR` (left to right), `BT` (bottom to top), `RL` (right to left)
 
-节点形状：`A[矩形]`、`A(圆角)`、`A{菱形}`、`A((圆形))`、`A([体育场])`、`A[[子程序]]`
+Node shapes: `A[矩形]`, `A(圆角)`, `A{菱形}`, `A((圆形))`, `A([体育场])`, `A[[子程序]]`
 
-连线：`-->`（实线）、`-.->`（虚线）、`==>`（粗线）、`-->|标签|`（带标签）
+Connections: `-->` (solid line), `-.->` (dashed line), `==>` (thick line), `-->|标签|` (with label)
 
 ## State Diagram
 
 ```mermaid
 stateDiagram-v2
     [*] --> Idle
-    Idle --> Processing : 收到请求
-    Processing --> Success : 处理成功
-    Processing --> Failed : 处理失败
+    Idle --> Processing : Request received
+    Processing --> Success : Processing succeeded
+    Processing --> Failed : Processing failed
     Success --> [*]
-    Failed --> Idle : 重试
+    Failed --> Idle : Retry
 ```
 
-## 其他支持的图表类型
+<a id="其他支持的图表类型"></a>
+## Other Supported Diagram Types
 
-- **甘特图**：`gantt`
-- **ER 图**：`erDiagram`
-- **Git 分支图**：`gitGraph`
+- **Gantt chart**: `gantt`
+- **ER diagram**: `erDiagram`
+- **Git branch diagram**: `gitGraph`
 
-## 注意事项
+<a id="注意事项"></a>
+## Notes
 
-- 输出纯 Mermaid 文本，不是 JSON，不要混用 DSL
-- 节点文字含特殊字符时用双引号包裹：`A["包含(括号)的文字"]`
-- `subgraph` 用于逻辑分组
-- Mermaid 的流程图样式较基础，也无法在节点内部嵌套复杂排版；复杂流程优先走 DSL（见 `scenes/flowchart.md`），极简文字流程或用户显式给 Mermaid 代码时再使用 Mermaid。
+- Output plain Mermaid text, not JSON; do not mix with DSL
+- When node text contains special characters, wrap it in double quotes: `A["包含(括号)的文字"]`
+- `subgraph` is used for logical grouping
+- Mermaid's flowchart styles are relatively basic, and complex layouts cannot be nested inside nodes; for complex flows, preferentially use DSL (see `scenes/flowchart.md`), and use Mermaid only for minimal text flows or when the user explicitly provides Mermaid code.

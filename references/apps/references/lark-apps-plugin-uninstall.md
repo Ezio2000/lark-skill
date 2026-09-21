@@ -1,25 +1,29 @@
 # apps +plugin-uninstall
 
-> **本地命令**：读当前目录的 `package.json`，在项目根目录下运行（和 npm 一样）。**不接受 `--app-id`**——它不是远端 API 命令。
+> **Local command**: reads the `package.json` in the current directory, and runs in the project root directory (just like npm). **Does not accept `--app-id`**—it is not a remote API command.
 
-卸载插件包。运行时命令事实以 `lark-cli apps +plugin-uninstall --help` 为准。
+Uninstalls a plugin package. For runtime command facts, `lark-cli apps +plugin-uninstall --help` shall prevail.
 
-## 何时用
+<a id="何时用"></a>
+## When to use
 
-用户不再需要某个插件能力时，卸载对应的插件包。卸载前应先删除该插件的所有实例。
+When the user no longer needs a certain plugin capability, uninstall the corresponding plugin package. Before uninstalling, all instances of that plugin should be deleted first.
 
-## 命令骨架
+<a id="命令骨架"></a>
+## Command skeleton
 
-- `--name <key>`：要卸载的插件包 key。
+- `--name <key>`: the key of the plugin package to uninstall.
 
-在项目根目录下运行（和 npm 一样，无需指定路径）。
+Run in the project root directory (just like npm, no path needs to be specified).
 
-## 示例
+<a id="示例"></a>
+## Examples
 
 ```bash
 lark-cli apps +plugin-uninstall --name <plugin-key>
 ```
 
-## 输出契约
+<a id="输出契约"></a>
+## Output contract
 
-- 删除 `node_modules/{key}` + 移除 `actionPlugins` 条目。
+- Delete `node_modules/{key}` + remove the `actionPlugins` entry.

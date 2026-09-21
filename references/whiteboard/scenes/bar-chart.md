@@ -1,59 +1,65 @@
-# 柱状图
+<a id="柱状图"></a>
+# Bar Chart
 
-## Content 约束
+<a id="content-约束"></a>
+## Content Constraints
 
-- 数据点 ≤ 12
-- 同一数据系列用同一颜色（不要每个柱不同色）
-- Y 轴必须有单位标注（如 "万元"、"人次"）
+- Data points ≤ 12
+- Use the same color for the same data series (do not use a different color for each bar)
+- The Y axis must have a unit label (such as "ten thousand yuan", "person-times")
 
-## Layout 选型
+<a id="layout-选型"></a>
+## Layout Selection
 
-- **脚本生成坐标**（推荐）：用 .cjs 脚本计算柱体位置和高度，脚本输出 JSON 文件后调用 `npx -y @larksuite/whiteboard-cli@^0.2.13` 渲染
-- **绝对定位手写**：简单柱状图（≤ 5 个柱）可手写坐标
+- **Script-generated coordinates** (recommended): Use a .cjs script to calculate bar positions and heights, have the script output a JSON file, then call `npx -y @larksuite/whiteboard-cli@^0.2.13` to render
+- **Absolute positioning by hand**: Simple bar charts (≤ 5 bars) can have coordinates written by hand
 
-## Layout 规则
+<a id="layout-规则"></a>
+## Layout Rules
 
-- 白板坐标系 Y 轴向下为正，图表"底部原点"拥有最大 Y 值，柱体向上生长时 Y 减小
-- 柱体等宽等间距，底部对齐 X 轴
-- 柱体高度：`height = (value / maxValue) * chartHeight`
-- 柱体 Y 坐标：`y = originY - height`
-- 坐标轴用 connector 直线，末端带箭头（endArrow: "arrow"）
-- 格线用虚线 connector（lineStyle: "dashed"，endArrow: "none"）
-- 刻度线短横线 connector（endArrow: "none"）
-- 数值标注放在柱体顶部上方
-- 类别标签放在 X 轴下方，居中对齐柱体
+- In the whiteboard coordinate system, the positive Y axis points downward; the chart's "bottom origin" has the largest Y value, and as bars grow upward, Y decreases
+- Bars are equal in width and equally spaced, aligned at the bottom with the X axis
+- Bar height: `height = (value / maxValue) * chartHeight`
+- Bar Y coordinate: `y = originY - height`
+- Use connector straight lines for the coordinate axes, with arrows at the ends (endArrow: "arrow")
+- Use dashed connectors for grid lines (lineStyle: "dashed", endArrow: "none")
+- Use short horizontal-line connectors for tick marks (endArrow: "none")
+- Place value labels above the top of the bars
+- Place category labels below the X axis, centered and aligned with the bars
 
-## 坐标与尺寸计算指南
+<a id="坐标与尺寸计算指南"></a>
+## Coordinate and Size Calculation Guide
 
-白板坐标系中，**X 轴向右为正，Y 轴向下为正**。因此图表的"底部原点"实际上拥有最大的 Y 坐标，图形向上生长时 Y 坐标在不断减小。
+In the whiteboard coordinate system, **the positive X axis points to the right, and the positive Y axis points downward**. Therefore, the chart's "bottom origin" actually has the largest Y coordinate, and as the graphic grows upward, the Y coordinate continuously decreases.
 
-1. **确定图表区域**：
-   - 设定图表区高度 `chartHeight` 和宽度 `chartWidth`
-   - 设定左下角坐标原点 `(originX, originY)`
-   - 示例：originX=80, originY=480, chartWidth=1000, chartHeight=400
-2. **Y 轴映射（计算高度）**：
-   - 找出数据的最大值 `maxValue`
-   - 将 maxValue 向上取整到"整数刻度"（如数据最大 190 → maxValue 取 200）
-   - 柱子高度：`height = (value / maxValue) * chartHeight`
-   - 柱子 Y 坐标：`y = originY - height`
-3. **X 轴映射（计算宽度与 X 坐标）**：
-   - 将 chartWidth 按数据个数均分：`slotWidth = chartWidth / barCount`
-   - 设定柱子间距 `barGap`（推荐 slotWidth 的 25%-30%）
-   - 柱子宽度：`barWidth = slotWidth - barGap`
-   - 第 i 根柱子 X 坐标：`x = originX + i * slotWidth + barGap / 2`
-4. **Y 轴刻度计算**：
-   - 将 0 到 maxValue 等分为 4-6 个刻度
-   - 每个刻度的 Y 坐标：`gridY = originY - (tickValue / maxValue) * chartHeight`
-   - 刻度线：从 (originX-10, gridY) 到 (originX, gridY) 的短横线
-   - 网格线：从 (originX, gridY) 到 (originX+chartWidth, gridY) 的虚线
+1. **Determine the chart area**:
+   - Set the chart area height `chartHeight` and width `chartWidth`
+   - Set the coordinate origin at the lower-left corner `(originX, originY)`
+   - Example: originX=80, originY=480, chartWidth=1000, chartHeight=400
+2. **Y-axis mapping (calculate height)**:
+   - Find the maximum value of the data `maxValue`
+   - Round maxValue up to an "integer tick" (for example, if the data maximum is 190 → maxValue becomes 200)
+   - Bar height: `height = (value / maxValue) * chartHeight`
+   - Bar Y coordinate: `y = originY - height`
+3. **X-axis mapping (calculate width and X coordinate)**:
+   - Divide chartWidth evenly by the number of data items: `slotWidth = chartWidth / barCount`
+   - Set the bar gap `barGap` (recommended: 25%-30% of slotWidth)
+   - Bar width: `barWidth = slotWidth - barGap`
+   - X coordinate of the i-th bar: `x = originX + i * slotWidth + barGap / 2`
+4. **Y-axis tick calculation**:
+   - Divide 0 to maxValue evenly into 4-6 ticks
+   - Y coordinate of each tick: `gridY = originY - (tickValue / maxValue) * chartHeight`
+   - Tick marks: short horizontal lines from (originX-10, gridY) to (originX, gridY)
+   - Grid lines: dashed lines from (originX, gridY) to (originX+chartWidth, gridY)
 
-## 完整 JSON 示例
+<a id="完整-json-示例"></a>
+## Complete JSON Example
 
-以下示例：3 根柱子，数据 [120, 200, 150]，maxValue=200，originX=80, originY=480, chartWidth=900, chartHeight=400。
+The following example: 3 bars, data [120, 200, 150], maxValue=200, originX=80, originY=480, chartWidth=900, chartHeight=400.
 
 - slotWidth = 900 / 3 = 300
 - barGap = 80, barWidth = 220
-- 刻度：0, 50, 100, 150, 200（每 50 一格，gridInterval = 80px）
+- Ticks: 0, 50, 100, 150, 200 (one grid every 50, gridInterval = 80px)
 
 ```json
 {
@@ -166,21 +172,22 @@
 }
 ```
 
-坐标推导验证：
+Coordinate derivation verification:
 - bar-0 (120): height = (120/200)*400 = 240, y = 480-240 = 240
 - bar-1 (200): height = (200/200)*400 = 400, y = 480-400 = 80
 - bar-2 (150): height = (150/200)*400 = 300, y = 480-300 = 180
 - bar-0 x = 80 + 0*300 + 80/2 = 120, bar-1 x = 80 + 1*300 + 40 = 420, bar-2 x = 80 + 2*300 + 40 = 720
 
-## 陷阱
+<a id="陷阱"></a>
+## Pitfalls
 
-- 单系列用多色（不专业）：同一数据系列所有柱体应使用同一颜色
-- 缺 Y 轴单位标注，读者无法理解数值含义
-- 柱体间距不均匀（脚本需统一计算 barGap）
-- Y 轴刻度线和格线误带箭头
-- 坐标轴忘记带箭头
+- Using multiple colors for a single series (unprofessional): all bars in the same data series should use the same color
+- Missing Y-axis unit labels, so readers cannot understand the meaning of the values
+- Uneven bar spacing (the script needs to calculate barGap uniformly)
+- Y-axis tick marks and grid lines mistakenly having arrows
+- Forgetting arrows on the coordinate axes
 
-此场景必须用 .cjs 脚本生成。Agent 使用时只需修改 `data` 数组，其余坐标与柱体高度全自动计算。
+This scenario must be generated with a .cjs script. When using it, the Agent only needs to modify the `data` array; all other coordinates and bar heights are calculated fully automatically.
 
 ```javascript
 const { writeFileSync } = require('fs');

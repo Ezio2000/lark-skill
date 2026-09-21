@@ -1,37 +1,43 @@
-# lark-doc 画板处理指南
+<a id="lark-doc-画板处理指南"></a>
+# lark-doc Whiteboard Handling Guide
 
-## 两个 Skill 的职责边界
+<a id="两个-skill-的职责边界"></a>
+## Responsibility Boundaries of the Two Skills
 
-| Skill             | 核心职责                                                      | 约束                              |
+| Skill             | Core Responsibility                                                      | Constraint                              |
 |-------------------|-----------------------------------------------------------|---------------------------------|
-| `lark-doc`        | 识别画板机会、使用 Mermaid/SVG 创建图表、调度 SubAgent、插入简单图表或复杂空白画板 | 简单图可由主 Agent 直接写入；复杂图再隔离到 SubAgent |
-| `lark-whiteboard` | 查询/导出已有画板；复杂图表生成（Mermaid/DSL/SVG 路由、场景选型、渲染验证）；写入已有/空白画板  | 仅特别复杂的图表或已有画板更新时由独立 SubAgent 读取 |
+| `lark-doc`        | Identify whiteboard opportunities, use Mermaid/SVG to create diagrams, schedule SubAgent, insert simple diagrams or complex blank whiteboards | Simple diagrams can be written directly by the main Agent; complex diagrams are isolated to a SubAgent |
+| `lark-whiteboard` | Query/export existing whiteboards; complex diagram generation (Mermaid/DSL/SVG routing, scenario selection, rendering validation); write to existing/blank whiteboards  | Only read by an independent SubAgent for particularly complex diagrams or updates to existing whiteboards |
 
-## 画板适用规则
+<a id="画板适用规则"></a>
+## Whiteboard Applicability Rules
 
-写文档时，核心流程、系统架构、方案对比、风险链路、里程碑、指标趋势、因果归因、组织关系、能力分层等内容，如果图示能明显降低理解成本，可以规划为画板；结构简单或文字更清楚的内容不必强行画板化。
+When writing documents, content such as core processes, system architecture, solution comparisons, risk chains, milestones, metric trends, causal attribution, organizational relationships, and capability layering can be planned as whiteboards if diagrams can significantly reduce comprehension cost; content with simple structure or that is clearer as text need not be forcibly turned into a whiteboard.
 
-同一篇文档可以有多个画板。确有多个独立图示点时，可拆成多个聚焦画板，而不是把所有信息塞进一张大图。
+A single document can have multiple whiteboards. When there are indeed multiple independent diagram points, they can be split into multiple focused whiteboards rather than cramming all information into one large diagram.
 
-## 文档与画板协同流程
+<a id="文档与画板协同流程"></a>
+## Document and Whiteboard Collaboration Flow
 
-### 步骤 1：识别画板机会
+<a id="步骤-1识别画板机会"></a>
+### Step 1: Identify Whiteboard Opportunities
 
-| 场景                      | 入口                                                        |
+| Scenario                      | Entry                                                        |
 |-------------------------|-----------------------------------------------------------|
-| 文档中需要思维导图、时序图、类图、饼图、甘特图 | 步骤 2A:使用 mermaid 插入图表                                     |
-| 文档中需要插入其他图表/自定义图形       | 步骤 2B: 使用 SVG 插入图表                                        |
-| 已有画板需要更新内容              | 先 `docs +fetch` 获取 `board_token`，跳至步骤 3B |
-| 只查看 / 下载已有画板            | 切换至 `lark-whiteboard`，不走本流程                               |
+| Document needs mind map, sequence diagram, class diagram, pie chart, Gantt chart | Step 2A: Use mermaid to insert diagram                                     |
+| Document needs to insert other diagrams/custom graphics       | Step 2B: Use SVG to insert diagram                                        |
+| Existing whiteboard needs content update              | First use `docs +fetch` to get `board_token`, skip to Step 3B |
+| Only view / download existing whiteboard            | Switch to `lark-whiteboard`, do not follow this flow                               |
 
 > [!IMPORTANT]
-> ⚠️ **分别对每个图表进行决策**
+> ⚠️ **Decide separately for each diagram**
 
-如果有多个位置需要插入图表，你需要根据每个图表的内容**分别决定**采用步骤 2A 还是 2B。思维导图、时序图、类图、饼图、甘特图可插入 mermaid 块；其他类型图表使用 SVG，简单图由主 Agent 直接写入，复杂图再启动 SubAgent。
+If there are multiple positions where diagrams need to be inserted, you need to **decide separately** for each diagram's content whether to use Step 2A or 2B. Mind maps, sequence diagrams, class diagrams, pie charts, and Gantt charts can be inserted as mermaid blocks; other types of diagrams use SVG, with simple diagrams written directly by the main Agent and complex diagrams handled by launching a SubAgent.
 
-简单 Mermaid / SVG 图可由主 Agent 直接写入本地 XML；需要专门视觉设计、信息密度较高或容易布局翻车的 SVG，再启动 SubAgent 产出完整片段。
+Simple Mermaid / SVG diagrams can be written directly into local XML by the main Agent; SVGs that require specialized visual design, have high information density, or are prone to layout failures should launch a SubAgent to produce the complete fragment.
 
-### 步骤 2A: 使用 mermaid 插入图表
+<a id="步骤-2a-使用-mermaid-插入图表"></a>
+### Step 2A: Use mermaid to insert diagram
 
 ```xml
 
@@ -40,11 +46,12 @@
 </whiteboard>
 ```
 
-如果 Mermaid 已在本地文件中，可写成 `<whiteboard type="mermaid" path="@./diagram.mmd"></whiteboard>`；CLI 会在写入前读取文件并展开为内联内容。
+If the Mermaid is already in a local file, it can be written as `<whiteboard type="mermaid" path="@./diagram.mmd"></whiteboard>`; the CLI will read the file and expand it into inline content before writing.
 
-### 步骤 2B: SubAgent 使用 SVG 插入图表
+<a id="步骤-2b-subagent-使用-svg-插入图表"></a>
+### Step 2B: SubAgent uses SVG to insert diagram
 
-主 Agent 启动 SubAgent，让它用 `docs +create` / `docs +update` 插入：
+The main Agent launches a SubAgent, letting it use `docs +create` / `docs +update` to insert:
 
 ```xml
 
@@ -54,71 +61,76 @@
 </whiteboard>
 ```
 
-如果 SVG 已在本地文件中，可写成 `<whiteboard type="svg" path="@./diagram.svg"></whiteboard>`；PlantUML 文件同理使用 `<whiteboard type="plantuml" path="@./sequence.puml"></whiteboard>`。
+If the SVG is already in a local file, it can be written as `<whiteboard type="svg" path="@./diagram.svg"></whiteboard>`; PlantUML files likewise use `<whiteboard type="plantuml" path="@./sequence.puml"></whiteboard>`.
 
-Sub Agent 需要携带以下的最小上下文，以及后续的 [SVG 设计 Workflow] 章节指南：
+The Sub Agent needs to carry the following minimal context, as well as the subsequent [SVG Design Workflow] section guide:
 
-- doc token、插入位置（标题 / block_id / command）
-- 图表目标、受众、源段落或数据
-- 要求读取 `lark-doc-xml.md`；不需要读取 `lark-whiteboard`
-- SVG 必须完整自包含：包含 `<svg>` 根节点和 `viewBox`，不引用外部图片、脚本、远程资源
+- doc token, insertion position (heading / block_id / command)
+- Diagram goal, audience, source paragraph or data
+- Required to read `lark-doc-xml.md`; no need to read `lark-whiteboard`
+- SVG must be fully self-contained: include the `<svg>` root node and `viewBox`, without referencing external images, scripts, or remote resources
 
-#### 画板 SVG 设计指南
+<a id="画板-svg-设计指南"></a>
+#### Whiteboard SVG Design Guide
 
-使用 SVG 插入画板时，最终交付是**画板跨越重排渲染的节点**(你写 SVG → 画板解析)
-**核心心智纠正 (重要)**：
+When using SVG to insert a whiteboard, the final deliverable is **the nodes of the whiteboard after re-layout rendering** (you write SVG → whiteboard parses)
+**Core mindset correction (important)**:
 
-- 大多数 AI 如果只考虑“绝对不报错/完美映射”, 最终给出的都是全篇纯白底色加单层 `<rect>` 的方正卡片网格, 极其死板单调, *
-  *这将被视为不及格！**
-- **SVG 给你了完全的设计自由**, 请大胆使用你脑内的图标路径 (`<path>`), 连接指引 (`流畅的 <path>`), 各种环境氛围点缀,
-  大胆一点, 充分信任你的品味, 发挥出你的顶级艺术创造力！
+- Most AI, if only considering "absolutely no errors / perfect mapping", will ultimately produce a rigid card grid with an all-white background and a single layer of `<rect>`, extremely stiff and monotonous, *
+  *this will be considered a failure!**
+- **SVG gives you complete design freedom**, please boldly use the icon paths in your mind (`<path>`), connection guides (`流畅的 <path>`), various environmental atmosphere embellishments,
+  be bold, fully trust your taste, and unleash your top-tier artistic creativity!
 
-##### SVG 设计 Workflow
+<a id="svg-设计-workflow"></a>
+##### SVG Design Workflow
 
-###### 1. 想清楚要画什么
+<a id="1-想清楚要画什么"></a>
+###### 1. Think clearly about what to draw
 
-- **核心信息是什么？** 能做到一图胜千言, 绝对不要只生成平平无奇的文字表格, 要有设计感
-- **内容充实度**：如果用户描述稀疏简略, 利用你的领域知识扩展, 保证信息维度和内容充实, 但不要过度堆砌, 淹没重点
-- **视觉层级与隐喻**：这个没有固定的形式, 你自由判断, 比如: 给重要的节点加光环, 加高亮背景；给对比项设计天平或对称结构
+- **What is the core information?** Achieve the effect of one image being worth a thousand words; absolutely do not just generate a mediocre text table, it must have a sense of design
+- **Content richness**: If the user's description is sparse and brief, use your domain knowledge to expand, ensuring information dimensions and content richness, but do not over-pile, drowning out the key points
+- **Visual hierarchy and metaphor**: There is no fixed form for this; you judge freely, for example: add halos to important nodes, add highlighted backgrounds; design scales or symmetrical structures for comparison items
 
-###### 2. 写 SVG
-
-> [!IMPORTANT]
-> 布局, 配色, 信息密度, 装饰物——**全部由你判断**, 打破单调的 `<rect>` 牢笼, 严禁通篇用矩形和文字应付用户
-> 操作边界约束：
-
-- **语言跟随用户**：图表文字的语言与用户 prompt 保持一致, 技术术语用行业里通用的写法, 不机械翻译
-- 文字用 `<text>`(不是 `<path>`), 容器宽度留够——画板按 CJK ≈ 1em / Latin ≈ 0.6em 重排
-- 连线使用正交折线替代斜直线(`<polyline>` 带水平/垂直折点)视觉效果更好
-- 可自由使用 `translate`, `rotate`, `scale`但请尽量避免使用 `skewX` / `skewY` / `matrix(...)` 发生空间级扭曲
-
-###### 画板怎么处理 SVG
-
-画板的 svg-parser 把可识别元素转成可编辑节点, 其余降级为内嵌图片(渲染没问题, 虽然不可编辑, 但是可以正常显示)；但非阴影用途的
-`<filter>` / `<pattern>` / `<clipPath>` / `<mask>` 等装饰特性画板不支持（见下方⚠️）
-**不需要所有元素都可编辑, 但必须避免使用不支持的装饰特性, 且要兼顾可编辑和美观漂亮**
-
-**可识别的元素**
-
-- 形状：`<rect>` / `<circle>` / `<ellipse>` / `<polygon>`
-- 连线：`<line>` / `<polyline>` / `<path>`(自动识别为直线 / 折线 / 曲线)
-- 文本：`<text>` / `<tspan>` 画板硬编码 Noto Sans SC **文字必须用 `<text>`**
-- 分组：`<g>` / `<a>` / `<use>` 引用 `<symbol>`
-- 变换：`translate` / `rotate` / `scale` 正常；`skewX` / `skewY` / `matrix(...)` 降级
-- 阴影：`<filter>` 里放 `<feDropShadow>` 或标准 drop/inner primitive 链 (`<feGaussianBlur in="SourceAlpha">` + `<feOffset>` + `<feFlood>` + `<feComposite>` + `<feMerge>`), 会被识别成节点阴影, drop 至多 1 个, inner 至多 1 个; 其余 filter 效果不识别
-- 渐变：`<linearGradient>` / `<radialGradient>` 在 `<defs>` 中定义, 通过 `fill="url(#id)"` 引用 (载体限 `<rect>` / `<circle>` / `<ellipse>` / `<polygon>` / `<path>`), 需要至少 2 个 `<stop>`, `gradientUnits` 只支持默认的 `objectBoundingBox` (不写即可)
+<a id="2-写-svg"></a>
+###### 2. Write SVG
 
 > [!IMPORTANT]
-> ⚠️ **不支持的装饰特性**
+> Layout, color scheme, information density, decorations——**all judged by you**, break out of the monotonous `<rect>` cage, strictly forbidden to use rectangles and text throughout to deal with the user
+> Operational boundary constraints:
 
-- `<pattern>` / `<clipPath>` / `<mask>` / 非阴影用途的 `<filter>` (blur / hue-rotate / 复合合成 / `flood-color=url(...)` / 多个 `<feDropShadow>` 等) → 画板不支持，**请避免使用，否则会导致画板渲染问题**
-- 渐变边界：`gradientUnits="userSpaceOnUse"` / `spreadMethod="reflect|repeat"` / stops 少于 2 个 / 复杂 `gradientTransform` 会变成不可编辑图片, 视觉正确但失去可编辑性, 若无必要请沿用默认 `objectBoundingBox`
+- **Language follows the user**: The language of the diagram text stays consistent with the user's prompt; technical terms use industry-standard conventions, not mechanical translation
+- Text uses `<text>` (not `<path>`), leave enough container width——the whiteboard re-layouts at CJK ≈ 1em / Latin ≈ 0.6em
+- Connections use orthogonal polylines instead of diagonal straight lines (`<polyline>` with horizontal/vertical breakpoints) for better visual effect
+- You may freely use `translate`, `rotate`, `scale` but please try to avoid using `skewX` / `skewY` / `matrix(...)` which cause spatial distortion
 
-###### 3.插入后审查
+<a id="画板怎么处理-svg"></a>
+###### How the Whiteboard Handles SVG
 
-插入画板后，可以从返回值使用 lark-cli 指令，将画板内容导出为 png
-图片。若是对设计不满意，可以修改后，删除原来的画板再重新插入，或是调用 [
-`../../whiteboard/index.md`](../../whiteboard/index.md) 编辑。
+The whiteboard's svg-parser converts recognizable elements into editable nodes, and the rest are downgraded to embedded images (rendering is fine, and although not editable, they can display normally); but decorative features such as `<filter>` / `<pattern>` / `<clipPath>` / `<mask>` not used for shadows are not supported by the whiteboard (see ⚠️ below)
+**Not all elements need to be editable, but you must avoid using unsupported decorative features, and balance editability with aesthetics**
+
+**Recognizable elements**
+
+- Shapes: `<rect>` / `<circle>` / `<ellipse>` / `<polygon>`
+- Connections: `<line>` / `<polyline>` / `<path>` (automatically recognized as straight lines / polylines / curves)
+- Text: `<text>` / `<tspan>` whiteboard hardcodes Noto Sans SC **text must use `<text>`**
+- Grouping: `<g>` / `<a>` / `<use>` referencing `<symbol>`
+- Transforms: `translate` / `rotate` / `scale` normal; `skewX` / `skewY` / `matrix(...)` downgraded
+- Shadows: placing `<feDropShadow>` inside `<filter>` or a standard drop/inner primitive chain (`<feGaussianBlur in="SourceAlpha">` + `<feOffset>` + `<feFlood>` + `<feComposite>` + `<feMerge>`) will be recognized as node shadows, at most 1 drop, at most 1 inner; other filter effects are not recognized
+- Gradients: `<linearGradient>` / `<radialGradient>` defined in `<defs>`, referenced via `fill="url(#id)"` (carriers limited to `<rect>` / `<circle>` / `<ellipse>` / `<polygon>` / `<path>`), requiring at least 2 `<stop>`, `gradientUnits` only supports the default `objectBoundingBox` (just omit it)
+
+> [!IMPORTANT]
+> ⚠️ **Unsupported decorative features**
+
+- `<pattern>` / `<clipPath>` / `<mask>` / `<filter>` not used for shadows (blur / hue-rotate / composite blending / `flood-color=url(...)` / multiple `<feDropShadow>`, etc.) → not supported by the whiteboard, **please avoid using them, otherwise it will cause whiteboard rendering issues**
+- Gradient boundaries: `gradientUnits="userSpaceOnUse"` / `spreadMethod="reflect|repeat"` / fewer than 2 stops / complex `gradientTransform` will become non-editable images, visually correct but losing editability; if unnecessary, please use the default `objectBoundingBox`
+
+<a id="3插入后审查"></a>
+###### 3. Review after insertion
+
+After inserting the whiteboard, you can use the lark-cli command from the return value to export the whiteboard content as a png
+image. If you are dissatisfied with the design, you can modify it and then delete the original whiteboard and re-insert it, or call [
+`../../whiteboard/index.md`](../../whiteboard/index.md) to edit.
 
 ```bash
 lark-cli whiteboard +export \
@@ -127,29 +139,32 @@ lark-cli whiteboard +export \
   --output ./preview.png
 ```
 
-### 步骤 3B：编辑已有画板 — 启动 lark-whiteboard SubAgent
+<a id="步骤-3b编辑已有画板--启动-lark-whiteboard-subagent"></a>
+### Step 3B: Edit existing whiteboard — launch lark-whiteboard SubAgent
 
-复杂图和已有画板更新必须启动 SubAgent。主 Agent 只传最小上下文，不直接执行 `lark-whiteboard` 的渲染和写入流程。
+Complex diagrams and updates to existing whiteboards must launch a SubAgent. The main Agent only passes minimal context and does not directly execute the rendering and writing flow of `lark-whiteboard`.
 
-复杂图 SubAgent 的最小上下文：
+Minimal context for the complex diagram SubAgent:
 
 - board_token
-- 图表目标、推荐画板类型、受众
-- 与图表直接相关的源段落或数据
-- 要求读取 [`../../whiteboard/index.md`](../../whiteboard/index.md)，按其完整流程写入该 board_token
+- Diagram goal, recommended whiteboard type, audience
+- Source paragraph or data directly related to the diagram
+- Required to read [`../../whiteboard/index.md`](../../whiteboard/index.md), and write to that board_token following its complete flow
 
-多个画板互不依赖时，可并行启动多个 SubAgent；每个 SubAgent 只负责一个画板或一个 SVG 插入点，不要互相复用上下文。
+When multiple whiteboards are independent of each other, multiple SubAgents can be launched in parallel; each SubAgent is responsible for only one whiteboard or one SVG insertion point, and contexts must not be reused between them.
 
-### 步骤 4：完成校验
+<a id="步骤-4完成校验"></a>
+### Step 4: Completion validation
 
-- Mermaid: 确认插入的是 `<whiteboard type="mermaid">`，且内容 mermaid 语法完整
-- SVG: 确认插入的是 `<whiteboard type="svg">`，且内容是完整 `<svg ...>...</svg>`
-- 不保留空白占位画板；复杂路径只有空白画板而无内容视为任务未完成
+- Mermaid: Confirm that what was inserted is `<whiteboard type="mermaid">`, and that the content's mermaid syntax is complete
+- SVG: Confirm that what was inserted is `<whiteboard type="svg">`, and that the content is a complete `<svg ...>...</svg>`
+- Do not keep blank placeholder whiteboards; a complex path with only a blank whiteboard and no content is considered an incomplete task
 
 ---
 
 ---
 
-## 关联参考
+<a id="关联参考"></a>
+## Related References
 
-- 画板查询/创作/修改/渲染写入：[`../../whiteboard/index.md`](../../whiteboard/index.md)
+- Whiteboard query/creation/modification/rendering write: [`../../whiteboard/index.md`](../../whiteboard/index.md)

@@ -1,62 +1,62 @@
 # Troubleshooting
 
-本文件覆盖 lark-slides 的通用创建前自检、XML 排障和常见失败处理。命令专属问题优先看对应 reference，例如 `+replace-slide`、`+media-upload`。
+This document covers general pre-creation self-checks, XML troubleshooting, and common failure handling for lark-slides. For command-specific issues, refer to the corresponding reference first, such as `+replace-slide`, `+media-upload`.
 
 ## XML Preflight
 
-在真正创建或替换前，至少检查：
+Before actually creating or replacing, at minimum check:
 
-- 特殊字符已转义：正文和标题里的 `&`、`<`、`>` 不能裸写；属性值里的裸 `&` 也必须写成 `&amp;`。
-- 属性引号安全：XML 属性、shell 引号、JSON 字符串包装之间没有互相打断。
-- 结构合法：`<slide>` 下只放 `<style>`、`<data>`、`<note>`，文本都在 `<content>` 内。
-- 图片路径正确：`<img src="@...">` 占位符由 `+create` 和 `+add-slide` 处理。
+- Special characters are escaped: `&`, `<`, `>` in body text and titles must not be written bare; bare `&` in attribute values must also be written as `&amp;`.
+- Attribute quote safety: XML attributes, shell quotes, and JSON string wrapping do not break each other.
+- Structure is valid: under `<slide>` only place `<style>`, `<data>`, `<note>`, and all text is inside `<content>`.
+- Image paths are correct: `<img src="@...">` placeholders are handled by `+create` and `+add-slide`.
 
 ## Failure Order
 
-遇到 `invalid param`、某一页创建失败、页面空白或布局错乱时，按顺序处理：
+When encountering `invalid param`, a failed page creation, a blank page, or a broken layout, handle in order:
 
-1. 记录 `xml_presentation_id`，不要假设失败代表什么都没创建。
-2. 用 `slides +xml-get` 回读，确认是否已有部分页面写入。
-3. 检查失败页是否含未转义字符：`Q&A -> Q&amp;A`，文本 `<` / `>` 写成 `&lt;` / `&gt;`，属性 URL `a=1&b=2 -> a=1&amp;b=2`。
-4. 检查标签闭合、属性引号、`<content>` 结构，以及 `<slide>` 直接子元素。
-5. 页面空白、溢出、重叠或越界时，按 [validation-xml.md](validation-xml.md) 运行 `xml_lint.py`；先修复所有 `error`，再对 `warning` 指向的页面和元素做截图复核。
-6. 如果使用 `--slides '[...]'` 字面量，怀疑 shell 转义或截断时改用文件输入：`+create --slide @page-01.xml --slide @page-02.xml`。
-7. 局部问题用 `+replace-slide` 块级修正；整页结构要改时用 `+delete-slide` 删旧页 + `+add-slide` 建新页。
+1. Record `xml_presentation_id`; do not assume that a failure means nothing was created.
+2. Use `slides +xml-get` to read back and confirm whether some pages have already been written.
+3. Check whether the failed page contains unescaped characters: `Q&A -> Q&amp;A`, text `<` / `>` written as `&lt;` / `&gt;`, attribute URL `a=1&b=2 -> a=1&amp;b=2`.
+4. Check tag closure, attribute quotes, `<content>` structure, and `<slide>` direct child elements.
+5. When a page is blank, overflows, overlaps, or goes out of bounds, run `xml_lint.py` according to [validation-xml.md](validation-xml.md); first fix all `error`, then take screenshots to review the pages and elements pointed to by `warning`.
+6. If using `--slides '[...]'` literals, when suspecting shell escaping or truncation, switch to file input: `+create --slide @page-01.xml --slide @page-02.xml`.
+7. For local issues, use `+replace-slide` for block-level corrections; when the entire page structure needs to change, use `+delete-slide` to delete the old page + `+add-slide` to create a new page.
 
 ## Symptom Fixes
 
-| 看到的问题 | 处理方式 |
+| Symptom | Fix |
 |-----------|----------|
-| 文字被截断 / 看不全 | 增大 shape 的 `width` 或 `height`，或减少文本量 |
-| 元素重叠 | 调整 `topLeftX` / `topLeftY`，拉开间距 |
-| 页面大面积空白 | 回读确认内容是否写入；若内容存在，再缩小间距或增加主体元素 |
-| 文字和背景色太接近 | 深色背景用浅色文字，浅色背景用深色文字 |
-| 表格列宽不合理 | 调整 `colgroup` 中 `col` 的 `width` 值 |
-| 图表没有显示 | 检查 `chartPlotArea` 和 `chartData` 是否都包含，`dim1` / `dim2` 数据数量是否匹配 |
-| 图片被裁掉一部分 | `<img>` 的 `width` / `height` 是裁剪后尺寸；要整图显示就让 `width:height` 对齐原图比例 |
-| 图片不显示 / `<img src>` 仍是 `@path` | `@` 占位符由 `+create` 和 `+add-slide` 替换 |
-| 新插入的 `<img>` 挡住原有元素 | 用 `+xml-get --slide-id` 读原页，对照已有块坐标挑空白位置；空间不够就在同一批 `--parts` 里先移动/缩小现有块再插图 |
-| 渐变背景变成白色 | 渐变必须用 `rgba()` 格式 + 百分比停靠点，如 `linear-gradient(135deg,rgba(30,60,114,1) 0%,rgba(59,130,246,1) 100%)` |
-| 整体风格不统一 | 封面页和结尾页用同一背景，内容页保持一致的配色和字号体系 |
+| Text is truncated / not fully visible | Increase the shape's `width` or `height`, or reduce the amount of text |
+| Elements overlap | Adjust `topLeftX` / `topLeftY` to increase spacing |
+| Large blank areas on the page | Read back to confirm whether content was written; if content exists, then reduce spacing or add main body elements |
+| Text and background color are too similar | Use light text on dark backgrounds, dark text on light backgrounds |
+| Table column widths are unreasonable | Adjust the `width` value of `col` in `colgroup` |
+| Chart does not display | Check whether both `chartPlotArea` and `chartData` are included, and whether the data counts for `dim1` / `dim2` match |
+| Image is partially cropped | `width` / `height` of `<img>` are the cropped dimensions; to display the full image, make `width:height` match the original image ratio |
+| Image does not display / `<img src>` is still `@path` | `@` placeholders are replaced by `+create` and `+add-slide` |
+| Newly inserted `<img>` blocks existing elements | Use `+xml-get --slide-id` to read the original page, and pick blank positions by comparing existing block coordinates; if space is insufficient, first move/shrink existing blocks in the same batch of `--parts`, then insert the image |
+| Gradient background becomes white | Gradients must use `rgba()` format + percentage stop points, e.g. `linear-gradient(135deg,rgba(30,60,114,1) 0%,rgba(59,130,246,1) 100%)` |
+| Overall style is inconsistent | Use the same background for the cover page and ending page, and keep a consistent color scheme and font size system for content pages |
 
 ## Common Errors
 
-| 错误码 / 信号 | 含义 | 解决方案 |
+| Error code / signal | Meaning | Solution |
 |--------------|------|----------|
-| 400 XML 格式错误 | XML 语法错误 | 检查标签闭合、属性引号、特殊字符转义 |
-| 400 XML 输入错误 | XML 未按所用 shortcut 的参数传入 | 按 `+create` / `+add-slide` / `+update-slide` reference 检查 `--slides`、`--slide` 或 `--content` 的值 |
-| 创建成功但页面空白 / 内容缺失 / 布局错乱 | 常见于 `--slides '[...]'` 字面量的 shell 转义或长参数传递问题 | 改用 `--slide @file`（每页一个文件）或 `--slides @deck.json`，并在创建后立即读取 XML 验证 |
-| 403 权限不足 | scope 或文档权限不匹配 | 确认 scope 和文档权限；无权限时根据错误响应引导用户解决 |
-| 404 演示文稿不存在 | `xml_presentation_id` 不正确或无权限 | 检查 token；wiki URL 需先解析真实 `obj_token` |
-| 404 幻灯片不存在 | `slide_id` 不正确 | 重新读取 presentation 或 slide，确认最新 ID |
-| 1061002 媒体上传 params error | slides 媒体上传参数不符合约定 | 用 `slides +media-upload`，由 shortcut 处理 Slides 所需的媒体参数 |
-| 1061004 forbidden | 当前用户对演示文稿无编辑权限 | 确认当前用户对目标 PPT 有编辑权限 |
-| 3350001 | XML 非 well-formed、XML 结构不符合服务端要求，或 replace 片段问题 | 优先检查未转义字符；replace 场景再看 `block_id` 和 `<content/>` |
-| 3350002 | `revision_id` 大于当前版本 | 用 `-1` 取当前版本，或重新用 `slides +xml-get` 取最新 `revision_id` |
-| validation: unsafe file path | `--file` 给了绝对路径或上层路径 | `--file` 必须是 CWD 内相对路径；先 `cd` 到素材目录再执行 |
+| 400 XML format error | XML syntax error | Check tag closure, attribute quotes, special character escaping |
+| 400 XML input error | XML was not passed in according to the parameters of the shortcut used | Check the values of `--slides`, `--slide`, or `--content` according to the `+create` / `+add-slide` / `+update-slide` reference |
+| Creation succeeds but page is blank / content is missing / layout is broken | Commonly seen with shell escaping or long parameter passing issues for `--slides '[...]'` literals | Switch to `--slide @file` (one file per page) or `--slides @deck.json`, and read the XML immediately after creation to verify |
+| 403 insufficient permissions | Scope or document permissions do not match | Confirm scope and document permissions; when there are no permissions, guide the user to resolve based on the error response |
+| 404 presentation does not exist | `xml_presentation_id` is incorrect or there are no permissions | Check the token; wiki URLs need to first resolve the real `obj_token` |
+| 404 slide does not exist | `slide_id` is incorrect | Re-read the presentation or slide to confirm the latest ID |
+| 1061002 media upload params error | Slides media upload parameters do not conform to the convention | Use `slides +media-upload`; the shortcut handles the media parameters required by Slides |
+| 1061004 forbidden | The current user does not have edit permission for the presentation | Confirm the current user has edit permission for the target PPT |
+| 3350001 | XML is not well-formed, the XML structure does not meet server requirements, or there is a replace fragment issue | First check for unescaped characters; for replace scenarios, then check `block_id` and `<content/>` |
+| 3350002 | `revision_id` is greater than the current version | Use `-1` to get the current version, or use `slides +xml-get` again to get the latest `revision_id` |
+| validation: unsafe file path | `--file` was given an absolute path or parent path | `--file` must be a relative path within the CWD; first `cd` to the asset directory, then execute |
 
 ## Command-Specific References
 
-- 图片上传、`@path` 占位符、`file_token`：见 [lark-slides-media-upload.md](../cli/lark-slides-media-upload.md) 和 [lark-slides-create.md](../cli/lark-slides-create.md)。
-- 块级替换、`block_id`、3350001 replace 细节：见 [lark-slides-replace-slide.md](../cli/lark-slides-replace-slide.md)。
-- 追加/插入单页、`--before-slide-id` 和 `--slide @file` 绕开转义：见 [lark-slides-add-slide.md](../cli/lark-slides-add-slide.md)。
+- Image upload, `@path` placeholders, `file_token`: see [lark-slides-media-upload.md](../cli/lark-slides-media-upload.md) and [lark-slides-create.md](../cli/lark-slides-create.md).
+- Block-level replacement, `block_id`, 3350001 replace details: see [lark-slides-replace-slide.md](../cli/lark-slides-replace-slide.md).
+- Append/insert a single page, `--before-slide-id` and `--slide @file` to bypass escaping: see [lark-slides-add-slide.md](../cli/lark-slides-add-slide.md).

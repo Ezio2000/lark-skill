@@ -1,32 +1,38 @@
-# Genre Contract: White Paper / 白皮书 (`report.white_paper`)
+<a id="genre-contract-white-paper--白皮书-reportwhite_paper"></a>
+# Genre Contract: White Paper (`report.white_paper`)
 
-## 体裁规则表（硬约束）
+<a id="体裁规则表硬约束"></a>
+## Genre Rules Table (Hard Constraints)
 
-| 规则项 | 规则 |
+| Rule Item | Rule |
 |-|-|
-| 写作风格 | 系统、清楚、克制；权威来自真实主体、证据与归属，不来自篇幅、正式腔或视觉复杂度 |
-| 内容逻辑 | 先确认白皮书类型、发布主体、专业读者和期望判断，再用证据建立问题、评价标准或框架、论证、反例及应用边界；框架必须实际解释或比较 |
-| 事实 / 边界 | 客观主张连接真实来源、时点、范围和限制；事实、解释、价值判断、提议与品牌立场可区分；政策身份、发布状态、利益、资助和案例选择不得虚构或隐匿；证据图与材料须确认使用权、来源和说明，复杂视觉附文字等价信息 |
-| 错误 | 政策与品牌身份混写；标题或版式伪造权威；宏大背景填篇幅；自创框架仅作装饰；来源不可追；单一案例冒充共识；忽略反证 / 利益冲突；CTA 吞没证据；复杂组件代替论证 |
+| Writing Style | Systematic, clear, restrained; authority comes from real entities, evidence, and attribution, not from length, formal tone, or visual complexity |
+| Content Logic | First confirm the white paper type, publishing entity, professional readers, and expected judgment, then use evidence to establish the problem, evaluation criteria or framework, argumentation, counterexamples, and application boundaries; the framework must actually explain or compare |
+| Facts / Boundaries | Objective claims connect to real sources, time points, scope, and limitations; facts, interpretations, value judgments, proposals, and brand positions can be distinguished; policy identity, publication status, interests, funding, and case selection must not be fabricated or concealed; evidence graphics and materials must confirm usage rights, sources, and explanations, and complex visuals must include textual equivalent information |
+| Errors | Mixing policy and brand identity; titles or layouts that fabricate authority; grand background used to fill length; self-created frameworks used only as decoration; sources that cannot be traced; a single case passed off as consensus; ignoring counterevidence / conflicts of interest; CTA swallowing evidence; complex components replacing argumentation |
 
-## 适用与消歧
+<a id="适用与消歧"></a>
+## Applicability and Disambiguation
 
-让专业读者系统理解并评估问题、框架或解决路径。先区分有权主体的政府政策白皮书与专业、技术或品牌资助白皮书；`白皮书`、`正式`、`权威`单独不产生政府或标准身份。明确研究问题和方法为核心走 [`research-report.md`](research-report.md)，特定组织选项决策走 [`business-analysis.md`](business-analysis.md)，设计 / RFC / 接口契约走 Technical，产品卖点、获客或 CTA 为主走 Marketing。
+Enable professional readers to systematically understand and evaluate a problem, framework, or solution path. First distinguish government policy white papers from professional, technical, or brand-funded white papers issued by authorized entities; `白皮书`, `正式`, and `权威` alone do not create government or standards identity. When clarifying the research question and method is the core, go to [`research-report.md`](research-report.md); when deciding among options for a specific organization, go to [`business-analysis.md`](business-analysis.md); for design / RFC / interface contracts, go to Technical; when product selling points, customer acquisition, or CTA are primary, go to Marketing.
 
-## 子类型
+<a id="子类型"></a>
+## Subtypes
 
-- **政府政策白皮书**：只有真实有权主体可使用；准确标政策、咨询、立法与发布状态，不模拟批准或法律效力。
-- **政策 / 专业问题白皮书**：围绕问题、证据、评价标准、方案和影响形成可审查论证。
-- **技术 / 行业 landscape 白皮书**：解释技术、标准或系统框架；一旦主要任务是批准实现设计或查询精确契约，改走 Technical。
-- **品牌资助白皮书**：证据评估仍须是主体任务；披露资助、产品利益和案例选择，转化内容与论证分层。
+- **Government Policy White Paper**: Only a genuinely authorized entity may use this; accurately mark policy, consultation, legislative, and publication status, and do not simulate approval or legal effect.
+- **Policy / Professional Issue White Paper**: Form a reviewable argument around the problem, evidence, evaluation criteria, options, and impact.
+- **Technical / Industry Landscape White Paper**: Explain technology, standards, or system frameworks; once the primary task is approving an implementation design or querying a precise contract, switch to Technical.
+- **Brand-Funded White Paper**: Evidence evaluation must still be the primary task; disclose funding, product interests, and case selection, and separate conversion content from argumentation.
 
-## 证据与边界
+<a id="证据与边界"></a>
+## Evidence and Boundaries
 
-- 开头明确作者 / 发布主体、读者、使用场景、范围、文档状态、核心立场和期望判断。
-- 主张强度匹配证据层级；有限测试、相关观察、厂商数据或单一案例不得扩写成绝对承诺或行业共识。
-- 框架的每一层都须增加解释、比较或选择价值；问题原因、评价标准与方案逻辑相连，并处理重要反证、替代解释和可行性限制。
-- 主体或授权不明时用 `[发布主体待确认]`，不得写成政府、官方或标准；核心证据不足时收窄为 concept note / outline。利益关系或关键政策状态无法确认的发布稿标记 `blocked`。
+- At the beginning, clearly state the author / publishing entity, readers, use scenarios, scope, document status, core position, and expected judgment.
+- Claim strength must match the evidence level; limited tests, correlational observations, vendor data, or a single case must not be expanded into absolute promises or industry consensus.
+- Every layer of the framework must add explanatory, comparative, or selection value; problem causes, evaluation criteria, and solution logic must be connected, and important counterevidence, alternative explanations, and feasibility constraints must be addressed.
+- When the entity or authorization is unclear, use `[发布主体待确认]`, and do not write it as government, official, or standards; when core evidence is insufficient, narrow it to a concept note / outline. For publication drafts where interest relationships or key policy status cannot be confirmed, mark `blocked`.
 
-## 结构与高质量写法
+<a id="结构与高质量写法"></a>
+## Structure and High-Quality Writing Approach
 
-独立摘要（主体、论点、证据边界） → 问题与现有证据 → 评价标准或核心框架 → 逐层论证、方案与反例 → 应用 / 政策含义及条件 → 限制、利益关系与来源。摘要让忙碌读者复述主张和保留条件；长篇才增加目录或附录，不以背景、封面、缩写或组件制造权威感。
+Standalone summary (entity, thesis, evidence boundaries) → problem and existing evidence → evaluation criteria or core framework → layer-by-layer argumentation, options, and counterexamples → application / policy implications and conditions → limitations, interest relationships, and sources. The summary should let busy readers restate the claims and retained conditions; only add a table of contents or appendix for long documents, and do not manufacture a sense of authority with background, cover, abbreviations, or components.

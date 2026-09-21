@@ -1,27 +1,31 @@
-# 权限治理 Command Patterns
+<a id="权限治理-command-patterns"></a>
+# Permission Governance Command Patterns
 
-本文只提供 `permission_governance` workflow 的具体 `lark-cli` 命令样例。只有进入对应 state 且需要拼装命令时才读取本文；命令可用范围仍以 [`lark-drive-workflow-permission-governance.md`](lark-drive-workflow-permission-governance.md) 的 `Command Map` 为准。
+This document only provides concrete `lark-cli` command examples for the `permission_governance` workflow. Read this document only when you have entered the corresponding state and need to assemble commands; the available command scope is still governed by the `Command Map` in [`lark-drive-workflow-permission-governance.md`](lark-drive-workflow-permission-governance.md).
 
-## 目录
+<a id="目录"></a>
+## Table of Contents
 
 - `目标解析`
 - `目标发现`
 - `事实读取`
 - `写前确认与执行`
 
-## 目标解析
+<a id="目标解析"></a>
+## Target Resolution
 
 ```bash
 lark-cli drive +inspect --url '<url>' --as user --format json
 ```
 
-`drive +inspect` 支持 Drive folder，并且是受支持 Drive URL 的统一解析入口。对文件夹自身权限设置，先通过 `+inspect` 解析 URL，或直接使用 `drive +permission-get-setting --token '<folder_url>'`；传 bare folder token 时必须显式传 `--type folder`。
+`drive +inspect` supports Drive folders and is the unified resolution entry point for supported Drive URLs. To set permissions on the folder itself, first resolve the URL via `+inspect`, or use `drive +permission-get-setting --token '<folder_url>'` directly; when passing a bare folder token, you must explicitly pass `--type folder`.
 
-`/wiki/space/<space_id>` URL 是 Wiki space 范围，不要用 `drive +inspect` 当作单文档解析；直接提取 `space_id` 后进入 `DISCOVER_TARGETS`。
+`/wiki/space/<space_id>` URLs are Wiki space scoped; do not use `drive +inspect` to resolve them as a single document; directly extract `space_id` and then enter `DISCOVER_TARGETS`.
 
-## 目标发现
+<a id="目标发现"></a>
+## Target Discovery
 
-发现 Wiki space / node 下目标：
+Discover targets under a Wiki space / node:
 
 ```bash
 lark-cli wiki +node-list \
@@ -39,9 +43,9 @@ lark-cli wiki +node-list \
   --as user --format json # replace $SPACE_ID before running
 ```
 
-解析返回时使用 `data.nodes`，不要读取顶层 `items`。`--page-limit 0` 表示当前层分页不设页数上限；`--page-all` 只覆盖当前 `space-id` / `parent-node-token` 范围内的分页，不会递归子节点。节点 `has_child=true` 时，必须继续以该节点的 `node_token` 作为 `--parent-node-token` 递归读取。
+When parsing the response, use `data.nodes`; do not read the top-level `items`. `--page-limit 0` means pagination at the current level has no page count limit; `--page-all` only covers pagination within the current `space-id` / `parent-node-token` scope and does not recurse into child nodes. When a node has `has_child=true`, you must continue to recursively read using that node's `node_token` as the `--parent-node-token`.
 
-发现 Drive folder 下目标：
+Discover targets under a Drive folder:
 
 ```bash
 lark-cli drive files list \
@@ -53,9 +57,10 @@ lark-cli drive files list \
   --as user --format json
 ```
 
-## 事实读取
+<a id="事实读取"></a>
+## Fact Reading
 
-读取 metadata：
+Read metadata:
 
 ```bash
 lark-cli drive metas batch_query \
@@ -63,7 +68,7 @@ lark-cli drive metas batch_query \
   --as user --format json
 ```
 
-读取权限设置：
+Read permission settings:
 
 ```bash
 lark-cli drive +permission-get-setting \
@@ -71,7 +76,7 @@ lark-cli drive +permission-get-setting \
   --as user --format json
 ```
 
-裸 folder token 必须显式传 `--type folder`：
+A bare folder token must explicitly pass `--type folder`:
 
 ```bash
 lark-cli drive +permission-get-setting \
@@ -79,7 +84,7 @@ lark-cli drive +permission-get-setting \
   --as user --format json
 ```
 
-通过 URL 读取权限设置时可以省略 `--type`：
+When reading permission settings via URL, `--type` may be omitted:
 
 ```bash
 lark-cli drive +permission-get-setting \
@@ -87,7 +92,7 @@ lark-cli drive +permission-get-setting \
   --as user --format json # replace $LARK_DRIVE_URL before running
 ```
 
-按需读取直接协作者/授权成员列表：
+Read the list of direct collaborators/authorized members as needed:
 
 ```bash
 lark-cli drive +member-list \
@@ -97,9 +102,9 @@ lark-cli drive +member-list \
   --as user --format json
 ```
 
-`--fields` 默认不传；只有需要名称、协作者类型、头像或外部标签时才显式传。它只声明期望返回的字段，不授予字段级权限：请求用户的 `name` / `avatar` 时还需 `contact:user.base:readonly`（“获取用户基本信息”）。字段权限或数据可见性不足时，接口仍可能成功但省略相应字段；缺字段不能解释为空值。
+`--fields` is not passed by default; pass it explicitly only when you need names, collaborator types, avatars, or external labels. It only declares the fields expected in the response and does not grant field-level permissions: when requesting the user's `name` / `avatar`, `contact:user.base:readonly` is also required ("Get user basic information"). When field permissions or data visibility are insufficient, the API may still succeed but omit the corresponding fields; a missing field must not be interpreted as an empty value.
 
-按需读取访问统计：
+Read access statistics as needed:
 
 ```bash
 lark-cli drive file.statistics get \
@@ -107,7 +112,7 @@ lark-cli drive file.statistics get \
   --as user --format json
 ```
 
-按需读取最近访问记录：
+Read recent access records as needed:
 
 ```bash
 lark-cli drive file.view_records list \
@@ -115,9 +120,10 @@ lark-cli drive file.view_records list \
   --as user --format json
 ```
 
-## 写前确认与执行
+<a id="写前确认与执行"></a>
+## Pre-write Confirmation and Execution
 
-patch 前检查 manage-public permission：
+Check manage-public permission before patching:
 
 ```bash
 lark-cli drive permission.members auth \
@@ -125,15 +131,15 @@ lark-cli drive permission.members auth \
   --as user --format json
 ```
 
-patch 前读取当前 schema：
+Read the current schema before patching:
 
 ```bash
 lark-cli schema drive.permission.public.patch --format json
 ```
 
-只 patch 当前 schema 支持的字段；对 Wiki 目标，必须省略 schema 明确标注为 Wiki 不支持的字段。
+Only patch fields supported by the current schema; for Wiki targets, you must omit fields that the schema explicitly marks as unsupported for Wiki.
 
-显式确认后 patch public permission：
+Patch public permission after explicit confirmation:
 
 ```bash
 lark-cli drive permission.public patch \
@@ -142,7 +148,7 @@ lark-cli drive permission.public patch \
   --as user --yes --format json
 ```
 
-显式确认后申请访问权限：
+Request access permission after explicit confirmation:
 
 ```bash
 lark-cli drive +apply-permission \
@@ -154,13 +160,13 @@ lark-cli drive +apply-permission \
   --perm view --remark '<reason>' --as user --format json
 ```
 
-owner 转移前读取当前 schema：
+Read the current schema before transferring owner:
 
 ```bash
 lark-cli schema drive.permission.members.transfer_owner --format json
 ```
 
-显式确认后转移 owner：
+Transfer owner after explicit confirmation:
 
 ```bash
 lark-cli drive permission.members transfer_owner \
@@ -169,9 +175,9 @@ lark-cli drive permission.members transfer_owner \
   --as user --yes --format json
 ```
 
-`member_type` 只能使用当前 schema 支持的值：`email`、`openid`、`userid`、`appid`。如果用户只给姓名，必须先解析为明确身份或要求用户补充；不要猜测 `member_id`。批量 owner 转移必须逐个目标顺序执行。
+`member_type` can only use values supported by the current schema: `email`, `openid`, `userid`, `appid`. If the user only provides a name, you must first resolve it to a definite identity or ask the user to supply more information; do not guess `member_id`. Batch owner transfers must be executed sequentially, one target at a time.
 
-secure label 写前枚举可用标签：
+Enumerate available labels before writing a secure label:
 
 ```bash
 lark-cli drive +secure-label-list \
@@ -183,9 +189,9 @@ lark-cli drive +secure-label-list \
   --as user --format json
 ```
 
-当用户给出的是标签名称、密级文案或不确定的 label ID 时，必须先枚举并解析为 `label-id`；写入确认里展示目标标签名称和 ID。找不到唯一标签时，停止并让用户选择，不要猜测。
+When the user provides a label name, classification text, or an uncertain label ID, you must first enumerate and resolve it to `label-id`; show the target label name and ID in the write confirmation. If no unique label can be found, stop and let the user choose; do not guess.
 
-显式确认后更新 secure label：
+Update secure label after explicit confirmation:
 
 ```bash
 lark-cli drive +secure-label-update \

@@ -83,9 +83,9 @@ Default behavior lists groups only — same as before this feature. To include p
 
 | User intent | Call | Identity |
 |---|---|---|
-| "list my groups" / 我的群 / 我加入了哪些群 | (default, omit `--types`) | user or bot |
-| "list my p2p chats" / 我的单聊 / 我跟谁有 1v1 | `--types p2p` | **user only** |
-| "all my chats" / 全部聊天 / 所有会话 (ambiguous) | `--types p2p,group` | **user only** |
+| "list my groups" / my groups / which groups I joined | (default, omit `--types`) | user or bot |
+| "list my p2p chats" / my single chats / who I have 1v1 with | `--types p2p` | **user only** |
+| "all my chats" / all chats / all conversations (ambiguous) | `--types p2p,group` | **user only** |
 
 For p2p rows in the response: `name` is the peer's display name, `owner_id` follows group semantics, `chat_mode = "p2p"`, and `p2p_target_type` / `p2p_target_id` identify the peer.
 

@@ -1,100 +1,102 @@
 # Lark Sheet Filter
 
-## 真对象硬约束 + 数量校验
+<a id="真对象硬约束--数量校验"></a>
+## Hard Constraints on Real Objects + Count Verification
 
-1. **先判产物形态，再选做法**：**要裁列 / 要另存结果表**（"只保留某几列""筛出来放新表"，含用户显式要求把筛选结果做成独立新表的行级筛选）→ 另建结果 sheet 物化符合条件的行与列，**原表原样保留**；**仅行级、不裁列**（"筛选 / 只看 / 仅保留符合条件的行"）→ **必须**通过 `+filter-{create|update|delete}` 创建真实的筛选器对象，**禁止**用"删除不符合条件的行" / "新建子表只放符合条件的行" / 用 `+cells-set` 覆盖原表来代替——这些做法会让原数据丢失或不可恢复。
-2. **筛选数量必校**：执行筛选后**必须**回读，断言 `len(visible_rows) == expected_count`。`expected_count` 来自先用本地脚本在源数据上独立复现该筛选条件得到的结果数。两者不一致时禁止交付，需排查筛选条件 / 数据列类型问题。
-3. **混合文本列禁止字面比较**：筛选 key 是公式文本（如 `1000+200=1200`）或带单位的混合文本时，先在辅助列里抽出纯数值再筛选；不能直接用文本比较。
+1. **First determine the artifact form, then choose the approach**: **Need to trim columns / need to save results to a separate sheet** ("only keep certain columns", "filter out and put into a new sheet", including row-level filtering where the user explicitly requests the filtered results be made into an independent new sheet) → create a separate result sheet to materialize the matching rows and columns, **keeping the original sheet unchanged**; **row-level only, no column trimming** ("filter / only view / only keep matching rows") → **must** create a real filter object via `+filter-{create|update|delete}`, **forbidden** to substitute with "delete non-matching rows" / "create a new sub-sheet containing only matching rows" / overwriting the original sheet with `+cells-set` — these approaches cause the original data to be lost or unrecoverable.
+2. **Filter count must be verified**: After executing the filter, **must** read back and assert `len(visible_rows) == expected_count`. `expected_count` comes from first independently reproducing the filter condition on the source data using a local script to obtain the result count. If the two do not match, delivery is forbidden; investigate the filter condition / data column type issues.
+3. **Mixed text columns forbid literal comparison**: When the filter key is formula text (e.g., `1000+200=1200`) or mixed text with units, first extract the pure numeric value in a helper column before filtering; do not directly use text comparison.
 
-## 使用场景
+<a id="使用场景"></a>
+## Use Cases
 
-读写筛选器对象。本 reference 覆盖 4 个 shortcut：
+Read and write filter objects. This reference covers 4 shortcuts:
 
-| 操作需求 | 使用工具 | 说明 |
+| Operation Need | Tool to Use | Description |
 |---------|---------|------|
-| 查看已有筛选器 | `+filter-list` | 获取筛选器的范围、规则和条件配置 |
-| 创建/更新/删除筛选器 | `+filter-{create|update|delete}` | 对筛选器执行写入操作 |
+| View existing filters | `+filter-list` | Get the filter's range, rules, and condition configuration |
+| Create/update/delete filters | `+filter-{create|update|delete}` | Perform write operations on filters |
 
-典型工作流：先读取现有筛选器了解配置 → 执行创建/更新/删除 → **必须再次读取验证结果**。
+Typical workflow: first read existing filters to understand the configuration → execute create/update/delete → **must read again to verify the result**.
 
-**只读场景例外**：用户只是想知道哪些数据满足条件、并不要求修改表格展示时，可以走 `references/lark-sheets-read-data.md` 读后文本回答，不必创建筛选器。
+**Read-only scenario exception**: When the user only wants to know which data meets the conditions and does not require modifying the sheet display, you can use `references/lark-sheets-read-data.md` to read and answer in text without creating a filter.
 
-**常见配置错误（必须注意）**：
-- **筛选范围必须覆盖表头行**：筛选器的 range 必须从表头行开始（如 `A1:F100`），不能只包含数据行。缺少表头会导致筛选条件无法正确匹配列
-- **更新已有筛选器前先读取**：如果子表上已存在筛选器，直接创建会报错或覆盖原有配置。应先用 `+filter-list` 查看是否存在筛选器，存在时使用 update 而非 create
-- **筛选条件的列索引要精确**：筛选条件中的列标识必须与实际数据列精确对应，不要凭猜测填写
-- **”调整筛选逻辑”要先读旧配置**：用户说”调整筛选”时，先读取现有筛选器的完整配置，理解当前规则后再修改，不要从零创建
-- **创建后必须验证**：调用 `+filter-list` 确认筛选器配置正确且生效
-- **筛选不支持正则表达式**：飞书表格筛选器不支持正则表达式，传入正则会当成普通文本处理。
+**Common configuration errors (must pay attention)**:
+- **Filter range must cover the header row**: The filter's range must start from the header row (e.g., `A1:F100`), and cannot include only data rows. Missing the header will cause filter conditions to fail to correctly match columns
+- **Read before updating an existing filter**: If a filter already exists on the sub-sheet, directly creating one will error or overwrite the original configuration. First use `+filter-list` to check whether a filter exists; if it does, use update instead of create
+- **Filter condition column index must be precise**: The column identifier in filter conditions must precisely correspond to the actual data column; do not fill in based on guesswork
+- **"Adjust filter logic" requires reading the old configuration first**: When the user says "adjust the filter", first read the complete configuration of the existing filter, understand the current rules before modifying, and do not create from scratch
+- **Must verify after creation**: Call `+filter-list` to confirm the filter configuration is correct and effective
+- **Filters do not support regular expressions**: Lark Sheets filters do not support regular expressions; passing a regex will be treated as plain text.
 
 ## Shortcuts
 
-| Shortcut | Risk | 分组 |
+| Shortcut | Risk | Group |
 | --- | --- | --- |
-| `+filter-list` | read | 对象 |
-| `+filter-create` | write | 对象 |
-| `+filter-update` | write | 对象 |
-| `+filter-delete` | high-risk-write | 对象 |
+| `+filter-list` | read | Object |
+| `+filter-create` | write | Object |
+| `+filter-update` | write | Object |
+| `+filter-delete` | high-risk-write | Object |
 
 ## Flags
 
 ### `+filter-list`
 
-_公共四件套 · 系统：`--dry-run`_
+_Common four-piece set · System: `--dry-run`_
 
-_仅含公共 / 系统 flag。_
+_Contains only common / system flags._
 
 ### `+filter-create`
 
-_公共四件套 · 系统：`--dry-run`_
+_Common four-piece set · System: `--dry-run`_
 
-| Flag | Type | 必填 | 说明 |
+| Flag | Type | Required | Description |
 | --- | --- | --- | --- |
-| `--range` | string | required | 筛选范围（A1 表示法，含表头行，如 `A1:F1000`）；不要重复写入 `--properties` 中的 range 字段 |
-| `--properties` | string + File + Stdin（复合 JSON） | optional | 筛选规则 JSON：`rules`（列级筛选规则数组）+ `filtered_columns?`（激活列索引提示）。`--properties` 整体可选——传它时 `rules` 不可为空；不传则只在 `--range` 上建立空筛选器（无列条件）。`range` 是独立 flag（不要再放此 JSON 里） |
+| `--range` | string | required | Filter range (A1 notation, including header row, e.g., `A1:F1000`); do not duplicate the range field in `--properties` |
+| `--properties` | string + File + Stdin (composite JSON) | optional | Filter rules JSON: `rules` (array of column-level filter rules) + `filtered_columns?` (active column index hint). `--properties` is entirely optional — when passing it, `rules` cannot be empty; if not passed, only an empty filter is established on `--range` (no column conditions). `range` is an independent flag (do not put it in this JSON again) |
 
 ### `+filter-update`
 
-_公共四件套 · 系统：`--dry-run`_
+_Common four-piece set · System: `--dry-run`_
 
-| Flag | Type | 必填 | 说明 |
+| Flag | Type | Required | Description |
 | --- | --- | --- | --- |
-| `--properties` | string + File + Stdin（复合 JSON） | required | 筛选规则 JSON，含 `rules` 和 `filtered_columns?`；update 是整组覆盖式（传空 `rules: []` 清空）。`range` 已拎为独立 flag |
-| `--range` | string | required | 筛选作用的单元格范围（A1 表示法，如 `A1:F1000`）；优先级高于 `--properties` 中同名字段 |
+| `--properties` | string + File + Stdin (composite JSON) | required | Filter rules JSON, containing `rules` and `filtered_columns?`; update is a full-group overwrite (passing empty `rules: []` clears). `range` has been extracted as an independent flag |
+| `--range` | string | required | The cell range the filter applies to (A1 notation, e.g., `A1:F1000`); takes priority over the same-named field in `--properties` |
 
 ### `+filter-delete`
 
-_公共四件套 · 系统：`--yes`、`--dry-run`_
+_Common four-piece set · System: `--yes`, `--dry-run`_
 
-_仅含公共 / 系统 flag。_
+_Contains only common / system flags._
 
 ## Schemas
 
-> 复合 JSON flag 字段速查（只列顶层 + 一层嵌套）。深层结构看下方 `## Examples`，或用 `--print-schema` 读完整 JSON Schema（用法见 index.md「公共 flag 速查」与「Agent 使用提示」）。
+> Composite JSON flag field quick reference (only lists top level + one level of nesting). For deeper structures see `## Examples` below, or use `--print-schema` to read the complete JSON Schema (usage see index.md "Common Flag Quick Reference" and "Agent Usage Tips").
 
 ### `+filter-create` `--properties` / `+filter-update` `--properties`
 
-_创建/更新的筛选器属性_
+_Filter properties for create/update_
 
-**顶层字段**：
-- `range` (string) — 筛选对象作用的单元格范围（A1 表示法） — ⚠️ 已拎为独立 flag `--range`，请勿在此 JSON 内重复填写（同名以独立 flag 为准）
-- `rules` (array<object>) — 列级筛选规则列表，每一项对应一个具体列的筛选条件 each: { column_index: string, conditions: array<oneOf>, filtered_rows?: array<number> }
-- `filtered_columns` (array<string>?) — 可选
+**Top-level fields**:
+- `range` (string) — The cell range the filter object applies to (A1 notation) — ⚠️ Already extracted as an independent flag `--range`, do not duplicate it in this JSON (same name defers to the independent flag)
+- `rules` (array<object>) — List of column-level filter rules, each item corresponds to a specific column's filter condition each: { column_index: string, conditions: array<oneOf>, filtered_rows?: array<number> }
+- `filtered_columns` (array<string>?) — optional
 
 ## Examples
 
-公共四件套：所有 shortcut 顶部排列 `--url` / `--spreadsheet-token` / `--sheet-id` / `--sheet-name`（XOR）。`filter_id` 等同于 `sheet_id`（每个工作表至多一个筛选器）。
+Common four-piece set: all shortcuts have `--url` / `--spreadsheet-token` / `--sheet-id` / `--sheet-name` (XOR) at the top. `filter_id` is equivalent to `sheet_id` (at most one filter per worksheet).
 
 ### `+filter-list`
 
 ```bash
-# 查看当前 sheet 的筛选器配置（filter_id 等于 sheet_id）
+# View the current sheet's filter configuration (filter_id equals sheet_id)
 lark-cli sheets +filter-list --url "..." --sheet-id "$SID"
 ```
 
 ### `+filter-create`
 
-`--range` 是独立 flag（含表头行）；`rules` 走 `--properties`：
+`--range` is an independent flag (including header row); `rules` goes through `--properties`:
 
 ```bash
 lark-cli sheets +filter-create --url "..." --sheet-id "$SID" \
@@ -102,20 +104,20 @@ lark-cli sheets +filter-create --url "..." --sheet-id "$SID" \
   --properties '{"rules":[{"column_index":"B","conditions":[{"type":"multiValue","compare_type":"equal","values":["北京","上海"]}]}]}'
 ```
 
-**`conditions[].type` × `compare_type` 取值**（`type` 决定可用的 `compare_type`；两者均必填）：
+**`conditions[].type` × `compare_type` values** (`type` determines the available `compare_type`; both are required):
 
-| `type` | 可用 `compare_type` | `values` |
+| `type` | Available `compare_type` | `values` |
 |---|---|---|
-| `text` | `contains` / `doesNotContain` / `beginsWith` / `doesNotBeginWith` / `endsWith` / `doesNotEndWith` / `equals` / `notEquals` | 字符串数组 |
-| `number` | `equal` / `notEqual` / `greaterThan` / `greaterThanOrEqual` / `lessThan` / `lessThanOrEqual` / `between` / `notBetween` | 数值（或数值字符串）数组；`between` / `notBetween` 传两个边界 |
-| `multiValue` | `equal` / `notEqual` | 字符串数组（精确匹配其中任一值） |
-| `color` | `backgroundColor` / `foregroundColor` | 不传 `values`（按单元格颜色筛选） |
+| `text` | `contains` / `doesNotContain` / `beginsWith` / `doesNotBeginWith` / `endsWith` / `doesNotEndWith` / `equals` / `notEquals` | String array |
+| `number` | `equal` / `notEqual` / `greaterThan` / `greaterThanOrEqual` / `lessThan` / `lessThanOrEqual` / `between` / `notBetween` | Numeric (or numeric string) array; `between` / `notBetween` pass two boundaries |
+| `multiValue` | `equal` / `notEqual` | String array (exact match to any one of the values) |
+| `color` | `backgroundColor` / `foregroundColor` | Do not pass `values` (filter by cell color) |
 
-> ⚠️ `text` 用 `equals` / `notEquals`（**带 s**），`number` / `multiValue` 用 `equal` / `notEqual`（**不带 s**）——别混。完整 schema 跑 `+filter-create --print-schema --flag-name properties`。
+> ⚠️ `text` uses `equals` / `notEquals` (**with s**), `number` / `multiValue` uses `equal` / `notEqual` (**without s**) — do not mix them up. For the complete schema run `+filter-create --print-schema --flag-name properties`.
 
 ### `+filter-update`
 
-> ⚠️ update 是覆盖式：`--properties` 中传新 `rules` 会替换旧组。如只想加一条，要带上已有的全部条件再追加。必填 `--range`。
+> ⚠️ update is overwrite-style: passing a new `rules` in `--properties` will replace the old group. If you only want to add one, you must include all existing conditions and then append. Required `--range`.
 
 ### `+filter-delete`
 
@@ -123,8 +125,9 @@ lark-cli sheets +filter-create --url "..." --sheet-id "$SID" \
 lark-cli sheets +filter-delete --url "..." --sheet-id "$SID" --yes
 ```
 
-### Validate / DryRun / Execute 约束
+<a id="validate--dryrun--execute-约束"></a>
+### Validate / DryRun / Execute Constraints
 
-- `Validate`：XOR 公共四件套；`+filter-create` 校验 `--range` 至少 2 行（表头 + 至少 1 行数据）；`+filter-update` 必须先 `+filter-list` 确认目标存在；`+filter-delete` 强制 `--yes` 或 `--dry-run`。
-- `DryRun`：输出"将要 POST/PATCH/DELETE 的 filter 请求模板"。
-- `Execute`：写后不自动回读；create/update 后必须调用 `+filter-list` 核对 range、rules 与已过滤行数；delete 后 list 确认筛选器不存在。
+- `Validate`: XOR common four-piece set; `+filter-create` validates that `--range` has at least 2 rows (header + at least 1 data row); `+filter-update` must first `+filter-list` to confirm the target exists; `+filter-delete` enforces `--yes` or `--dry-run`.
+- `DryRun`: Outputs the "filter request template to be POST/PATCH/DELETE'd".
+- `Execute`: Does not automatically read back after writing; after create/update you must call `+filter-list` to verify range, rules, and filtered row count; after delete, list to confirm the filter no longer exists.

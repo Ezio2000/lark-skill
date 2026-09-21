@@ -1,394 +1,422 @@
-# OKR 实体定义
+<a id="okr-实体定义"></a>
+# OKR Entity Definitions
 
-本文档描述飞书 OKR API (`/open-apis/okr/v2`) 中涉及的核心实体及其字段定义。
+This document describes the core entities and their field definitions involved in the Feishu OKR API (`/open-apis/okr/v2`).
 
-## 实体关系概览
+<a id="实体关系概览"></a>
+## Entity Relationship Overview
 
 ```
-Cycle (用户周期)
-  └── Objective (目标)
-        ├── KeyResult (关键结果)
-        │     └── Indicator (指标)
-        │     └── list<Progress> (进展记录列表)
-        │     └── list<Comment> (评论列表)
-        └── Indicator (指标)
-        └── list<Progress> (进展记录列表)
-        └── list<Comment> (评论列表)
+Cycle (User Cycle)
+  └── Objective (Objective)
+        ├── KeyResult (Key Result)
+        │     └── Indicator (Indicator)
+        │     └── list<Progress> (Progress Record List)
+        │     └── list<Comment> (Comment List)
+        └── Indicator (Indicator)
+        └── list<Progress> (Progress Record List)
+        └── list<Comment> (Comment List)
 
-Cycle、Progress 也可以直接挂载 Comment。
-Alignment (对齐关系): Objective ↔ Objective
-Category (分类): Objective 的分组标签
+Cycle and Progress can also have Comment attached directly.
+Alignment (Alignment Relationship): Objective ↔ Objective
+Category (Category): Grouping label for Objective
 ```
 
 ---
 
-## Owner (所有者)
+<a id="owner-所有者"></a>
+## Owner
 
-所有者标识 OKR 实体的归属，目前仅支持用户类型。
+The owner identifies the belonging of an OKR entity. Currently, only the user type is supported.
 
-| 字段           | 类型       | 必填 | 说明                                            |
+| Field           | Type       | Required | Description                                            |
 |--------------|----------|----|-----------------------------------------------|
-| `owner_type` | `string` | 是  | 所有者类型，通常为 `"user"`。                           |
-| `user_id`    | `string` | 否  | 员工 ID，类型由请求参数 `user_id_type` 决定（默认 `open_id`） |
+| `owner_type` | `string` | Yes  | Owner type, usually `"user"`.                           |
+| `user_id`    | `string` | No  | Employee ID, the type is determined by the request parameter `user_id_type` (default `open_id`) |
 
 ---
 
-## Cycle (用户周期)
+<a id="cycle-用户周期"></a>
+## Cycle (User Cycle)
 
-用户周期是 OKR 的顶层容器，代表一个时间段内的所有目标与关键结果。
+The user cycle is the top-level container of OKRs, representing all objectives and key results within a time period.
 
-| 字段                | 类型        | 必填 | 说明                                         |
+| Field                | Type        | Required | Description                                         |
 |-------------------|-----------|----|--------------------------------------------|
-| `id`              | `string`  | 是  | 用户周期 ID                                    |
-| `create_time`     | `string`  | 是  | 创建时间                                       |
-| `update_time`     | `string`  | 是  | 更新时间                                       |
-| `tenant_cycle_id` | `string`  | 是  | 租户周期 ID（同一周期在不同用户下有不同的用户周期 ID，但租户周期 ID 相同） |
-| `owner`           | `Owner`   | 是  | 所有者                                        |
-| `start_time`      | `string`  | 是  | 周期开始时间。总是从某月1日开始                           |
-| `end_time`        | `string`  | 是  | 周期结束时间。到某月最后一日结束                           |
-| `cycle_status`    | `integer` | 否  | 周期状态，见下表                                   |
-| `score`           | `number`  | 否  | 周期分数，范围 [0, 1]，支持一位小数                      |
+| `id`              | `string`  | Yes  | User cycle ID                                    |
+| `create_time`     | `string`  | Yes  | Creation time                                       |
+| `update_time`     | `string`  | Yes  | Update time                                       |
+| `tenant_cycle_id` | `string`  | Yes  | Tenant cycle ID (the same cycle has different user cycle IDs under different users, but the tenant cycle ID is the same) |
+| `owner`           | `Owner`   | Yes  | Owner                                        |
+| `start_time`      | `string`  | Yes  | Cycle start time. Always starts on the 1st of a month                           |
+| `end_time`        | `string`  | Yes  | Cycle end time. Ends on the last day of a month                           |
+| `cycle_status`    | `integer` | No  | Cycle status, see the table below                                   |
+| `score`           | `number`  | No  | Cycle score, range [0, 1], supports one decimal place                      |
 
-### 常用术语
+<a id="常用术语"></a>
+### Common Terms
 
-- **当前周期**: 指周期的 start_time/end_time
-  指周期的 start_time / end_time 所在的时间段与当前时间重叠的周期（即： start_time <= 当前时间 且 end_time >= 当前时间）。
-  注意：时间重叠是判断当前周期的首要且必须的硬性条件，绝对不能仅仅根据 cycle_status == 1 去判断。
-  如果有多个符合时间重叠标准的周期，再在这些包含当前时间的周期中过滤，保留周期状态为 default (0) 或 normal (1)
-  的周期。如果仍然有多个，则选择其中较新的一个。当用户提及“上一个周期”，“下一个周期”一类的表述时，通常是以当前周期为准计算。
-    - 如果用户没有提及，那么当前周期一般不考虑年度周期（起止时间从 01-01 至 12-31 的周期）
-- **所有者**: 绝大多数所有者都是用户，少部分租户启用了“团队OKR”功能，所有者可能是部门。用户身份下，只能编辑所有者为当前用户的
-  OKR。
+- **Current cycle**: Refers to the start_time/end_time of the cycle
+  Refers to the cycle whose time period of start_time / end_time overlaps with the current time (that is: start_time <= current time and end_time >= current time).
+  Note: Time overlap is the primary and mandatory hard condition for determining the current cycle. It must never be determined solely based on cycle_status == 1.
+  If there are multiple cycles that meet the time overlap criterion, then filter among these cycles that contain the current time, keeping cycles whose cycle status is default (0) or normal (1).
+  If there are still multiple, choose the newer one among them. When the user mentions expressions such as "previous cycle" or "next cycle", they are usually calculated based on the current cycle.
+    - If the user does not mention it, the current cycle generally does not consider annual cycles (cycles whose start and end times are from 01-01 to 12-31)
+- **Owner**: The vast majority of owners are users. A small number of tenants have enabled the "Team OKR" feature, and the owner may be a department. Under a user identity, you can only edit OKRs whose owner is the current user.
 
-### 周期状态 (cycle_status)
+<a id="周期状态-cycle_status"></a>
+### Cycle Status (cycle_status)
 
-| 值 | 常量名       | 说明          |
+| Value | Constant Name       | Description          |
 |---|-----------|-------------|
-| 0 | `default` | 默认状态        |
-| 1 | `normal`  | 生效中         |
-| 2 | `invalid` | 已失效（通常仍可填写） |
-| 3 | `hidden`  | 已隐藏（不可见）    |
+| 0 | `default` | Default status        |
+| 1 | `normal`  | In effect         |
+| 2 | `invalid` | Expired (usually can still be filled in) |
+| 3 | `hidden`  | Hidden (invisible)    |
 
-> **SHORTCUT：** `okr +cycle-list` [lark-okr-cycle-list.md](lark-okr-cycle-list.md) 获取用户的周期列表，可按时间筛选
+> **SHORTCUT:** `okr +cycle-list` [lark-okr-cycle-list.md](lark-okr-cycle-list.md) Get the user's cycle list, which can be filtered by time
 >
-> **API：** `cycles.list`
+> **API:** `cycles.list`
 
 ---
 
-## Objective (目标)
+<a id="objective-目标"></a>
+## Objective
 
-目标是 OKR 中的 "O"，属于某个用户周期，可包含多个关键结果。
+An objective is the "O" in OKR. It belongs to a user cycle and can contain multiple key results.
 
-| 字段            | 类型             | 必填 | 说明                                                      |
+| Field            | Type             | Required | Description                                                      |
 |---------------|----------------|----|---------------------------------------------------------|
-| `id`          | `string`       | 是  | 目标 ID                                                   |
-| `create_time` | `string`       | 是  | 创建时间，毫秒时间戳，shortcut 会将其解析为日期时间                          |
-| `update_time` | `string`       | 是  | 更新时间，毫秒时间戳，shortcut 会将其解析为日期时间                          |
-| `owner`       | `Owner`        | 是  | 所有者                                                     |
-| `cycle_id`    | `string`       | 是  | 所属用户周期 ID                                               |
-| `position`    | `integer`      | 是  | 排序序号，从 1 开始，范围 [1, 100]                                 |
-| `content`     | `ContentBlock` | 否  | 目标内容（富文本），见 [ContentBlock 定义](lark-okr-contentblock.md) |
-| `score`       | `number`       | 否  | 目标分数，范围 [0, 1]，支持一位小数                                   |
-| `notes`       | `ContentBlock` | 否  | 目标备注（富文本），见 [ContentBlock 定义](lark-okr-contentblock.md) |
-| `weight`      | `number`       | 否  | 目标权重，范围 [0, 1]，支持三位小数                                   |
-| `deadline`    | `string`       | 否  | 截止时间，毫秒时间戳，shortcut 会将其解析为日期时间                          |
-| `category_id` | `string`       | 否  | 所属分类 ID                                                 |
+| `id`          | `string`       | Yes  | Objective ID                                                   |
+| `create_time` | `string`       | Yes  | Creation time, millisecond timestamp, the shortcut will parse it into a date-time                          |
+| `update_time` | `string`       | Yes  | Update time, millisecond timestamp, the shortcut will parse it into a date-time                          |
+| `owner`       | `Owner`        | Yes  | Owner                                                     |
+| `cycle_id`    | `string`       | Yes  | Belonging user cycle ID                                               |
+| `position`    | `integer`      | Yes  | Sort order, starting from 1, range [1, 100]                                 |
+| `content`     | `ContentBlock` | No  | Objective content (rich text), see [ContentBlock Definition](lark-okr-contentblock.md) |
+| `score`       | `number`       | No  | Objective score, range [0, 1], supports one decimal place                                   |
+| `notes`       | `ContentBlock` | No  | Objective notes (rich text), see [ContentBlock Definition](lark-okr-contentblock.md) |
+| `weight`      | `number`       | No  | Objective weight, range [0, 1], supports three decimal places                                   |
+| `deadline`    | `string`       | No  | Deadline, millisecond timestamp, the shortcut will parse it into a date-time                          |
+| `category_id` | `string`       | No  | Belonging category ID                                                 |
 
-> **SHORTCUT：**
-> - `okr +cycle-detail` [lark-okr-cycle-detail.md](lark-okr-cycle-detail.md) 获取某个用户周期下的全部目标和关键结果。时间相关的字段会以日期时间格式解析
+> **SHORTCUT:**
+> - `okr +cycle-detail` [lark-okr-cycle-detail.md](lark-okr-cycle-detail.md) Get all objectives and key results under a user cycle. Time-related fields will be parsed in date-time format
 >
-> **API：**
-> - `cycle.objectives.list` — 获取周期下的目标列表
-> - `objectives.get` — 获取单个目标
-> - `cycle.objectives.create` — 创建目标
-> - `objectives.delete` — 删除目标
-> - `cycles.objectives_position` — 更新周期下的目标排序
-> - `cycles.objectives_weight` — 更新周期下的目标权重
+> **API:**
+> - `cycle.objectives.list` — Get the objective list under a cycle
+> - `objectives.get` — Get a single objective
+> - `cycle.objectives.create` — Create an objective
+> - `objectives.delete` — Delete an objective
+> - `cycles.objectives_position` — Update the objective sort order under a cycle
+> - `cycles.objectives_weight` — Update the objective weight under a cycle
 
 ---
 
-## KeyResult (关键结果)
+<a id="keyresult-关键结果"></a>
+## KeyResult
 
-关键结果是 OKR 中的 "KR"，属于某个目标，描述目标的可衡量成果。
+A key result is the "KR" in OKR. It belongs to an objective and describes the measurable outcome of the objective.
 
-| 字段             | 类型             | 必填 | 说明                                                        |
+| Field             | Type             | Required | Description                                                        |
 |----------------|----------------|----|-----------------------------------------------------------|
-| `id`           | `string`       | 是  | 关键结果 ID                                                   |
-| `create_time`  | `string`       | 是  | 创建时间，毫秒时间戳                                                |
-| `update_time`  | `string`       | 是  | 修改时间，毫秒时间戳                                                |
-| `owner`        | `Owner`        | 是  | 所有者                                                       |
-| `objective_id` | `string`       | 是  | 所属目标 ID                                                   |
-| `position`     | `integer`      | 是  | 排序序号，从 1 开始，范围 [1, 100]                                   |
-| `content`      | `ContentBlock` | 否  | 关键结果内容（富文本），见 [ContentBlock 定义](lark-okr-contentblock.md) |
-| `score`        | `number`       | 否  | 关键结果分数，范围 [0, 1]，支持一位小数                                   |
-| `weight`       | `number`       | 否  | 权重，范围 [0, 1]，支持三位小数                                       |
-| `deadline`     | `string`       | 否  | 截止时间，毫秒时间戳                                                |
+| `id`           | `string`       | Yes  | Key result ID                                                   |
+| `create_time`  | `string`       | Yes  | Creation time, millisecond timestamp                                                |
+| `update_time`  | `string`       | Yes  | Modification time, millisecond timestamp                                                |
+| `owner`        | `Owner`        | Yes  | Owner                                                       |
+| `objective_id` | `string`       | Yes  | Belonging objective ID                                                   |
+| `position`     | `integer`      | Yes  | Sort order, starting from 1, range [1, 100]                                   |
+| `content`      | `ContentBlock` | No  | Key result content (rich text), see [ContentBlock Definition](lark-okr-contentblock.md) |
+| `score`        | `number`       | No  | Key result score, range [0, 1], supports one decimal place                                   |
+| `weight`       | `number`       | No  | Weight, range [0, 1], supports three decimal places                                       |
+| `deadline`     | `string`       | No  | Deadline, millisecond timestamp                                                |
 
-> **API：**
-> - `objective.key_results.list` — 获取目标下的关键结果列表
-> - `key_results.get` — 获取单个关键结果
-> - `key_results.patch` — 更新关键结果
-> - `key_results.delete` — 删除关键结果
-> - `objectives.key_results_position` — 更新目标下的关键结果排序
-> - `objectives.key_results_weight` — 更新目标下的关键结果权重
+> **API:**
+> - `objective.key_results.list` — Get the key result list under an objective
+> - `key_results.get` — Get a single key result
+> - `key_results.patch` — Update a key result
+> - `key_results.delete` — Delete a key result
+> - `objectives.key_results_position` — Update the key result sort order under an objective
+> - `objectives.key_results_weight` — Update the key result weight under an objective
 
 ---
 
-## Progress (进展记录)
+<a id="progress-进展记录"></a>
+## Progress
 
-进展记录挂载在目标（Objective）或关键结果（Key Result）上，用于记录阶段性进展内容与进度百分比。每条进展记录包含富文本内容和可选的进度率。
+Progress records are attached to an Objective or Key Result and are used to record phased progress content and progress percentage. Each progress record contains rich text content and an optional progress rate.
 
-| 字段              | 类型             | 必填 | 说明                                                      |
+| Field              | Type             | Required | Description                                                      |
 |-----------------|----------------|----|---------------------------------------------------------|
-| `progress_id`   | `string`       | 是  | 进展记录 ID（int64，正整数）                                      |
-| `modify_time`   | `string`       | 是  | 最后修改时间，毫秒时间戳，shortcut 会将其解析为日期时间                        |
-| `content`       | `ContentBlock` | 否  | 进展内容（富文本），见 [ContentBlock 定义](lark-okr-contentblock.md) |
-| `progress_rate` | `ProgressRate` | 否  | 进度率，包含百分比和状态                                            |
+| `progress_id`   | `string`       | Yes  | Progress record ID (int64, positive integer)                                      |
+| `modify_time`   | `string`       | Yes  | Last modification time, millisecond timestamp, the shortcut will parse it into a date-time                        |
+| `content`       | `ContentBlock` | No  | Progress content (rich text), see [ContentBlock Definition](lark-okr-contentblock.md) |
+| `progress_rate` | `ProgressRate` | No  | Progress rate, including percentage and status                                            |
 
-### ProgressRate (进度率)
+<a id="progressrate-进度率"></a>
+### ProgressRate
 
-| 字段        | 类型       | 必填 | 说明                                                                                                                           |
+| Field        | Type       | Required | Description                                                                                                                           |
 |-----------|----------|----|------------------------------------------------------------------------------------------------------------------------------|
-| `percent` | `number` | 否  | 进度百分比，范围 [-99999999999, 99999999999]。百分比的取值通常在 0-100，但允许超过此范围，以表示超额完成或负增长等情况。挂载的目标或关键结果的量化指标不使用百分比单位时，以这个字段更新当前值。系统内最多保留两位小数 |
-| `status`  | `string` | 否  | 进度状态，shortcut 返回可读字符串，见下表                                                                                                    |
+| `percent` | `number` | No  | Progress percentage, range [-99999999999, 99999999999]. The percentage value is usually in 0-100, but values outside this range are allowed to represent situations such as overachievement or negative growth. When the quantitative metric of the attached objective or key result does not use percentage units, use this field to update the current value. The system retains at most two decimal places |
+| `status`  | `string` | No  | Progress status, the shortcut returns a readable string, see the table below                                                                                                    |
 
-### 进度状态 (progress_rate.status)
+<a id="进度状态-progress_ratestatus"></a>
+### Progress Status (progress_rate.status)
 
-| 值         | 常量名 | 说明    |
+| Value         | Constant Name | Description    |
 |-----------|-----|-------|
-| `normal`  | 正常  | 进展正常  |
-| `overdue` | 逾期  | 进展逾期  |
-| `done`    | 已完成 | 进展已完成 |
+| `normal`  | Normal  | Progress is normal  |
+| `overdue` | Overdue  | Progress is overdue  |
+| `done`    | Completed | Progress is completed |
 
-### 创建进展记录时的参数
+<a id="创建进展记录时的参数"></a>
+### Parameters When Creating a Progress Record
 
-创建进展记录时，除了 `content` 外，还需要指定这条进展记录挂载的对应目标或关键结果：
+When creating a progress record, in addition to `content`, you also need to specify the corresponding objective or key result to which this progress record is attached:
 
-| 字段              | 类型             | 必填 | 说明                                                      |
+| Field              | Type             | Required | Description                                                      |
 |-----------------|----------------|----|---------------------------------------------------------|
-| `content`       | `ContentBlock` | 是  | 进展内容（富文本），见 [ContentBlock 定义](lark-okr-contentblock.md) |
-| `target_id`     | `string`       | 是  | 目标 ID 或关键结果 ID                                          |
-| `target_type`   | `integer`      | 是  | 目标类型：`2`=目标（Objective），`3`=关键结果（KeyResult）              |
-| `progress_rate` | `ProgressRate` | 否  | 进度率，可设置 `percent` 和 `status`                            |
-| `source_title`  | `string`       | 否  | 来源标题，用于在 OKR 界面中显示进展来源                                  |
-| `source_url`    | `string`       | 否  | 来源 URL，用于在 OKR 界面中显示进展来源链接                              |
+| `content`       | `ContentBlock` | Yes  | Progress content (rich text), see [ContentBlock Definition](lark-okr-contentblock.md) |
+| `target_id`     | `string`       | Yes  | Objective ID or key result ID                                          |
+| `target_type`   | `integer`      | Yes  | Target type: `2`=Objective, `3`=KeyResult              |
+| `progress_rate` | `ProgressRate` | No  | Progress rate, can set `percent` and `status`                            |
+| `source_title`  | `string`       | No  | Source title, used to display the progress source in the OKR interface                                  |
+| `source_url`    | `string`       | No  | Source URL, used to display the progress source link in the OKR interface                              |
 
-> **SHORTCUT：**
-> - `okr +progress-get` [lark-okr-progress-get.md](lark-okr-progress-get.md) 获取单条进展记录
-> - `okr +progress-create` [lark-okr-progress-create.md](lark-okr-progress-create.md) 为目标或关键结果创建进展记录
-> - `okr +progress-update` [lark-okr-progress-update.md](lark-okr-progress-update.md) 更新进展记录内容
-> - `okr +progress-delete` [lark-okr-progress-delete.md](lark-okr-progress-delete.md) 删除进展记录
-> - `okr +progress-list` [lark-okr-progress-list.md](lark-okr-progress-list.md) 获取目标/关键结果下的进展记录
+> **SHORTCUT:**
+> - `okr +progress-get` [lark-okr-progress-get.md](lark-okr-progress-get.md) Get a single progress record
+> - `okr +progress-create` [lark-okr-progress-create.md](lark-okr-progress-create.md) Create a progress record for an objective or key result
+> - `okr +progress-update` [lark-okr-progress-update.md](lark-okr-progress-update.md) Update progress record content
+> - `okr +progress-delete` [lark-okr-progress-delete.md](lark-okr-progress-delete.md) Delete a progress record
+> - `okr +progress-list` [lark-okr-progress-list.md](lark-okr-progress-list.md) Get the progress records under an objective/key result
 
 ---
 
-## Comment (评论)
+<a id="comment-评论"></a>
+## Comment
 
-评论可以挂载在 Cycle、Objective、KeyResult 或 Progress 上，用于对 OKR 实体或正文中的一段文字进行讨论。评论分为实体级评论和划词评论两种：
+Comments can be attached to a Cycle, Objective, KeyResult, or Progress, and are used to discuss an OKR entity or a passage of text in the body. Comments fall into two types: entity-level comments and selection comments:
 
-- **实体级评论**：直接附着在 Cycle 或 Progress 上。一条评论就是一个评论项，solve/reopen 只影响该评论。
-- **划词评论**：附着在 Objective 或 KeyResult 的正文选区上，带有 `selection`。同一个 `selection.id`
-  下的评论属于同一个评论串；solve/reopen 按评论串处理，但 delete 仍然只删除指定的一条评论。
+- **Entity-level comments**: Attached directly to a Cycle or Progress. One comment is one comment item, and solve/reopen only affects that comment.
+- **Selection comments**: Attached to a text selection in the body of an Objective or KeyResult, and carry a `selection`. Comments under the same `selection.id`
+  belong to the same comment thread; solve/reopen are handled by comment thread, but delete still deletes only the specified single comment.
 
-### Comment 字段
+<a id="comment-字段"></a>
+### Comment Fields
 
-| 字段               | 类型                 | 必填 | 说明                                                                                            |
+| Field               | Type                 | Required | Description                                                                                            |
 |------------------|--------------------|----|-----------------------------------------------------------------------------------------------|
-| `id`             | `string`           | 是  | 评论 ID，int64 正整数。                                                                              |
-| `target`         | `CommentTarget`    | 是  | 评论挂载对象，包含 `target_type` 和 `target_id`。类型为 `cycle`、`progress`、`objective` 或 `key_result`。      |
-| `commentator_id` | `string`           | 是  | 评论者 ID，返回 ID 类型由请求参数 `user_id_type` 决定。                                                       |
-| `status`         | `string`           | 是  | 评论状态：`open`（打开）或 `solved`（已解决）。                                                               |
-| `create_time`    | `string`           | 是  | 创建时间；                                                                                         |
-| `update_time`    | `string`           | 是  | 最后更新时间；                                                                                       |
-| `content`        | `ContentBlock`     | 否  | 评论正文，见 [ContentBlock 定义](lark-okr-contentblock.md)。                                           |
-| `solver_id`      | `string`           | 否  | 解决评论的用户 ID。                                                                                   |
-| `solved_time`    | `string`           | 否  | 评论解决时间，毫秒时间戳。                                                                                 |
-| `ref_comment_id` | `string`           | 否  | 被引用评论 ID。Progress/Cycle 等实体级评论可用它表示回复关系；Objective/KeyResult 的划词评论创建时可用它定位已有划词串，但新评论本身不建立引用关系。 |
-| `selection`      | `CommentSelection` | 否  | 划词信息。实体级评论为空；划词评论包含 selection ID 和可选的选区文本。                                                    |
+| `id`             | `string`           | Yes  | Comment ID, a positive int64 integer.                                                                              |
+| `target`         | `CommentTarget`    | Yes  | The object the comment is attached to, containing `target_type` and `target_id`. The type is `cycle`, `progress`, `objective`, or `key_result`.      |
+| `commentator_id` | `string`           | Yes  | Commenter ID; the returned ID type is determined by the request parameter `user_id_type`.                                                       |
+| `status`         | `string`           | Yes  | Comment status: `open` (open) or `solved` (resolved).                                                               |
+| `create_time`    | `string`           | Yes  | Creation time;                                                                                         |
+| `update_time`    | `string`           | Yes  | Last update time;                                                                                       |
+| `content`        | `ContentBlock`     | No  | Comment body, see [ContentBlock definition](lark-okr-contentblock.md).                                           |
+| `solver_id`      | `string`           | No  | ID of the user who resolved the comment.                                                                                   |
+| `solved_time`    | `string`           | No  | Comment resolution time, a millisecond timestamp.                                                                                 |
+| `ref_comment_id` | `string`           | No  | Referenced comment ID. Entity-level comments such as Progress/Cycle can use it to express a reply relationship; when creating a selection comment on an Objective/KeyResult, it can be used to locate an existing selection thread, but the new comment itself does not establish a reference relationship. |
+| `selection`      | `CommentSelection` | No  | Selection information. Empty for entity-level comments; selection comments contain a selection ID and optional selected text.                                                    |
 
-### CommentTarget (评论目标)
+<a id="commenttarget-评论目标"></a>
+### CommentTarget
 
-| 字段            | 类型       | 必填 | 说明                                             |
+| Field            | Type       | Required | Description                                             |
 |---------------|----------|----|------------------------------------------------|
-| `target_type` | `string` | 是  | `cycle`、`progress`、`objective` 或 `key_result`。 |
-| `target_id`   | `string` | 是  | 对应 Cycle、Progress、Objective 或 KeyResult 的 ID。  |
+| `target_type` | `string` | Yes  | `cycle`, `progress`, `objective`, or `key_result`. |
+| `target_id`   | `string` | Yes  | The ID of the corresponding Cycle, Progress, Objective, or KeyResult.  |
 
-### CommentSelection (划词信息)
+<a id="commentselection-划词信息"></a>
+### CommentSelection
 
-| 字段              | 类型       | 必填 | 说明                          |
+| Field              | Type       | Required | Description                          |
 |-----------------|----------|----|-----------------------------|
-| `id`            | `string` | 是  | 划词 ID。同一 `id` 下的评论属于同一个评论串。 |
-| `selected_text` | `string` | 否  | 划词锚定的正文文字。                  |
+| `id`            | `string` | Yes  | Selection ID. Comments under the same `id` belong to the same comment thread. |
+| `selected_text` | `string` | No  | The body text anchored by the selection.                  |
 
-### 评论创建与状态规则
+<a id="评论创建与状态规则"></a>
+### Comment Creation and Status Rules
 
-- Cycle/Progress 创建实体级评论时不传 `selected_text`；可以通过 `ref_comment_id` 回复已有评论。
-- Objective/KeyResult 创建划词评论时，`selected_text` 与 `ref_comment_id` 二选一：前者新建划词，后者将评论挂入被引用评论所属的已有划词串。shortcut
-  另外提供 `--select-all` 替代 `selected_text` 以选中 O/KR 内的全部内容。
-- `solve` / `reopen` 的请求参数是单条评论 ID。对实体级评论只影响该评论；对划词评论会影响整条评论串。
-- `delete` 永久删除指定评论，不会连带删除同一评论串的其他评论，且删除后不可找回。
+- When creating an entity-level comment on a Cycle/Progress, do not pass `selected_text`; you can reply to an existing comment via `ref_comment_id`.
+- When creating a selection comment on an Objective/KeyResult, choose one of `selected_text` or `ref_comment_id`: the former creates a new selection, and the latter attaches the comment to the existing selection thread that the referenced comment belongs to. shortcut
+  additionally provides `--select-all` in place of `selected_text` to select all content within the O/KR.
+- The request parameter of `solve` / `reopen` is a single comment ID. For entity-level comments it affects only that comment; for selection comments it affects the entire comment thread.
+- `delete` permanently deletes the specified comment, does not delete other comments in the same comment thread, and cannot be recovered after deletion.
 
-> **SHORTCUT：**
-> - `okr +comment-detail` [lark-okr-comment-detail.md](lark-okr-comment-detail.md) 获取周期下全部对象的评论并按评论串整理
-> - `okr +comment-list` [lark-okr-comment-list.md](lark-okr-comment-list.md) 分页获取单个评论目标下的评论
-> - `okr +comment-get` [lark-okr-comment-get.md](lark-okr-comment-get.md) 获取单条评论
-> - `okr +comment-create` [lark-okr-comment-create.md](lark-okr-comment-create.md) 创建评论、回复或挂入已有划词串
-> - `okr +comment-patch` [lark-okr-comment-patch.md](lark-okr-comment-patch.md) 修改评论正文
-> - `okr +comment-delete` [lark-okr-comment-delete.md](lark-okr-comment-delete.md) 永久删除单条评论
-> - `okr +comment-solve` [lark-okr-comment-solve-reopen.md](lark-okr-comment-solve-reopen.md) 解决评论/评论串
-> - `okr +comment-reopen` [lark-okr-comment-solve-reopen.md](lark-okr-comment-solve-reopen.md) 重新打开评论/评论串
+> **SHORTCUT:**
+> - `okr +comment-detail` [lark-okr-comment-detail.md](lark-okr-comment-detail.md) Get all comments of all objects under a cycle and organize them by comment thread
+> - `okr +comment-list` [lark-okr-comment-list.md](lark-okr-comment-list.md) Get comments under a single comment target with pagination
+> - `okr +comment-get` [lark-okr-comment-get.md](lark-okr-comment-get.md) Get a single comment
+> - `okr +comment-create` [lark-okr-comment-create.md](lark-okr-comment-create.md) Create a comment, reply, or attach to an existing selection thread
+> - `okr +comment-patch` [lark-okr-comment-patch.md](lark-okr-comment-patch.md) Modify the comment body
+> - `okr +comment-delete` [lark-okr-comment-delete.md](lark-okr-comment-delete.md) Permanently delete a single comment
+> - `okr +comment-solve` [lark-okr-comment-solve-reopen.md](lark-okr-comment-solve-reopen.md) Resolve a comment/comment thread
+> - `okr +comment-reopen` [lark-okr-comment-solve-reopen.md](lark-okr-comment-solve-reopen.md) Reopen a comment/comment thread
 ---
 
-## Indicator (指标)
+<a id="indicator-指标"></a>
+## Indicator
 
-指标是目标和关键结果的量化度量，可独立挂载在 Objective 或 KeyResult 上。
+An indicator is a quantitative measure of an objective or key result, and can be attached independently to an Objective or KeyResult.
 
-| 字段                             | 类型              | 必填 | 说明                                 |
+| Field                             | Type              | Required | Description                                 |
 |--------------------------------|-----------------|----|------------------------------------|
-| `id`                           | `string`        | 是  | 指标 ID                              |
-| `create_time`                  | `string`        | 是  | 创建时间，毫秒时间戳                         |
-| `update_time`                  | `string`        | 是  | 更新时间，毫秒时间戳                         |
-| `owner`                        | `Owner`         | 是  | 所有者                                |
-| `entity_type`                  | `integer`       | 是  | 所属实体类型：`2`=目标，`3`=关键结果             |
-| `entity_id`                    | `string`        | 是  | 所属实体 ID                            |
-| `indicator_status`             | `integer`       | 是  | 指标状态，见下表                           |
-| `status_calculate_type`        | `integer`       | 是  | 状态计算方式，见下表                         |
-| `start_value`                  | `number`        | 否  | 起始值，范围 [-99999999999, 99999999999] |
-| `target_value`                 | `number`        | 否  | 目标值，范围 [-99999999999, 99999999999] |
-| `current_value`                | `number`        | 否  | 当前值，范围 [-99999999999, 99999999999] |
-| `current_value_calculate_type` | `integer`       | 否  | 当前值计算方式，见下表                        |
-| `unit`                         | `IndicatorUnit` | 否  | 指标单位                               |
+| `id`                           | `string`        | Yes  | Indicator ID                              |
+| `create_time`                  | `string`        | Yes  | Creation time, a millisecond timestamp                         |
+| `update_time`                  | `string`        | Yes  | Update time, a millisecond timestamp                         |
+| `owner`                        | `Owner`         | Yes  | Owner                                |
+| `entity_type`                  | `integer`       | Yes  | Owning entity type: `2`=objective, `3`=key result             |
+| `entity_id`                    | `string`        | Yes  | Owning entity ID                            |
+| `indicator_status`             | `integer`       | Yes  | Indicator status, see the table below                           |
+| `status_calculate_type`        | `integer`       | Yes  | Status calculation method, see the table below                         |
+| `start_value`                  | `number`        | No  | Start value, range [-99999999999, 99999999999] |
+| `target_value`                 | `number`        | No  | Target value, range [-99999999999, 99999999999] |
+| `current_value`                | `number`        | No  | Current value, range [-99999999999, 99999999999] |
+| `current_value_calculate_type` | `integer`       | No  | Current value calculation method, see the table below                        |
+| `unit`                         | `IndicatorUnit` | No  | Indicator unit                               |
 
-### 修改指南
+<a id="修改指南"></a>
+### Modification Guide
 
-- **进度值**: 一般指 `current_value`，单位未提及时通常用百分制计算。
-- 当用户要求量化的更新 OKR 进度时，一般指的就是修改对应 OKR 的 Indicator。
-- OKR 在未设置量化指标时，Indicator 的内容为空。如果用户未做特别说明，更新进度时可以默认将进度以百分制设置（初始值0，目标值100，unit
-  参见下文设置为 0/PERCENT）
+- **Progress value**: Generally refers to `current_value`; when no unit is mentioned, it is usually calculated on a percentage scale.
+- When the user asks to update OKR progress quantitatively, it generally means modifying the Indicator of the corresponding OKR.
+- When an OKR has no quantitative indicator set, the Indicator content is empty. If the user does not specify otherwise, when updating progress you can by default set the progress on a percentage scale (start value 0, target value 100, unit
+  set to 0/PERCENT as described below)
 
-### 指标状态 (indicator_status)
+<a id="指标状态-indicator_status"></a>
+### Indicator Status (indicator_status)
 
-| 值  | 说明  |
+| Value  | Description  |
 |----|-----|
-| -1 | 未定义 |
-| 0  | 正常  |
-| 1  | 有风险 |
-| 2  | 已延期 |
+| -1 | Undefined |
+| 0  | Normal  |
+| 1  | At risk |
+| 2  | Delayed |
 
-### 状态计算方式 (status_calculate_type)
+<a id="状态计算方式-status_calculate_type"></a>
+### Status Calculation Method (status_calculate_type)
 
-| 值 | 说明              | 适用范围    |
+| Value | Description              | Applicable scope    |
 |---|-----------------|---------|
-| 0 | 手动更新            | 目标、关键结果 |
-| 1 | 基于进度和当前时间自动更新   | 目标、关键结果 |
-| 2 | 基于风险最高的关键结果状态更新 | 仅目标     |
+| 0 | Manual update            | Objective, key result |
+| 1 | Automatically updated based on progress and current time   | Objective, key result |
+| 2 | Updated based on the status of the highest-risk key result | Objective only     |
 
-### 当前值计算方式 (current_value_calculate_type)
+<a id="当前值计算方式-current_value_calculate_type"></a>
+### Current Value Calculation Method (current_value_calculate_type)
 
-| 值 | 说明            | 适用范围    |
+| Value | Description            | Applicable scope    |
 |---|---------------|---------|
-| 0 | 手动更新          | 目标、关键结果 |
-| 1 | 基于关键结果进度自动更新  | 仅目标     |
-| 2 | 基于拆解的关键结果进度更新 | 仅关键结果   |
+| 0 | Manual update          | Objective, key result |
+| 1 | Automatically updated based on key result progress  | Objective only     |
+| 2 | Updated based on the progress of decomposed key results | Key result only   |
 
-### IndicatorUnit (指标单位)
+<a id="indicatorunit-指标单位"></a>
+### IndicatorUnit
 
-| 字段           | 类型        | 必填 | 说明                                                                          |
+| Field           | Type        | Required | Description                                                                          |
 |--------------|-----------|----|-----------------------------------------------------------------------------|
-| `unit_type`  | `integer` | 是  | 单位类型：`0`=公共，`1`=自定义                                                         |
-| `unit_value` | `string`  | 是  | 单位值。公共类型可选：`PERCENT`(百分比)、`NONE`(无单位)、`YUAN`(元)、`DOLLAR`(美元)；自定义类型字符长度不超过 5 |
+| `unit_type`  | `integer` | Yes  | Unit type: `0`=common, `1`=custom                                                         |
+| `unit_value` | `string`  | Yes  | Unit value. Options for the common type: `PERCENT` (percentage), `NONE` (no unit), `YUAN` (yuan), `DOLLAR` (US dollar); custom type character length must not exceed 5 |
 
-> **API：**
-> - `key_result.indicators.list` — 获取关键结果的指标
-> - `objective.indicators.list` — 获取目标的指标
-> - `indicators.patch` — 更新指标
+> **API:**
+> - `key_result.indicators.list` — Get the indicators of a key result
+> - `objective.indicators.list` — Get the indicators of an objective
+> - `indicators.patch` — Update an indicator
 
 ---
 
-## Alignment (对齐关系)
+<a id="alignment-对齐关系"></a>
+## Alignment
 
-对齐关系描述两个目标之间的上下对齐。
+An alignment relationship describes the vertical alignment between two objectives.
 
-| 字段                 | 类型        | 必填 | 说明                    |
+| Field                 | Type        | Required | Description                    |
 |--------------------|-----------|----|-----------------------|
-| `id`               | `string`  | 是  | 对齐 ID                 |
-| `create_time`      | `string`  | 是  | 创建时间，毫秒时间戳            |
-| `update_time`      | `string`  | 是  | 更新时间，毫秒时间戳            |
-| `from_owner`       | `Owner`   | 是  | 发起对齐的所有者              |
-| `to_owner`         | `Owner`   | 是  | 被对齐的所有者               |
-| `from_entity_type` | `integer` | 是  | 发起对齐的实体类型，固定为 `2`（目标） |
-| `from_entity_id`   | `string`  | 是  | 发起对齐的实体 ID            |
-| `to_entity_type`   | `integer` | 是  | 被对齐的实体类型，固定为 `2`（目标）  |
-| `to_entity_id`     | `string`  | 是  | 被对齐的实体 ID             |
+| `id`               | `string`  | Yes  | Alignment ID                 |
+| `create_time`      | `string`  | Yes  | Creation time, a millisecond timestamp            |
+| `update_time`      | `string`  | Yes  | Update time, a millisecond timestamp            |
+| `from_owner`       | `Owner`   | Yes  | Owner who initiates the alignment              |
+| `to_owner`         | `Owner`   | Yes  | Owner being aligned to               |
+| `from_entity_type` | `integer` | Yes  | Entity type that initiates the alignment, fixed as `2` (objective) |
+| `from_entity_id`   | `string`  | Yes  | Entity ID that initiates the alignment            |
+| `to_entity_type`   | `integer` | Yes  | Entity type being aligned to, fixed as `2` (objective)  |
+| `to_entity_id`     | `string`  | Yes  | Entity ID being aligned to             |
 
-> **API：**
-> - `alignments.get` — 获取对齐关系
-> - `alignments.delete` — 删除对齐关系
-> - `objective.alignments.list` — 批量获取目标下的对齐关系
-> - `objective.alignments.create` — 创建对齐关系
+> **API:**
+> - `alignments.get` — Get an alignment relationship
+> - `alignments.delete` — Delete an alignment relationship
+> - `objective.alignments.list` — Batch get alignment relationships under an objective
+> - `objective.alignments.create` — Create an alignment relationship
 
 ---
 
-## Category (分类)
+<a id="category-分类"></a>
+## Category
 
-分类用于对目标进行分组标记（如"个人 OKR"、"团队 OKR"、"承诺 OKR"）等。具体的分类根据租户设置而定。
+Categories are used to group and label objectives (such as "personal OKR", "team OKR", "committed OKR"), etc. The specific categories depend on tenant settings.
 
-| 字段              | 类型             | 必填 | 说明                                                          |
+| Field              | Type             | Required | Description                                                          |
 |-----------------|----------------|----|-------------------------------------------------------------|
-| `id`            | `string`       | 是  | 分类 ID                                                       |
-| `create_time`   | `string`       | 是  | 创建时间，毫秒时间戳                                                  |
-| `update_time`   | `string`       | 是  | 更新时间，毫秒时间戳                                                  |
-| `category_type` | `string`       | 是  | 分类类型：`"person"`=个人，`"team"`=团队                              |
-| `enabled`       | `boolean`      | 是  | 是否启用                                                        |
-| `color`         | `string`       | 是  | 颜色标识：`blue`、`purple`、`wathet`、`turquoise`、`indigo`、`orange` |
-| `name`          | `CategoryName` | 是  | 多语言名称                                                       |
+| `id`            | `string`       | Yes  | Category ID                                                       |
+| `create_time`   | `string`       | Yes  | Creation time, a millisecond timestamp                                                  |
+| `update_time`   | `string`       | Yes  | Update time, a millisecond timestamp                                                  |
+| `category_type` | `string`       | Yes  | Category type: `"person"`=personal, `"team"`=team                              |
+| `enabled`       | `boolean`      | Yes  | Whether enabled                                                        |
+| `color`         | `string`       | Yes  | Color identifier: `blue`, `purple`, `wathet`, `turquoise`, `indigo`, `orange` |
+| `name`          | `CategoryName` | Yes  | Multilingual name                                                       |
 
-### CategoryName (分类名称)
+<a id="categoryname-分类名称"></a>
+### CategoryName
 
-| 字段   | 类型       | 必填 | 说明  |
+| Field   | Type       | Required | Description  |
 |------|----------|----|-----|
-| `zh` | `string` | 否  | 中文名 |
-| `en` | `string` | 否  | 英文名 |
-| `ja` | `string` | 否  | 日文名 |
+| `zh` | `string` | No  | Chinese name |
+| `en` | `string` | No  | English name |
+| `ja` | `string` | No  | Japanese name |
 
-> **API：** `categories.list` — 批量获取租户设置的分类列表
+> **API:** `categories.list` — Batch get the list of categories configured for the tenant
 
 ---
 
-## 通用请求参数
+<a id="通用请求参数"></a>
+## Common Request Parameters
 
-以下参数在多数 OKR API 中通用：
+The following parameters are common to most OKR APIs:
 
-| 参数                   | 位置      | 必填 | 默认值                    | 说明                                               |
+| Parameter                   | Location      | Required | Default Value                    | Description                                               |
 |----------------------|---------|----|------------------------|--------------------------------------------------|
-| `user_id_type`       | `query` | 否  | `"open_id"`            | 用户 ID 类型：`open_id` \| `union_id` \| `user_id`    |
-| `department_id_type` | `query` | 否  | `"open_department_id"` | 部门 ID 类型：`open_department_id` \| `department_id` |
-| `page_size`          | `query` | 否  | `10`                   | 分页大小，最大 100                                      |
-| `page_token`         | `query` | 否  | `""`                   | 分页键，首页传空串                                        |
+| `user_id_type`       | `query` | No  | `"open_id"`            | User ID type: `open_id` \| `union_id` \| `user_id`    |
+| `department_id_type` | `query` | No  | `"open_department_id"` | Department ID type: `open_department_id` \| `department_id` |
+| `page_size`          | `query` | No  | `10`                   | Page size, maximum 100                                      |
+| `page_token`         | `query` | No  | `""`                   | Page token, pass an empty string for the first page                                        |
 
 ---
 
-## 权限 Scope 说明
+<a id="权限-scope-说明"></a>
+## Permission Scope Description
 
-| Scope                          | 权限类型 | 说明           |
+| Scope                          | Permission Type | Description           |
 |--------------------------------|------|--------------|
-| `okr:okr.content:readonly`     | 读    | 读取 OKR 内容    |
-| `okr:okr.content:writeonly`    | 写    | 写入/删除 OKR 内容 |
-| `okr:okr.period:readonly`      | 读    | 读取 OKR 周期    |
-| `okr:okr.progress:readonly`    | 读    | 读取进展记录       |
-| `okr:okr.progress:writeonly`   | 写    | 创建/更新进展记录    |
-| `okr:okr.progress:delete`      | 写    | 删除进展记录       |
-| `okr:okr.progress.file:upload` | 写    | 上传进展记录图片附件   |
-| `okr:okr.setting:read`         | 读    | 读取 OKR 设置    |
+| `okr:okr.content:readonly`     | Read    | Read OKR content    |
+| `okr:okr.content:writeonly`    | Write    | Write/delete OKR content |
+| `okr:okr.period:readonly`      | Read    | Read OKR cycles    |
+| `okr:okr.progress:readonly`    | Read    | Read progress records       |
+| `okr:okr.progress:writeonly`   | Write    | Create/update progress records    |
+| `okr:okr.progress:delete`      | Write    | Delete progress records       |
+| `okr:okr.progress.file:upload` | Write    | Upload progress record image attachments   |
+| `okr:okr.setting:read`         | Read    | Read OKR settings    |
 
-所有 OKR API 均支持 `user` 和 `tenant`（应用）两种 access token 类型。
+All OKR APIs support both `user` and `tenant` (app) access token types.
 
-## 参考
+<a id="参考"></a>
+## References
 
-- [OKR ContentBlock 富文本格式](lark-okr-contentblock.md) — content/notes 字段的富文本结构定义
-- [okr +cycle-list](lark-okr-cycle-list.md) — 列出用户 OKR 周期
-- [okr +cycle-detail](lark-okr-cycle-detail.md) — 获取周期下的目标与关键结果
-- [okr +progress-get](lark-okr-progress-get.md) — 获取进展记录
-- [okr +progress-create](lark-okr-progress-create.md) — 创建进展记录
-- [okr +progress-update](lark-okr-progress-update.md) — 更新进展记录
-- [okr +progress-delete](lark-okr-progress-delete.md) — 删除进展记录
+- [OKR ContentBlock rich text format](lark-okr-contentblock.md) — Rich text structure definition for the content/notes fields
+- [okr +cycle-list](lark-okr-cycle-list.md) — List a user's OKR cycles
+- [okr +cycle-detail](lark-okr-cycle-detail.md) — Get the objectives and key results under a cycle
+- [okr +progress-get](lark-okr-progress-get.md) — Get a progress record
+- [okr +progress-create](lark-okr-progress-create.md) — Create a progress record
+- [okr +progress-update](lark-okr-progress-update.md) — Update a progress record
+- [okr +progress-delete](lark-okr-progress-delete.md) — Delete a progress record

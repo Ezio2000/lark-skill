@@ -1,39 +1,44 @@
-# 金字塔图 (Pyramid)
+<a id="金字塔图-pyramid"></a>
+# Pyramid
 
-## Content 约束
+<a id="content-约束"></a>
+## Content constraints
 
-- 层级 3-6 个，从底到顶宽度递减
-- 每层一个短标签（如关键词或短语）
-- 长文案外置到金字塔旁边，图形内仅保留核心短文案
+- 3-6 levels, with width decreasing from bottom to top
+- One short label per level (such as a keyword or phrase)
+- Place long copy outside next to the pyramid; keep only the core short copy inside the shape
 
-## Layout 选型
+<a id="layout-选型"></a>
+## Layout selection
 
-vertical frame + 每层宽度递减。gap 4px 保持紧密。
+vertical frame + decreasing width per level. Keep gap at 4px for tightness.
 
-## Layout 规则
+<a id="layout-规则"></a>
+## Layout rules
 
-- 外层 frame 使用 `layout: "vertical"` + `alignItems: "center"`
-- 所有层必须使用脚本计算宽度，以保证**绝对完美的等斜率（直线边缘）**。切勿手写拍脑袋的宽度！
-- children 数组中第一个元素是顶层（最窄），最后一个是底层（最宽）。
-- 顶层通常用 `triangle`（`topWidth: 0`），中间和底层用 `trapezoid`。
-- gap 通常设为 4px 保持紧密的金字塔感。
+- The outer frame uses `layout: "vertical"` + `alignItems: "center"`
+- All levels must use a script to calculate width, to guarantee **absolutely perfect equal slope (straight edges)**. Never hand-write guessed widths!
+- In the children array, the first element is the top level (narrowest), and the last is the bottom level (widest).
+- The top level usually uses `triangle` (`topWidth: 0`), while the middle and bottom levels use `trapezoid`.
+- gap is usually set to 4px to maintain a tight pyramid feel.
 
-> **严格的斜率算法（必须在脚本中实现）**：
-> 要让金字塔的侧边形成一条完美的直线，**宽度的增量必须与高度和 gap 严格挂钩**。
-> 1. 设定整体宽度扩张系数 `angleK`（建议值 1.5 到 2.5，表示高度每增加1px，总宽度增加的像素数）。
-> 2. 当前层的底宽公式：`width = topWidth + (height * angleK)`
-> 3. 下一层的顶宽公式（必须考虑 gap 带来的额外外扩）：`nextTopWidth = width + (gap * angleK)`
+> **Strict slope algorithm (must be implemented in the script)**:
+> To make the sides of the pyramid form a perfect straight line, **the width increment must be strictly tied to the height and gap**.
+> 1. Set the overall width expansion coefficient `angleK` (recommended value 1.5 to 2.5, meaning the number of pixels the total width increases for each 1px increase in height).
+> 2. Formula for the bottom width of the current level: `width = topWidth + (height * angleK)`
+> 3. Formula for the top width of the next level (must account for the extra outward expansion caused by gap): `nextTopWidth = width + (gap * angleK)`
 
-## 脚本构建模板
+<a id="脚本构建模板"></a>
+## Script construction template
 
-必须使用 `node` 运行脚本生成 JSON。
+You must use `node` to run the script and generate JSON.
 
 ```javascript
 const fs = require('fs');
 
-// 1. 配置基础参数
+// 1. Configure basic parameters
 const GAP = 4;
-const ANGLE_K = 2; // 斜率系数：高度每增加1px，宽度增加2px
+const ANGLE_K = 2; // Slope coefficient: for each 1px increase in height, width increases by 2px
 const LAYER_HEIGHT = 80;
 
 const data = [
@@ -43,9 +48,9 @@ const data = [
   { text: "最底层基础", fillColor: "#F0F4FC", textColor: "#1F2329" }
 ];
 
-let currentTopWidth = 0; // 顶层如果是尖角，初始为 0
+let currentTopWidth = 0; // If the top level is a pointed tip, initialize it to 0
 const children = data.map((layer, index) => {
-  // 2. 根据公式计算当前层的底宽
+  // 2. Calculate the bottom width of the current level according to the formula
   const currentBottomWidth = currentTopWidth + (LAYER_HEIGHT * ANGLE_K);
   
   const node = {
@@ -62,7 +67,7 @@ const children = data.map((layer, index) => {
     textColor: layer.textColor
   };
 
-  // 3. 关键：计算下一层的顶宽。必须把 gap 的延伸也算进去！
+  // 3. Key point: calculate the top width of the next level. The gap extension must also be included!
   currentTopWidth = currentBottomWidth + (GAP * ANGLE_K);
   
   return node;
@@ -85,15 +90,17 @@ const output = {
 fs.writeFileSync('diagram.json', JSON.stringify(output, null, 2));
 ```
 
-## 陷阱
+<a id="陷阱"></a>
+## Pitfalls
 
-- **不要手写随意递增的宽度**：这会导致金字塔侧边变成折线，不直。必须严格使用上述 `angleK` 公式计算。
-- **忘记计算 gap 带来的扩展**：如果下一层的 `topWidth` 只是简单等于上一层的 `width`，在有 gap 的情况下，衔接处会产生锯齿折角。必须加上 `gap * angleK`。
-- **从上到下排列错误**：children 数组第一个是顶层（最窄），最后一个是底层（最宽），宽度依次递增。
-- **文字溢出顶层三角形**：顶层三角形内部可用空间极小。短文案用 `\n` 手动换行；长文案外置到金字塔旁边（外层套 horizontal frame，金字塔左侧，说明文字右侧）
-- **倒金字塔误用**：如果用户要求"倒金字塔"、"漏斗图"或"自上而下递减的结构"，**不要**使用本文件，切换到 `scenes/funnel.md`
+- **Do not hand-write arbitrarily increasing widths**: this will make the pyramid sides become a polyline instead of straight. You must strictly use the above `angleK` formula for calculation.
+- **Forgetting to account for the expansion caused by gap**: if the next level's `topWidth` is simply equal to the previous level's `width`, then when there is a gap, the junction will produce a jagged corner. You must add `gap * angleK`.
+- **Incorrect ordering from top to bottom**: the first item in the children array is the top level (narrowest), and the last is the bottom level (widest), with widths increasing in order.
+- **Text overflowing the top triangle**: the usable space inside the top triangle is extremely small. For short copy, use `\n` for manual line breaks; place long copy outside next to the pyramid (wrap the outer layer in a horizontal frame, with the pyramid on the left and explanatory text on the right)
+- **Misuse of inverted pyramid**: if the user requests an "inverted pyramid", "funnel chart", or "top-down decreasing structure", **do not** use this file; switch to `scenes/funnel.md`
 
-## 扩展
+<a id="扩展"></a>
+## Extensions
 
-- **辅助说明**：需要在旁边添加文字说明时，在最外层套一个 `layout: "horizontal"` 的 frame，金字塔放左侧，说明文字（vertical 排列的 text 节点）放右侧
-- **配色**：各层颜色应从色板中选取不同颜色以示区分（如蓝→紫→绿→黄递进）
+- **Supplementary explanation**: when text explanation needs to be added beside it, wrap the outermost layer in a `layout: "horizontal"` frame, place the pyramid on the left, and place the explanatory text (vertical text nodes) on the right
+- **Color scheme**: each level's color should use different colors selected from the palette to distinguish them (such as a progression from blue → purple → green → yellow)

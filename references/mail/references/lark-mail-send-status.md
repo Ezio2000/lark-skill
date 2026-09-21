@@ -1,45 +1,50 @@
-# 发送投递状态
+<a id="发送投递状态"></a>
+# Send Delivery Status
 
 
-发送后确认投递状态，处理发送拦截。命令选择见 [`../index.md`](../index.md) 的“命令选择”章节。
+Confirm the delivery status after sending, and handle send interception. For command selection, see the "Command Selection" section of [`../index.md`](../index.md).
 
-## 查询时机
+<a id="查询时机"></a>
+## Query Timing
 
-- 立即发送：发送成功并返回非空 `message_id` 后立即查询。
-- 定时发送：不要立即查询；等预定发送时间后，再使用发送产生的 `message_id` 查询投递状态。
+- Immediate send: query immediately after the send succeeds and returns a non-empty `message_id`.
+- Scheduled send: do not query immediately; wait until after the scheduled send time, then use the `message_id` produced by the send to query the delivery status.
 
-## 立即发送
+<a id="立即发送"></a>
+## Immediate Send
 
-邮件发送成功后，若响应中包含非空 `message_id`，必须调用 `send_status` 查询投递状态并向用户报告。
+After the email is sent successfully, if the response contains a non-empty `message_id`, you must call `send_status` to query the delivery status and report it to the user.
 
 ```bash
 lark-cli mail user_mailbox.messages send_status \
   --params '{"user_mailbox_id":"me","message_id":"<发送返回的 message_id>"}'
 ```
 
-返回每个收件人的投递状态（`status`）：
+Returns the delivery status for each recipient (`status`):
 
-| status | 含义 |
+| status | Meaning |
 |--------|------|
-| 1 | 正在投递 |
-| 2 | 投递失败重试 |
-| 3 | 退信 |
-| 4 | 投递成功 |
-| 5 | 待审批 |
-| 6 | 审批拒绝 |
+| 1 | Delivering |
+| 2 | Delivery failed, retrying |
+| 3 | Bounced |
+| 4 | Delivered successfully |
+| 5 | Pending approval |
+| 6 | Approval rejected |
 
-向用户简要报告结果；如有退信、审批拒绝等异常状态，需要重点提示。
+Briefly report the results to the user; if there are abnormal statuses such as bounces or approval rejections, highlight them.
 
-## 发送被拦截
+<a id="发送被拦截"></a>
+## Send Intercepted
 
-若发送响应中包含 `automation_send_disable_reason` / `automation_send_disable_reference`，说明邮件未真正发出，而是被邮箱设置拦截。
+If the send response contains `automation_send_disable_reason` / `automation_send_disable_reference`, it means the email was not actually sent, but was intercepted by mailbox settings.
 
-- 直接向用户展示拦截原因和草稿打开链接。
-- 不要继续假设已经发送成功。
-- 不要调用 `send_status`。
+- Directly show the user the interception reason and the draft open link.
+- Do not continue assuming it was sent successfully.
+- Do not call `send_status`.
 
-## 相关命令
+<a id="相关命令"></a>
+## Related Commands
 
-- `lark-cli mail +send --confirm-send` — 发送新邮件。
-- `lark-cli mail +reply --confirm-send` / `+reply-all --confirm-send` — 发送回复。
-- `lark-cli mail +forward --confirm-send` — 发送转发。
+- `lark-cli mail +send --confirm-send` — Send a new email.
+- `lark-cli mail +reply --confirm-send` / `+reply-all --confirm-send` — Send a reply.
+- `lark-cli mail +forward --confirm-send` — Send a forward.

@@ -1,24 +1,29 @@
-# Genre Contract: Meeting Minutes / 会议纪要 (`workplace.meeting_minutes`)
+<a id="genre-contract-meeting-minutes--会议纪要-workplacemeeting_minutes"></a>
+# Genre Contract: Meeting Minutes (`workplace.meeting_minutes`)
 
-## 体裁规则表（硬约束）
+<a id="体裁规则表硬约束"></a>
+## Genre Rules Table (Hard Constraints)
 
-| 规则项 | 规则 |
+| Rule Item | Rule |
 |-|-|
-| 写作风格 | 中性、精确、按议题和决定组织，用稳定标签区分决定、建议、未决和待确认，不重放发言顺序 |
-| 内容逻辑 | 先说明会议身份和记录状态，再按议题写实际材料 / 必要讨论摘要 → 决定及理由 / 异议 → 未决项 → 行动 → 审阅材料；深度与治理风险相称 |
-| 事实 / 边界 | 出席、法定人数、冲突、动议、表决、决定、owner、期限和批准状态均须来自会议材料或确认；只保留治理所需个人信息，草稿不得冒充批准版；历史状态固定为文字快照，不得由`checkbox`、`task`等可变交互块改写 |
-| 错误 | 摘要冒充逐字稿、讨论流水账、建议写成决定、行动不可跟踪、法定人数不明却宣称决定有效、草稿冒充批准、静默改历史或泄露无关个人信息，任一出现即失败 |
+| Writing Style | Neutral, precise, organized by agenda item and decision, using stable labels to distinguish decisions, recommendations, unresolved items, and items pending confirmation; do not replay the order of remarks |
+| Content Logic | First state the meeting identity and record status, then write by agenda item the actual materials / necessary discussion summary → decisions and rationale / dissenting opinions → unresolved items → actions → review materials; depth should be commensurate with governance risk |
+| Facts / Boundaries | Attendance, quorum, conflicts, motions, votes, decisions, owners, deadlines, and approval status must all come from meeting materials or confirmation; retain only personal information required for governance; drafts must not masquerade as approved versions; historical status is fixed as a text snapshot and must not be rewritten by mutable interactive blocks such as `checkbox`, `task` |
+| Errors | A summary masquerading as a verbatim transcript, a running log of discussion, recommendations written as decisions, untrackable actions, claiming decisions are valid when quorum is unclear, a draft masquerading as approved, silently altering history, or leaking irrelevant personal information — any one of these constitutes failure |
 
-## 适用与消歧
+<a id="适用与消歧"></a>
+## Applicability and Disambiguation
 
-用于某次已发生会议的可引用治理记录，使缺席者、执行者和审核者确认决定、未决与行动。逐字 / 逐发言人 / 可回放内容只是 transcript 源材料；会前准备走 `memo-brief.md`；非会议状态走 `weekly-report.md`；党政机关法定“纪要”走 `official-redhead.md`。
+Used for a citable governance record of a meeting that has already occurred, enabling absentees, executors, and reviewers to confirm decisions, unresolved items, and actions. Verbatim / per-speaker / replayable content is merely transcript source material; pre-meeting preparation goes to `memo-brief.md`; non-meeting status goes to `weekly-report.md`; statutory "minutes" of Party and government organs go to `official-redhead.md`.
 
-## 子类型与治理证据
+<a id="子类型与治理证据"></a>
+## Subtypes and Governance Evidence
 
-普通工作会可精简为会议身份、决定、未决和行动；项目决策会补必要理由与审阅材料；董事会、委员会、表决或法定会议按章程 / 适用规则记录出席、法定人数、利益冲突、动议、票决、精确决议及认证。
+Ordinary working meetings may be streamlined to meeting identity, decisions, unresolved items, and actions; project decision meetings add necessary rationale and review materials; board, committee, voting, or statutory meetings record attendance, quorum, conflicts of interest, motions, vote results, precise resolutions, and certification in accordance with the charter / applicable rules.
 
-证据可来自 agenda、出席记录、实际审阅材料、动议 / 投票和录音 / 逐字稿，但正文只链接关键来源，不复制附件淹没决定。来源冲突并列保留并交主持人 / 参会者确认。
+Evidence may come from the agenda, attendance records, actual review materials, motions / votes, and recordings / verbatim transcripts, but the body should only link key sources and not copy attachments in a way that drowns out decisions. Conflicting sources are retained side by side and referred to the chair / participants for confirmation.
 
-## 结构与高质量写法
+<a id="结构与高质量写法"></a>
+## Structure and High-Quality Writing
 
-标明名称 / 类型、日期时间、地点 / 方式、主持 / 记录和草稿 / 已批准状态；每个议题围绕结果而非发言顺序。行动项写交付物 / 动作、责任人 / 单位、时间要求和状态。缺失信息用`[决议原文待确认]`、`[owner 待确认]`等具体占位；法定人数或批准不明时不得宣称有效，保持草稿并进入确认流程。
+Indicate name / type, date and time, location / method, chair / recorder, and draft / approved status; each agenda item centers on outcomes rather than the order of remarks. Action items state deliverable / action, responsible person / unit, time requirements, and status. For missing information, use specific placeholders such as `[决议原文待确认]`, `[owner 待确认]`; when quorum or approval is unclear, do not claim validity, keep it as a draft, and enter the confirmation process.

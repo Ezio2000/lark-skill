@@ -1,145 +1,155 @@
 
 # approval instances get
 
-获取单个审批实例详情（用户级只读操作）。适合在执行 approve / reject / transfer / rollback / cancel / cc / remind 之前，先查看审批表单、当前节点、任务列表、审批动态和整体状态。
+Get details of a single approval instance (user-level read-only operation). Useful for viewing the approval form, current nodes, task list, approval activity, and overall status before performing approve / reject / transfer / rollback / cancel / cc / remind.
 
-需要的 scopes: ["approval:instance:read"]
+Required scopes: ["approval:instance:read"]
 
-## 命令
+<a id="命令"></a>
+## Command
 
 ```bash
-# 按实例 Code 查询详情
+# Query details by instance Code
 lark-cli approval instances get --params '{"instance_code":"<INSTANCE_CODE>"}' --as user
 
-# 表格格式输出，便于快速浏览顶层字段
+# Table format output, for quickly browsing top-level fields
 lark-cli approval instances get --params '{"instance_code":"<INSTANCE_CODE>"}' --format table --as user
 
-# 预览 API 调用，不执行
+# Preview the API call without executing
 lark-cli approval instances get --params '{"instance_code":"<INSTANCE_CODE>"}' --as user --dry-run
 ```
 
-## 参数
+<a id="参数"></a>
+## Parameters
 
-| 参数 | 必填 | 说明 |
+| Parameter | Required | Description |
 |------|------|------|
-| `--params '{...}'` | 是 | 查询参数，使用 JSON 传入 |
-| `instance_code` | 是 | 审批实例 Code |
-| `locale` | 否 | 返回语言，例如 `zh-CN`、`en-US`、`ja-JP` |
-| `user_id_type` | 否 | 用户 ID 类型：`user_id`、`union_id`、`open_id` |
-| `--as user` | 否 | 建议显式指定用户身份；审批实例详情查询通常应使用用户身份 |
-| `--format` | 否 | 输出格式：`json`（默认）、`ndjson`、`table`、`csv` |
-| `--dry-run` | 否 | 预览 API 调用，不执行 |
+| `--params '{...}'` | Yes | Query parameters, passed as JSON |
+| `instance_code` | Yes | Approval instance Code |
+| `locale` | No | Return language, e.g. `zh-CN`, `en-US`, `ja-JP` |
+| `user_id_type` | No | User ID type: `user_id`, `union_id`, `open_id` |
+| `--as user` | No | It is recommended to explicitly specify the user identity; approval instance detail queries should usually use the user identity |
+| `--format` | No | Output format: `json` (default), `ndjson`, `table`, `csv` |
+| `--dry-run` | No | Preview the API call without executing |
 
-## 常见输入来源
+<a id="常见输入来源"></a>
+## Common input sources
 
-如果你已经有实例 Code，可直接查询：
+If you already have the instance Code, you can query directly:
 
 ```bash
 lark-cli approval instances get --params '{"instance_code":"<INSTANCE_CODE>"}' --as user
 ```
 
-如果你还没有实例 Code，可先从以下命令获取：
+If you do not yet have the instance Code, you can first obtain it from the following commands:
 
 ```bash
-# 查询我发起的审批实例
+# Query approval instances I initiated
 lark-cli approval instances initiated --params '{"page_size":20}' --as user
 
-# 或从任务列表里拿到关联实例 Code
+# Or get the associated instance Code from the task list
 lark-cli approval tasks query --params '{"topic":"1"}' --as user
 ```
 
-## 输出重点字段
+<a id="输出重点字段"></a>
+## Key output fields
 
-返回结果中常见字段：
+Common fields in the returned result:
 
-| 字段 | 说明 |
+| Field | Description |
 |------|------|
-| `instance_code` | 审批实例 Code |
-| `serial_number` | 审批单编号 |
-| `definition_code` | 审批定义 Code |
-| `definition_name` | 审批名称 |
-| `user_id` | 发起审批的用户 ID |
-| `department_id` | 发起人所在部门 ID |
-| `status` | 审批实例状态，见下方“status 枚举” |
-| `reverted` | 单据是否已被撤销 |
-| `start_time` | 审批创建时间 |
-| `end_time` | 审批完成时间，未完成时通常为 `0` |
-| `form` | 表单数据，JSON 字符串 |
-| `current_nodes` | 当前审批节点列表 |
-| `tasks` | 审批任务列表 |
-| `operation_records` | 审批动态，例如通过、拒绝、转交、加签、回退、撤回、抄送 |
-| `comments` | 评论列表 |
+| `instance_code` | Approval instance Code |
+| `serial_number` | Approval form number |
+| `definition_code` | Approval definition Code |
+| `definition_name` | Approval name |
+| `user_id` | User ID of the person who initiated the approval |
+| `department_id` | Department ID of the initiator |
+| `status` | Approval instance status, see "status enum" below |
+| `reverted` | Whether the form has been revoked |
+| `start_time` | Approval creation time |
+| `end_time` | Approval completion time, usually `0` when not completed |
+| `form` | Form data, JSON string |
+| `current_nodes` | List of current approval nodes |
+| `tasks` | List of approval tasks |
+| `operation_records` | Approval activity, e.g. approved, rejected, transferred, added approver, rolled back, withdrawn, cc |
+| `comments` | List of comments |
 
-## status 枚举
+<a id="status-枚举"></a>
+## status enum
 
-| 值 | 含义 |
+| Value | Meaning |
 |----|------|
-| `PENDING` | 审批中 |
-| `APPROVED` | 已通过 |
-| `REJECTED` | 已拒绝 |
-| `CANCELED` | 已撤回 |
-| `DELETED` | 已删除 |
+| `PENDING` | In approval |
+| `APPROVED` | Approved |
+| `REJECTED` | Rejected |
+| `CANCELED` | Withdrawn |
+| `DELETED` | Deleted |
 
-## current_nodes 重点字段
+<a id="current_nodes-重点字段"></a>
+## current_nodes key fields
 
-`current_nodes` 常用于判断审批流当前卡在哪一层：
+`current_nodes` is often used to determine which level the approval flow is currently stuck at:
 
-| 字段 | 说明                                       |
+| Field | Description                                       |
 |------|------------------------------------------|
-| `current_nodes[].node_id` | 当前审批节点 ID                                |
-| `current_nodes[].node_name` | 当前审批节点名称                                 |
-| `current_nodes[].type` | 审批方式：`AND` 会签、`OR` 或签、`SEQUENTIAL` 依次审批等 |
-| `current_nodes[].approvers[].task_id` | 当前审批人关联任务 ID                             |
-| `current_nodes[].approvers[].user_id` | 当前审批人用户 ID                               |
+| `current_nodes[].node_id` | Current approval node ID                                |
+| `current_nodes[].node_name` | Current approval node name                                 |
+| `current_nodes[].type` | Approval method: `AND` all-approve, `OR` any-approve, `SEQUENTIAL` sequential approval, etc. |
+| `current_nodes[].approvers[].task_id` | Task ID associated with the current approver                             |
+| `current_nodes[].approvers[].user_id` | User ID of the current approver                               |
 
-## tasks 重点字段
+<a id="tasks-重点字段"></a>
+## tasks key fields
 
-`tasks` 常用于把实例和具体审批任务关联起来：
+`tasks` is often used to associate an instance with specific approval tasks:
 
-| 字段 | 说明 |
+| Field | Description |
 |------|------|
-| `tasks[].id` | 审批任务 ID |
-| `tasks[].node_id` | 任务所属节点 ID |
-| `tasks[].node_name` | 任务所属节点名称 |
-| `tasks[].user_id` | 审批人用户 ID |
-| `tasks[].status` | 任务状态：`PENDING`、`APPROVED`、`REJECTED`、`TRANSFERRED`、`DONE` |
-| `tasks[].start_time` | 任务开始时间 |
-| `tasks[].end_time` | 任务完成时间 |
+| `tasks[].id` | Approval task ID |
+| `tasks[].node_id` | ID of the node the task belongs to |
+| `tasks[].node_name` | Name of the node the task belongs to |
+| `tasks[].user_id` | Approver user ID |
+| `tasks[].status` | Task status: `PENDING`, `APPROVED`, `REJECTED`, `TRANSFERRED`, `DONE` |
+| `tasks[].start_time` | Task start time |
+| `tasks[].end_time` | Task completion time |
 
-## operation_records 重点字段
+<a id="operation_records-重点字段"></a>
+## operation_records key fields
 
-`operation_records` 常用于审计审批过程：
+`operation_records` is often used to audit the approval process:
 
-| 字段 | 说明 |
+| Field | Description |
 |------|------|
-| `operation_records[].type` | 事件类型，如 `PASS`、`REJECT`、`TRANSFER`、`ROLLBACK`、`CANCEL`、`CC` |
-| `operation_records[].create_time` | 事件发生时间 |
-| `operation_records[].user_id` | 触发该事件的用户 ID |
-| `operation_records[].task_id` | 关联任务 ID |
-| `operation_records[].node_id` | 关联节点 ID |
-| `operation_records[].comment` | 理由 / 备注 |
-| `operation_records[].cc_user_ids` | 被抄送人列表（抄送事件时） |
+| `operation_records[].type` | Event type, e.g. `PASS`, `REJECT`, `TRANSFER`, `ROLLBACK`, `CANCEL`, `CC` |
+| `operation_records[].create_time` | Time the event occurred |
+| `operation_records[].user_id` | User ID that triggered the event |
+| `operation_records[].task_id` | Associated task ID |
+| `operation_records[].node_id` | Associated node ID |
+| `operation_records[].comment` | Reason / remark |
+| `operation_records[].cc_user_ids` | List of cc recipients (for cc events) |
 
-## 使用建议
+<a id="使用建议"></a>
+## Usage recommendations
 
-- **这是最适合做“详情确认”的只读命令**：当你已经拿到 `instance_code`，需要确认表单、当前节点、任务状态、审批动态时，优先使用它。
-- **在执行写操作前先看详情**：例如做 `tasks rollback` 前确认可退回节点，做 `instances cancel` 前确认实例状态，做 `tasks remind` 前确认当前任务是否仍待处理。
-- **`form` 是 JSON 字符串**：调用方通常还需要再解析一层，才能拿到表单字段值。
-- **`current_nodes` 和 `tasks` 可以联动看**：前者看“当前卡在哪个节点”，后者看“每个任务目前由谁处理、状态如何”。
-- **`operation_records` 适合做时间线回溯**：例如排查谁转交过、谁加签过、什么时候撤回或抄送过。
-- **优先显式传 `locale` 和 `user_id_type`**：这样 agent 更容易理解返回文本和 ID 语义，减少歧义。
+- **This is the most suitable read-only command for "detail confirmation"**: when you already have `instance_code` and need to confirm the form, current nodes, task status, and approval activity, use it first.
+- **View details before performing write operations**: for example, confirm the rollback-able nodes before doing `tasks rollback`, confirm the instance status before doing `instances cancel`, and confirm whether the current task is still pending before doing `tasks remind`.
+- **`form` is a JSON string**: the caller usually needs to parse it one more level to get the form field values.
+- **`current_nodes` and `tasks` can be viewed together**: the former shows "which node it is currently stuck at", while the latter shows "who is currently handling each task and what the status is".
+- **`operation_records` is suitable for timeline backtracking**: for example, investigating who transferred, who added an approver, and when it was withdrawn or cc'd.
+- **Prefer explicitly passing `locale` and `user_id_type`**: this makes it easier for the agent to understand the returned text and ID semantics, reducing ambiguity.
 
-## 输出与后续操作
+<a id="输出与后续操作"></a>
+## Output and follow-up operations
 
-读取详情后，常见下一步：
+After reading the details, common next steps:
 
 ```bash
-# 同意审批任务
+# Approve approval task
 lark-cli approval tasks approve --data '{"instance_code":"<INSTANCE_CODE>","task_id":"<TASK_ID>"}' --as user --yes
 
-# 撤回审批实例
+# Withdraw approval instance
 lark-cli approval instances cancel --data '{"instance_code":"<INSTANCE_CODE>"}' --as user --yes
 
-# 催办审批任务
+# Remind approval task
 lark-cli approval tasks remind --data '{"instance_code":"<INSTANCE_CODE>","task_ids":["<TASK_ID>"]}' --as user --yes
 ```

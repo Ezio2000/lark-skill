@@ -1,72 +1,79 @@
-# drive +create-folder（创建云空间/云盘/云存储文件夹）
+<a id="drive-create-folder创建云空间云盘云存储文件夹"></a>
+# drive +create-folder (create a cloud space/cloud drive/cloud storage folder)
 
 
-在飞书云空间（云盘/云存储）中创建一个新文件夹。该 shortcut 对原生 `drive files create_folder` 做了一层更适合日常使用的封装：`--folder-token` 可省略，此时会在调用者根目录创建；如果使用 `--as bot`，创建成功后 CLI 会尝试把新文件夹的可管理权限自动授予当前 CLI 用户。
+Create a new folder in Feishu cloud space (cloud drive/cloud storage). This shortcut wraps the native `drive files create_folder` in a layer that is better suited for everyday use: `--folder-token` can be omitted, in which case the folder is created in the caller's root directory; if `--as bot` is used, after successful creation the CLI will attempt to automatically grant the new folder's manageable permission to the current CLI user.
 
-## 命令
+<a id="命令"></a>
+## Command
 
 ```bash
-# 在根目录创建文件夹
+# Create a folder in the root directory
 lark-cli drive +create-folder \
   --name "周报归档"
 
-# 在指定父文件夹下创建子文件夹
+# Create a subfolder under the specified parent folder
 lark-cli drive +create-folder \
   --folder-token <PARENT_FOLDER_TOKEN> \
   --name "2026-W16"
 
-# 预览底层调用
+# Preview the underlying call
 lark-cli drive +create-folder \
   --folder-token <PARENT_FOLDER_TOKEN> \
   --name "分析资料" \
   --dry-run
 ```
 
-## 返回值
+<a id="返回值"></a>
+## Return value
 
-成功后会返回一个 JSON 对象，常见字段包括：
+On success, a JSON object is returned. Common fields include:
 
-- `folder_token`：新建文件夹 token，可直接用于后续 `drive +move`、`drive +upload` 等命令
-- `url`：新建文件夹链接（如果接口返回）
-- `name`：文件夹名称
-- `parent_folder_token`：父文件夹 token；为空字符串表示创建在根目录
-- `permission_grant`（可选）：仅 `--as bot` 时返回，说明是否已自动为当前 CLI 用户授予可管理权限
+- `folder_token`: the new folder token, which can be used directly in subsequent commands such as `drive +move` and `drive +upload`
+- `url`: the new folder link (if returned by the API)
+- `name`: the folder name
+- `parent_folder_token`: the parent folder token; an empty string means it was created in the root directory
+- `permission_grant` (optional): returned only for `--as bot`, indicating whether manageable permission has been automatically granted to the current CLI user
 
 > [!IMPORTANT]
-> 如果文件夹是**以应用身份（bot）创建**的，如 `lark-cli drive +create-folder --as bot`，在创建成功后 CLI 会**尝试为当前 CLI 用户自动授予该文件夹的 `full_access`（可管理权限）**。
+> If the folder is **created with an app identity (bot)**, such as `lark-cli drive +create-folder --as bot`, after successful creation the CLI will **attempt to automatically grant the current CLI user `full_access` (manageable permission) for that folder**.
 >
-> 以应用身份创建时，结果里会额外返回 `permission_grant` 字段，明确说明授权结果：
-> - `status = granted`：当前 CLI 用户已获得该文件夹的可管理权限
-> - `status = skipped`：本地没有可用的当前用户 `open_id`，因此不会自动授权；可提示用户先完成 `lark-cli auth login`，再让 AI / agent 继续使用应用身份（bot）授予当前用户权限
-> - `status = failed`：文件夹已创建成功，但自动授权用户失败；会带上失败原因，并提示稍后重试或继续使用 bot 身份处理该文件夹
+> When created with an app identity, the result additionally returns the `permission_grant` field, which explicitly states the authorization result:
+> - `status = granted`: the current CLI user has obtained manageable permission for the folder
+> - `status = skipped`: there is no available current user `open_id` locally, so authorization will not be performed automatically; you can prompt the user to complete `lark-cli auth login` first, then have the AI / agent continue to use the app identity (bot) to grant the current user permission
+> - `status = failed`: the folder was created successfully, but automatically authorizing the user failed; the failure reason is included, and you are prompted to retry later or continue handling the folder using the bot identity
 >
-> `permission_grant.perm = full_access` 表示该资源已授予“可管理权限”。
+> `permission_grant.perm = full_access` indicates that the resource has been granted "manageable permission".
 >
-> **不要擅自执行 owner 转移。** 创建或导入不隐含 owner 转移；用户已明确要求转移且目标已确定时沿用授权执行。
+> **Do not perform owner transfer on your own initiative.** Creation or import does not imply owner transfer; when the user has explicitly requested a transfer and the target has been determined, proceed with the authorization execution.
 
-## 参数
+<a id="参数"></a>
+## Parameters
 
-| 参数 | 必填 | 说明 |
+| Parameter | Required | Description |
 |------|------|------|
-| `--name` | 是 | 文件夹名称，不能为空，最长 256 字节 |
-| `--folder-token` | 否 | 父文件夹 token；省略时表示在调用者根目录创建 |
+| `--name` | Yes | Folder name; cannot be empty; maximum 256 bytes |
+| `--folder-token` | No | Parent folder token; when omitted, the folder is created in the caller's root directory |
 
-## 行为说明
+<a id="行为说明"></a>
+## Behavior notes
 
-- **根目录创建**：不传 `--folder-token` 时，shortcut 会向 API 显式传空字符串 `folder_token=""`，让后端按“根目录”语义创建
-- **bot 自动授权**：只有在 `--as bot` 时，结果才会额外带上 `permission_grant`
-- **原生 API 仍可用**：如果用户明确要求按底层 API 字段调用，仍可继续使用 `lark-cli drive files create_folder`
+- **Root directory creation**: when `--folder-token` is not passed, the shortcut explicitly passes an empty string `folder_token=""` to the API, so the backend creates it with "root directory" semantics
+- **Bot automatic authorization**: only when `--as bot` will the result additionally include `permission_grant`
+- **The native API is still available**: if the user explicitly requests calling by the underlying API fields, `lark-cli drive files create_folder` can still be used
 
-## 推荐场景
+<a id="推荐场景"></a>
+## Recommended scenarios
 
-- 用户说“在云空间（云盘/云存储）新建一个文件夹 / 目录”时，优先使用 `drive +create-folder`
-- 用户给了父文件夹链接或 token，需要在其下继续分层建目录时，传 `--folder-token`
-- 如果后续还要上传文件、移动文件、建子目录，优先复用返回值里的 `folder_token`
+- When the user says "create a new folder / directory in cloud space (cloud drive/cloud storage)", prefer using `drive +create-folder`
+- When the user provides a parent folder link or token and needs to continue creating directories hierarchically under it, pass `--folder-token`
+- If files will subsequently be uploaded, moved, or subdirectories created, prefer reusing the `folder_token` from the return value
 
 > [!CAUTION]
-> `drive +create-folder` 是**写入操作**，执行前必须确认用户意图。
+> `drive +create-folder` is a **write operation**; the user's intent must be confirmed before execution.
 
-## 参考
+<a id="参考"></a>
+## References
 
-- [lark-drive](../index.md) -- 云空间（云盘/云存储）全部命令
-- [lark-shared](../../shared/index.md) -- 认证和全局参数
+- [lark-drive](../index.md) -- all commands for cloud space (cloud drive/cloud storage)
+- [lark-shared](../../shared/index.md) -- authentication and global parameters

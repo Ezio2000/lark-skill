@@ -1,28 +1,32 @@
 # apps +release-get
 
-按 release ID 查询单次发布详情。运行时命令事实以 `lark-cli apps +release-get --help` 为准。
+Query details of a single release by release ID. For runtime command facts, refer to `lark-cli apps +release-get --help`.
 
-## 何时用
+<a id="何时用"></a>
+## When to use
 
-用于跟进已知 `release_id` 的发布状态。没有 `release_id` 时先读 [`lark-apps-release-list.md`](lark-apps-release-list.md)，不要让用户手填。
+Use this to follow up on the release status of a known `release_id`. When there is no `release_id`, first read [`lark-apps-release-list.md`](lark-apps-release-list.md); do not ask the user to fill it in manually.
 
-`release_id` 是妙搭发布 ID（`+release-create` 返回），不是飞书审批实例号；查发布进度/失败都在 `apps +release-*` 命令族内完成，不要路由到 lark-approval。
+`release_id` is the Miaoda release ID (returned by `+release-create`), not a Feishu approval instance number; checking release progress/failures is all done within the `apps +release-*` command family, so do not route to lark-approval.
 
-## 命令骨架
+<a id="命令骨架"></a>
+## Command skeleton
 
-- 必填：`--app-id`、`--release-id`。
-- `release_id` 来自 `+release-create` 或 `+release-list`。
+- Required: `--app-id`, `--release-id`.
+- `release_id` comes from `+release-create` or `+release-list`.
 
-## 示例
+<a id="示例"></a>
+## Example
 
 ```bash
 lark-cli apps +release-get --app-id app_xxx --release-id release_yyy
 ```
 
-## 输出契约
+<a id="输出契约"></a>
+## Output contract
 
-- 成功可能直接返回 release 字段，也可能包在 `data.release`；读取 `release_id`、`status`、`created_at`、`updated_at`，以及 `commit_id`（本轮发布对应的 git commit SHA，pretty 输出在其非空时展示一行）。
-- `status=publishing` 继续轮询。此时尚无 `online_url`；不要拿其它链接（如 `+list` 里的应用主页 / 开发态预览 URL）冒充"本轮发布的访问链接"——只回报 `release_id`、`status`，并说明 `finished` 后才可能有 `online_url`。
-- `status=finished` 发布成功——若输出含 `online_url`，直接读取它作为本轮发布的线上访问链接；未返回时只报告发布完成，不要编造链接。该链接默认仅创建者可见，交付他人前先告知当前仅本人可见、按需用 `+access-scope-set` 放开可见范围。无需再调 `+list`（`+list` 仍可用于按应用名浏览，但不是发布主流程的必经步骤）。
-- `status=failed` 发布失败——若输出含 `error_logs`（`step`/`error_log`），据此向用户转述关键失败步骤和可行动修复；未返回时不要编造失败原因。
-- 只有当这个 `release_id` 已返回 `finished`，随后读到的 `online_url` 才能被表述为"本轮发布后的访问链接"。单独从 `+list` 看到 `is_published=true` 不能证明最新版本已部署。
+- On success, the release fields may be returned directly, or they may be wrapped in `data.release`; read `release_id`, `status`, `created_at`, `updated_at`, and `commit_id` (the git commit SHA corresponding to this release; pretty output shows a line for it when it is non-empty).
+- `status=publishing` keep polling. At this point there is still no `online_url`; do not pass off other links (such as the app homepage / development preview URL in `+list`) as the "access link for this release"—only report `release_id`, `status`, and explain that `online_url` may only exist after `finished`.
+- `status=finished` release succeeded—if the output contains `online_url`, read it directly as the online access link for this release; if it is not returned, only report that the release is complete and do not fabricate a link. By default, this link is visible only to the creator; before delivering it to others, first inform them that it is currently visible only to you, and use `+access-scope-set` as needed to open up the visibility scope. There is no need to call `+list` again (`+list` can still be used to browse by app name, but it is not a required step in the main release flow).
+- `status=failed` release failed—if the output contains `error_logs` (`step`/`error_log`), use it to relay to the user the key failed step and actionable fixes; if it is not returned, do not fabricate a failure reason.
+- Only when this `release_id` has already returned `finished` can the `online_url` read afterward be described as the "access link after this release." Seeing `is_published=true` from `+list` alone cannot prove that the latest version has been deployed.

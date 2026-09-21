@@ -1,71 +1,78 @@
-# 可视化报告与专题表达
+<a id="可视化报告与专题表达"></a>
+# Visual reports and feature presentation
 
-创建内容驱动的 HTML 视觉作品。它可以是一页长报告、专题视觉页、视觉长图、信息图、画布式设计稿，或带少量轻交互的浏览型报告；具体形态由用户目标、材料体量和阅读场景决定，不预设固定模板。
+Create content-driven HTML visual works. It can be a one-page long report, a feature visual page, a visual long image, an infographic, a canvas-style design draft, or a browsing-oriented report with a small amount of light interaction; the specific form is determined by the user's goals, the volume of material, and the reading scenario, and no fixed template is presupposed.
 
-## 工作方式
+<a id="工作方式"></a>
+## Working approach
 
-1. 先读用户材料，提取主题、受众、阅读场景、核心结论、必须出现的事实和可省略的细节。
-2. 判断报告目的：汇报、解释、披露、说服、传播、留档，还是做视觉方向探索。
-3. 选择交付形态：长页报告、专题页、视觉长图、单屏摘要、画布式多方案、图文混排报告、偏打印感的正式报告等。不要把所有需求压成同一种版式。
-4. 按材料逻辑组织内容，而不是套固定目录、固定模块或固定视觉模板。参考样式只能启发表达方式，不能替代对当前材料的判断。
-5. 把材料拆成具体阅读任务：这一段要让读者完成什么判断、理解什么关系、记住什么事实、比较什么差异、追踪什么过程、相信什么证据。不要把这些任务名直接变成目录或模块标题。
-6. 为每个阅读任务现场生成合适的组件、视觉和布局：先说明这段内容需要什么表达方式，再落成具体 UI / 图形 / 排版 / 图表 / 截图 / 文字组合。可以创造新的结构和视觉隐喻，不受现有组件名限制；避免所有章节共享同一套组件组合。
-7. 先写风格 brief：主题隐喻、受众姿态、材料语言、配色逻辑和签名元素。财务报告可以像正式报告册，员工调研可以像组织研究档案，产品上市总结可以像品牌战报；这些只是启发，必须从用户材料里推导。
-8. 建立版式系统：画幅、栅格、字号层级、颜色、图标/线条语言、强调方式和章节节奏。版式系统必须说明不同章节如何变化，而不是所有章节都用同一种上下结构。
-9. 产出单个 HTML 文档。用户需求明确时直接做；只有主题、素材或交付形态完全无法判断时，才问少量必要问题。
+1. First read the user's material, and extract the theme, audience, reading scenario, core conclusions, facts that must appear, and details that can be omitted.
+2. Determine the purpose of the report: reporting, explaining, disclosing, persuading, communicating, archiving, or exploring a visual direction.
+3. Choose the delivery form: long-page report, feature page, visual long image, single-screen summary, canvas-style multiple options, text-image mixed report, formal report with a print feel, etc. Do not compress all requirements into the same layout.
+4. Organize the content according to the logic of the material, rather than applying a fixed table of contents, fixed modules, or a fixed visual template. Reference styles can only inspire the mode of expression; they cannot replace judgment about the current material.
+5. Break the material into specific reading tasks: what judgment should this section lead the reader to make, what relationship should they understand, what fact should they remember, what difference should they compare, what process should they track, what evidence should they believe. Do not turn these task names directly into a table of contents or module titles.
+6. Generate suitable components, visuals, and layouts on the spot for each reading task: first explain what mode of expression this section of content needs, then turn it into a concrete combination of UI / graphics / typography / charts / screenshots / text. You may create new structures and visual metaphors, unrestricted by existing component names; avoid having all sections share the same set of component combinations.
+7. First write a style brief: thematic metaphor, audience stance, material language, color logic, and signature elements. A financial report can resemble a formal report booklet, an employee survey can resemble an organizational research archive, and a product launch summary can resemble a brand battle report; these are only inspirations, and must be derived from the user's material.
+8. Establish a layout system: canvas size, grid, font-size hierarchy, color, icon/line language, emphasis methods, and section rhythm. The layout system must explain how different sections vary, rather than having all sections use the same top-to-bottom structure.
+9. Produce a single HTML document. When the user's requirements are clear, do it directly; only when the theme, materials, or delivery form are completely impossible to determine should you ask a small number of necessary questions.
 
-## 内容组织
+<a id="内容组织"></a>
+## Content organization
 
-本模块 中出现的报告形态、表达方式、组件和版式都只是示意，不是必须参考的清单。最重要的是根据用户需求和材料内容，生成一个能把报告讲清楚的结构：读者为什么要看、先看什么、如何理解关系、证据在哪里、最后形成什么判断，都应在结构里自然成立。
+The report forms, modes of expression, components, and layouts that appear in this module are only illustrative, not a checklist that must be referenced. The most important thing is to generate, based on the user's needs and the material content, a structure that can explain the report clearly: why the reader should look, what to look at first, how to understand relationships, where the evidence is, and what judgment is ultimately formed should all naturally hold within the structure.
 
-可视化报告不是把图表排满，也不是把文字切成很多卡片。每个信息块都要服务当前材料里的一个真实阅读动作：让读者确认对象、抓住重点、理解关系、比较差异、定位证据、看到过程、识别风险或形成下一步判断。把这些阅读动作翻译成本次需求专属的视觉结构，而不是复用固定模块名。
+A visual report is not about filling the page with charts, nor about cutting text into many cards. Each information block must serve a real reading action in the current material: letting the reader confirm the object, grasp the key point, understand relationships, compare differences, locate evidence, see the process, identify risks, or form a next-step judgment. Translate these reading actions into a visual structure exclusive to this requirement, rather than reusing fixed module names.
 
-允许为当前需求重新发明表达结构：可以合并、拆分、放大、弱化、横向展开、纵向叙事、图文化、表格化、截图化或做成完全不同的布局。只要它能更清楚地解释报告内容，就优先于任何示例组件或常见版式。
+You are allowed to reinvent the expression structure for the current requirement: you may merge, split, enlarge, weaken, expand horizontally, narrate vertically, turn into graphics, turn into tables, turn into screenshots, or create a completely different layout. As long as it can explain the report content more clearly, it takes priority over any example component or common layout.
 
-如果材料很长，先压缩成报告叙事，不要把原文完整铺上去。需要精确查数时使用表格或附录；需要快速传播时使用摘要和视觉重点；需要正式汇报时保留章节编号、图表标题和口径说明。
+If the material is very long, first compress it into a report narrative; do not lay out the full original text. When precise number lookup is needed, use tables or an appendix; when rapid communication is needed, use summaries and visual highlights; when formal reporting is needed, retain section numbering, chart titles, and scope notes.
 
-不要把关键内容压成角落里的附录片段。用户明确要求展示的部分，应按报告目标给足版面权重，并选择合适的信息结构承载。
+Do not compress key content into an appendix fragment in the corner. The parts the user explicitly asks to display should be given sufficient layout weight according to the report's goals, and a suitable information structure should be chosen to carry them.
 
-## 版式策略
+<a id="版式策略"></a>
+## Layout strategy
 
-可视化报告要像一份经过编辑设计的专题，而不是由同款卡片拼起来的长页面。先决定阅读节奏，再落组件：
+A visual report should feel like a feature that has undergone editorial design, not a long page pieced together from identical cards. First decide the reading rhythm, then place components:
 
-- 根据材料的展开方式设计版式：它可能需要连续叙事、密集证据、空间关系、过程推进、对照判断、沉浸式主视觉、正式报告册，或完全不同的结构。先为当前需求命名一个版式概念，再确定栅格、密度、视觉重心和章节变化。
-- 版式变化来自内容关系，不来自凑组件。关键段落可以被放大、拆页、满版化、图文化或变成精确表格；次要段落可以压缩、并列、收进注释或弱化。
-- 每个章节的结构可以不同，但要属于同一套视觉系统。变化要能解释：为什么这里适合宽图、那里适合密集表格、另一处适合分段叙事。
+- Design the layout according to how the material unfolds: it may need continuous narrative, dense evidence, spatial relationships, process progression, comparative judgment, an immersive key visual, a formal report booklet, or a completely different structure. First name a layout concept for the current requirement, then determine the grid, density, visual center of gravity, and section variation.
+- Layout variation comes from content relationships, not from padding out components. Key sections can be enlarged, split across pages, turned into full-bleed layouts, turned into graphics, or turned into precise tables; secondary sections can be compressed, placed side by side, tucked into notes, or weakened.
+- Each section's structure can differ, but it must belong to the same visual system. The variation must be explainable: why a wide image suits this place, a dense table suits that place, and segmented narrative suits another place.
 
-不要为了“丰富”而乱放装饰。变化应该来自内容关系和阅读任务，而不是从组件清单里凑满页面。
+Do not place decorations randomly just to be "rich." Variation should come from content relationships and reading tasks, not from padding the page with items from a component list.
 
-## 视觉原则
+<a id="视觉原则"></a>
+## Visual principles
 
-- 优先清楚，其次好看。读者应该先理解结构，再感受到风格。
-- 明暗主题由需求、品牌、素材、受众和阅读场景决定；浅色、暗色、中性或局部深色都可以。选择后要保证对比度、可读性和信息层级，并能解释为什么适合当前主题。
-- 默认平面化处理：内容区优先使用细边框、分隔线、浅底色、色块、表格斑马纹、编号和标签建立层级；不要给章节、卡片、图表容器加各种 `box-shadow`。
-- 少用装饰性渐变、发光、玻璃拟态。视觉效果要帮助分组、强调或引导视线。
-- 风格跟随内容、受众和品牌：可以正式、温和、技术、编辑化、品牌化或实验感，但不要从某个样例场景继承固定颜色、固定目录或固定组件。
-- 每份报告应有一个可解释的签名元素。签名元素要从用户主题、材料质感和阅读任务中生成，而不是复用固定手法；它可以是任何能组织内容、建立记忆点并保持一致性的视觉规则。
-- 真实素材优先：用户给的截图、logo、图片、图标、数据片段要优先使用。没有素材时，用清楚的占位结构和可替换文案。
-- 允许少量动效，但只用于进入、强调或引导阅读，不做干扰理解的持续动画。
-- 可以包含数字、图表和表格，但它们服务于报告叙事；不要为了“可视化”而把所有内容都做成图。
-- 深色区域可以用于封面、结论、行动区或整篇报告的主视觉；只要它服务主题气质和阅读体验，而不是作为无依据的装饰。
+- Clarity first, beauty second. Readers should first understand the structure, then feel the style.
+- Light and dark themes are determined by the requirement, brand, material, audience, and reading scenario; light, dark, neutral, or partially dark are all acceptable. After choosing, ensure contrast, readability, and information hierarchy, and be able to explain why it suits the current theme.
+- Default to a flat treatment: content areas should prioritize thin borders, divider lines, light background colors, color blocks, table zebra striping, numbering, and labels to establish hierarchy; do not add all kinds of `box-shadow` to sections, cards, or chart containers.
+- Use decorative gradients, glows, and glassmorphism sparingly. Visual effects should help group, emphasize, or guide the eye.
+- Style follows content, audience, and brand: it can be formal, gentle, technical, editorial, branded, or experimental, but do not inherit fixed colors, a fixed table of contents, or fixed components from some sample scenario.
+- Each report should have an explainable signature element. The signature element should be generated from the user's theme, the texture of the material, and the reading tasks, rather than reusing a fixed technique; it can be any visual rule that can organize content, create a memorable point, and maintain consistency.
+- Real material first: screenshots, logos, images, icons, and data snippets provided by the user should be used first. When there is no material, use clear placeholder structures and replaceable copy.
+- A small amount of motion is allowed, but only for entrance, emphasis, or guiding reading; do not use continuous animation that interferes with understanding.
+- Numbers, charts, and tables may be included, but they serve the report narrative; do not turn all content into graphics just for the sake of "visualization."
+- Dark areas can be used for the cover, conclusion, action area, or the key visual of the entire report; as long as it serves the thematic tone and reading experience, rather than being an unfounded decoration.
 
-## 画布与交付
+<a id="画布与交付"></a>
+## Canvas and delivery
 
-- 多方案、设计稿、方向探索：使用 `design-canvas.jsx`，每个方向一个 `<DCArtboard>`。
-- 单一可视化报告、视觉长图或专题视觉稿：做成完整 HTML 页面，保持明确画幅、节奏和层级。
-- 如果用户要“设计稿”，优先走画布式交付；如果用户要“可直接展示/传播”，可以做成完整页面式视觉作品。
-- 所有文字应直接写在 HTML 中，便于用户后续编辑。
+- Multiple options, design drafts, direction exploration: use `design-canvas.jsx`, with one `<DCArtboard>` per direction.
+- A single visual report, visual long image, or feature visual draft: make it a complete HTML page, maintaining a clear canvas size, rhythm, and hierarchy.
+- If the user wants a "design draft," prioritize canvas-style delivery; if the user wants something "directly presentable/shareable," it can be made into a complete page-style visual work.
+- All text should be written directly in the HTML, making it easy for the user to edit later.
 
-## 检查清单
+<a id="检查清单"></a>
+## Checklist
 
-- 交付形态匹配用户需求：长页报告、专题页、长图、画布设计稿或单屏摘要，而不是被固定模板绑住。
-- 当前需求的主题、边界和最重要信息在第一屏或开篇清楚可见。
-- 章节顺序跟随材料逻辑，不按评测集样例或预设场景套目录。
-- 章节版式有节奏变化，并且变化来自材料关系；没有一路同款上下卡片，也没有因为预设组件清单而硬凑结构。
-- 没有大面积空白、错位、低对比、文字不可读或模块之间风格突兀。
-- 内容区保持平面化，没有滥用阴影、发光、玻璃拟态或厚重悬浮效果。
-- 所有表达载体各司其职，没有为了数据而堆图，也没有用空泛文字或预设组件填空间。
-- 文字密度可读，没有小字堆叠。
-- 图标、线条、颜色和卡片样式属于同一套视觉语言。
-- 明暗选择能解释为什么适合这个主题；无论浅色还是暗色，都保证长文、图表和表格可读。
-- 事实性内容没有编造；不确定内容用中性描述或占位说明。
+- The delivery form matches the user's needs: long-page report, feature page, long image, canvas design draft, or single-screen summary, rather than being bound by a fixed template.
+- The theme, boundaries, and most important information of the current requirement are clearly visible on the first screen or in the opening.
+- Section order follows the logic of the material, and does not apply a table of contents based on evaluation set samples or preset scenarios.
+- Section layouts have rhythmic variation, and the variation comes from material relationships; there is no uniform top-to-bottom card layout throughout, and no structure is forced together because of a preset component list.
+- There are no large blank areas, misalignment, low contrast, unreadable text, or abrupt style differences between modules.
+- Content areas remain flat, without abuse of shadows, glows, glassmorphism, or heavy floating effects.
+- All expression carriers perform their own roles; there is no piling up of charts for the sake of data, and no filling of space with vague text or preset components.
+- Text density is readable, with no stacking of tiny text.
+- Icons, lines, colors, and card styles belong to the same visual language.
+- The light/dark choice can explain why it suits this theme; whether light or dark, long text, charts, and tables remain readable.
+- Factual content is not fabricated; uncertain content uses neutral descriptions or placeholder notes.

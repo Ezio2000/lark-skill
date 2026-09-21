@@ -1,17 +1,19 @@
-# JSON 输出契约
+# JSON output contract
 
-`--format json`（默认）下，成功与错误的信封结构不同：
+With `--format json` (the default), success and error envelopes differ.
 
-成功信封写入 **stdout**（退出码 0）：
-
-```json
-{ "ok": true, "identity": "user", "data": { "guid": "..." }, "meta": { "count": 1 } }
-```
-
-错误信封写入 **stderr**（退出码非 0）：
+Success is written to stdout with exit code 0:
 
 ```json
-{ "ok": false, "identity": "user", "error": { "type": "authorization", "subtype": "missing_scope", "code": 99991679, "message": "...", "hint": "...", "missing_scopes": ["..."] } }
+{"ok": true, "identity": "user", "data": {"guid": "..."}, "meta": {"count": 1}}
 ```
 
-**判断成功必须用 `ok == true`（或进程退出码 0），不要用 `code == 0`**：成功信封没有顶层 `code` / `msg` 字段，`code` 只出现在错误信封的 `error` 内，含义是上游 OpenAPI 的 numeric code。按 OpenAPI 老格式 `{"code": 0, "msg": "ok"}` 判断会把所有成功调用误判为失败；封装写入类命令（如 `task +create`）时尤其危险，误判会绕过幂等逻辑导致重复创建。
+Errors are written to stderr with a nonzero exit code:
+
+```json
+{"ok": false, "identity": "user", "error": {"type": "authorization", "subtype": "missing_scope", "code": 99991679, "message": "...", "hint": "...", "missing_scopes": ["..."]}}
+```
+
+Use `ok == true` together with process status, not top-level `code == 0`. Successful CLI envelopes have no top-level `code` or `msg`. `error.code` is the upstream numeric OpenAPI code, not the CLI success indicator.
+
+Testing for the old raw-API shape `{"code":0,"msg":"ok"}` misclassifies successful wrapped commands. In a write wrapper this can cause duplicate creation by retrying an operation that already succeeded. If success is uncertain, inspect state before resubmitting.

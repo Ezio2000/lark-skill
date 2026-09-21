@@ -1,65 +1,69 @@
 # wiki +move-to-drive
 
 
-将已有 Wiki 节点移出知识库，并放到指定 Drive 文件夹；省略目标文件夹时放到当前调用身份的“我的空间”根目录。该操作始终创建异步任务，shortcut 会自动有限轮询。
+Move an existing Wiki node out of the knowledge base and into a specified Drive folder; when the target folder is omitted, it is placed in the "My Space" root directory of the current calling identity. This operation always creates an asynchronous task, and the shortcut automatically performs a limited number of polling attempts.
 
-## 何时使用
+<a id="何时使用"></a>
+## When to use
 
-| 源对象 | 目标位置 | 命令 |
+| Source object | Target location | Command |
 |--------|----------|------|
-| Wiki 节点 | Wiki 空间或 Wiki 父节点 | `wiki +move` |
-| Drive 文档 | Wiki 空间或 Wiki 父节点 | `wiki +move` |
-| Wiki 节点 | Drive 文件夹或“我的空间”根目录 | `wiki +move-to-drive` |
-| Drive 文件 / 文件夹 | Drive 文件夹或根目录 | `drive +move` |
+| Wiki node | Wiki space or Wiki parent node | `wiki +move` |
+| Drive document | Wiki space or Wiki parent node | `wiki +move` |
+| Wiki node | Drive folder or "My Space" root directory | `wiki +move-to-drive` |
+| Drive file / folder | Drive folder or root directory | `drive +move` |
 
-`--node-token` 必须是 Wiki 节点 token，不是底层文档的 `obj_token`。无法判断时，先执行 `wiki +node-get --node-token <URL_OR_TOKEN>`。
+`--node-token` must be a Wiki node token, not the `obj_token` of the underlying document. When unable to determine, first run `wiki +node-get --node-token <URL_OR_TOKEN>`.
 
-## 命令
+<a id="命令"></a>
+## Command
 
 ```bash
-# 移到指定 Drive 文件夹
+# Move to a specified Drive folder
 lark-cli wiki +move-to-drive \
   --node-token <WIKI_NODE_TOKEN> \
   --folder-token <TARGET_FOLDER_TOKEN> \
   --as user
 
-# 移到当前调用身份的“我的空间”根目录
+# Move to the "My Space" root directory of the current calling identity
 lark-cli wiki +move-to-drive \
   --node-token <WIKI_NODE_TOKEN> \
   --as user
 
-# 预览提交任务和轮询任务两步请求
+# Preview the two-step requests of submitting the task and polling the task
 lark-cli wiki +move-to-drive \
   --node-token <WIKI_NODE_TOKEN> \
   --folder-token <TARGET_FOLDER_TOKEN> \
   --dry-run
 ```
 
-## 参数
+<a id="参数"></a>
+## Parameters
 
-| 参数 | 必填 | 说明 |
+| Parameter | Required | Description |
 |------|------|------|
-| `--node-token` | 是 | 要移出知识库的 Wiki 节点 token |
-| `--folder-token` | 否 | 目标 Drive 文件夹 token；省略时移动到当前调用身份的“我的空间”根目录 |
+| `--node-token` | Yes | The Wiki node token to move out of the knowledge base |
+| `--folder-token` | No | The target Drive folder token; when omitted, it is moved to the "My Space" root directory of the current calling identity |
 
-## 异步协议与续跑
+<a id="异步协议与续跑"></a>
+## Asynchronous protocol and resumption
 
-shortcut 会按以下协议执行：
+The shortcut executes according to the following protocol:
 
-1. `POST /open-apis/wiki/v2/nodes/{node_token}/move_wiki_to_docs`，取得完整、不可拆分的 `task_id`。
-2. `GET /open-apis/wiki/v2/tasks/{task_id}?task_type=move_wiki_to_docs`。
-3. 读取 `data.task.move_wiki_to_docs_result`：`status=1` 表示处理中，`status=0` 表示成功，`status=-1` 表示失败。
+1. `POST /open-apis/wiki/v2/nodes/{node_token}/move_wiki_to_docs`, obtaining a complete, indivisible `task_id`.
+2. `GET /open-apis/wiki/v2/tasks/{task_id}?task_type=move_wiki_to_docs`.
+3. Read `data.task.move_wiki_to_docs_result`: `status=1` indicates processing, `status=0` indicates success, `status=-1` indicates failure.
 
-任务查询必须使用 `task_type=move_wiki_to_docs`、`move_wiki_to_docs_result` 和数值状态；不要回退到其他 task type、result 字段或字符串状态。
+Task queries must use `task_type=move_wiki_to_docs`, `move_wiki_to_docs_result`, and numeric status; do not fall back to other task types, result fields, or string statuses.
 
-- 最多轮询 30 次，每次间隔 2 秒。
-- 轮询窗口内成功时返回 `ready=true`，并尽可能返回 `obj_token`、`obj_type` 和 `url`。
-- 仍在处理中时返回 `ready=false`、`timed_out=true`、完整 `task_id` 和 `next_command`；超时不代表任务失败。
-- 任务进入失败态时返回结构化错误。
-- `task_id` 是服务端签名的 opaque ID，可能包含多个连字符；必须原样保存，不能自行切分。
-- 续跑必须保持和初始移动相同的 `--profile` 与 `--as user|bot` 身份，否则可能收到权限错误；shortcut 返回的 `next_command` 会保留两者。
+- Poll at most 30 times, with an interval of 2 seconds each time.
+- On success within the polling window, return `ready=true`, and return `obj_token`, `obj_type`, and `url` where possible.
+- When still processing, return `ready=false`, `timed_out=true`, the complete `task_id`, and `next_command`; a timeout does not mean the task failed.
+- When the task enters a failed state, return a structured error.
+- `task_id` is a server-signed opaque ID and may contain multiple hyphens; it must be saved as-is and must not be split on your own.
+- Resumption must maintain the same `--profile` and `--as user|bot` identity as the initial move, otherwise a permission error may be received; the `next_command` returned by the shortcut preserves both.
 
-手动续跑命令：
+Manual resumption command:
 
 ```bash
 lark-cli drive +task_result \
@@ -68,9 +72,10 @@ lark-cli drive +task_result \
   --as user
 ```
 
-## 典型返回
+<a id="典型返回"></a>
+## Typical responses
 
-成功：
+Success:
 
 ```json
 {
@@ -87,7 +92,7 @@ lark-cli drive +task_result \
 }
 ```
 
-轮询窗口超时：
+Polling window timeout:
 
 ```json
 {
@@ -103,19 +108,21 @@ lark-cli drive +task_result \
 }
 ```
 
-## 权限与影响
+<a id="权限与影响"></a>
+## Permissions and impact
 
-- CLI 写操作预检查使用 `space:document:move`，任务轮询使用 `wiki:space:read`。
-- 调用方必须能移动源 Wiki 节点并写入目标 Drive 文件夹。
-- 成功后源节点会从 Wiki 树中消失，目标文档改用 Drive 目标位置的权限模型；原 Wiki 层级继承权限不再保留。
-- 省略 `--folder-token` 时，“根目录”属于当前 `--as` 身份，user 与 bot 的可见资源范围可能不同。
+- CLI write operation pre-checks use `space:document:move`, and task polling uses `wiki:space:read`.
+- The caller must be able to move the source Wiki node and write to the target Drive folder.
+- After success, the source node disappears from the Wiki tree, and the target document switches to the permission model of the target Drive location; the original Wiki hierarchy inherited permissions are no longer retained.
+- When `--folder-token` is omitted, the "root directory" belongs to the current `--as` identity, and the visible resource scope of user and bot may differ.
 
 > [!CAUTION]
-> 这是会改变文档归属和权限继承的**写入操作**。执行前必须确认源 Wiki 节点、目标 Drive 位置和调用身份。
+> This is a **write operation** that changes document ownership and permission inheritance. Before execution, you must confirm the source Wiki node, the target Drive location, and the calling identity.
 
-## 参考
+<a id="参考"></a>
+## References
 
-- [lark-wiki](../index.md) -- 知识库全部命令
-- [wiki +move](lark-wiki-move.md) -- Wiki 内移动与 Drive 文档迁入 Wiki
-- [drive +task_result](../../drive/references/lark-drive-task-result.md) -- 超时后的任务续跑
-- [lark-shared](../../shared/index.md) -- 认证和全局参数
+- [lark-wiki](../index.md) -- all knowledge base commands
+- [wiki +move](lark-wiki-move.md) -- moving within Wiki and migrating Drive documents into Wiki
+- [drive +task_result](../../drive/references/lark-drive-task-result.md) -- task resumption after timeout
+- [lark-shared](../../shared/index.md) -- authentication and global parameters

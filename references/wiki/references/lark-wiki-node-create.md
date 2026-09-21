@@ -1,109 +1,114 @@
 # wiki +node-create
 
 
-在飞书知识库中创建一个新节点，并自动解析目标知识空间。该 shortcut 对原生 `wiki.nodes.create` 做了一层更适合日常使用的封装：可以直接指定 `space_id`，也可以从父节点自动反查所属空间；在 `user` 身份下，如果同时省略 `--space-id` 和 `--parent-node-token`，还会自动回退到个人知识库 `my_library`。
+Create a new node in a Feishu Wiki and automatically resolve the target knowledge space. This shortcut wraps the native `wiki.nodes.create` in a layer more suited to everyday use: you can specify `space_id` directly, or automatically look up the owning space from a parent node; under the `user` identity, if both `--space-id` and `--parent-node-token` are omitted, it will also automatically fall back to the personal knowledge base `my_library`.
 
-## 命令
+<a id="命令"></a>
+## Command
 
 ```bash
-# 在个人知识库根目录下创建一个 docx 节点（user 身份默认回退到 my_library）
+# Create a docx node under the root of the personal knowledge base (user identity defaults to falling back to my_library)
 lark-cli wiki +node-create \
   --title "项目计划"
 
-# 在指定知识空间中创建一个 docx 节点
+# Create a docx node in the specified knowledge space
 lark-cli wiki +node-create \
   --space-id <SPACE_ID> \
   --title "项目计划"
 
-# 在指定父节点下创建一个子节点
+# Create a child node under the specified parent node
 lark-cli wiki +node-create \
   --parent-node-token <PARENT_NODE_TOKEN> \
   --title "迭代记录"
 
-# 显式指定创建到个人知识库（仅 user 身份；bot 不支持 `--space-id my_library`）
+# Explicitly specify creation into the personal knowledge base (user identity only; bot does not support `--space-id my_library`)
 lark-cli wiki +node-create \
   --space-id my_library \
   --title "学习笔记"
 
-# 创建一个快捷方式节点（shortcut）
+# Create a shortcut node (shortcut)
 lark-cli wiki +node-create \
   --parent-node-token <PARENT_NODE_TOKEN> \
   --node-type shortcut \
   --origin-node-token <ORIGIN_NODE_TOKEN> \
   --title "原文档快捷方式"
 
-# 创建非 docx 类型节点
+# Create a node of a non-docx type
 lark-cli wiki +node-create \
   --space-id <SPACE_ID> \
   --obj-type sheet \
   --title "周报数据"
 
-# 预览底层调用链
+# Preview the underlying call chain
 lark-cli wiki +node-create \
   --title "Roadmap" \
   --dry-run
 ```
 
-## 返回值
+<a id="返回值"></a>
+## Return Value
 
-成功后会返回一个 JSON 对象，常见字段包括：
+On success, a JSON object is returned; common fields include:
 
-- `resolved_space_id`：最终用于创建的真实知识空间 ID
-- `resolved_by`：空间解析来源，可能是 `explicit_space_id`、`parent_node_token`、`my_library`
-- `node_token`：新建知识库节点 token
-- `obj_token`：节点关联对象 token
-- `obj_type`：节点关联对象类型
-- `node_type`：节点类型
-- `title`：节点标题
-- `permission_grant`（可选）：仅 `--as bot` 时返回，说明是否已自动为当前 CLI 用户授予可管理权限
+- `resolved_space_id`: the real knowledge space ID ultimately used for creation
+- `resolved_by`: the source of space resolution, which may be `explicit_space_id`, `parent_node_token`, `my_library`
+- `node_token`: the newly created wiki node token
+- `obj_token`: the node's associated object token
+- `obj_type`: the node's associated object type
+- `node_type`: the node type
+- `title`: the node title
+- `permission_grant` (optional): returned only for `--as bot`, indicating whether manageable permission has been automatically granted to the current CLI user
 
 > [!IMPORTANT]
-> 如果节点是**以应用身份（bot）创建**的，如 `lark-cli wiki +node-create --as bot`，在创建成功后 CLI 会**尝试为当前 CLI 用户自动授予该知识库节点的 `full_access`（可管理权限）**。
+> If the node is **created under the app identity (bot)**, such as `lark-cli wiki +node-create --as bot`, after successful creation the CLI will **attempt to automatically grant the current CLI user `full_access` (manageable permission) on that wiki node**.
 >
-> 以应用身份创建时，结果里会额外返回 `permission_grant` 字段，明确说明授权结果：
-> - `status = granted`：当前 CLI 用户已获得该知识库节点的可管理权限
-> - `status = skipped`：本地没有可用的当前用户 `open_id`，因此不会自动授权；可提示用户先完成 `lark-cli auth login`，再让 AI / agent 继续使用应用身份（bot）授予当前用户权限
-> - `status = failed`：节点已创建成功，但自动授权用户失败；会带上失败原因，并提示稍后重试或继续使用 bot 身份处理该节点
+> When created under the app identity, the result additionally returns the `permission_grant` field, clearly stating the authorization result:
+> - `status = granted`: the current CLI user has obtained manageable permission on that wiki node
+> - `status = skipped`: there is no available current user `open_id` locally, so no automatic authorization will occur; you may prompt the user to complete `lark-cli auth login` first, then let the AI / agent continue using the app identity (bot) to grant the current user permission
+> - `status = failed`: the node was created successfully, but automatically authorizing the user failed; the failure reason will be included, and you will be prompted to retry later or continue handling the node using the bot identity
 >
-> `permission_grant.perm = full_access` 表示该资源已授予“可管理权限”
+> `permission_grant.perm = full_access` indicates that the resource has been granted "manageable permission"
 >
-> **不要擅自执行 owner 转移。** 创建或导入不隐含 owner 转移；用户已明确要求转移且目标已确定时沿用授权执行。
+> **Do not perform owner transfer on your own initiative.** Creation or import does not imply owner transfer; when the user has explicitly requested a transfer and the target is determined, proceed with the authorization execution.
 
-## 参数
+<a id="参数"></a>
+## Parameters
 
-| 参数 | 必填 | 说明 |
+| Parameter | Required | Description |
 |------|------|------|
-| `--space-id` | 否 | 目标知识空间 ID；`user` 身份可传特殊值 `my_library` 表示个人知识库，`bot` 身份不支持该值 |
-| `--parent-node-token` | 否 | 父知识库节点 token 或文档 obj_token；在解析出的 Wiki 节点下创建新节点 |
-| `--title` | 否 | 节点标题 |
-| `--node-type` | 否 | 节点类型，默认 `origin`；可选值：`origin`、`shortcut` |
-| `--obj-type` | 否 | 节点对应对象类型，默认 `docx`；可选值：`sheet`、`mindnote`、`bitable`、`file`、`docx`、`slides`。`file` 仅支持 `shortcut` 节点 |
-| `--origin-node-token` | 否 | 当 `--node-type=shortcut` 时必填，表示快捷方式指向的源节点 token |
+| `--space-id` | No | Target knowledge space ID; the `user` identity may pass the special value `my_library` to indicate the personal knowledge base, while the `bot` identity does not support this value |
+| `--parent-node-token` | No | Parent wiki node token or document obj_token; create the new node under the resolved Wiki node |
+| `--title` | No | Node title |
+| `--node-type` | No | Node type, defaults to `origin`; possible values: `origin`, `shortcut` |
+| `--obj-type` | No | The object type corresponding to the node, defaults to `docx`; possible values: `sheet`, `mindnote`, `bitable`, `file`, `docx`, `slides`. `file` only supports `shortcut` nodes |
+| `--origin-node-token` | No | Required when `--node-type=shortcut`, indicating the source node token that the shortcut points to |
 
-## 空间解析规则
+<a id="空间解析规则"></a>
+## Space Resolution Rules
 
-- **优先级**：`--space-id` > `--parent-node-token` > `my_library`
-- **显式 space**：传了 `--space-id` 时，shortcut 会直接使用该空间；如果该值是 `my_library`，则仅 `user` 身份可用，并会先调用 `GET /open-apis/wiki/v2/spaces/my_library` 解析成真实 `space_id`
-- **父节点推断**：未传 `--space-id` 但传了 `--parent-node-token` 时，会先调用 `GET /open-apis/wiki/v2/spaces/node_by_token` 获取父节点，再读取其 `space_id`
-- **父节点类型**：`--parent-node-token` 接受 Wiki `node_token` 或已挂载到 Wiki 的文档 `obj_token`，创建时使用查询返回的 `node_token`；显式传空间时也会查询并校验父节点空间。
-- **个人知识库回退**：`user` 身份下，如果 `--space-id` 和 `--parent-node-token` 都没传，会自动解析 `my_library`
-- **bot 身份限制**：`bot` 身份既没有“个人知识库”回退语义，也不支持显式传 `--space-id my_library`；请改用真实 `space_id` 或 `--parent-node-token`
+- **Priority**: `--space-id` > `--parent-node-token` > `my_library`
+- **Explicit space**: when `--space-id` is passed, the shortcut will use that space directly; if the value is `my_library`, it is available only under the `user` identity, and `GET /open-apis/wiki/v2/spaces/my_library` will first be called to resolve it into a real `space_id`
+- **Parent node inference**: when `--space-id` is not passed but `--parent-node-token` is passed, `GET /open-apis/wiki/v2/spaces/node_by_token` will first be called to get the parent node, then its `space_id` will be read
+- **Parent node type**: `--parent-node-token` accepts a Wiki `node_token` or a document `obj_token` already mounted to Wiki; creation uses the `node_token` returned by the query; when a space is explicitly passed, the parent node's space is also queried and validated.
+- **Personal knowledge base fallback**: under the `user` identity, if neither `--space-id` nor `--parent-node-token` is passed, `my_library` will be automatically resolved
+- **bot identity restrictions**: the `bot` identity has neither the "personal knowledge base" fallback semantics nor support for explicitly passing `--space-id my_library`; use a real `space_id` or `--parent-node-token` instead
 
-## 节点类型与对象类型
+<a id="节点类型与对象类型"></a>
+## Node Types and Object Types
 
-| `node_type` | 支持的 `obj_type` |
+| `node_type` | Supported `obj_type` |
 |-------------|-------------------|
-| `origin` | `sheet`、`mindnote`、`bitable`、`docx`、`slides` |
-| `shortcut` | `sheet`、`mindnote`、`bitable`、`file`、`docx`、`slides` |
+| `origin` | `sheet`, `mindnote`, `bitable`, `docx`, `slides` |
+| `shortcut` | `sheet`, `mindnote`, `bitable`, `file`, `docx`, `slides` |
 
-- `--node-type=shortcut` 时，必须同时提供 `--origin-node-token`
-- `--node-type=origin` 时，不能传 `--origin-node-token`
-- `--obj-type=file` 仅支持 `--node-type=shortcut`；实体节点不支持创建 `file` 类型
-- `shortcut` 节点只是知识库中的快捷方式入口；真正被引用的节点由 `--origin-node-token` 指定
-- 如果 `+node-create` 因上述组合返回参数校验错误，禁止改用 raw `wiki nodes create` 或直接调用 OpenAPI 绕过校验；应修正 `node_type`、`obj_type` 或 `origin_node_token`
+- When `--node-type=shortcut`, `--origin-node-token` must also be provided
+- When `--node-type=origin`, `--origin-node-token` must not be passed
+- `--obj-type=file` only supports `--node-type=shortcut`; entity nodes do not support creating the `file` type
+- A `shortcut` node is merely a shortcut entry in the wiki; the node actually referenced is specified by `--origin-node-token`
+- If `+node-create` returns a parameter validation error due to the above combinations, it is forbidden to switch to raw `wiki nodes create` or call the OpenAPI directly to bypass validation; instead, fix `node_type`, `obj_type`, or `origin_node_token`
 
 ```bash
-# 创建一个指向文件的快捷方式节点
+# Create a shortcut node pointing to a file
 lark-cli wiki +node-create \
   --space-id <SPACE_ID> \
   --node-type shortcut \
@@ -111,34 +116,38 @@ lark-cli wiki +node-create \
   --origin-node-token <ORIGIN_NODE_TOKEN>
 ```
 
-## 一致性校验
+<a id="一致性校验"></a>
+## Consistency Validation
 
-- 如果同时传了 `--space-id` 和 `--parent-node-token`，shortcut 会校验父节点所属空间是否与 `--space-id` 一致
-- 如果两者解析出的空间不一致，命令会直接返回验证错误，而不会继续创建
-- 对于 `my_library`，`user` 身份下也会先解析出真实 `space_id` 后再做这层校验
+- If both `--space-id` and `--parent-node-token` are passed, the shortcut will validate whether the space the parent node belongs to is consistent with `--space-id`
+- If the spaces resolved from the two are inconsistent, the command will directly return a validation error instead of continuing to create
+- For `my_library`, under the `user` identity, the real `space_id` will also be resolved first before performing this layer of validation
 
-## 行为说明
+<a id="行为说明"></a>
+## Behavior Description
 
-- **默认对象类型**：不传 `--obj-type` 时默认创建 `docx` 节点
-- **默认节点类型**：不传 `--node-type` 时默认创建普通节点 `origin`
-- **dry-run 编排**：
-  - 仅传 `--title`：会展示 `my_library` 解析 + 创建节点 两步调用
-  - 仅传 `--parent-node-token`：会展示“查询父节点 -> 创建节点”两步调用
-  - 同时需要 `my_library` 和父节点时：会展示三步调用链
-- **bot 自动授权**：若使用 `--as bot`，结果还会额外带上 `permission_grant`，用于说明是否已自动为当前 CLI 用户授予新建节点的可管理权限
-- **输出结果**：成功后会返回 `resolved_space_id`、`resolved_by`、`node_token`、`obj_token`、`obj_type`、`node_type`、`title` 等字段，便于后续继续操作
-- **结构限制**：返回 `131003` 表示触发了知识空间总节点数、目录深度或单个父节点直属子节点数等结构限制。这不是瞬时错误，禁止使用相同参数重试。根据上游错误信息选择更浅或其他父节点、重新组织现有节点，或清理/改用其他知识空间；不要在无法确认具体限制时盲目增加中间层级。
+- **Default object type**: when `--obj-type` is not passed, a `docx` node is created by default
+- **Default node type**: when `--node-type` is not passed, a normal node `origin` is created by default
+- **dry-run orchestration**:
+  - Only `--title` passed: shows the two-step call of `my_library` resolution + node creation
+  - Only `--parent-node-token` passed: shows the two-step call of "query parent node -> create node"
+  - When both `my_library` and a parent node are needed: shows a three-step call chain
+- **bot automatic authorization**: if `--as bot` is used, the result additionally includes `permission_grant`, used to indicate whether manageable permission on the newly created node has been automatically granted to the current CLI user
+- **Output result**: on success, fields such as `resolved_space_id`, `resolved_by`, `node_token`, `obj_token`, `obj_type`, `node_type`, `title` are returned, making it convenient to continue operations afterward
+- **Structural limits**: returning `131003` indicates that a structural limit such as the total node count of the knowledge space, directory depth, or the number of direct child nodes under a single parent node has been triggered. This is not a transient error, and retrying with the same parameters is forbidden. Based on the upstream error message, choose a shallower or different parent node, reorganize existing nodes, or clean up / switch to another knowledge space; do not blindly add intermediate levels when the specific limit cannot be confirmed.
 
-## 推荐场景
+<a id="推荐场景"></a>
+## Recommended Scenarios
 
-- 用户说“在我的知识库里新建一篇页面”时，优先用 `lark-cli wiki +node-create --title "..."`
-- 用户已经给出父页面链接或 `parent_node_token` 时，优先传 `--parent-node-token`，让 shortcut 自动推导空间
-- 需要创建知识库快捷方式时，使用 `--node-type shortcut --origin-node-token <token>`
+- When the user says "create a new page in my wiki", prefer `lark-cli wiki +node-create --title "..."`
+- When the user has already given a parent page link or `parent_node_token`, prefer passing `--parent-node-token`, letting the shortcut automatically infer the space
+- When a wiki shortcut needs to be created, use `--node-type shortcut --origin-node-token <token>`
 
 > [!CAUTION]
-> `wiki +node-create` 是**写入操作**，执行前必须确认用户意图。
+> `wiki +node-create` is a **write operation**; user intent must be confirmed before execution.
 
-## 参考
+<a id="参考"></a>
+## References
 
-- [lark-wiki](../index.md) -- 知识库全部命令
-- [lark-shared](../../shared/index.md) -- 认证和全局参数
+- [lark-wiki](../index.md) -- all wiki commands
+- [lark-shared](../../shared/index.md) -- authentication and global parameters

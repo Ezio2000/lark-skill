@@ -1,95 +1,106 @@
-# 预约/改约日程或会议、查询/搜索可用会议室的工作流
+<a id="预约改约日程或会议查询搜索可用会议室的工作流"></a>
+# Workflow for scheduling/rescheduling a calendar event or meeting, and querying/searching for available meeting rooms
 
-## 执行摘要
+<a id="执行摘要"></a>
+## Executive Summary
 
-- **第一步永远是判断任务类型：新建日程，还是编辑已有日程。**
-- **编辑已有日程时，必须先定位目标日程或实例的 `event_id`。**
-- **默认做智能助理，不做表单填写机。** 能根据上下文补全的默认值就直接补全，仅在必须决策的冲突或无法唯一确定的场景下才发起询问。
-- **新建流先补默认值，编辑流先继承已定位日程信息。**
-- **明确时间** → 进入 [明确时间分支](./lark-calendar-schedule-clear-time.md)
-- **模糊时间或无时间信息** → 进入 [模糊时间分支](./lark-calendar-schedule-fuzzy-time.md)
-- **BLOCKING REQUIREMENT**: 面临时间方案或会议室方案的选择时，必须先向用户展示选项并等待确认，禁止未经确认直接创建/更新日程。
-- **必须按顺序执行。** 不要跳过"任务类型判定""目标日程定位（编辑流）""补默认值/继承基线信息""判断时间明确性"这些前置步骤。
+- **The first step is always to determine the task type: create a new calendar event, or edit an existing one.**
+- **When editing an existing calendar event, you must first locate the `event_id` of the target calendar event or instance.**
+- **By default, act as an intelligent assistant, not a form-filling machine.** Fill in defaults that can be inferred from context directly, and only ask questions in scenarios involving conflicts that require a decision or that cannot be uniquely determined.
+- **The create flow fills in defaults first; the edit flow inherits information from the located calendar event first.**
+- **Clear time** → go to [Clear Time branch](./lark-calendar-schedule-clear-time.md)
+- **Vague time or no time information** → go to [Vague Time branch](./lark-calendar-schedule-fuzzy-time.md)
+- **BLOCKING REQUIREMENT**: When faced with a choice of time options or meeting room options, you must first present the options to the user and wait for confirmation; creating/updating a calendar event directly without confirmation is prohibited.
+- **Must be executed in order.** Do not skip the prerequisite steps of "task type determination", "target calendar event location (edit flow)", "filling in defaults/inheriting baseline information", and "determining time clarity".
 
-## 严禁行为
+<a id="严禁行为"></a>
+## Strictly Prohibited Actions
 
-- **严禁在未读取对应子命令文档前直接调用命令。**
-- **严禁在尚未判断"新建"还是"编辑"之前，就直接进入创建日程或查会议室动作。**
-- **严禁把带有既有日程锚点 + 修改动词的请求当成新建日程。**
-- **严禁在编辑已有日程时跳过目标定位步骤。** 未拿到唯一 `event_id` 前，不得调用 `+update`。
-- **严禁在面临时间/会议室方案选择时，未经用户确认就擅自创建/更新日程。**
+- **It is strictly prohibited to call a command directly without first reading the corresponding subcommand documentation.**
+- **It is strictly prohibited to go directly into creating a calendar event or searching for meeting rooms before determining whether this is a "create" or an "edit".**
+- **It is strictly prohibited to treat a request with an existing calendar event anchor + a modification verb as creating a new calendar event.**
+- **It is strictly prohibited to skip the target location step when editing an existing calendar event.** Before obtaining a unique `event_id`, you must not call `+update`.
+- **It is strictly prohibited to create/update a calendar event without user confirmation when faced with a choice of time/meeting room options.**
 
-## 适用场景
+<a id="适用场景"></a>
+## Applicable Scenarios
 
-- "帮我约个会" / "下周找时间和 XX 开会"
-- "帮我订/找/搜索一个可用会议室"
-- "明天下午3点约个日程"
-- "把明天上午的日程加上 小明"
-- "给下周一的周会换个会议室"
-- "把这个日程改到明天下午，并加上学清 F201"
+- "Help me schedule a meeting" / "Find a time to meet with XX next week"
+- "Help me book/find/search for an available meeting room"
+- "Schedule a calendar event for tomorrow at 3 PM"
+- "Add Xiao Ming to tomorrow morning's calendar event"
+- "Change the meeting room for next Monday's weekly meeting"
+- "Move this calendar event to tomorrow afternoon, and add Xueqing F201"
 
-## 核心概念
+<a id="核心概念"></a>
+## Core Concepts
 
-- **会议室是日程的一种参与人（attendee / resource），不能脱离日程单独预定。**
-- **预定或查找会议室，均需先确定时间块。**
-- **当用户说"查会议室""找会议室"，默认意图是查会议室可用性，不是检索会议室资源名录。**
+- **A meeting room is a type of attendee (attendee / resource) of a calendar event, and cannot be booked separately from the calendar event.**
+- **To book or find a meeting room, the time block must be determined first.**
+- **When the user says "check meeting rooms" or "find a meeting room", the default intent is to check meeting room availability, not to search the meeting room resource directory.**
 
-## 任务类型判定
+<a id="任务类型判定"></a>
+## Task Type Determination
 
-| 类型 | 典型语言信号 | 第一动作 |
+| Type | Typical Language Signals | First Action |
 |------|--------------|----------|
-| 新建日程 | "约个会""安排会议""新建日程""订个会议室开会" | 补默认值，再进入时间判断 |
-| 编辑已有日程 | "给某日程加人/删人/加会议室""把某日程改到…""换会议室" | 先定位目标 `event_id` |
+| Create new calendar event | "schedule a meeting" "arrange a meeting" "create a new calendar event" "book a meeting room for a meeting" | Fill in defaults, then proceed to time determination |
+| Edit existing calendar event | "add/remove people to/from a calendar event" "move a calendar event to…" "change meeting room" | First locate the target `event_id` |
 
-规则：
-- 只要同时出现**既有日程锚点**（标题、时间段、`这个日程`、`这场会`）和**修改动词**（添加、移除、改到、换），默认判定为编辑。
-- 对重复性日程的编辑，必须先定位到对应实例的 `event_id`。
+Rules:
+- As long as both an **existing calendar event anchor** (title, time range, `这个日程`, `这场会`) and a **modification verb** (add, remove, move to, change) appear, it is by default determined to be an edit.
+- For edits to recurring calendar events, you must first locate the `event_id` of the corresponding instance.
 
-## 编辑流：先定位目标日程
+<a id="编辑流先定位目标日程"></a>
+## Edit Flow: First Locate the Target Calendar Event
 
-定位规则：
-- 优先利用用户给出的标题、日期、时间范围等锚点，通过 `+agenda`、`+search-event` 或实例视图缩小范围
-- 命中多个候选日程时，必须向用户展示候选项并要求确认
-- 重复性日程必须继续定位到该次实例的 `event_id`
+Location rules:
+- Prioritize using anchors given by the user, such as title, date, and time range, to narrow the scope through `+agenda`, `+search-event`, or the instance view
+- When multiple candidate calendar events match, you must present the candidates to the user and require confirmation
+- For recurring calendar events, you must continue locating the `event_id` of that instance
 
-编辑流分支路由：
+Edit flow branch routing:
 
-| 编辑子场景 | 下一步 |
+| Edit Sub-scenario | Next Step |
 |-----------|--------|
-| 仅增删普通参会人/群组，不改时间，不涉及会议室 | 直接 `+update`（详见 [lark-calendar-update.md](./lark-calendar-update.md)） |
-| 新增会议室，不改时间 | 基于已定位日程 start/end → [明确时间分支](./lark-calendar-schedule-clear-time.md) |
-| 只改时间，不涉及会议室 | 判断时间明确性 → 对应分支 |
-| 既改时间，又新增/更换会议室 | 先确定最终时间 → 再查会议室 → 落地 |
+| Only add/remove ordinary attendees/groups, do not change time, do not involve meeting rooms | Directly `+update` (see [lark-calendar-update.md](./lark-calendar-update.md) for details) |
+| Add a meeting room, do not change time | Based on the located calendar event start/end → [Clear Time branch](./lark-calendar-schedule-clear-time.md) |
+| Only change time, do not involve meeting rooms | Determine time clarity → corresponding branch |
+| Both change time and add/change meeting rooms | First determine the final time → then check meeting rooms → finalize |
 
-## 新建日程：智能推断默认值
+<a id="新建日程智能推断默认值"></a>
+## Create New Calendar Event: Intelligently Infer Defaults
 
-- **标题**：根据上下文自动生成；如无法推断，默认"会议"
-- **参会人**：如未指定，默认仅用户自己
-- **时长**：基于上下文推断；默认 30 分钟
-- **无时间信息**：默认推断合理区间（如"今天"或"近两天"），进入时间推荐流程，禁止询问用户
+- **Title**: Automatically generate based on context; if it cannot be inferred, default to "Meeting"
+- **Attendees**: If not specified, default to only the user themselves
+- **Duration**: Infer based on context; default to 30 minutes
+- **No time information**: By default, infer a reasonable range (such as "today" or "the past two days"), enter the time recommendation flow, and do not ask the user
 
-搜索参与人出现多个结果无法唯一确定时，必须询问用户并记录长期记忆。
+When searching for attendees returns multiple results that cannot be uniquely determined, you must ask the user and record it in long-term memory.
 
-## 判断时间是否明确
+<a id="判断时间是否明确"></a>
+## Determine Whether the Time Is Clear
 
-时间基准规则：
-- **新建流**：使用用户给出的时间，或默认补全出的时间范围
-- **编辑流且不改时间**：已定位日程的当前 `start/end` 就是明确时间
-- **编辑流且改时间**：用户想改到的新时间；若表达模糊，进入模糊时间分支
-**注意**: 在执行修改日程/会议时间的任务时，必须先获取原日程的持续时长。如果用户只提供了新的开始时间，你必须根据原时长自动计算出新的结束时间，严格保持原时长不变，禁止擅自改变原日程的时长。
+Time baseline rules:
+- **Create flow**: Use the time given by the user, or the time range filled in by default
+- **Edit flow without changing time**: The current `start/end` of the located calendar event is the clear time
+- **Edit flow with time change**: The new time the user wants to change to; if the expression is vague, enter the vague time branch
+**Note**: When performing the task of modifying the time of a calendar event/meeting, you must first obtain the duration of the original calendar event. If the user only provides a new start time, you must automatically calculate the new end time based on the original duration, strictly keeping the original duration unchanged; changing the duration of the original calendar event without authorization is prohibited.
 
-## 分支路由
+<a id="分支路由"></a>
+## Branch Routing
 
-| 判定结果 | 下一步读取 |
+| Determination Result | Next Read |
 |----------|-----------|
-| 明确时间 | [schedule-clear-time.md](./lark-calendar-schedule-clear-time.md) |
-| 模糊时间 / 无时间信息 | [schedule-fuzzy-time.md](./lark-calendar-schedule-fuzzy-time.md) |
+| Clear time | [schedule-clear-time.md](./lark-calendar-schedule-clear-time.md) |
+| Vague time / no time information | [schedule-fuzzy-time.md](./lark-calendar-schedule-fuzzy-time.md) |
 
-## 落地日程变更
+<a id="落地日程变更"></a>
+## Finalize Calendar Event Changes
 
-用户确认后调用：
-- 新建 → [`+create`](./lark-calendar-create.md)
-- 编辑 → [`+update`](./lark-calendar-update.md)
+After user confirmation, call:
+- Create → [`+create`](./lark-calendar-create.md)
+- Edit → [`+update`](./lark-calendar-update.md)
 
 ```bash
 lark-cli calendar +create \
@@ -105,13 +116,14 @@ lark-cli calendar +update \
   --add-attendee-ids "omm_new_room"
 ```
 
-落地规则：
-- 编辑流必须始终沿用前面定位得到的目标 `event_id`；禁止在最后一步重新猜测目标日程
-- 编辑流中"新增会议室"默认仅追加 `room_id`，不移除已有会议室
-- 仅当用户明确说"更换会议室"时，才同时 `--remove-attendee-ids` 旧 + `--add-attendee-ids` 新
-- 需要会议室时，将选中的 `room_id` 写入参与人列表
+Finalization rules:
+- The edit flow must always continue using the target `event_id` located earlier; it is prohibited to re-guess the target calendar event in the final step
+- In the edit flow, "add meeting room" by default only appends `room_id`, and does not remove existing meeting rooms
+- Only when the user explicitly says "change meeting room" should you both `--remove-attendee-ids` the old one + `--add-attendee-ids` the new one
+- When a meeting room is needed, write the selected `room_id` into the attendee list
 
-## 参考
+<a id="参考"></a>
+## References
 
 - [lark-calendar-schedule-clear-time.md](./lark-calendar-schedule-clear-time.md)
 - [lark-calendar-schedule-fuzzy-time.md](./lark-calendar-schedule-fuzzy-time.md)

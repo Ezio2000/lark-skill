@@ -1,26 +1,27 @@
-# Drive 评论内容格式（--content）
+<a id="drive-评论内容格式--content"></a>
+# Drive comment content format (--content)
 
-> 本文是写入类评论命令（`+add-comment` / `+add-reply` / `+update-reply`）共享的 `--content` 内容格式说明，由这三个命令的 ref 引用。
+> This document describes the `--content` content format shared by the write-type comment commands (`+add-comment` / `+add-reply` / `+update-reply`), and is referenced by the refs of these three commands.
 
-`drive +add-comment`、`drive +add-reply`、`drive +update-reply` 的 `--content` 使用同一套 `reply_elements` JSON 数组格式。本文集中说明 schema、元素类型、转义和长度限制，各命令 ref 只保留最常见的纯文本例子。
+The `--content` of `drive +add-comment`, `drive +add-reply`, and `drive +update-reply` use the same `reply_elements` JSON array format. This document focuses on the schema, element types, escaping, and length limits; each command ref keeps only the most common plain-text example.
 
 ## Schema
 
-`--content` 是一个 JSON 数组字符串，至少一个元素。每个元素按 `type` 用对应字段承载值：
+`--content` is a JSON array string with at least one element. Each element carries its value in the corresponding field according to `type`:
 
-| type | 字段 | 值 |
+| type | field | value |
 |---|---|---|
-| `text` | `text` | 普通文本正文 |
-| `mention_user` | `mention_user` | 被 @ 用户的 open_id |
-| `link` | `link` | 飞书云文档链接（docx/doc/sheet/bitable/wiki 等云文档 URL；对应 wire `docs_link`） |
+| `text` | `text` | Plain text body |
+| `mention_user` | `mention_user` | open_id of the @-mentioned user |
+| `link` | `link` | Feishu cloud document link (cloud document URL such as docx/doc/sheet/bitable/wiki; corresponds to wire `docs_link`) |
 
-最常见就是单个纯文本元素：
+The most common case is a single plain-text element:
 
 ```bash
 --content '[{"type":"text","text":"评论正文"}]'
 ```
 
-组合多种元素：
+Combining multiple elements:
 
 ```bash
 --content '[
@@ -31,20 +32,22 @@
 ]'
 ```
 
-- `type=text` 的 `text` 不能为空；未知 `type` 会被拒绝，只允许 `text` / `mention_user` / `link`。
-- 为省事，`mention_user` / `link` 的值也可以直接放在 `text` 字段（如 `{"type":"mention_user","text":"ou_xxx"}`），CLI 会识别；推荐用上表的专属字段，语义更清晰。
-- `link` 是**飞书云文档链接**（wire 类型就叫 `docs_link`），不是任意网页链接。回复类命令（`+add-reply` / `+update-reply`）会校验，传外部 URL 被服务端拒绝（`1069302`），只接受飞书云文档 URL；`+add-comment` 对外部 URL 较宽松（能写入），但外部链接未必按云文档链接渲染，仍建议只放云文档 URL。
+- The `text` of `type=text` cannot be empty; unknown `type` will be rejected, and only `text` / `mention_user` / `link` are allowed.
+- For convenience, the values of `mention_user` / `link` can also be placed directly in the `text` field (e.g. `{"type":"mention_user","text":"ou_xxx"}`), and the CLI will recognize them; using the dedicated fields in the table above is recommended, as the semantics are clearer.
+- `link` is a **Feishu cloud document link** (the wire type is called `docs_link`), not an arbitrary web page link. Reply-type commands (`+add-reply` / `+update-reply`) will validate this, and passing an external URL is rejected by the server (`1069302`); only Feishu cloud document URLs are accepted. `+add-comment` is more lenient with external URLs (they can be written), but external links may not render as cloud document links, so it is still recommended to only put cloud document URLs.
 
 
-## 长度限制
+<a id="长度限制"></a>
+## Length limit
 
-- 所有 `type=text` 元素的字符（rune）总和上限 10000，按原始输入的字符数计（中英文、符号一视同仁，不是字节数、也不是转义后的长度）。
-- 这是对**总额**的限制：把一段长文本拆成多个 text 元素不能绕过，它们共用同一个 10000 字符预算。
-- `mention_user` / `link` 不计入该长度。
-- 超限时 shortcut 在发送前拒绝并指出累计超长的元素；服务端对超限返回不透明的 `[1069302]`，所以这是预检。
+- The total number of characters (runes) across all `type=text` elements is capped at 10000, counted by the number of characters in the original input (Chinese and English, symbols are all treated the same; it is not the byte count, nor the length after escaping).
+- This is a limit on the **total**: splitting a long text into multiple text elements cannot bypass it; they share the same 10000-character budget.
+- `mention_user` / `link` are not counted toward this length.
+- When the limit is exceeded, the shortcut rejects it before sending and points out the elements whose cumulative length exceeds the limit; the server returns an opaque `[1069302]` for over-limit cases, so this is a pre-check.
 
-## 参考
+<a id="参考"></a>
+## References
 
-- [lark-drive-add-comment](lark-drive-add-comment.md) -- 添加评论
-- [lark-drive-add-reply](lark-drive-add-reply.md) -- 回复评论
-- [lark-drive-update-reply](lark-drive-update-reply.md) -- 更新回复
+- [lark-drive-add-comment](lark-drive-add-comment.md) -- Add a comment
+- [lark-drive-add-reply](lark-drive-add-reply.md) -- Reply to a comment
+- [lark-drive-update-reply](lark-drive-update-reply.md) -- Update a reply

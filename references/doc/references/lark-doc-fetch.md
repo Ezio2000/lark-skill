@@ -1,79 +1,85 @@
-# docs +fetch（读取飞书云文档）
+<a id="docs-fetch读取飞书云文档"></a>
+# docs +fetch (Read Feishu cloud documents)
 
-读取整篇文档，或按目录、章节、区间和关键词获取局部内容。
+Read an entire document, or fetch partial content by table of contents, section, range, and keyword.
 
-## 常用示例
+<a id="常用示例"></a>
+## Common examples
 
 ```bash
-# 读取整篇文档，并附带当前用户可见的未解决评论；
+# Read the entire document, along with unresolved comments visible to the current user;
 lark-cli docs +fetch --doc "文档URL或token"
 
-# 按 URL 中的 #share 锚点局部读取
+# Fetch a portion by the #share anchor in the URL
 lark-cli docs +fetch --doc '文档URL#share-anchor'
 
-# 按关键词定位
+# Locate by keyword
 lark-cli docs +fetch --doc Z1Fj...tnAc --scope keyword --keyword "部署|发布|上线"
 
-# 先查看目录，再读取指定章节
+# First view the table of contents, then read the specified section
 lark-cli docs +fetch --doc Z1Fj...tnAc --scope outline --max-depth 3
 lark-cli docs +fetch --doc Z1Fj...tnAc --scope section --start-block-id blkTitle
 ```
 
-## 参数
+<a id="参数"></a>
+## Parameters
 
-|参数|必填|说明|
+|Parameter|Required|Description|
 |-|-|-|
-|`--doc`|是|文档 URL 或 token，支持 `/docx/`、`/wiki/` 和带 `#share-...` 的选区链接|
-|`--doc-format`|否|`xml`（默认）\| `markdown` \| `im-markdown`（供后续 `lark-im` 场景使用）|
-|`--detail`|否|`simple`（默认）\| `with-ids` \| `full`|
-|`--revision-id`|否|文档版本号；`-1` 表示最新版本（默认）|
-|`--scope`|否|`outline` \| `range` \| `keyword` \| `section`；省略则读取整篇|
-|`--start-block-id`|否|`range` 的起点，或 `section` 的锚点（`section` 必填）|
-|`--end-block-id`|否|`range` 的终点；`-1` 表示读到末尾|
-|`--keyword`|否|`keyword` 模式的关键词；支持多级自动匹配和多分支 OR|
-|`--context-before`|否|返回命中项之前的顶层兄弟块数量（默认 `0`）|
-|`--context-after`|否|返回命中项之后的顶层兄弟块数量（默认 `0`）|
-|`--max-depth`|否|`outline` 表示标题层级上限；其它模式表示子树深度（默认 `-1`，不限）|
+|`--doc`|Yes|Document URL or token, supports `/docx/`, `/wiki/`, and selection links with `#share-...`|
+|`--doc-format`|No|`xml` (default) \| `markdown` \| `im-markdown` (for subsequent `lark-im` scenarios)|
+|`--detail`|No|`simple` (default) \| `with-ids` \| `full`|
+|`--revision-id`|No|Document version number; `-1` means the latest version (default)|
+|`--scope`|No|`outline` \| `range` \| `keyword` \| `section`; if omitted, reads the entire document|
+|`--start-block-id`|No|The start point of `range`, or the anchor of `section` (`section` required)|
+|`--end-block-id`|No|The end point of `range`; `-1` means read to the end|
+|`--keyword`|No|Keyword for `keyword` mode; supports multi-level automatic matching and multi-branch OR|
+|`--context-before`|No|Number of top-level sibling blocks to return before the matched item (default `0`)|
+|`--context-after`|No|Number of top-level sibling blocks to return after the matched item (default `0`)|
+|`--max-depth`|No|`outline` means the heading level upper limit; other modes mean subtree depth (default `-1`, unlimited)|
 
-## 选择详细度：`--detail`
+<a id="选择详细度--detail"></a>
+## Choosing detail level: `--detail`
 
-|目的|取值|返回内容|
+|Purpose|Value|Returned content|
 |-|-|-|
-|浏览、总结|`simple`（默认）|简洁 XML/Markdown，不含 block ID、样式和引用元数据|
-|定位、跳转|`with-ids`|包含 block ID，可用于 `+update --block-id`，也可拼成 `文档URL#block_id` 直达链接|
-|编辑文档|`full`|包含 block ID、样式和引用元数据，保留完整结构信息|
+|Browsing, summarizing|`simple` (default)|Concise XML/Markdown, without block IDs, styles, or reference metadata|
+|Locating, jumping|`with-ids`|Includes block IDs, usable for `+update --block-id`, and can be assembled into `文档URL#block_id` direct links|
+|Editing documents|`full`|Includes block IDs, styles, and reference metadata, preserving complete structural information|
 
-需要修改文档时使用 `full`；只读场景通常不必获取额外元数据。
+Use `full` when you need to modify a document; read-only scenarios usually do not need to fetch extra metadata.
 
-## 选择读取范围：`--scope`
+<a id="选择读取范围--scope"></a>
+## Choosing read range: `--scope`
 
-`--scope` 与 `--detail` 可以组合。优先读取满足任务所需的最小范围；只有确需全文时才省略 `--scope`。
+`--scope` and `--detail` can be combined. Prefer reading the smallest range that satisfies the task; omit `--scope` only when the full text is truly needed.
 
-|模式|适用场景|关键参数|返回行为|
+|Mode|Applicable scenario|Key parameters|Return behavior|
 |-|-|-|-|
-|`outline`|结构未知，先查看目录|`--max-depth`|扁平列出标题；返回的标题 ID 可作为 `section` 或 `range` 的端点|
-|`section`|读取某个标题对应的整节|`--start-block-id`（必填）|顶层标题展开到下一个同级或更高级标题之前；容器内节点（含内嵌标题）按最小包容单元返回容器或表格切片|
-|`range`|已知精确起止位置|`--start-block-id`、`--end-block-id` 至少一个|同一顶层序列按区间切片；同一容器返回整个容器；同一表格返回瘦身切片；跨顶层时完整返回端点所在的顶层块|
-|`keyword`|只有关键词或模糊线索|`--keyword`（必填）|按最小包容单元返回命中；同一容器的多处命中自动去重，同一表格的多行命中合并为切片|
+|`outline`|Structure unknown, view the table of contents first|`--max-depth`|Lists headings flatly; the returned heading IDs can serve as endpoints for `section` or `range`|
+|`section`|Read the entire section corresponding to a heading|`--start-block-id` (required)|A top-level heading expands up to the next heading of the same or higher level; nodes inside a container (including embedded headings) are returned as the container or table slice by the smallest containing unit|
+|`range`|Exact start and end positions known|At least one of `--start-block-id`, `--end-block-id`|The same top-level sequence is sliced by range; the same container returns the entire container; the same table returns a slimmed slice; when spanning top-level blocks, the top-level blocks containing the endpoints are returned in full|
+|`keyword`|Only keywords or fuzzy clues available|`--keyword` (required)|Returns matches by the smallest containing unit; multiple matches in the same container are automatically deduplicated, and multiple row matches in the same table are merged into a slice|
 
-`keyword` 会依次尝试子串、归一化、分词形变和 RE2 正则匹配。多关键词使用 `|` 表示 OR，例如 `部署|发布|上线`；任一分支命中即返回。
+`keyword` tries substring, normalization, tokenization variants, and RE2 regex matching in sequence. For multiple keywords, use `|` to mean OR, for example `部署|发布|上线`; a match on any branch returns a result.
 
-范围参数的共同规则：
+Common rules for range parameters:
 
-- `--max-depth`：`outline` 中 `3` 表示列出 h1～h3；其它模式中 `0` 表示仅返回块自身，`-1` 表示不限深度。
-- `--context-before` / `--context-after`：仅对完整的顶层块生效。命中位于容器或表格内时会被忽略；如需更大范围，改用 `section` 或 `range`。
+- `--max-depth`: In `outline`, `3` means list h1–h3; in other modes, `0` means return only the block itself, and `-1` means unlimited depth.
+- `--context-before` / `--context-after`: Only takes effect for complete top-level blocks. Matches located inside a container or table are ignored; if a larger range is needed, use `section` or `range` instead.
 
-推荐选择顺序：
+Recommended selection order:
 
-|已知信息|首选方式|后续动作|
+|Known information|Preferred method|Follow-up action|
 |-|-|-|
-|具体术语、错误码或标识|`keyword`|上下文不足时，用返回的 `top-block-id` 再执行 `section` 或 `range`|
-|章节或标题|`outline --max-depth 3`|获取标题 ID 后执行 `section`|
-|精确起止位置|`range`|按需调整端点或深度|
-|没有关键词，也不了解结构|`outline`|根据目录转入 `section` 或 `range`|
-|确实需要整篇|省略 `--scope`|—|
+|Specific term, error code, or identifier|`keyword`|When context is insufficient, use the returned `top-block-id` to run `section` or `range` again|
+|Section or heading|`outline --max-depth 3`|After obtaining the heading ID, run `section`|
+|Exact start and end positions|`range`|Adjust endpoints or depth as needed|
+|No keywords and structure unknown|`outline`|Based on the table of contents, switch to `section` or `range`|
+|The entire document is truly needed|Omit `--scope`|—|
 
-## 返回值
+<a id="返回值"></a>
+## Return values
 
 ```json
 {
@@ -101,36 +107,40 @@ lark-cli docs +fetch --doc Z1Fj...tnAc --scope section --start-block-id blkTitle
   }
 }
 ```
-- `content` 的格式由 `--doc-format` 决定。`reference_map` 是结构化 sidecar，一级键表示引用组：普通资源组通常以 `block_type` 命名，二级键 `ref` 对应正文中的临时引用，其值由真实属性组成；保留组 `comments` 使用 `<ref>.data` 保存评论。XML、Markdown 和 IM Markdown 在存在可见评论时都会返回该组；Markdown 正文没有与评论 key 对应的内联引用，这是有意的协议设计。没有提取数据时，`reference_map` 可能为空。`comments.tips.data` 表示评论因数量上限被截断，文档顶层 `tips` 则给出安全回放或依赖降级提示。`content` 和 `reference_map` 属于同一份响应，应保留完整 JSON 响应；`im-markdown` 仅用于获取内容后在 `lark-im` 场景下使用。设置 `--scope` 时会被 `<fragment>` 包裹，详见下文“局部读取的输出结构”。
-- 评论内容不保证全部返回，需要详细信息时使用  `drive +list-comments` 获取完整评论。
+- The format of `content` is determined by `--doc-format`. `reference_map` is a structured sidecar; first-level keys represent reference groups: ordinary resource groups are usually named `block_type`, second-level keys `ref` correspond to temporary references in the body text, and their values consist of real attributes; the reserved group `comments` uses `<ref>.data` to store comments. XML, Markdown, and IM Markdown all return this group when visible comments exist; Markdown body text has no inline reference corresponding to the comment key, which is an intentional protocol design. When no data is extracted, `reference_map` may be empty. `comments.tips.data` indicates that comments were truncated due to the quantity limit, while the document top-level `tips` gives safe replay or dependency degradation hints. `content` and `reference_map` belong to the same response, and the complete JSON response should be preserved; `im-markdown` is only used after fetching content in `lark-im` scenarios. When `--scope` is set, it is wrapped by `<fragment>`; see “Output structure of partial reads” below for details.
+- Comment content is not guaranteed to be returned in full; when detailed information is needed, use `drive +list-comments` to fetch complete comments.
 
-### 理解局部读取结果
+<a id="理解局部读取结果"></a>
+### Understanding partial read results
 
-## 参数
+<a id="参数-1"></a>
+## Parameters
 
-设置 `--scope` 后，`content` 外层是 `<fragment>`，并按需携带 `mode`、`requested-start`、`requested-end` 或 `keyword` 属性。其子节点有两种形式：
+After setting `--scope`, the outer layer of `content` is `<fragment>`, and it carries `mode`, `requested-start`, `requested-end`, or `keyword` attributes as needed. Its child nodes have two forms:
 
-- **顶层块**：直接作为 `<fragment>` 的子节点，表示返回了完整块。
-- **`<excerpt top-block-id="..." parent-block-path="...">`**：表示只返回了容器或表格中的节选。
-  - `top-block-id` 是节选所在的顶层块 ID。需要查看完整块时，可将它作为 `section` 或 `range` 的锚点重新读取。
-  - `parent-block-path` 是从顶层块到节选内容直接父节点的 ID 路径，以 `/` 分隔；表格切片中即表格自身 ID。
+- **Top-level block**: Directly a child node of `<fragment>`, indicating that a complete block was returned.
+- **`<excerpt top-block-id="..." parent-block-path="...">`**: Indicates that only an excerpt from a container or table was returned.
+  - `top-block-id` is the top-level block ID where the excerpt is located. To view the complete block, you can use it as the anchor for `section` or `range` to read again.
+  - `parent-block-path` is the ID path from the top-level block to the direct parent node of the excerpt content, separated by `/`; in a table slice, it is the table's own ID.
 
-看到 `<excerpt>` 时，不要假设已经获取了整个顶层块。
+When you see `<excerpt>`, do not assume that the entire top-level block has been fetched.
 
-表格默认瘦身：即使 `<table>` 本身是顶层块，也只返回表头和命中的行。读取整张表时，使用 `range --start-block-id <table-id> --end-block-id <table-id>`。如果切片覆盖全部数据行，SDK 会自动返回完整表格，不再包裹 `<excerpt>`。
+Tables are slimmed by default: even if `<table>` itself is a top-level block, only the header and matched rows are returned. To read the entire table, use `range --start-block-id <table-id> --end-block-id <table-id>`. If the slice covers all data rows, the SDK automatically returns the complete table without wrapping `<excerpt>`.
 
-## 处理文档内嵌资源
+<a id="处理文档内嵌资源"></a>
+## Handling embedded resources in documents
 
-|返回内容|处理方式|
+|Returned content|Handling method|
 |-|-|
-|`<img>`、`<source>`|有 `url` 时仅下载可信的公开 HTTPS URL：拒绝 userinfo 及解析到 private、loopback、link-local、multicast、unspecified 地址的 host，并逐次校验重定向；不满足时禁止请求。无 `url` 时提取 `token`，预览用 `docs +media-preview`，下载用 `docs +media-download`|
-|`<whiteboard>`|提取 `token`，使用 `docs +media-download`|
-|`<sheet>`、`<cite file-type="sheets">`|提取 `token` 和 `sheet-id`，转到 [`lark-sheets`](../../sheets/index.md)|
-|`<bitable>`、`<cite file-type="bitable">`|提取 `token` 和 `table-id`，转到 [`lark-base`](../../base/index.md)|
-|`<vc-transcribe-tab>`|提取 `vc-node-id`，使用 [`lark-meeting`](../../meeting/index.md) 的 `note +detail`|
-|`<synced_reference>`|提取 `src-token` 和 `src-block-id`，读取源文档并定位 block|
+|`<img>`, `<source>`|When `url` is present, download only trusted public HTTPS URLs: reject userinfo and hosts that resolve to private, loopback, link-local, multicast, or unspecified addresses, and validate redirects one by one; when these conditions are not met, requests are prohibited. When `url` is absent, extract `token`; use `docs +media-preview` for preview and `docs +media-download` for download|
+|`<whiteboard>`|Extract `token`, use `docs +media-download`|
+|`<sheet>`, `<cite file-type="sheets">`|Extract `token` and `sheet-id`, go to [`lark-sheets`](../../sheets/index.md)|
+|`<bitable>`, `<cite file-type="bitable">`|Extract `token` and `table-id`, go to [`lark-base`](../../base/index.md)|
+|`<vc-transcribe-tab>`|Extract `vc-node-id`, use `note +detail` of [`lark-meeting`](../../meeting/index.md)|
+|`<synced_reference>`|Extract `src-token` and `src-block-id`, read the source document and locate the block|
 
-## 参考
+<a id="参考"></a>
+## References
 
-- [lark-doc-media-preview](lark-doc-media-preview.md) — 预览素材
-- [lark-doc-media-download](lark-doc-media-download.md) — 下载素材或画板缩略图
+- [lark-doc-media-preview](lark-doc-media-preview.md) — preview media
+- [lark-doc-media-download](lark-doc-media-download.md) — download media or board thumbnails

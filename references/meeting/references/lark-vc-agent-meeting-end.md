@@ -1,26 +1,28 @@
 # vc +meeting-end
 
-当前 Host 应用 Bot 结束会议。
+End the meeting as the current Host app Bot.
 
 ```bash
 lark-cli vc +meeting-end --as bot --meeting-id 7628568141510692381 --yes
 lark-cli vc +meeting-end --as bot --meeting-id 7628568141510692381 --dry-run
 ```
 
-正常执行必须显式传入 `--yes`；`--dry-run` 不会结束会议。
+For normal execution, `--yes` must be explicitly passed; `--dry-run` will not end the meeting.
 
-## 参数
+<a id="参数"></a>
+## Parameters
 
-| 参数 | 必填 | 说明 |
+| Parameter | Required | Description |
 | --- | --- | --- |
-| `--meeting-id` | 是 | 长数字 Meeting ID，不是 9 位会议号。 |
+| `--meeting-id` | Yes | Long numeric Meeting ID, not the 9-digit meeting number. |
 
-仅支持应用身份，调用 `POST /open-apis/vc/v1/bots/end`；仅当前 Host Bot 可结束进行中的会议。
+Only app identity is supported; call `POST /open-apis/vc/v1/bots/end`; only the current Host Bot can end an in-progress meeting.
 
-所需应用 Scope：`vc:meeting.bot.manage:write`。
+Required app Scope: `vc:meeting.bot.manage:write`.
 
-## 常见失败原因
+<a id="常见失败原因"></a>
+## Common failure reasons
 
-- 当前应用 Bot 不在会议中：先使用同一应用 Bot 发起或加入该 Calendar 会议，再执行结束。
-- 应用 Bot 在会中但不是当前 Host：将 Host 转交给该 Bot，或由当前 Host/Owner 结束会议。
-- 会议未启用 Agent 会议能力：确认会议设置及会议 Owner 的必要灰度开关。
+- The current app Bot is not in the meeting: first use the same app Bot to start or join the Calendar meeting, then execute the end.
+- The app Bot is in the meeting but is not the current Host: transfer Host to that Bot, or have the current Host/Owner end the meeting.
+- The meeting has not enabled the Agent meeting capability: confirm the meeting settings and the necessary gradual rollout switch for the meeting Owner.

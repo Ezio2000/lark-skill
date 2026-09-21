@@ -1,31 +1,36 @@
 # apps +release-list
 
-分页查询妙搭应用发布历史，最新发布在前。运行时命令事实以 `lark-cli apps +release-list --help` 为准。
+Paginate through Miaoda app release history, with the latest release first. For runtime command facts, refer to `lark-cli apps +release-list --help`.
 
-## 何时用
+<a id="何时用"></a>
+## When to use
 
-用户问"最近发布""历史版本""上次为什么失败"，但没有提供 `release_id` 时使用。拿到候选 release 后再接 `+release-get`。
+Use when the user asks about "recent releases", "historical versions", or "why the last one failed", but does not provide `release_id`. After obtaining candidate releases, follow up with `+release-get`.
 
-## 命令骨架
+<a id="命令骨架"></a>
+## Command skeleton
 
-- 必填：`--app-id`。
-- 可选 `--status`：`publishing` / `finished` / `failed`。
-- 可选 `--page-size`：默认 20，最大 500；总是发送给服务端。
-- 可选 `--page-token`：上一页 cursor。
+- Required: `--app-id`.
+- Optional `--status`: `publishing` / `finished` / `failed`.
+- Optional `--page-size`: default 20, maximum 500; always sent to the server.
+- Optional `--page-token`: previous page cursor.
 
-## 示例
+<a id="示例"></a>
+## Example
 
 ```bash
 lark-cli apps +release-list --app-id app_xxx --page-size 10
 lark-cli apps +release-list --app-id app_xxx --status failed
 ```
 
-## 输出契约
+<a id="输出契约"></a>
+## Output contract
 
-- 成功读取 `data.releases[]`；关键字段是 `release_id`、`status`、`created_at`、`updated_at`。
-- `release_id` 用于继续查 `+release-get`。
-- 若 `has_more=true`，用 `next_page_token` / `page_token` 翻页。
+- On success, read `data.releases[]`; the key fields are `release_id`, `status`, `created_at`, `updated_at`.
+- `release_id` is used to continue querying `+release-get`.
+- If `has_more=true`, use `next_page_token` / `page_token` to paginate.
 
-## Agent 规则
+<a id="agent-规则"></a>
+## Agent rules
 
-用户限定只看 N 条（"最近 N 条""最新 N 个""只要前 N 条"）时用 `--page-size N`（如"最近一次发布"→ `--page-size 1`），而不是取全量再本地截断。
+When the user limits the view to only N items ("the most recent N", "the latest N", "only the first N"), use `--page-size N` (e.g., "the most recent release" → `--page-size 1`), rather than fetching the full set and truncating locally.

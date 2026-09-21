@@ -1,40 +1,45 @@
-# 内容规划
+<a id="内容规划"></a>
+# Content Planning
 
-核心原则：**信息量匹配用户需求的详细程度。** 用户说"画一个简单架构图"就画简单的，说"画一个完整的微服务架构"才画复杂的。不要自作主张**过度展开**。
+Core principle: **The amount of information should match the level of detail the user needs.** If the user says "draw a simple architecture diagram," draw a simple one; only when they say "draw a complete microservices architecture" should you draw a complex one. Do not take it upon yourself to **over-expand**.
 
-**用户 prompt 简短/模糊时**（如"画个漏斗图"、"画个架构图"），不要只输出字面内容。应适当补充该领域合理的内容
+**When the user's prompt is short/vague** (such as "draw a funnel chart" or "draw an architecture diagram"), do not just output the literal content. You should appropriately supplement reasonable content for that domain.
 
-## 信息量参考
+<a id="信息量参考"></a>
+## Information Volume Reference
 
-| 用户需求 | 合理的信息量 |
+| User Requirement | Reasonable Information Volume |
 |---------|------------|
-| "画一个简单的 XX 架构图" | 3 层，每层 2-3 节点，无侧边栏 |
-| "画一个 XX 架构图"（普通请求） | 3-4 层，每层 3-4 节点 |
-| "画一个完整/详细的 XX 架构图" | 4-5 层，每层 4-6 节点，可加侧边栏（侧边栏最多 2-3 项）|
-| 流程图 | 6-10 步骤 + 1-2 个条件分支 |
-| 对比表 | 4-6 个维度，每格 1-2 行说明 |
-| 组织架构 | 3-4 层，每个父节点下 2-4 个子节点 |
+| "Draw a simple XX architecture diagram" | 3 layers, 2-3 nodes per layer, no sidebar |
+| "Draw an XX architecture diagram" (ordinary request) | 3-4 layers, 3-4 nodes per layer |
+| "Draw a complete/detailed XX architecture diagram" | 4-5 layers, 4-6 nodes per layer, sidebar allowed (sidebar at most 2-3 items) |
+| Flowchart | 6-10 steps + 1-2 conditional branches |
+| Comparison table | 4-6 dimensions, 1-2 lines of explanation per cell |
+| Organizational structure | 3-4 layers, 2-4 child nodes under each parent node |
 
-**节点文字**：标题 + 简短说明（如"用户服务\n注册登录和权限管理"），不要写长段落。说明 12 字以内为佳。
+**Node text**: title + brief description (such as "User Service\nRegistration, login, and permission management"), do not write long paragraphs. Descriptions of 12 characters or fewer are best.
 
-## 分组
+<a id="分组"></a>
+## Grouping
 
-每组 2-5 个节点。超过 5 个拆成子组。
+Each group has 2-5 nodes. If more than 5, split into subgroups.
 
-## 连线预判
+<a id="连线预判"></a>
+## Connection Pre-estimation
 
-| 连线数 | 策略 |
+| Number of Connections | Strategy |
 |--------|------|
-| ≤8 | 逐条画 |
-| 9-15 | 代表性连线 |
-| >15 | 层到层，或回退精简 |
+| ≤8 | Draw one by one |
+| 9-15 | Representative connections |
+| >15 | Layer to layer, or fall back to simplification |
 
-## 精简触发条件
+<a id="精简触发条件"></a>
+## Simplification Trigger Conditions
 
-布局放不下时才精简：
+Only simplify when the layout cannot fit:
 
-| 问题 | 精简方式 |
+| Problem | Simplification Method |
 |------|---------|
-| 节点文字放不下 | 缩短描述文字 |
-| 一行节点超过 5 个 | 拆成两排或合并同类 |
-| 连线交叉 | 减少连线数量 |
+| Node text does not fit | Shorten the description text |
+| More than 5 nodes in one row | Split into two rows or merge similar ones |
+| Crossing connections | Reduce the number of connections |

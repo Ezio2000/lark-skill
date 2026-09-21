@@ -1,8 +1,10 @@
-# 人员列表 `person_list`
+<a id="人员列表-person_list"></a>
+# Person list `person_list`
 
-展示多个用户的头像/姓名。**Card 2.0**。
+Displays the avatars/names of multiple users. **Card 2.0**.
 
-## 最小示例
+<a id="最小示例"></a>
+## Minimal example
 
 ```json
 {
@@ -11,21 +13,23 @@
 }
 ```
 
-## 字段
+<a id="字段"></a>
+## Fields
 
-| 字段 | 必填 | 类型 | 默认 | 说明 |
+| Field | Required | Type | Default | Description |
 |---|---|---|---|---|
-| `tag` | 是 | String | / | 固定 `person_list` |
-| `persons` | 是 | Array | / | 每项 `{ id }`，id 支持 open_id / union_id / user_id |
-| `show_name` | 否 | Boolean | true | 是否显示姓名；关掉且多人时为"葫芦串"叠头像样式 |
-| `show_avatar` | 否 | Boolean | false | 是否显示头像 |
-| `size` | 否 | String | medium | `extra_small` / `small` / `medium` / `large` |
-| `lines` | 否 | Int | / | 最大行数，不可为 0 |
-| `drop_invalid_user_id` | 否 | Boolean | false | true 忽略无效 ID；false 则有无效 ID 时报错 |
-| `icon` / `ud_icon` | 否 | Object | / | 前缀图标（同 `div.icon`）；两者同设以 `icon` 为准 |
-| `margin` | 否 | String | 0 | 外边距 [-99,99]px |
-| `element_id` | 否 | String | / | 唯一标识，字母开头 ≤20 字符 |
+| `tag` | Yes | String | / | Fixed `person_list` |
+| `persons` | Yes | Array | / | Each item is `{ id }`; id supports open_id / union_id / user_id |
+| `show_name` | No | Boolean | true | Whether to show names; when turned off and there are multiple people, uses the "gourd string" stacked avatar style |
+| `show_avatar` | No | Boolean | false | Whether to show avatars |
+| `size` | No | String | medium | `extra_small` / `small` / `medium` / `large` |
+| `lines` | No | Int | / | Maximum number of lines, cannot be 0 |
+| `drop_invalid_user_id` | No | Boolean | false | true ignores invalid IDs; false reports an error when there are invalid IDs |
+| `icon` / `ud_icon` | No | Object | / | Prefix icon (same as `div.icon`); if both are set, `icon` takes precedence |
+| `margin` | No | String | 0 | Outer margin [-99,99]px |
+| `element_id` | No | String | / | Unique identifier, starts with a letter, ≤20 characters |
 
-## 易错点
+<a id="易错点"></a>
+## Common pitfalls
 
-- 发卡应用需有访问用户 ID 的权限，否则无法展示人员信息。
+- The app sending the card must have permission to access user IDs, otherwise person information cannot be displayed.

@@ -1,5 +1,6 @@
-# slides +create（创建飞书幻灯片）（兼容入口）
+<a id="slides-create创建飞书幻灯片兼容入口"></a>
+# slides +create (Create Feishu Slides) (compatibility entry)
 
-本文档已迁移至 [`cli/lark-slides-create.md`](cli/lark-slides-create.md)。
+This document has been migrated to [`cli/lark-slides-create.md`](cli/lark-slides-create.md).
 
-此文件仅保留旧路径兼容性；后续引用请使用新路径。
+This file is retained only for old path compatibility; please use the new path for future references.

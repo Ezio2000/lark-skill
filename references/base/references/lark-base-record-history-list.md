@@ -1,18 +1,20 @@
 # base +record-history-list
 
-查询单条记录的变更历史。它返回历史事件，不返回记录当前值，也不支持整表审计扫描。
+Query the change history of a single record. It returns historical events, not the record's current values, and does not support full-table audit scans.
 
-## 使用前置
+<a id="使用前置"></a>
+## Prerequisites
 
-`+record-history-list` 仅查询单条记录。调用前必须获得能唯一对应用户指定目标、且与 `table_id` 属于同一张表的 `record_id`。
+`+record-history-list` queries only a single record. Before calling, you must obtain a `record_id` that uniquely corresponds to the user-specified target and belongs to the same table as `table_id`.
 
-如果当前信息无法唯一确定目标记录，先向用户确认，必要时用 `+record-list` 辅助定位；不得自行选择记录，也不得扩展为批量或整表扫描。需要查询多条记录时，先确认范围，再逐条调用。
+If the current information cannot uniquely determine the target record, first confirm with the user, and if necessary use `+record-list` to help locate it; do not select a record on your own, and do not expand to batch or full-table scans. When multiple records need to be queried, first confirm the scope, then call one by one.
 
-用 `+record-list` 展示候选时，可重复传入 `--field-id` 做最小投影。字段名包含空格时，需要给完整值加引号，例如 `--field-id "Project Owner"`。
+When using `+record-list` to display candidates, you may pass `--field-id` repeatedly for a minimal projection. When a field name contains spaces, you need to quote the complete value, for example `--field-id "Project Owner"`.
 
-用户明确指定某个视图的第 N 行时，先用同一 `view_id` 调用 `+record-list`，并将 `--offset` 设为 N-1、`--limit` 设为 1，再从唯一结果中取得 `record_id`。视图或排序上下文不明确时仍需先确认。
+When the user explicitly specifies the Nth row of a view, first call `+record-list` with the same `view_id`, and set `--offset` to N-1 and `--limit` to 1, then obtain `record_id` from the unique result. If the view or sort context is unclear, you still need to confirm first.
 
-## 推荐命令
+<a id="推荐命令"></a>
+## Recommended commands
 
 ```bash
 lark-cli base +record-history-list \
@@ -34,27 +36,30 @@ lark-cli base +record-history-list \
   --format pretty
 ```
 
-## 返回解释
+<a id="返回解释"></a>
+## Return interpretation
 
-- 历史条目通常按版本号降序返回，最新在前。
-- 每条历史包含版本号、操作人、操作时间、操作类型和字段变更。
-- 默认 JSON 中的 `create_time` 是秒级 Unix 时间戳；`--format pretty` 会将其转换为带 UTC 偏移的本地时间，并和操作人、字段变化放在同一行。
-- `field_changes` 描述字段变更，重点看字段名/字段类型、`before` 和 `after`。
-- `--format pretty` 中空的 `before` 或 `after` 显示为 `-`；默认 JSON 保留原始值。
-- `activity_type` 常见值：`create`（创建记录）、`update`（编辑记录）、`delete`（删除记录）。
+- History entries are usually returned in descending version order, with the latest first.
+- Each history entry includes the version number, operator, operation time, operation type, and field changes.
+- In the default JSON, `create_time` is a second-level Unix timestamp; `--format pretty` converts it to local time with a UTC offset, and places it on the same line as the operator and field changes.
+- `field_changes` describes field changes; focus on the field name/field type, `before`, and `after`.
+- In `--format pretty`, an empty `before` or `after` is displayed as `-`; the default JSON preserves the original value.
+- Common values of `activity_type`: `create` (create record), `update` (edit record), `delete` (delete record).
 
-以下字段类型的变化可能不会出现在 `field_changes` 中：
+Changes to the following field types may not appear in `field_changes`:
 
-- 计算字段：`formula`、`lookup`
-- 系统字段：自动编号、创建时间、创建人、修改时间、修改人
+- Calculated fields: `formula`, `lookup`
+- System fields: auto number, creation time, creator, modification time, modifier
 
-## 翻页
+<a id="翻页"></a>
+## Pagination
 
-- 首次请求不传 `--max-version`。
-- 如果返回 `has_more=true`，取返回中的 `next_max_version` 作为下一次请求的 `--max-version`。
-- `--page-size` 默认 30，最大 50。
+- Do not pass `--max-version` on the first request.
+- If `has_more=true` is returned, take the returned `next_max_version` as the `--max-version` for the next request.
+- `--page-size` defaults to 30, maximum 50.
 
-## 注意
+<a id="注意"></a>
+## Notes
 
-- `table-id` 和 `record-id` 必须来自同一张表。
-- 这是单条记录历史，不是表级审计；用户明确要求查询多条记录时，先确认目标范围，再按记录串行调用。
+- `table-id` and `record-id` must come from the same table.
+- This is single-record history, not table-level auditing; when the user explicitly requests querying multiple records, first confirm the target scope, then call serially by record.

@@ -1,108 +1,123 @@
-# 审批提单值来源
+<a id="审批提单值来源"></a>
+# Approval Instance Value Sources
 
-## 目的
+<a id="目的"></a>
+## Purpose
 
-本文用于回答一个固定问题：在调用 `approval instances create` 发起原生审批实例时，**每个要填写的值从哪里拿**。
+This document answers one fixed question: when calling `approval instances create` to create a native approval instance, **where does each value to be filled in come from**.
 
-阅读顺序固定如下：
+The reading order is fixed as follows:
 
-1. [`lark-approval-initiate.md`](./lark-approval-initiate.md) 中的创建请求参数、节点参数和返回结果说明
-2. `approval approvals get` 返回的 `form` / `node_list`
+1. The create request parameters, node parameters, and return result descriptions in [`lark-approval-initiate.md`](./lark-approval-initiate.md)
+2. The `form` / `node_list` returned by `approval approvals get`
 3. [`lark-approval-instance-form-control-parameters.md`](./lark-approval-instance-form-control-parameters.md)
-4. 本文
+4. This document
 
-## 总原则
+<a id="总原则"></a>
+## General Principles
 
-- `lark-approval-initiate.md` 决定创建请求字段名、字段层级、节点参数结构。
-- `approvals.get.form` 决定控件 `id`、`type`、选项值范围、子控件结构。
-- `approvals.get.node_list` 决定节点 key、是否必须补审批人、是否允许多人。
-- [`lark-approval-instance-form-control-parameters.md`](./lark-approval-instance-form-control-parameters.md) 决定各控件 `value` 的最终结构。
-- 除非本文明确允许，否则不要猜值来源，不要把展示文案直接当成可提交值。
+- `lark-approval-initiate.md` determines the create request field names, field hierarchy, and node parameter structure.
+- `approvals.get.form` determines the widget `id`, `type`, option value range, and sub-widget structure.
+- `approvals.get.node_list` determines the node key, whether an approver must be added, and whether multiple people are allowed.
+- [`lark-approval-instance-form-control-parameters.md`](./lark-approval-instance-form-control-parameters.md) determines the final structure of each widget's `value`.
+- Unless this document explicitly permits otherwise, do not guess the value source, and do not treat display text directly as a submittable value.
 
-## 默认来源
+<a id="默认来源"></a>
+## Default Sources
 
-- 审批定义、`approval_code`、`is_external`、`create_link` 等基础信息，默认从 `approval approvals search` 获取。
-- 控件 `id`、`type`、选项值、子控件结构，默认从 `approval approvals get.form` 获取。
-- 节点 key、`need_approver`、`approver_chosen_multi` 等节点信息，默认从 `approval approvals get.node_list` 获取。
-- 本文只补充 **这些默认来源之外** 的取值规则，以及当前必须由用户直接提供的值。
+- Basic information such as the approval definition, `approval_code`, `is_external`, and `create_link` is obtained from `approval approvals search` by default.
+- Widget `id`, `type`, option values, and sub-widget structure are obtained from `approval approvals get.form` by default.
+- Node information such as the node key, `need_approver`, and `approver_chosen_multi` is obtained from `approval approvals get.node_list` by default.
+- This document only supplements the value sourcing rules **beyond these default sources**, as well as the values that currently must be provided directly by the user.
 
-## 控件值来源规则
+<a id="控件值来源规则"></a>
+## Widget Value Source Rules
 
-### 联系人 `contact`
+<a id="联系人-contact"></a>
+### Contact `contact`
 
-- 只推荐写 `open_ids`。
-- 不再推荐双写 `value(user_id)` + `open_ids`，避免复杂度继续上升。
-- 如果用户给的是姓名、邮箱或账号，先用 `lark-contact` 解析成 `open_id`。
+- Only writing `open_ids` is recommended.
+- Writing both `value(user_id)` + `open_ids` is no longer recommended, to avoid further increasing complexity.
+- If the user provides a name, email, or account, first use `lark-contact` to resolve it into `open_id`.
 
-### 部门 `department`
+<a id="部门-department"></a>
+### Department `department`
 
-- 最优先：用户直接提供 `open_department_id`。
-- 若用户说“我的部门”或“张三的部门”，先用 `lark-contact` 查询对应人员信息，再取其所属部门里的 `open_department_id`。
-- 如果查到该人员只有一个部门，可直接使用。
-- 如果查到多个部门，不自动猜，必须让用户明确选一个，或直接输入 `open_department_id`。
-- 如果仍无法确定，则明确告知当前不支持自动决定部门值。
+- Highest priority: the user directly provides `open_department_id`.
+- If the user says "my department" or "Zhang San's department", first use `lark-contact` to query the corresponding person's information, then take the `open_department_id` from the department they belong to.
+- If the query finds that the person has only one department, it can be used directly.
+- If the query finds multiple departments, do not guess automatically; the user must explicitly choose one, or directly enter the `open_department_id`.
+- If it still cannot be determined, clearly inform the user that automatically determining the department value is currently not supported.
 
-### 附件 `attachmentV2`
+<a id="附件-attachmentv2"></a>
+### Attachment `attachmentV2`
 
-- 当前 `lark-approval` 不负责上传文件。
-- 用户必须直接提供 file code。
-- 如果用户无法提供 file code，应明确告知当前无法仅通过 `lark-approval` 完成该控件提单。
+- Currently `lark-approval` is not responsible for uploading files.
+- The user must directly provide the file code.
+- If the user cannot provide the file code, clearly inform them that submitting this widget cannot currently be completed through `lark-approval` alone.
 
-### 图片 `image` / `imageV2`
+<a id="图片-image--imagev2"></a>
+### Image `image` / `imageV2`
 
-- 当前 `lark-approval` 不负责上传图片。
-- 用户必须直接提供 file code。
-- 如果用户无法提供 file code，应明确告知当前无法仅通过 `lark-approval` 完成该控件提单。
+- Currently `lark-approval` is not responsible for uploading images.
+- The user must directly provide the file code.
+- If the user cannot provide the file code, clearly inform them that submitting this widget cannot currently be completed through `lark-approval` alone.
 
-### 文档 `document`
+<a id="文档-document"></a>
+### Document `document`
 
-- 用户可直接提供 `token` / `document_id`。
-- 如果用户给的是飞书文档链接，应先尝试从链接中提取 token。
-- 若链接提取失败，再要求用户手动输入 token。
+- The user can directly provide `token` / `document_id`.
+- If the user provides a Feishu document link, first try to extract the token from the link.
+- If link extraction fails, then ask the user to manually enter the token.
 
-### 关联审批 `connect`
+<a id="关联审批-connect"></a>
+### Related Approval `connect`
 
-- 用户直接提供目标审批实例的 `instance_code`。
-- 当前不默认做“搜索关联实例再反查 code”的自动流程。
+- The user directly provides the `instance_code` of the target approval instance.
+- Currently, the automatic process of "searching for the related instance and then looking up the code" is not performed by default.
 
-### 地址 `address`
+<a id="地址-address"></a>
+### Address `address`
 
-- 用户直接提供地理库 `id`。
-- 若用户无法提供该 `id`，当前不支持自动取值。
+- The user directly provides the geographic database `id`.
+- If the user cannot provide this `id`, automatic value sourcing is currently not supported.
 
-## 特殊控件组
+<a id="特殊控件组"></a>
+## Special Widget Groups
 
-以下控件组的结构仍按 [`lark-approval-instance-form-control-parameters.md`](./lark-approval-instance-form-control-parameters.md) 组装：
+The structure of the following widget groups is still assembled according to [`lark-approval-instance-form-control-parameters.md`](./lark-approval-instance-form-control-parameters.md):
 
 - `leaveGroupV2`
 - `workGroup`
 - `outGroup`
 - `shiftGroup`
 
-补充规则：
+Supplementary rules:
 
-- 控件组自身和子控件的 `id` / `type` 从 `approval approvals get.form` 中识别。
-- 组内单选/多选或业务枚举值，优先从 `approval approvals get.form` 返回的选项结构中取。
-- 不要把控件组整体当成普通字符串或扁平对象提交。
+- The `id` / `type` of the widget group itself and its sub-widgets are identified from `approval approvals get.form`.
+- For single-select/multi-select or business enumeration values within the group, preferentially take them from the option structure returned by `approval approvals get.form`.
+- Do not submit the widget group as a whole as an ordinary string or flat object.
 
-## 不支持自动准备的值
+<a id="不支持自动准备的值"></a>
+## Values Not Supported for Automatic Preparation
 
-以下值当前不建议由 `lark-approval` 自动准备：
+The following values are currently not recommended to be automatically prepared by `lark-approval`:
 
-- 文件上传后的 file code
-- 图片上传后的 file code
-- 地址控件的地理库 `id`
-- 无法唯一确定的部门 `open_department_id`
+- The file code after file upload
+- The file code after image upload
+- The geographic database `id` of the address widget
+- A department `open_department_id` that cannot be uniquely determined
 
-遇到这类值时，应明确告诉用户需要提供什么，而不是继续猜测。
+When encountering such values, clearly tell the user what needs to be provided, rather than continuing to guess.
 
-## 最小决策表
+<a id="最小决策表"></a>
+## Minimal Decision Table
 
-| 场景 | 处理 |
+| Scenario | Handling |
 |---|---|
-| 用户说“找张三当审批人” | 用 `lark-contact` 解析张三，取 `open_id` |
-| 用户说“我的部门” | 先查当前用户部门；若多个部门，让用户选 |
-| 用户给了文档链接 | 先尝试提取 token |
-| 用户要填图片/附件 | 要求直接提供 file code |
-| 用户要填关联审批 | 要求直接提供 `instance_code` |
-| 用户要填地址 | 要求直接提供地理库 `id` |
+| The user says "find Zhang San as the approver" | Use `lark-contact` to resolve Zhang San, and take `open_id` |
+| The user says "my department" | First query the current user's department; if there are multiple departments, let the user choose |
+| The user provides a document link | First try to extract the token |
+| The user wants to fill in an image/attachment | Require them to directly provide the file code |
+| The user wants to fill in a related approval | Require them to directly provide `instance_code` |
+| The user wants to fill in an address | Require them to directly provide the geographic database `id` |

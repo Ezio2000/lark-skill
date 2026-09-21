@@ -1,35 +1,36 @@
 # markdown +diff
 
 
-比较 Drive 中原生 Markdown 的两个历史版本，或比较远端 Markdown 与本地 `.md` 草稿。需要历史版本号时，先用 [`drive +version-history`](../../drive/references/lark-drive-version-history.md) 获取 `version`，不要使用 `tag`。
+Compare two historical versions of native Markdown in Drive, or compare remote Markdown with a local `.md` draft. When you need a historical version number, first use [`drive +version-history`](../../drive/references/lark-drive-version-history.md) to obtain `version`, do not use `tag`.
 
-## 命令
+<a id="命令"></a>
+## Command
 
 ```bash
-# 比较两个远端版本
+# Compare two remote versions
 lark-cli markdown +diff \
   --file-token boxcnxxxx \
   --from-version 7633658129540910621 \
   --to-version 7633658129540910628
 
-# 比较历史版本与远端最新版本
+# Compare a historical version with the remote latest version
 lark-cli markdown +diff \
   --file-token boxcnxxxx \
   --from-version 7633658129540910621
 
-# 比较远端最新版本与本地草稿
+# Compare the remote latest version with a local draft
 lark-cli markdown +diff \
   --file-token boxcnxxxx \
   --file ./draft.md \
   --format pretty
 
-# 比较指定远端版本与本地草稿
+# Compare a specified remote version with a local draft
 lark-cli markdown +diff \
   --file-token boxcnxxxx \
   --from-version 7633658129540910621 \
   --file ./draft.md
 
-# 预览底层请求
+# Preview the underlying request
 lark-cli markdown +diff \
   --file-token boxcnxxxx \
   --from-version 7633658129540910621 \
@@ -37,29 +38,32 @@ lark-cli markdown +diff \
   --dry-run
 ```
 
-## 参数
+<a id="参数"></a>
+## Parameters
 
-| 参数 | 必填 | 说明 |
+| Parameter | Required | Description |
 |------|------|------|
-| `--file-token` | 是 | 目标 Markdown 文件 token |
-| `--from-version` | 否 | 基准远端版本；不传 `--file` 时必填，传 `--file` 时省略表示“远端最新 vs 本地文件” |
-| `--to-version` | 否 | 目标远端版本；要求同时传 `--from-version`，且不能与 `--file` 一起使用。省略时表示远端最新版本 |
-| `--file` | 否 | 本地 `.md` 文件路径；传入后进入“远端 vs 本地”比较模式 |
-| `--context-lines` | 否 | unified diff 每个 hunk 前后保留的上下文行数，默认 `3` |
-| `--format` | 否 | 仅支持 `json`（默认）和 `pretty` |
+| `--file-token` | Yes | Target Markdown file token |
+| `--from-version` | No | Base remote version; required when `--file` is not passed, when `--file` is passed, omitting it means "remote latest vs local file" |
+| `--to-version` | No | Target remote version; requires passing `--from-version` at the same time, and cannot be used together with `--file`. When omitted, it means the remote latest version |
+| `--file` | No | Local `.md` file path; after passing it, enters "remote vs local" comparison mode |
+| `--context-lines` | No | Number of context lines to keep before and after each hunk in the unified diff, default `3` |
+| `--format` | No | Only supports `json` (default) and `pretty` |
 
-## 关键行为
+<a id="关键行为"></a>
+## Key behaviors
 
-- `--file` 存在时：
-  - 省略 `--from-version` = 比较“远端最新版本 vs 本地文件”
-  - 传入 `--from-version` = 比较“指定远端版本 vs 本地文件”
-- `--to-version` 只能用于“远端版本 vs 远端版本”，不能与 `--file` 同时出现
-- `--format pretty` 输出带颜色的 unified diff；`--format json` 返回结构化摘要和完整 diff 文本
-- 无差异时：
-  - `json` 输出里 `changed=false`
-  - `pretty` 输出固定为 `No differences.`
+- When `--file` exists:
+  - Omitting `--from-version` = compare "remote latest version vs local file"
+  - Passing `--from-version` = compare "specified remote version vs local file"
+- `--to-version` can only be used for "remote version vs remote version", and cannot appear together with `--file`
+- `--format pretty` outputs a colored unified diff; `--format json` returns a structured summary and the complete diff text
+- When there is no difference:
+  - In the `json` output, `changed=false`
+  - The `pretty` output is fixed as `No differences.`
 
-## 返回值
+<a id="返回值"></a>
+## Return value
 
 ```json
 {
@@ -90,51 +94,51 @@ lark-cli markdown +diff \
 }
 ```
 
-完整字段说明：
+Complete field descriptions:
 
-| 字段 | 层级 | 含义 |
+| Field | Level | Meaning |
 |------|------|------|
-| `ok` | 顶层 | CLI 通用成功标记；`true` 表示命令执行成功 |
-| `identity` | 顶层 | 本次执行使用的身份，通常是 `user` 或 `bot` |
-| `data` | 顶层 | 本次 diff 的业务结果对象 |
-| `changed` | `data` | 是否存在差异；`true` 表示两侧内容不同，`false` 表示完全一致 |
-| `mode` | `data` | 比较模式；`remote_vs_remote` = 远端对远端，`remote_vs_local` = 远端对本地 |
-| `file_token` | `data` | 被比较的远端 Markdown 文件 token |
-| `from_version` | `data` | 基准远端版本号；远端最新 vs 本地时可能为空字符串 |
-| `to_version` | `data` | 目标远端版本号；当目标侧是远端最新版本或本地文件时通常为空字符串 |
-| `from_label` | `data` | unified diff 基准侧标签名，会直接出现在 `diff` 文本的 `---` 头部 |
-| `to_label` | `data` | unified diff 目标侧标签名，会直接出现在 `diff` 文本的 `+++` 头部 |
-| `added_lines` | `data` | 新增行数统计 |
-| `deleted_lines` | `data` | 删除行数统计 |
-| `context_lines` | `data` | 每个 hunk 前后保留的上下文行数，对应传入的 `--context-lines` |
-| `hunks` | `data` | 结构化的变更块摘要数组；每个元素对应 patch 里的一个 `@@ ... @@` 段 |
-| `diff` | `data` | 完整 unified diff 文本；最适合直接阅读或保存 |
-| `local_file` | `data` | 仅在 `remote_vs_local` 模式下出现；值就是传给 `--file` 的本地 Markdown 路径 |
+| `ok` | Top level | CLI general success flag; `true` indicates the command executed successfully |
+| `identity` | Top level | The identity used for this execution, usually `user` or `bot` |
+| `data` | Top level | The business result object of this diff |
+| `changed` | `data` | Whether a difference exists; `true` indicates the two sides differ, `false` indicates they are completely identical |
+| `mode` | `data` | Comparison mode; `remote_vs_remote` = remote to remote, `remote_vs_local` = remote to local |
+| `file_token` | `data` | Token of the remote Markdown file being compared |
+| `from_version` | `data` | Base remote version number; may be an empty string for remote latest vs local |
+| `to_version` | `data` | Target remote version number; usually an empty string when the target side is the remote latest version or a local file |
+| `from_label` | `data` | Label name for the base side of the unified diff, which appears directly in the `---` header of the `diff` text |
+| `to_label` | `data` | Label name for the target side of the unified diff, which appears directly in the `+++` header of the `diff` text |
+| `added_lines` | `data` | Count of added lines |
+| `deleted_lines` | `data` | Count of deleted lines |
+| `context_lines` | `data` | Number of context lines kept before and after each hunk, corresponding to the passed `--context-lines` |
+| `hunks` | `data` | Structured array of change block summaries; each element corresponds to one `@@ ... @@` section in the patch |
+| `diff` | `data` | Complete unified diff text; best suited for direct reading or saving |
+| `local_file` | `data` | Appears only in `remote_vs_local` mode; the value is exactly the local Markdown path passed to `--file` |
 
-标签字段补充：
+Label field notes:
 
-- `from_label` / `to_label` 只用于标识 diff 两侧，不代表额外 API 字段
-- `from_label` 表示基准侧，`to_label` 表示目标侧
-- 远端版本通常形如 `a/<file_token>@version:<version>`、`b/<file_token>@version:<version>`
-- 当目标侧是远端最新版本时，`to_label` 形如 `b/<file_token>@latest`
-- 当目标侧是本地文件时，`to_label` 形如 `b/./draft.md`
+- `from_label` / `to_label` are only used to identify the two sides of the diff, and do not represent additional API fields
+- `from_label` indicates the base side, `to_label` indicates the target side
+- Remote versions are usually in the form `a/<file_token>@version:<version>`, `b/<file_token>@version:<version>`
+- When the target side is the remote latest version, `to_label` is in the form `b/<file_token>@latest`
+- When the target side is a local file, `to_label` is in the form `b/./draft.md`
 
-`hunks` 子字段说明：
+`hunks` subfield descriptions:
 
-| 字段 | 含义 |
+| Field | Meaning |
 |------|------|
-| `header` | 原始 hunk 头，例如 `@@ -3,1 +3,1 @@` |
-| `old_start` | 旧内容从第几行开始 |
-| `old_lines` | 旧内容这段覆盖多少行 |
-| `new_start` | 新内容从第几行开始 |
-| `new_lines` | 新内容这段覆盖多少行 |
+| `header` | Original hunk header, for example `@@ -3,1 +3,1 @@` |
+| `old_start` | The line number where the old content starts |
+| `old_lines` | How many lines this section of old content covers |
+| `new_start` | The line number where the new content starts |
+| `new_lines` | How many lines this section of new content covers |
 
-补充说明：
+Additional notes:
 
-- `hunks` 适合 agent 或脚本快速定位变更范围；完整逐行内容仍以 `diff` 字段为准
-- `changed=false` 时，`hunks` 通常为空数组，`diff` 通常为空字符串；如果使用 `--format pretty`，终端输出会是 `No differences.`
+- `hunks` is suitable for agents or scripts to quickly locate the scope of changes; the complete line-by-line content is still based on the `diff` field
+- When `changed=false`, `hunks` is usually an empty array, and `diff` is usually an empty string; if `--format pretty` is used, the terminal output will be `No differences.`
 
-远端 vs 本地时会额外返回：
+When comparing remote vs local, an additional field is returned:
 
 ```json
 {
@@ -143,13 +147,14 @@ lark-cli markdown +diff \
 ```
 
 - `local_file`
-  - 只有传了 `--file`、进入“远端 vs 本地”模式时才会返回
-  - 值就是本次命令实际比较的本地 Markdown 路径，也就是你传给 `--file` 的那个路径
-  - 它表示“目标侧本地文件”，不是临时下载文件，也不是远端文件名
-  - 如果没有这个字段，说明本次是“远端版本 vs 远端版本”
+  - Returned only when `--file` is passed and "remote vs local" mode is entered
+  - The value is exactly the local Markdown path actually compared by this command, that is, the path you passed to `--file`
+  - It represents the "target-side local file", not a temporary downloaded file, and not a remote file name
+  - If this field is absent, it means this run is "remote version vs remote version"
 
-## 参考
+<a id="参考"></a>
+## References
 
-- [lark-markdown](../index.md) — Markdown 域总览
-- [lark-drive-version-history](../../drive/references/lark-drive-version-history.md) — 获取可用于 diff 的历史版本号
-- [lark-shared](../../shared/index.md) — 认证和全局参数
+- [lark-markdown](../index.md) — Markdown domain overview
+- [lark-drive-version-history](../../drive/references/lark-drive-version-history.md) — Obtain historical version numbers usable for diff
+- [lark-shared](../../shared/index.md) — Authentication and global parameters

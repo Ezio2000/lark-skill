@@ -1,8 +1,10 @@
-# 图表 `chart`
+<a id="图表-chart"></a>
+# Chart `chart`
 
-基于 VChart 的可视化图表（折线/柱/饼/词云等）。**Card 2.0**。
+VChart-based visualization charts (line/bar/pie/word cloud, etc.). **Card 2.0**.
 
-## 最小示例
+<a id="最小示例"></a>
+## Minimal example
 
 ```json
 {
@@ -20,38 +22,41 @@
 }
 ```
 
-## 字段
+<a id="字段"></a>
+## Fields
 
-| 字段 | 必填 | 类型 | 默认 | 说明 |
+| Field | Required | Type | Default | Description |
 |---|---|---|---|---|
-| `tag` | 是 | String | / | 固定 `chart` |
-| `chart_spec` | 是 | Object | / | VChart 图表定义，见下 |
-| `aspect_ratio` | 否 | String | 16:9(PC)/1:1(移动) | `1:1` / `2:1` / `4:3` / `16:9` |
-| `color_theme` | 否 | String | brand | `brand` / `rainbow` / `complementary` / `converse` / `primary`；chart_spec 里声明了样式则此项无效 |
-| `height` | 否 | String | auto | `auto`(按宽高比) 或 `[1,999]px`（设固定高则 aspect_ratio 失效） |
-| `preview` | 否 | Boolean | true | 是否可独立窗口/全屏查看 |
-| `margin` | 否 | String | 0 | 外边距 [-99,99]px |
-| `element_id` | 否 | String | / | 唯一标识，字母开头 ≤20 字符 |
+| `tag` | Yes | String | / | Fixed `chart` |
+| `chart_spec` | Yes | Object | / | VChart chart definition, see below |
+| `aspect_ratio` | No | String | 16:9(PC)/1:1(mobile) | `1:1` / `2:1` / `4:3` / `16:9` |
+| `color_theme` | No | String | brand | `brand` / `rainbow` / `complementary` / `converse` / `primary`; if a style is declared in chart_spec, this item is invalid |
+| `height` | No | String | auto | `auto`(by aspect ratio) or `[1,999]px` (if a fixed height is set, aspect_ratio becomes invalid) |
+| `preview` | No | Boolean | true | Whether it can be viewed in an independent window/full screen |
+| `margin` | No | String | 0 | Outer margin [-99,99]px |
+| `element_id` | No | String | / | Unique identifier, starts with a letter, ≤20 characters |
 
-## chart_spec 常用类型
+<a id="chart_spec-常用类型"></a>
+## Common chart_spec types
 
-`chart_spec` 是标准 VChart spec。核心字段：`type`、`data.values`（数据数组）、`xField`/`yField`（轴字段）、`seriesField`（分组）、`title.text`、`legends`。
+`chart_spec` is a standard VChart spec. Core fields: `type`, `data.values` (data array), `xField`/`yField` (axis fields), `seriesField` (grouping), `title.text`, `legends`.
 
-| 图表 | type | 关键字段 |
+| Chart | type | Key fields |
 |---|---|---|
-| 折线 | `line` | `xField`, `yField` |
-| 面积 | `area` | `xField`, `yField` |
-| 柱状 | `bar` | `xField`, `yField`，分组加 `seriesField` |
-| 条形（横向） | `bar` | `direction:"horizontal"`，`xField`=值，`yField`=类别 |
-| 饼/环 | `pie` | `valueField`, `categoryField`，环图加 `innerRadius` |
-| 散点 | `scatter` | `xField`, `yField` |
-| 词云 | `wordCloud` | `nameField`, `valueField` |
+| Line | `line` | `xField`, `yField` |
+| Area | `area` | `xField`, `yField` |
+| Column | `bar` | `xField`, `yField`, add `seriesField` for grouping |
+| Bar (horizontal) | `bar` | `direction:"horizontal"`, `xField`=value, `yField`=category |
+| Pie/Donut | `pie` | `valueField`, `categoryField`, add `innerRadius` for donut charts |
+| Scatter | `scatter` | `xField`, `yField` |
+| Word cloud | `wordCloud` | `nameField`, `valueField` |
 
-完整属性参考 [VChart 官方文档](https://www.visactor.io/vchart/option/barChart)。
+For complete properties, refer to the [VChart official documentation](https://www.visactor.io/vchart/option/barChart).
 
-## 易错点
+<a id="易错点"></a>
+## Common pitfalls
 
-- 不支持 JavaScript 语法，`chart_spec` 必须是纯 JSON。
-- 单卡建议 ≤5 个图表。
-- 移动端不支持部分 VChart 属性（纹理 texture、conical 渐变、grid 词云布局等），用了会在移动端加载失败。
-- 平台默认给 chart_spec 追加 media query 自适应；要自控可设 `"media": []`。
+- JavaScript syntax is not supported; `chart_spec` must be pure JSON.
+- A single card is recommended to have ≤5 charts.
+- Some VChart properties are not supported on mobile (texture, conical gradient, grid word cloud layout, etc.); using them will cause loading failure on mobile.
+- The platform appends media query responsiveness to chart_spec by default; to control it yourself, set `"media": []`.

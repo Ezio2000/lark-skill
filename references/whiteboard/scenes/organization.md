@@ -1,39 +1,45 @@
-# 组织架构图
+<a id="组织架构图"></a>
+# Organization Chart
 
-适用于：公司组织架构、模块依赖树、分类层级树等树形层级结构的场景。
+Applicable to: scenarios with tree-like hierarchical structures such as company organization charts, module dependency trees, and category hierarchy trees.
 
-## Content 约束
+<a id="content-约束"></a>
+## Content Constraints
 
-- 层级 ≤ 4
-- 每个父节点下 ≤ 5 个子节点
-- 叶节点有意义（不要只为凑数添加空节点）
-- 长文本用 `\n` 手动换行（如"研发负责人\n(CTO)"）
+- Hierarchy ≤ 4
+- ≤ 5 child nodes under each parent node
+- Leaf nodes must be meaningful (do not add empty nodes just to make up the count)
+- For long text, use `\n` to manually wrap lines (e.g., "R&D Lead\n(CTO)")
 
-## Layout 选型
+<a id="layout-选型"></a>
+## Layout Selection
 
-| 模式 | 适用条件 | 特征 |
+| Mode | Applicable Conditions | Characteristics |
 |------|---------|------|
-| **tree（居中展开）** | 有明确从属关系的层级结构 | 根节点居中，子节点横向排列，逐层展开。每个"父+子"用 vertical frame 包裹（子树模块） |
-| **grid（矩阵式）** | 多部门平级，每部门内部有细分 | 横向等分各部门，每部门内部 vertical 列表 |
+| **tree (centered expansion)** | Hierarchical structures with clear subordinate relationships | Root node centered, child nodes arranged horizontally, expanding layer by layer. Each "parent + children" is wrapped in a vertical frame (subtree module) |
+| **grid (matrix-style)** | Multiple departments at the same level, with subdivisions inside each department | Horizontally divide departments equally, with a vertical list inside each department |
 
-## Layout 规则
+<a id="layout-规则"></a>
+## Layout Rules
 
-以下规则违反会导致连线错乱或排版崩溃：
+Violating the following rules will cause connector lines to become disordered or the layout to collapse:
 
-1. **子树包裹模式（关键）**：每个父节点和它的子节点群用一个 `layout: "vertical"` + `alignItems: "center"` 的 frame 包裹。**不要**把所有父节点放一层、所有子节点放另一层。*违反后果：父节点与子节点群中心偏移，正交连线无法合并，分裂成两条平行线。*
-2. **同层节点建议等高**：同层节点统一 `height`（如 60-70），保证连线横向主轴平直。如果文字长度差异大可用 `fit-content`，但要确保同层文字行数接近。*违反后果：同层节点高低不平，rightAngle 连线横向弯折错乱。*
-3. **垂直间距 >= 60**：父子间纵向 `gap: 60`。*违反后果：连线引擎没有足够空间折弯与合并，导致连线穿模或提前分叉。*
-4. **叶子容器偶数宽度**：包含叶子节点的横向 frame，宽度应手动计算（子节点宽度之和 + gap × (n-1)），如 2 个 120px 节点 + 20px gap = `width: 260`。或用 `fill-container` 自动等分。*违反后果：父节点中心与子节点群中心有像素级偏差。*
-5. **同层兄弟间横向 gap: 20-40**
-6. 最小字号 14px
-7. 连线：所有父子连线必须 `lineShape: "rightAngle"`（总线风格），`fromAnchor: "bottom"`, `toAnchor: "top"`。*违反后果：失去组织架构图专属的总线视觉效果。*
-8. 根 frame 宽度要足够（如 1200-1600），避免叶节点被挤压重叠
-9. 不同层级在 fontSize、borderWidth、颜色上递进区分（如 Root 深灰 → L1 浅蓝 → L2 浅绿 → L3 浅紫）
-10. 长文本用 `\n` 主动换行（如 "基础架构部\n(包含云原生)"），确保节点高度足够容纳
+1. **Subtree wrapping pattern (critical)**: Each parent node and its group of child nodes are wrapped in a frame made of `layout: "vertical"` + `alignItems: "center"`. **Do not** put all parent nodes in one layer and all child nodes in another layer. *Consequence of violation: the center of the parent node and the center of the child node group become offset, orthogonal connectors cannot merge, and they split into two parallel lines.*
+2. **Nodes at the same layer should preferably be equal height**: Nodes at the same layer should use a uniform `height` (e.g., 60-70) to ensure the horizontal main axis of the connectors is straight. If text lengths vary greatly, you may use `fit-content`, but make sure the number of text lines at the same layer is similar. *Consequence of violation: nodes at the same layer become uneven in height, and rightAngle connectors bend horizontally in a disordered way.*
+3. **Vertical spacing >= 60**: Vertical `gap: 60` between parent and child. *Consequence of violation: the connector engine does not have enough space to bend and merge, causing connectors to clip through shapes or branch prematurely.*
+4. **Even width for leaf containers**: For a horizontal frame containing leaf nodes, the width should be calculated manually (sum of child node widths + gap × (n-1)), e.g., 2 nodes of 120px + 20px gap = `width: 260`. Or use `fill-container` to divide equally automatically. *Consequence of violation: there is a pixel-level offset between the parent node center and the child node group center.*
+5. **Horizontal gap between siblings at the same layer: 20-40**
+6. Minimum font size 14px
+7. Connectors: all parent-child connectors must be `lineShape: "rightAngle"` (bus style), `fromAnchor: "bottom"`, `toAnchor: "top"`. *Consequence of violation: loss of the bus-style visual effect unique to organization charts.*
+8. The root frame width must be sufficient (e.g., 1200-1600) to avoid leaf nodes being squeezed and overlapping
+9. Different layers should be progressively distinguished by fontSize, borderWidth, and color (e.g., Root dark gray → L1 light blue → L2 light green → L3 light purple)
+10. For long text, use `\n` to actively wrap lines (e.g., "Infrastructure Department\n(includes cloud native)") to ensure node height is sufficient to contain it
 
-## 骨架示例
+<a id="骨架示例"></a>
+## Skeleton Example
 
-### 树形展开（子树包裹模式）
+<a id="树形展开子树包裹模式"></a>
+### Tree Expansion (Subtree Wrapping Pattern)
 
 ```json
 {
@@ -162,12 +168,13 @@
 }
 ```
 
-## 陷阱
+<a id="陷阱"></a>
+## Pitfalls
 
-- **分离父子层级（致命错误）**：不要把所有同级父节点放一个 horizontal frame、所有子节点放另一个。必须用 `alignItems: "center"` 的 vertical frame 把每个父节点和它的子节点包裹在一起。
-- **同层节点高低不平**：同层节点高度应一致（或文字行数接近），否则 rightAngle 连线横向弯折错乱。
-- **垂直间距不足**：父子间 gap 必须 >= 60。不够时连线引擎无法折弯合并。也不要用 80，3-4 层会纵向拉伸过度。
-- **做成线性链而非树形展开**：每个父节点的子节点必须横向展开，不要做单链。
-- **连线混用 straight**：所有父子连线必须 `lineShape: "rightAngle"`，`fromAnchor: "bottom"`，`toAnchor: "top"`。
-- **叶节点字号 12px 看不清**：最小字号 14px。
-- **所有节点同一大小和样式**：不同层级必须在 fontSize、borderWidth、颜色上有区分（根>子>叶）。
+- **Separating parent and child layers (fatal error)**: Do not put all parent nodes at the same level in one horizontal frame and all child nodes in another. You must use a vertical frame with `alignItems: "center"` to wrap each parent node together with its child nodes.
+- **Nodes at the same layer uneven in height**: Nodes at the same layer should have the same height (or a similar number of text lines), otherwise rightAngle connectors bend horizontally in a disordered way.
+- **Insufficient vertical spacing**: The gap between parent and child must be >= 60. If it is not enough, the connector engine cannot bend and merge. Also do not use 80; 3-4 layers will stretch vertically too much.
+- **Making it a linear chain instead of a tree expansion**: The child nodes of each parent node must expand horizontally; do not make a single chain.
+- **Mixing straight connectors**: All parent-child connectors must be `lineShape: "rightAngle"`, `fromAnchor: "bottom"`, `toAnchor: "top"`.
+- **Leaf node font size 12px is illegible**: Minimum font size 14px.
+- **All nodes have the same size and style**: Different layers must be distinguished by fontSize, borderWidth, and color (root > child > leaf).

@@ -1,63 +1,64 @@
-# Lark Sheet Styles Put（+styles-put）
+# Lark Sheet Styles Put (+styles-put)
 
-> **本文定位**：对**已有**表格做美化收尾的默认入口——样式 / 边框 / 合并 / 行高列宽 / 冻结写成一份声明式规格，一次调用交付。样式**取什么值**（配色 / 字号 / 对齐 / 数字格式标准）以 `references/lark-sheets-visual-standards.md` 为唯一权威，本文只讲**怎么落地**。
+> **Purpose of this document**: The default entry point for the final beautification pass on an **existing** spreadsheet — styles / borders / merges / row heights and column widths / freeze are written as a single declarative spec and delivered in one call. Which **values** styles take (color schemes / font sizes / alignment / number format standards) is governed solely by `references/lark-sheets-visual-standards.md`; this document only covers **how to apply them**.
 >
-> **边界（三分流判定，按操作组合选入口）**：目标是**样式 / 合并 / 行高列宽 / 冻结**的任意组合 → 本命令；**同一个写操作**打多个区域（如多区域清除、批量下拉）→ 用该命令自身的复数形态（`--ranges` / map 入参）；操作链**跨类型且有顺序依赖**（如插列 → 写表头 → 回填数据）→ `+batch-update`。美化收尾不需要也不应该拼 `--operations` 子操作数组。
+> **Boundaries (three-way routing, choose the entry point by operation combination)**: target is any combination of **styles / merges / row heights and column widths / freeze** → this command; **the same write operation** applied to multiple ranges (e.g. multi-range clear, batch dropdown) → use that command's own plural form (`--ranges` / map input); operation chain is **cross-type with sequential dependencies** (e.g. insert column → write header → backfill data) → `+batch-update`. The beautification pass does not need and should not assemble a `--operations` sub-operation array.
 
-## 使用场景
+<a id="使用场景"></a>
+## Use Cases
 
-写入。对存量表格的多个子表批量应用视觉规格：新表美化、加汇总行后统一版式、按分组合并同类单元格、调列宽行高、冻结表头。整份规格展开为一次批量提交按序执行，与 `+batch-update` 同为 **fail-fast**——失败后哪些子操作已生效不做统一假设，先回读确认再补发（语义同 `references/lark-sheets-batch-update.md`「执行语义」）。
+Write. Batch-apply visual specs to multiple sub-sheets of an existing spreadsheet: beautify a new sheet, unify formatting after adding summary rows, merge similar cells by group, adjust column widths and row heights, freeze headers. The entire spec is expanded into a single batch submission executed in order, and like `+batch-update` it is **fail-fast** — after a failure, no uniform assumption is made about which sub-operations have taken effect; read back to confirm first, then resend (semantics same as `references/lark-sheets-batch-update.md` "execution semantics").
 
-⚠️ **失败后不要照抄报错里的 `operations[N]` 去续发**：那个数组是 CLI 从 `--styles` 展开出来的（相邻同样式的 `cell_styles` 还会被合并成更大的矩形），下标与你写的 spec 项没有对应关系，也不是你能直接重发的东西。正确做法：回读受影响区域（`+cells-get --include style` / `+sheet-info`）确认哪些已生效，再重发没落上的部分。样式 / 行高列宽 / 冻结是幂等盖章（整份重发无副作用，这通常就是最省事的解法），只有 `cell_merges` 需要挑出未生效的部分单独发。
+⚠️ **After a failure, do not copy the `operations[N]` from the error message to continue sending**: that array is expanded by the CLI from `--styles` (adjacent `cell_styles` with the same style are further merged into a larger rectangle), its indices do not correspond to the spec items you wrote, and it is not something you can directly resend. The correct approach: read back the affected ranges (`+cells-get --include style` / `+sheet-info`) to confirm which have taken effect, then resend the parts that did not land. Styles / row heights and column widths / freeze are idempotent stamps (resending the whole spec has no side effects, and this is usually the simplest solution); only `cell_merges` requires picking out the parts that did not take effect and sending them separately.
 
-**词汇三处同构**：`--styles` 的字段词汇与 `+workbook-create --styles`（建新表同步美化）、`+table-put --styles`（写数据同步美化）完全一致——`cell_styles` / `cell_merges` / `row_sizes` / `col_sizes` / `freeze` 学一次三处通用。区别只有两点：本命令作用于**已有**表格（顶层 `--url` / `--spreadsheet-token` 定位），且 `cell_styles` 的 range 不受「本次写入区域」限制、可指向表内任意区域。
+**Vocabulary is isomorphic in three places**: the field vocabulary of `--styles` is completely identical to `+workbook-create --styles` (create new sheet with synchronized beautification) and `+table-put --styles` (write data with synchronized beautification) — learn `cell_styles` / `cell_merges` / `row_sizes` / `col_sizes` / `freeze` once and they apply in all three places. There are only two differences: this command acts on an **existing** spreadsheet (located by top-level `--url` / `--spreadsheet-token`), and the range of `cell_styles` is not limited to "the region written this time" and may point to any region in the sheet.
 
-**规格要点**：
+**Spec highlights**:
 
-- 顶层 `{styles:[...]}`，每项对应一个目标子表，`name` 必须是真实子表名（不确定先 `+workbook-info` 查，禁止猜 `Sheet1`）。
-- 每个子表项按固定顺序执行：`cell_merges` → `cell_styles` → `row_sizes` → `col_sizes` → `freeze`；样式盖章允许覆盖含合并区的区域（合并区限制只针对值写入，样式不受限）。
-- `row_sizes` / `col_sizes` 只需 `{range, size}`（px，即像素尺寸；`standard` / 行的 `auto` 才需显式 `type`）。尺寸键统一是 `size`。
-- 加边框用 `border` 简写：`{"style":"solid","color":"#DDDDDD"}` 应用到四边；只有分侧不同样式才用 `border_styles` 完整形态。
-- `freeze` 用 `{rows:N, cols:N}` 冻结前 N 行 / 列，0 或省略表示该维度不冻结；freeze 是整份状态覆盖，全 0（如 `{"rows":0}`）= 两轴全部解冻，与 `+dim-freeze --rows 0 --cols 0` 等价（仅 `+workbook-create` 建新表时全 0 无意义、会被校验拒绝）。
+- Top-level `{styles:[...]}`, each item corresponds to one target sub-sheet; `name` must be a real sub-sheet name (if unsure, look it up first with `+workbook-info`; do not guess `Sheet1`).
+- Each sub-sheet item is executed in a fixed order: `cell_merges` → `cell_styles` → `row_sizes` → `col_sizes` → `freeze`; style stamping is allowed to cover ranges that include merged regions (the merged-region restriction applies only to value writes; styles are unrestricted).
+- `row_sizes` / `col_sizes` only need `{range, size}` (px, i.e. pixel dimensions; only `standard` / row `auto` require an explicit `type`). The size key is uniformly `size`.
+- Add borders with the `border` shorthand: `{"style":"solid","color":"#DDDDDD"}` applies to all four sides; only when different sides need different styles do you use the full `border_styles` form.
+- `freeze` uses `{rows:N, cols:N}` to freeze the first N rows / columns; 0 or omitted means that dimension is not frozen; freeze is a full-state override, all 0 (e.g. `{"rows":0}`) = unfreeze both axes, equivalent to `+dim-freeze --rows 0 --cols 0` (only in `+workbook-create` when creating a new sheet is all 0 meaningless and rejected by validation).
 
-**回读校验**：整份规格执行成功后按编辑准则抽样回读受影响区域（`+cells-get --include style` 或 `+sheet-info` 看合并 / 行高列宽 / 冻结），确认关键样式实际生效。
+**Read-back verification**: after the entire spec executes successfully, sample-read the affected ranges per the editing guidelines (`+cells-get --include style` or `+sheet-info` to check merges / row heights and column widths / freeze) to confirm the key styles actually took effect.
 
 ## Shortcuts
 
-| Shortcut | Risk | 分组 |
+| Shortcut | Risk | Group |
 | --- | --- | --- |
-| `+styles-put` | write | 批量 |
+| `+styles-put` | write | Batch |
 
 ## Flags
 
 ### `+styles-put`
 
-_公共：URL/token（无 sheet 定位） · 系统：`--dry-run`_
+_Common: URL/token (no sheet location) · System: `--dry-run`_
 
-| Flag | Type | 必填 | 说明 |
+| Flag | Type | Required | Description |
 | --- | --- | --- | --- |
-| `--styles` | string + File + Stdin（复合 JSON） | required | 对**已有**表格应用的视觉规格 JSON：顶层 `{styles:[...]}`，每项对应一个目标子表（`name` 用真实子表名），并至少给 `cell_styles` / `cell_merges` / `row_sizes` / `col_sizes` / `freeze` 之一。字段词汇与 `+workbook-create` / `+table-put` 的 `--styles` 完全同构（cell_styles 用 A1 range + 扁平样式字段，边框用 `border` 简写 {style,weight,color} 四边同款、分侧才用 border_styles；row/col sizes 用行/列范围 + size（px 即像素，standard/auto 才需 type）；merges 用单元格 range；freeze 用 `{rows:N, cols:N}` 冻结前 N 行/列）。整份规格展开为一次批量提交（fail-fast：失败后哪些已生效不做统一假设，先回读确认再补发）；range 不受「本次写入区域」限制，可指向表内任意区域 |
+| `--styles` | string + File + Stdin (composite JSON) | required | Visual spec JSON applied to an **existing** spreadsheet: top-level `{styles:[...]}`, each item corresponds to one target sub-sheet (`name` uses a real sub-sheet name), and at least one of `cell_styles` / `cell_merges` / `row_sizes` / `col_sizes` / `freeze` must be given. Field vocabulary is completely isomorphic to `--styles` of `+workbook-create` / `+table-put` (cell_styles uses A1 range + flat style fields; borders use the `border` shorthand {style,weight,color} for all four sides alike, and border_styles only when sides differ; row/col sizes use row/column ranges + size (px means pixels; type is only needed for standard/auto); merges use cell ranges; freeze uses `{rows:N, cols:N}` to freeze the first N rows/columns). The entire spec is expanded into a single batch submission (fail-fast: after a failure, no uniform assumption is made about what has taken effect; read back to confirm first, then resend); range is not limited to "the region written this time" and may point to any region in the sheet |
 
 ## Schemas
 
-> 复合 JSON flag 字段速查（只列顶层 + 一层嵌套）。深层结构看下方 `## Examples`，或用 `--print-schema` 读完整 JSON Schema（用法见 index.md「公共 flag 速查」与「Agent 使用提示」）。
+> Quick reference for composite JSON flag fields (only top level + one level of nesting). For deeper structures, see `## Examples` below, or use `--print-schema` to read the full JSON Schema (usage see index.md "Common flag quick reference" and "Agent usage tips").
 
 ### `+styles-put` `--styles`
 
 
-**数组项**（类型 object）：
-- `cell_merges` (array<object>?) — 单元格合并操作数组；range 使用 A1 单元格范围，merge_type 默认 all each: { merge_type?: enum, range: string }
-- `cell_styles` (array<object>?) — 单元格样式操作数组；每项用 A1 单元格 range 指定范围，字段名与 +cells-set-style 对齐 each: { background_color?: string, border?: object, border_styles?: object, font_color?: string, font_family?: string, …共 14 项 }
-- `col_sizes` (array<object>?) — 列宽操作数组；range 使用列范围如 A:C，给 size（px）即像素列宽（type 可省略）；type 为 standard 时不带 size each: { range: string, size?: number, type?: enum }
-- `freeze` (object?) — 冻结行列：rows = 冻结前 N 行，cols = 冻结前 N 列（0 或省略 = 该维度不冻结） { cols?: integer, rows?: integer }
-- `name` (string) — 子表名
-- `row_sizes` (array<object>?) — 行高操作数组；range 使用行范围如 1:3，给 size（px）即像素行高（type 可省略）；type 为 standard/auto 时不带 size each: { range: string, size?: number, type?: enum }
+**Array items** (type object):
+- `cell_merges` (array<object>?) — Array of cell merge operations; range uses A1 cell ranges, merge_type defaults to all each: { merge_type?: enum, range: string }
+- `cell_styles` (array<object>?) — Array of cell style operations; each item specifies a range with an A1 cell range, field names align with +cells-set-style each: { background_color?: string, border?: object, border_styles?: object, font_color?: string, font_family?: string, …14 items in total }
+- `col_sizes` (array<object>?) — Array of column width operations; range uses column ranges such as A:C, giving size (px) means pixel column width (type may be omitted); when type is standard, no size is given each: { range: string, size?: number, type?: enum }
+- `freeze` (object?) — Frozen rows and columns: rows = freeze the first N rows, cols = freeze the first N columns (0 or omitted = that dimension is not frozen) { cols?: integer, rows?: integer }
+- `name` (string) — Sub-sheet name
+- `row_sizes` (array<object>?) — Array of row height operations; range uses row ranges such as 1:3, giving size (px) means pixel row height (type may be omitted); when type is standard/auto, no size is given each: { range: string, size?: number, type?: enum }
 
 ## Examples
 
 ### `+styles-put`
 
-表头美化 + 按组合并 + 列宽 + 冻结首行，一次交付：
+Header beautification + merge by group + column widths + freeze first row, delivered in one go:
 
 ```bash
 lark-cli sheets +styles-put --url "https://example.feishu.cn/sheets/shtXXX" --styles - <<'JSON'
@@ -75,7 +76,7 @@ lark-cli sheets +styles-put --url "https://example.feishu.cn/sheets/shtXXX" --st
 JSON
 ```
 
-多子表同一批交付（每个子表一个 styles 项）：
+Multiple sub-sheets delivered in the same batch (one styles item per sub-sheet):
 
 ```bash
 lark-cli sheets +styles-put --url "..." --styles - <<'JSON'
@@ -86,8 +87,9 @@ lark-cli sheets +styles-put --url "..." --styles - <<'JSON'
 JSON
 ```
 
-### Validate / DryRun / Execute 约束
+<a id="validate--dryrun--execute-约束"></a>
+### Validate / DryRun / Execute Constraints
 
-- `Validate`：`--styles` 必须是合法 JSON、`styles` 非空数组；每项 `name` 必填、至少给 `cell_merges` / `cell_styles` / `row_sizes` / `col_sizes` / `freeze` 之一；`cell_styles` 每项至少一个样式字段；展开后受子操作数（100）与总格数预算约束，超限报错给拆分建议。
-- `DryRun`：输出展开后每个子操作的请求模板，不发起调用。
-- `Execute`：整份规格合成一次批量请求按序执行；fail-fast。报错会列出失败的子操作及原因，但其中的 `operations[N]` 是 CLI 展开后的内部下标（含 `cell_styles` 合并），不对应 `--styles` 里的项，也不能直接按下标续发——报错会明说这一点并让你先回读再补发。
+- `Validate`: `--styles` must be valid JSON and `styles` a non-empty array; each item's `name` is required, and at least one of `cell_merges` / `cell_styles` / `row_sizes` / `col_sizes` / `freeze` must be given; each item of `cell_styles` must have at least one style field; after expansion it is subject to the sub-operation count (100) and total cell budget constraints; exceeding the limit reports an error with splitting suggestions.
+- `DryRun`: outputs the request template for each expanded sub-operation without making any calls.
+- `Execute`: the entire spec is combined into a single batch request executed in order; fail-fast. The error lists the failed sub-operations and reasons, but the `operations[N]` in it are internal indices after CLI expansion (including `cell_styles` merges), do not correspond to the items in `--styles`, and cannot be used to continue sending by index directly — the error states this explicitly and tells you to read back first, then resend.

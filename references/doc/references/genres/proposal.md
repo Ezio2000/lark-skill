@@ -1,24 +1,29 @@
-# Genre Contract: Proposal / 方案提案 (`workplace.proposal`)
+<a id="genre-contract-proposal--方案提案-workplaceproposal"></a>
+# Genre Contract: Proposal (`workplace.proposal`)
 
-## 体裁规则表（硬约束）
+<a id="体裁规则表硬约束"></a>
+## Genre Rules Table (Hard Constraints)
 
-| 规则项 | 规则 |
+| Rule Item | Rule |
 |-|-|
-| 写作风格 | 结论前置、具体、可审议，主动呈现代价、反例与不确定性，不用宏大背景或伪精确制造可批准感 |
-| 内容逻辑 | 明确 decision / 决策者 / 时点，再按“改变理由与不行动基准 → 目标 → 真实选项同口径比较 → 推荐 → 资源 / 交付 → 风险 / 未知 → 决策入口”推进 |
-| 事实 / 边界 | 区分事实、估算、假设和未知；收益、成本、资源、用户证据、审批和排期须可追溯；进入执行决策才写治理 / 退出条件，未批准不得写成既有承诺 |
-| 错误 | 无决策者 / ask、无不行动基准、预设单一答案、选项口径不同、成本风险后置、未批先承诺、编造收益 / 审批或与 PRD 混写，任一出现即失败 |
+| Writing Style | Conclusion first, specific, deliberable; proactively present costs, counterexamples, and uncertainties; do not use grand background or false precision to manufacture a sense of approvability |
+| Content Logic | Clarify the decision / decision-maker / timing first, then proceed in the order of "reasons for change and baseline of inaction → goals → comparison of real options on the same basis → recommendation → resources / delivery → risks / unknowns → decision entry point" |
+| Facts / Boundaries | Distinguish facts, estimates, assumptions, and unknowns; benefits, costs, resources, user evidence, approvals, and scheduling must be traceable; only write governance / exit conditions when entering an execution decision, and unapproved items must not be written as existing commitments |
+| Errors | No decision-maker / ask, no baseline of inaction, presupposing a single answer, options not on the same basis, costs and risks deferred to the end, committing before approval, fabricating benefits / approvals, or mixing with a PRD—any one of these means failure |
 
-## 适用与消歧
+<a id="适用与消歧"></a>
+## Applicability and Disambiguation
 
-用于请求具名决策者批准、驳回或选择方向、预算、资源、试点或执行承诺。方向已定并定义产品行为 / 验收走 `prd.md`；短决策封面走 `memo-brief.md`；已批准安排的发布走 `formal-doc.md`。“方案”单词本身不触发本体裁。
+Used to request a named decision-maker to approve, reject, or choose a direction, budget, resource, pilot, or execution commitment. If the direction is already set and product behavior / acceptance criteria are being defined, use `prd.md`; for a short decision cover, use `memo-brief.md`; for a release of an already approved arrangement, use `formal-doc.md`. The word "proposal" itself does not trigger this genre.
 
-## 子类型与证据
+<a id="子类型与证据"></a>
+## Subtypes and Evidence
 
-可用于概念 / 方向、投资 / 预算、资源申请、变更、试点 / 实验和执行承诺提案；深度随阶段、金额、风险和不可逆性裁剪。必须给 case for change、目标 / 成功标准、不行动或最小变化基准，以及足以判断的成本、收益、依赖、风险和敏感因素。
+Can be used for concept / direction, investment / budget, resource requests, changes, pilots / experiments, and execution commitment proposals; depth is tailored to stage, amount, risk, and irreversibility. Must provide the case for change, goals / success criteria, a baseline of inaction or minimal change, and sufficient costs, benefits, dependencies, risks, and sensitivity factors for judgment.
 
-存在真实选择时纳入可行替代并以相同范围、时间和评价标准比较；没有真实替代时说明约束如何收敛，不能造假选项。不可量化影响可定性，但须说明原因及其决策影响。
+When real choices exist, include feasible alternatives and compare them on the same scope, time, and evaluation criteria; when there are no real alternatives, explain how the constraints converge, and do not fabricate options. Non-quantifiable impacts may be qualitative, but the reasons and their decision impact must be explained.
 
-## 结构与高质量写法
+<a id="结构与高质量写法"></a>
+## Structure and High-Quality Writing
 
-先把选择题写对，再论证推荐；显式记录被放弃选项和推荐代价。数字不足时使用范围、依据和验证计划，不补精确点估。进入执行决策时按需补 owner、里程碑、治理、衡量、退出 / 复盘；缺决策权、关键成本或安全合规依据时收窄为探索稿，仍要求批准则 `blocked`。
+First frame the choice correctly, then argue for the recommendation; explicitly record discarded options and the costs of the recommendation. When numbers are insufficient, use ranges, basis, and a validation plan; do not fill in precise point estimates. When entering an execution decision, add owner, milestones, governance, measurement, and exit / retrospective as needed; when decision rights, key costs, or safety and compliance basis are missing, narrow it to an exploration draft, and if approval is still required, `blocked`.

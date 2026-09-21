@@ -1,36 +1,42 @@
-# Genre Contract: Personal Brand / 个人品牌 (`router.personal_brand`)
+<a id="genre-contract-personal-brand--个人品牌-routerpersonal_brand"></a>
+# Genre Contract: Personal Brand (`router.personal_brand`)
 
-## 体裁规则表（硬约束）
+<a id="体裁规则表硬约束"></a>
+## Genre Rules Table (Hard Constraints)
 
-| 规则项 | 规则 |
+| Rule Item | Rule |
 |-|-|
-| 写作风格 | 可信、具体、有辨识度，声音服从目标读者和真实经历，不用自我评价替代成果证据 |
-| 内容逻辑 | 从目标读者和目标机会出发，用“身份 / 价值定位 → 相关经历 → 可验证贡献 → 做事方式 → 下一步意图”组织；每项经历说明情境、本人动作、结果及与目标的关系 |
-| 事实 / 边界 | 职位、时间、职责、学历、技能、作品和指标须真实可核，个人贡献与团队成果分开；尊重保密、个人信息、雇主和作品权利，作品、图片和推荐语须确认归属、使用权限与必要语境，非文字证据须有文字等价信息；关键身份、时间、归属或公开权限缺失时用具体占位，无法安全表述则 blocked |
-| 错误 | 夸大头衔 / 技能 / 指标、把团队成果全归个人、关键词堆砌、伪造推荐语或客户、泄露敏感信息、作品无归属 / 权限、同一经历前后矛盾、渠道语气改变事实，任一出现即失败 |
+| Writing Style | Credible, specific, and distinctive; the voice serves the target reader and real experience; do not substitute self-evaluation for evidence of results |
+| Content Logic | Start from the target reader and target opportunity, and organize using "identity / value positioning → relevant experience → verifiable contributions → way of working → next-step intent"; for each experience item, explain the context, your own actions, the results, and the relationship to the target |
+| Facts / Boundaries | Job titles, dates, responsibilities, education, skills, works, and metrics must be true and verifiable; separate personal contributions from team results; respect confidentiality, personal information, employer and work rights; works, images, and testimonials must have confirmed attribution, usage permission, and necessary context; non-textual evidence must have textual equivalent information; when key identity, dates, attribution, or public-disclosure permission is missing, use specific placeholders; if it cannot be safely expressed, mark it blocked |
+| Errors | Inflated titles / skills / metrics, attributing all team results to the individual, keyword stuffing, fabricated testimonials or clients, leaking sensitive information, works without attribution / permission, contradictions in the same experience, or channel tone changing facts—any one of these constitutes failure |
 
-## 适用与消歧
+<a id="适用与消歧"></a>
+## Applicability and Disambiguation
 
-用于让招聘方、合作方、客户或专业社群判断“这个人是谁、做过什么、能带来什么”。仅出现平台名称不触发；明确要求最终交付 Email、小红书笔记或微信公众号文章时走 `route_platform`，再选择对应 leaf，个人身份、经历和信誉目标作为该 leaf contract 的硬约束，不再并读 Personal Brand。
+Use this to let recruiters, partners, clients, or professional communities judge "who this person is, what they have done, and what they can bring." The mere appearance of a platform name does not trigger it; when the final deliverable is explicitly required to be an Email, Xiaohongshu note, or WeChat Official Account article, go to `route_platform`, then select the corresponding leaf; personal identity, experience, and reputation goals serve as hard constraints of that leaf contract, and Personal Brand is no longer read in parallel.
 
-以项目经验得失来改进下一轮走 Retrospective；以购买体验帮助他人选择走 Consumer；以组织身份转化客户走 Marketing。出现“介绍、主页、复盘”不能单独触发，须确认目标是个人能力和信誉呈现。
+To improve the next round based on project experience gains and losses, go to Retrospective; to help others choose based on purchasing experience, go to Consumer; to convert clients under an organizational identity, go to Marketing. The appearance of "introduction, homepage, review" cannot trigger it on its own; the goal must be confirmed as the presentation of personal capability and credibility.
 
-## 子类型
+<a id="子类型"></a>
+## Subtypes
 
-| 子类型 | 读者任务与推进 |
+| Subtype | Reader Task and Progression |
 |-|-|
-| 简历 / CV | 快速判断岗位匹配；摘要 → 相关经历与成果 → 技能 / 教育 → 必要补充 |
-| 求职信 / 自我介绍 / 简介 | 理解动机与差异化价值；目标 → 相关证据 → 工作方式 → 明确下一步 |
-| 个人主页 | 建立清晰定位并找到入口；一句定位 → 代表证据 → 领域 / 服务 → 联系或作品 |
-| 作品集 / 案例集 | 判断能力如何形成结果；问题 → 约束与本人角色 → 过程决策 → 结果与反思 |
-| 个人成长回顾 | 理解身份与能力变化；起点 → 关键选择 → 证据 → 学到什么 → 下一方向 |
+| Resume / CV | Quickly judge job fit; summary → relevant experience and results → skills / education → necessary supplements |
+| Cover Letter / Self-Introduction / Bio | Understand motivation and differentiated value; goal → relevant evidence → way of working → clear next step |
+| Personal Homepage | Establish a clear positioning and find an entry point; one-sentence positioning → representative evidence → domain / services → contact or works |
+| Portfolio / Case Collection | Judge how capability produces results; problem → constraints and your role → process decisions → results and reflection |
+| Personal Growth Review | Understand changes in identity and capability; starting point → key choices → evidence → what was learned → next direction |
 
-## 证据与真实性
+<a id="证据与真实性"></a>
+## Evidence and Authenticity
 
-- 成果优先写可核结果及其口径，不能量化时写可观察变化、交付物或他人采用情况，不编造数字。明确“负责、协作、支持、批准”等角色差异。
-- 时间线、组织名、客户名、作品链接和推荐语在公开前确认准确与授权；需匿名时保留问题、本人动作和结果的判断价值，不留下可反推的敏感细节。
-- 技能由近期作品、职责范围或实际使用场景支撑；自我定位可以有主张，但不能使用未获认可的资质、奖项或身份。
+- For results, prioritize verifiable outcomes and their definitions; when quantification is not possible, write observable changes, deliverables, or adoption by others; do not fabricate numbers. Clearly distinguish role differences such as "responsible for, collaborated on, supported, approved."
+- Before public disclosure, confirm the accuracy and authorization of timelines, organization names, client names, work links, and testimonials; when anonymization is needed, preserve the judgment value of the problem, your own actions, and the results, without leaving sensitive details that can be reverse-engineered.
+- Skills are supported by recent works, scope of responsibility, or actual usage scenarios; self-positioning may include claims, but must not use unrecognized qualifications, awards, or identities.
 
-## 结构与高质量写法
+<a id="结构与高质量写法"></a>
+## Structure and High-Quality Writing
 
-先筛选与目标读者最相关的经历，不把完整人生经历当作专业证明。经历条目以动作和影响开头，背景只写理解贡献所需的约束；案例说明权衡和本人判断，比工具清单更能证明能力。CTA 具体到希望发生的下一步，并只提供获授权的联系方式。
+First filter for the experience most relevant to the target reader; do not treat a complete life history as professional proof. Experience entries should begin with actions and impact, and background should include only the constraints needed to understand the contribution; cases that explain trade-offs and your own judgment prove capability better than a tool list. The CTA should be specific about the next step you want to happen, and provide only authorized contact information.

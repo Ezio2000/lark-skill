@@ -1,84 +1,93 @@
-# 审批实例表单控件参数
+<a id="审批实例表单控件参数"></a>
+# Approval Instance Form Control Parameters
 
-> 说明：本文尽量保留上游参数文档的原始结构与示例，用于回答“控件 `value` 长什么样”。
-> 当前 `lark-cli` 的推荐取值口径以 [`lark-approval-instance-value-sourcing.md`](./lark-approval-instance-value-sourcing.md) 为准；如果两份文档在“值从哪里拿”上存在差异，以后者为准。
+> Note: This document aims to preserve the original structure and examples of the upstream parameter documentation as much as possible, to answer "what does control `value` look like".
+> The currently recommended value conventions for `lark-cli` are governed by [`lark-approval-instance-value-sourcing.md`](./lark-approval-instance-value-sourcing.md); if the two documents differ on "where the value comes from", the latter takes precedence.
 
-在调用创建审批实例接口时需要使用表单控件参数，你可以通过本文了解审批实例内各表单控件的参数说明。
+When calling the create approval instance API, you need to use form control parameters. This document helps you understand the parameter descriptions for each form control within an approval instance.
 
-## 准备工作
+<a id="准备工作"></a>
+## Preparation
 
-审批实例的表单控件参数依据审批定义表单来配置，例如，审批定义的表单设计包括了 **单行文本** 和 **日期区间** 控件，则审批实例的表单控件参数就需要为 **单行文本** 和 **日期区间** 控件进行赋值。因此，在操作审批实例表单的控件参数前，应先通过审批定义详情确认表单控件结构。
+The form control parameters of an approval instance are configured based on the approval definition form. For example, if the approval definition's form design includes **Single-line text** and **Date interval** controls, then the approval instance's form control parameters need to assign values for the **Single-line text** and **Date interval** controls. Therefore, before operating on the control parameters of an approval instance form, you should first confirm the form control structure through the approval definition details.
 
-## 审批实例 API 不支持的控件
+<a id="审批实例-api-不支持的控件"></a>
+## Controls Not Supported by the Approval Instance API
 
-创建审批实例 API 未完全支持所有的审批表单控件，不支持的控件如下表所示。如果你必须使用 API 不支持的控件，则不能仅通过当前 API 完成提单。
+The create approval instance API does not fully support all approval form controls. The unsupported controls are shown in the table below. If you must use a control that the API does not support, you cannot complete the submission through the current API alone.
 
-**控件/控件组** | **Type**                    |
+**Control/Control Group** | **Type**                    |
 | ---------- | --------------------------- |
-| 说明         | text                        |
-| 引用多维表格     | mutableGroup                |
-| 收款账户       | account                     |
-| 流水号        | serialNumber                |
-| 出差控件组      | tripGroup                   |
-| 录用控件组      | apaascorehrOnboardingGroup  |
-| 转正控件组      | apaascorehrRegularateGroup  |
-| 补卡控件组      | remedyGroupV2               |
-| 调岗控件组      | apaascorehrJobAdjustGroup   |
-| 离职控件组      | apaascorehrOffboardingGroup
+| Description         | text                        |
+| Reference to Base     | mutableGroup                |
+| Receiving Account       | account                     |
+| Serial Number        | serialNumber                |
+| Business Trip Control Group      | tripGroup                   |
+| Onboarding Control Group      | apaascorehrOnboardingGroup  |
+| Regularization Control Group      | apaascorehrRegularateGroup  |
+| Attendance Makeup Control Group      | remedyGroupV2               |
+| Job Adjustment Control Group      | apaascorehrJobAdjustGroup   |
+| Offboarding Control Group      | apaascorehrOffboardingGroup
 
-## 通用参数
+<a id="通用参数"></a>
+## Common Parameters
 
-审批实例的表单控件均包含的参数如下表所示。
+The parameters common to all form controls of an approval instance are shown in the table below.
 
-参数 | 类型 | 是否必填 | 描述
+Parameter | Type | Required | Description
 ---|---|---|---
-id | string | 是 | 控件的 ID，需要与审批定义中的控件 ID 保持一致。
-type | string | 是 | 控件类型。各控件类型取值参见下文 **不同控件的参数** 章节。
-value | 不同控件的类型不同 | 是 | 控件的取值。不同控件 value 数据类型也不同，例如单行文本控件的 value 为字符串、联系人的 value 为数组。详情参见下文 **不同控件的参数** 章节。
+id | string | Yes | The control's ID, which must match the control ID in the approval definition.
+type | string | Yes | Control type. For the values of each control type, see the **Parameters for Different Controls** section below.
+value | Varies by control type | Yes | The control's value. The value data type also varies by control; for example, the value of a single-line text control is a string, and the value of a contact is an array. For details, see the **Parameters for Different Controls** section below.
 
-## 不同控件的参数
+<a id="不同控件的参数"></a>
+## Parameters for Different Controls
 
-本章节提供不同控件的 type 参数值、JSON 示例以及非通用参数说明。
+This section provides the type parameter values, JSON examples, and non-common parameter descriptions for different controls.
 
-### 单行文本
+<a id="单行文本"></a>
+### Single-line Text
 
-控件 type 为 input，JSON 数据示例：
+The control type is input. JSON data example:
 
 ```json
 {
     "id": "widget1",
     "type": "input",
-    "value": "data" // string 类型
+    "value": "data" // string type
 }
 ```
 
-### 多行文本
+<a id="多行文本"></a>
+### Multi-line Text
 
-控件 type 为 textarea，JSON 数据示例：
+The control type is textarea. JSON data example:
 
 ```json
 {
     "id": "widget1",
     "type": "textarea",
-    "value": "data" // string 类型
+    "value": "data" // string type
 }
 ```
 
-### 日期
+<a id="日期"></a>
+### Date
 
-控件 type 为 date，JSON 数据示例：
+The control type is date. JSON data example:
 
 ```json
 {
     "id": "widget1",
     "type": "date",
-    "value": "2019-10-01T08:12:01+08:00" // 需满足 RFC3339 格式的 string 类型
+    "value": "2019-10-01T08:12:01+08:00" // string type that must conform to the RFC3339 format
 }
 ```
 
-### 日期区间
+<a id="日期区间"></a>
+### Date Interval
 
-控件 type 为 dateInterval，JSON 数据示例：
+The control type is dateInterval. JSON data example:
 
 ```json
 {
@@ -92,110 +101,118 @@ value | 不同控件的类型不同 | 是 | 控件的取值。不同控件 value
 }
 ```
 
-value 参数为 object 类型，包含参数说明：
+The value parameter is of object type. Parameter descriptions:
 
-参数 | 类型 | 是否必填 | 描述
+Parameter | Type | Required | Description
 ---|---|---|---
-start | string | 是 | 开始时间，需满足 RFC3339 格式。
-end | string | 是 | 结束时间，需满足 RFC3339 格式。
-interval | float | 是 | 时长（天）。
+start | string | Yes | Start time, which must conform to the RFC3339 format.
+end | string | Yes | End time, which must conform to the RFC3339 format.
+interval | float | Yes | Duration (days).
 
-### 单选
+<a id="单选"></a>
+### Single Select
 
-控件 type 为 radio/radioV2，JSON 数据示例：
+The control type is radio/radioV2. JSON data example:
 
 ```json
 {                                     
     "id": "widget1",
     "type": "radioV2",
-    "value": "k2b8mkx0-h71x5gl1234-1" // string 类型
+    "value": "k2b8mkx0-h71x5gl1234-1" // string type
 }
 ```
 
-其中， value 表示选项值，取值范围需要参考相应审批定义中 **单选** 控件 option 的 value 参数。你可以通过审批定义详情返回的 `form` 参数，获取单选控件 option 的 value 取值。如果控件关联了外部选项，则 value 需要传入外部选项的 `options.id`。
+Here, value represents the option value, and the value range needs to reference the value parameter of the **Single Select** control's option in the corresponding approval definition. You can obtain the value of the single select control's option through the `form` parameter returned by the approval definition details. If the control is associated with an external option, then value needs to be passed the `options.id` of the external option.
 
-### 多选
+<a id="多选"></a>
+### Multi-select
 
-控件 type 为 checkbox/checkboxV2，JSON数据示例：
+The control type is checkbox/checkboxV2. JSON data example:
 
 ```json
 {
     "id":"widget1",
     "type":"checkboxV2",
-    "value": ["k2b8mkx0-h71x5gl4321-1"] // string 类型的数组
+    "value": ["k2b8mkx0-h71x5gl4321-1"] // array of string type
 }
 ```
-其中， value 表示选项值，取值范围需要参考相应审批定义中 **多选** 控件 option 的 value 参数。你可以通过审批定义详情返回的 `form` 参数，获取多选控件 option 的 value 取值。如果控件关联了外部选项，则 value 需要传入外部选项的 `options.id`。
+Here, value represents the option value, and the value range needs to reference the value parameter of the **Multi-select** control's option in the corresponding approval definition. You can obtain the value of the multi-select control's option through the `form` parameter returned by the approval definition details. If the control is associated with an external option, then value needs to be passed the `options.id` of the external option.
 
-### 数字
+<a id="数字"></a>
+### Number
 
-控件 type 为 number，JSON 数据示例：
+The control type is number. JSON data example:
 
 ```json
 {
     "id": "widget1",
     "type": "number",
-    "value": 1234.5678 // float 类型
+    "value": 1234.5678 // float type
 }
 ```
 
-### 金额
+<a id="金额"></a>
+### Amount
 
-控件 type 为 amount，JSON 数据示例：
+The control type is amount. JSON data example:
 
 ```json
 {
     "id": "widget1",
     "type": "amount",
-    "value": 1234.5678, // float 类型
+    "value": 1234.5678, // float type
     "currency":"USD"
 }
 ```
 
-其中，currency 表示货币种类，取值范围需要参考相应审批定义中 **金额** 控件的 value 参数。你可以通过审批定义详情返回的 `form` 参数，获取金额控件可设置的货币种类。
+Here, currency represents the currency type, and the value range needs to reference the value parameter of the **Amount** control in the corresponding approval definition. You can obtain the currency types that can be set for the amount control through the `form` parameter returned by the approval definition details.
 
-### 计算公式
+<a id="计算公式"></a>
+### Formula
 
-控件 type 为 formula，JSON 数据示例：
+The control type is formula. JSON data example:
 
 ```json
 {
     "id": "widget1",
     "type": "formula",
-    "value": 1234.5678 // 该值由审批定义内配置的公式计算出取值，若不匹配则返回报错。
+    "value": 1234.5678 // This value is calculated by the formula configured in the approval definition. If it does not match, an error will be returned.
 }
 ```
 
-### 联系人
+<a id="联系人"></a>
+### Contact
 
-控件 type 为 contact，JSON 数据示例：
+The control type is contact. JSON data example:
 
 ```json
 {
     "id":"widget1",
     "type":"contact",
-    "value": ["f8ca557e"], // string 类型的数组
-    "open_ids": ["ou_12345"] // string 类型的数组
+    "value": ["f8ca557e"], // array of string type
+    "open_ids": ["ou_12345"] // array of string type
 }
 ```
-其中，value 包含的是用户 `user_id`；open_ids 包含的是用户 `open_id`。
+Here, value contains the user's `user_id`; open_ids contains the user's `open_id`.
 
-### 关联审批
+<a id="关联审批"></a>
+### Linked Approval
 
-控件 type 为 connect，JSON 数据示例：
+The control type is connect. JSON data example:
 
 ```json
 {
     "id":"widget1",
     "type":"connect",
-    "value": ["19EAC829-F1CB-527F-BE2A-1330422E60C0"] // string 类型的数组
+    "value": ["19EAC829-F1CB-527F-BE2A-1330422E60C0"] // array of string type
 }
 ```
-其中，value 包含的是被关联的审批实例 Code，你可以通过审批实例详情能力根据实例 Code 获取实例详情。
+Here, value contains the Code of the linked approval instance. You can obtain the instance details by the instance Code through the approval instance details capability.
 
-### 文档控件
+<a id="文档控件"></a>
+### Document Control
 
-控件 type 为 document，JSON 数据示例：
+The control type is document. JSON data example:
 
 ```json
 {
@@ -208,43 +225,46 @@ interval | float | 是 | 时长（天）。
 }
 ```
 
-value 参数为 object 类型，包含参数说明：
+The value parameter is of object type. Parameter descriptions:
 
-参数 | 类型 | 是否必填 | 描述
+Parameter | Type | Required | Description
 ---|---|---|---
-token | string | 是 | 文档的 document_id。
-type | string | 是 | 文档类型，支持 `docx`。
+token | string | Yes | The document's document_id.
+type | string | Yes | Document type. Supports `docx`.
 
-### 附件
+<a id="附件"></a>
+### Attachment
 
-控件 type 为 attachmentV2，JSON 数据示例：
+The control type is attachmentV2. JSON data example:
 
 ```json
 {
     "id":"widget1",
     "type":"attachmentV2",
-    "value": ["D93653C3-2609-4EE0-8041-61DC1D84F0B5"] // string 类型的数组
+    "value": ["D93653C3-2609-4EE0-8041-61DC1D84F0B5"] // array of string type
 }
 ```
-其中，value 包含的是上传文件后返回的文件 code。
+Here, value contains the file code returned after uploading the file.
 
-### 图片
+<a id="图片"></a>
+### Image
 
-控件 type 为 image/imageV2，JSON 数据示例：
+The control type is image/imageV2. JSON data example:
 
 ```json
 {
     "id":"widget1",
     "type":"image",
-    "value": ["D93653C3-2609-4EE0-8041-61DC1D84F0B5"] // string 类型的数组
+    "value": ["D93653C3-2609-4EE0-8041-61DC1D84F0B5"] // array of string type
 }
 ```
 
-其中，value 包含的是上传文件后返回的文件 code。
+Here, value contains the file code returned after uploading the file.
 
-### 明细/表格
+<a id="明细表格"></a>
+### Detail/Table
 
-控件 type 为 fieldList，JSON 格式示例：
+The control type is fieldList. JSON format example:
 
 ```json
 {
@@ -262,11 +282,12 @@ type | string | 是 | 文档类型，支持 `docx`。
 }
 ```
 
-其中 value 是二维数组，根据审批定义内 **明细/表格** 控件所包含的控件，依次设置控件 JSON 值。
+Here, value is a two-dimensional array. Set the control JSON values in order according to the controls contained in the **Detail/Table** control within the approval definition.
 
-### 部门
+<a id="部门"></a>
+### Department
 
-控件 type 为 department，JSON 数据示例：
+The control type is department. JSON data example:
 
 ```json
 {
@@ -280,11 +301,12 @@ type | string | 是 | 文档类型，支持 `docx`。
 }
 ```
 
-其中 value 为对象数组，通过 open_id 设置部门的 open_department_id。
+Here, value is an array of objects. Set the department's open_department_id through open_id.
 
-### 电话
+<a id="电话"></a>
+### Phone
 
-控件 type 为 telephone，JSON 数据示例：
+The control type is telephone. JSON data example:
 
 ```json
 {
@@ -297,15 +319,16 @@ type | string | 是 | 文档类型，支持 `docx`。
 }
 ```
 
-value 参数为 object 类型，包含参数说明：
+The value parameter is of object type. Parameter descriptions:
 
-参数 | 类型 | 是否必填 | 描述
+Parameter | Type | Required | Description
 ---|---|---|---
-countryCode | string | 是 | 区号。
-nationalNumber | string | 是 | 电话号。
+countryCode | string | Yes | Area code.
+nationalNumber | string | Yes | Phone number.
 
-### 地址
-控件 type 为 address，JSON 数据示例：
+<a id="地址"></a>
+### Address
+The control type is address. JSON data example:
 
 ```json
 {
@@ -318,17 +341,18 @@ nationalNumber | string | 是 | 电话号。
 }
 ```
 
-value 参数为 []object 类型，参数说明如下：
+The value parameter is of []object type. Parameter descriptions are as follows:
 
-参数 | 类型 | 是否必填 | 描述
+Parameter | Type | Required | Description
 ---|---|---|---
-value | []object | 是 | 非出差控件组场景地址控件仅支持单个地址，传入多个时默认只取第一个
-└ id | string | 是 | 区域ID, 可通过审批的地理库接口获取
-└ detailAddress | string | 否 | 详细的地址，若表单配置中未开启填写详细地址，则会忽略该参数，即使传入也不会生效
+value | []object | Yes | In non-business-trip control group scenarios, the address control only supports a single address; when multiple are passed, only the first is taken by default
+└ id | string | Yes | Region ID, which can be obtained through the approval's geographic library API
+└ detailAddress | string | No | Detailed address. If filling in a detailed address is not enabled in the form configuration, this parameter will be ignored and will not take effect even if passed
 
-### 换班控件组
+<a id="换班控件组"></a>
+### Shift Swap Control Group
 
-控件 type 为 shiftGroup，JSON 数据示例：
+The control type is shiftGroup. JSON data example:
 
 ```json
 {
@@ -342,17 +366,18 @@ value | []object | 是 | 非出差控件组场景地址控件仅支持单个地�
 }
 ```
 
-value 参数为 object 类型，包含参数说明：
+The value parameter is of object type. Parameter descriptions:
 
-参数 | 类型 | 是否必填 | 描述
+Parameter | Type | Required | Description
 ---|---|---|---
-shiftTime | string | 是 | 换班时间，需满足 RFC3339 格式。
-returnTime | string | 是 | 对调日期，需满足 RFC3339 格式。
-reason | string | 是 | 换班原因。
+shiftTime | string | Yes | Shift swap time, which must conform to the RFC3339 format.
+returnTime | string | Yes | Swap date, which must conform to the RFC3339 format.
+reason | string | Yes | Reason for shift swap.
 
-### 请假控件组
+<a id="请假控件组"></a>
+### Leave Control Group
 
-**请假控件组请求示例**
+**Leave control group request example**
 ```json
 {
     "id": "widgetLeaveGroupV2",
@@ -404,51 +429,52 @@ reason | string | 是 | 换班原因。
 }
 ```
 
-**请假控件组包含参数说明：**
+**Leave control group parameter descriptions:**
 
-id | 类型 | JSON示例 | 描述
+id | Type | JSON Example | Description
 ---|---|---|---
-id | string | 是 | 控件组ID，固定为widgetLeaveGroupV2
-type | string | 是 | 控件组类型，固定为leaveGroupV2
-value | object[] | 是 | 控件组的值，值为多个子控件值的列表
+id | string | Yes | Control group ID, fixed as widgetLeaveGroupV2
+type | string | Yes | Control group type, fixed as leaveGroupV2
+value | object[] | Yes | The value of the control group, which is a list of multiple sub-control values
 
-value中包含的子控件值说明:
+Description of the sub-control values contained in value:
 
-id | 类型 | JSON示例 | 描述
+id | Type | JSON Example | Description
 ---|---|---|---
-widgetLeaveGroupType | radioV2 | ```<br>{<br>"id": "widgetLeaveGroupType",<br>"type": "radioV2",<br>"value": "7488925543484620819"<br>}<br>``` | 假期类型，具体格式可参考单选控件，选项由假勤接口获取，提单时必须包含该控件
-widgetLeaveGroupStartTime | date | ```<br>{<br>"id": "widgetLeaveGroupStartTime",<br>"type": "date",<br>"value": "2019-10-01T08:12:01+08:00", // 需满足 RFC3339 格式的 string 类型<br>}    <br>``` | 请假开始时间，具体格式可参考日期控件，会根据假期类型自动取整,其中半天假小于12点则认为是上午，小时假则以半小时为粒度向前取整, 提单时必须包含该控件
-widgetLeaveGroupEndTime | date | ```<br>{<br>"id": "widgetLeaveGroupEndTime",<br>"type": "date",<br>"value": "2019-10-01T08:12:01+08:00", // 需满足 RFC3339 格式的 string 类型<br>}<br>``` | 请假结束时间，具体格式可参考日期控件，会根据假期类型自动取整，其中半天假小于12点则认为是上午，小时假则以半小时为粒度向后取整
-widgetLeaveGroupReason | textarea | ```<br>{<br>"id": "widgetLeaveGroupReason",<br>"type": "textarea",<br>"value": "123123"<br>}<br>``` | 请假事由，具体格式可参考多行文本控件，哺乳假无需填写，其他情况则根据控件组配置中该控件是否可见以及必填判断
-widgetLeaveCertification | image | ```<br>{<br>"id":"widgetLeaveCertification",<br>"type":"image",<br>"value": ["D93653C3-2609-4EE0-8041-61DC1D84F0B5"]<br>}<br>``` | 请假证明，具体格式可参考图片控件，如果所选假期类型配置要求补充证明则必须传递该值，缺失会报错
-widgetLeaveGroupFeedingArrivingLate | radioV2 | ```<br>{                                     <br>"id": "widgetLeaveGroupFeedingArrivingLate",<br>"type": "radioV2",<br>"value": "30"<br>}<br>``` | 上班晚到的分钟数，具体格式可参考单选控件，仅哺乳假需要填写，取值范围是0-120分钟，粒度是15分钟，选项从审批定义中该控件的option中获取
-widgetLeaveGroupFeedingOffLeaveEarly | radioV2 | ```<br>{                                     <br>"id": "widgetLeaveGroupFeedingOffLeaveEarly",<br>"type": "radioV2",<br>"value": "30"<br>}   <br>``` | 下班早走的分钟数，具体格式可参考单选控件，仅哺乳假需要填写，取值范围是0-120分钟，粒度是15分钟，选项即是分钟对应的字符串
+widgetLeaveGroupType | radioV2 | ```<br>{<br>"id": "widgetLeaveGroupType",<br>"type": "radioV2",<br>"value": "7488925543484620819"<br>}<br>``` | Leave type. For the specific format, refer to the single select control. The options are obtained through the attendance API. This control must be included when submitting
+widgetLeaveGroupStartTime | date | ```<br>{<br>"id": "widgetLeaveGroupStartTime",<br>"type": "date",<br>"value": "2019-10-01T08:12:01+08:00", // string type that must conform to the RFC3339 format<br>}    <br>``` | Leave start time. For the specific format, refer to the date control. It will be automatically rounded according to the leave type. For half-day leave, if it is earlier than 12 o'clock, it is considered morning; for hourly leave, it is rounded forward to the nearest half hour. This control must be included when submitting
+widgetLeaveGroupEndTime | date | ```<br>{<br>"id": "widgetLeaveGroupEndTime",<br>"type": "date",<br>"value": "2019-10-01T08:12:01+08:00", // string type that must conform to the RFC3339 format<br>}<br>``` | Leave end time. For the specific format, refer to the date control. It will be automatically rounded according to the leave type. For half-day leave, if it is earlier than 12 o'clock, it is considered morning; for hourly leave, it is rounded backward to the nearest half hour
+widgetLeaveGroupReason | textarea | ```<br>{<br>"id": "widgetLeaveGroupReason",<br>"type": "textarea",<br>"value": "123123"<br>}<br>``` | Leave reason. For the specific format, refer to the multi-line text control. It is not required for breastfeeding leave; in other cases, it is determined by whether the control is visible and required in the control group configuration
+widgetLeaveCertification | image | ```<br>{<br>"id":"widgetLeaveCertification",<br>"type":"image",<br>"value": ["D93653C3-2609-4EE0-8041-61DC1D84F0B5"]<br>}<br>``` | Leave certificate. For the specific format, refer to the image control. If the configuration of the selected leave type requires supplementary proof, this value must be passed; otherwise an error will be reported
+widgetLeaveGroupFeedingArrivingLate | radioV2 | ```<br>{                                     <br>"id": "widgetLeaveGroupFeedingArrivingLate",<br>"type": "radioV2",<br>"value": "30"<br>}<br>``` | Number of minutes late for work. For the specific format, refer to the single select control. Only required for breastfeeding leave. The value range is 0-120 minutes, with a granularity of 15 minutes. The options are obtained from the option of this control in the approval definition
+widgetLeaveGroupFeedingOffLeaveEarly | radioV2 | ```<br>{                                     <br>"id": "widgetLeaveGroupFeedingOffLeaveEarly",<br>"type": "radioV2",<br>"value": "30"<br>}   <br>``` | Number of minutes leaving work early. For the specific format, refer to the single select control. Only required for breastfeeding leave. The value range is 0-120 minutes, with a granularity of 15 minutes. The options are the strings corresponding to the minutes
 
-**特殊的参数校验报错信息**
-message                                            | 说明                           |
+**Special parameter validation error messages**
+message                                            | Description                           |
 | -------------------------------------------------- | ---------------------------- |
-| leave type id parse error                          | 请假类型不是int64                  |
-| group value is invalid                             | 当前控件组的值无效，请校验是否为空或者校验类型是否为数组 |
-| start time format is not RFC3339                   | 开始时间日期格式非*RFC3339格式*         |
-| end time format is not RFC3339                     | 结束时间日期格式非*RFC3339格式*         |
-| start time is after end time                       | 开始时间晚于结束时间                   |
-| user not in gray                                   | 申请用户不在假勤灰度内                  |
-| leave type not found                               | 请假类型不存在                      |
-| reason is required                                 | 请假原因未填写                      |
-| leave quote should be bigger than 0                | 请假时长需要大于0                    |
-| leave is conflict                                  | 所选时间内已有请假记录，请选择其他时间          |
-| balance is not enough                              | 当前假期类型下假期余额不足                |
-| certification is required                          | 需要上传请假证明                     |
-| arriving late is required                          | 哺乳假需要填写上班晚到时长                |
-| arriving late value is not in the optional items   | 晚到时间不在可选范围内                  |
-| leaving early is required                          | 哺乳假需要填写下班提前时长                |
-| leaving early value is not in the optional items   | 下班提前时间不在可选范围内                |
-| feeding rest daily is 0                            | 哺乳假每日休息时长为0，请重新选择            |
-| the operation is prohibited by the workforce rules | 当前账户已在假勤侧封账，无法提交
+| leave type id parse error                          | Leave type is not int64                  |
+| group value is invalid                             | The current control group value is invalid. Please check whether it is empty or whether the type is an array |
+| start time format is not RFC3339                   | The start time date format is not *RFC3339 format*         |
+| end time format is not RFC3339                     | The end time date format is not *RFC3339 format*         |
+| start time is after end time                       | Start time is later than end time                   |
+| user not in gray                                   | The applying user is not in the attendance gray release                  |
+| leave type not found                               | Leave type does not exist                      |
+| reason is required                                 | Leave reason is not filled in                      |
+| leave quote should be bigger than 0                | Leave duration must be greater than 0                    |
+| leave is conflict                                  | There is already a leave record within the selected time. Please choose another time          |
+| balance is not enough                              | Insufficient leave balance under the current leave type                |
+| certification is required                          | Leave certificate needs to be uploaded                     |
+| arriving late is required                          | Breastfeeding leave requires filling in the late arrival duration                |
+| arriving late value is not in the optional items   | The late arrival time is not within the selectable range                  |
+| leaving early is required                          | Breastfeeding leave requires filling in the early departure duration                |
+| leaving early value is not in the optional items   | The early departure time is not within the selectable range                |
+| feeding rest daily is 0                            | The daily rest duration for breastfeeding leave is 0. Please reselect            |
+| the operation is prohibited by the workforce rules | The current account has been closed on the attendance side and cannot be submitted
 
-### 加班控件组
+<a id="加班控件组"></a>
+### Overtime Control Group
 
-**加班控件组请求示例**
+**Overtime control group request example**
 ```json
 {
   "id": "widgetWorkGroup",
@@ -493,49 +519,50 @@ message                                            | 说明                     
 
 ```
 
-**加班控件组参数说明：**
+**Overtime control group parameter descriptions:**
 
-参数 | 类型 | 是否必填 | 描述
+Parameter | Type | Required | Description
 ---|---|---|---
-id | string | 是 | 控件组ID，固定为widgetWorkGroup
-type | string | 是 | 控件组类型，固定为workGroup
-value | object[] | 是 | 控件组的值，值为多个子控件值的列表
+id | string | Yes | Control group ID, fixed as widgetWorkGroup
+type | string | Yes | Control group type, fixed as workGroup
+value | object[] | Yes | The value of the control group, which is a list of multiple sub-control values
 
-value中包含的子控件值说明:
+Description of the sub-control values contained in value:
 
-id | 类型 | JSON示例 | 描述
+id | Type | JSON Example | Description
 ---|---|---|---
-widgetWorkGroupOvertimeWorkers | contact | ```<br>{<br>"id":"widgetWorkGroupOvertimeWorkers",<br>"type":"contact",<br>"value": ["f8ca557e"], <br>"open_ids": ["ou_12345"]<br>}<br>``` | 加班人员列表，具体格式可参考联系人控件，如果定义中配置「允许代多人提交」则该字段必填，如果是提交人给自己提交需填写提交人的ID
-widgetWorkGroupType | radioV2 | ```<br>{<br>"id": "widgetWorkGroupType",<br>"type": "radioV2",<br>"value": "7259635026038505475" // 对应的类型选项ID<br>}<br>``` | 加班类型，具体格式可参考单选控件，如果定义中关闭「关联加班规则」则需要填写该字段
-widgetWorkGroupTimeRangeFieldList | fieldList | ```<br>{<br>"id":"widgetWorkGroupTimeRangeFieldList",<br>"type":"fieldList",<br>"value":[<br>[<br>{<br>"id":"widgetWorkGroupStartTime",<br>"type":"date",<br>"value":"2019-10-01T08:12:01+08:00"<br>},<br>{<br>"id":"widgetWorkGroupEndTime",<br>"type":"date",<br>"value":"2019-10-01T08:12:01+08:00"<br>}<br>]<br>]<br>}<br>``` | 加班时段，具体格式可参考明细控件，如果定义中打开「允许提交多个加班时段」则可以传多个，最多支持30个，否则只会取第一个，单次加班时长不可超过两天
-widgetWorkGroupReason | textarea | ```<br>{<br>"id": "widgetWorkGroupReason",<br>"type": "textarea",<br>"value": "111"<br>}<br>``` | 加班事由，如果定义中配置了「加班事由」必填，则必须填写该字段
+widgetWorkGroupOvertimeWorkers | contact | ```<br>{<br>"id":"widgetWorkGroupOvertimeWorkers",<br>"type":"contact",<br>"value": ["f8ca557e"], <br>"open_ids": ["ou_12345"]<br>}<br>``` | Overtime worker list. For the specific format, refer to the contact control. If "Allow submitting on behalf of multiple people" is configured in the definition, this field is required. If the submitter is submitting for themselves, the submitter's ID must be filled in
+widgetWorkGroupType | radioV2 | ```<br>{<br>"id": "widgetWorkGroupType",<br>"type": "radioV2",<br>"value": "7259635026038505475" // corresponding type option ID<br>}<br>``` | Overtime type. For the specific format, refer to the single select control. If "Associate overtime rules" is disabled in the definition, this field needs to be filled in
+widgetWorkGroupTimeRangeFieldList | fieldList | ```<br>{<br>"id":"widgetWorkGroupTimeRangeFieldList",<br>"type":"fieldList",<br>"value":[<br>[<br>{<br>"id":"widgetWorkGroupStartTime",<br>"type":"date",<br>"value":"2019-10-01T08:12:01+08:00"<br>},<br>{<br>"id":"widgetWorkGroupEndTime",<br>"type":"date",<br>"value":"2019-10-01T08:12:01+08:00"<br>}<br>]<br>]<br>}<br>``` | Overtime time period. For the specific format, refer to the detail control. If "Allow submitting multiple overtime time periods" is enabled in the definition, multiple can be passed, up to 30; otherwise only the first will be taken. A single overtime duration cannot exceed two days
+widgetWorkGroupReason | textarea | ```<br>{<br>"id": "widgetWorkGroupReason",<br>"type": "textarea",<br>"value": "111"<br>}<br>``` | Overtime reason. If "Overtime reason" is configured as required in the definition, this field must be filled in
 
-**特殊的参数校验报错信息**
-message                                                                            | 说明                           |
+**Special parameter validation error messages**
+message                                                                            | Description                           |
 | ---------------------------------------------------------------------------------- | ---------------------------- |
-| the time range list has more than 30 items                                         | 加班时段数量超过30                   |
-| group value is invalid                                                             | 当前控件组的值无效，请校验是否为空或者校验类型是否为数组 |
-| overtime type is required                                                          | 未关联加班规则时，加班类型必填              |
-| work time range is required                                                        | 至少需要一个加班时段                   |
-| start time is after end time                                                       | 开始时间晚于结束时间                   |
-| start time or end time of range is required                                        | 加班时间段的开始时间和结束时间必填            |
-| overtime duration is over 2 days                                                   | 单次加班时长不可超过两天                 |
-| overtime date time zone not support                                                | 加班时段的日期时区信息无法识别              |
-| {date} can not apply overtime                                                      | 所选时间不可申请加班                   |
-| {date} already apply overtime                                                      | 所选时间已经有加班记录                  |
-| {date} no need approval                                                            | 所选日期加班无需申请                   |
-| apply reason is required                                                           | 定义中设置了加班事由为必填，不可为空           |
-| {users} user follow different overtime rules, cannot be submitted in the same form | 所选加班人不在同一个考勤组内，无法同时提交加班      |
-| invalid overtime work application                                                  | 没有有效的加班申请，请重新选择加班日期          |
-| the overtime duration cannot be 0                                                  | 加班时长不能是0                     |
-| the number of apply workers cannot exceed 50                                       | 单次申请加班人数量不可大于50              |
-| apply worker is required                                                           | 必须有加班人，配置置可代多人提交时必须指定加班人     |
-| resigned worker can not apply                                                      | 离职人员不可申请加班                   |
-| overtime duration is over limit                                                    | 加班时长超过限制
+| the time range list has more than 30 items                                         | The number of overtime time periods exceeds 30                   |
+| group value is invalid                                                             | The current control group value is invalid. Please check whether it is empty or whether the type is an array |
+| overtime type is required                                                          | When overtime rules are not associated, overtime type is required              |
+| work time range is required                                                        | At least one overtime time period is required                   |
+| start time is after end time                                                       | Start time is later than end time                   |
+| start time or end time of range is required                                        | The start time and end time of the overtime time period are required            |
+| overtime duration is over 2 days                                                   | A single overtime duration cannot exceed two days                 |
+| overtime date time zone not support                                                | The date time zone information of the overtime time period cannot be recognized              |
+| {date} can not apply overtime                                                      | Overtime cannot be applied for the selected time                   |
+| {date} already apply overtime                                                      | There is already an overtime record for the selected time                  |
+| {date} no need approval                                                            | Overtime on the selected date does not require application                   |
+| apply reason is required                                                           | The definition sets the overtime reason as required and it cannot be empty           |
+| {users} user follow different overtime rules, cannot be submitted in the same form | The selected overtime workers are not in the same attendance group and cannot submit overtime at the same time      |
+| invalid overtime work application                                                  | There is no valid overtime application. Please reselect the overtime date          |
+| the overtime duration cannot be 0                                                  | Overtime duration cannot be 0                     |
+| the number of apply workers cannot exceed 50                                       | The number of overtime workers in a single application cannot exceed 50              |
+| apply worker is required                                                           | There must be an overtime worker. When configured to allow submitting on behalf of multiple people, the overtime worker must be specified     |
+| resigned worker can not apply                                                      | Resigned personnel cannot apply for overtime                   |
+| overtime duration is over limit                                                    | Overtime duration exceeds the limit
 
-### 外出控件组
+<a id="外出控件组"></a>
+### Outing Control Group
 
-**外出控件组请求体示例**
+**Outing control group request body example**
 ```json
 {
     "id": "widgetOutGroup",
@@ -571,36 +598,36 @@ message                                                                         
 
 ```
 
-**外出控件参数说明**
+**Outing widget parameter description**
 
-参数 | 类型 | 是否必填 | 描述
+Parameter | Type | Required | Description
 ---|---|---|---
-id | string | 是 | 控件组ID，固定为widgetOutGroup
-type | string | 是 | 控件组Type，固定为outGroup
-value | object[] | 是 | 控件组的值，值为多个子控件值的列表
+id | string | Yes | Widget group ID, fixed as widgetOutGroup
+type | string | Yes | Widget group Type, fixed as outGroup
+value | object[] | Yes | The value of the widget group, which is a list of values of multiple child widgets
 
-value中包含的子控件值说明:
+Description of the child widget values contained in value:
 
-id | 类型 | JSON示例 | 描述
+id | Type | JSON example | Description
 ---|---|---|---
-widgetOutGroupType | radioV2 | ```<br>{<br>"id": "widgetOutGroupType",<br>"type": "radioV2",<br>"value":  "me15yqrf-gmjgbml2vhp-0"      <br>}<br>``` | 外出类型，具体格式可参考单选控件，如果配置了「外出类型」则必填，外出时长单位会选取所选外出类型关联的单位，如果没有配置「外出类型」，则该字段无需填写，计算外出时长时会选取「外出时长」配置的单位
-widgetOutGroupStartTime | date | ```<br>{<br>"id": "widgetOutGroupStartTime",<br>"type": "date",<br>"value":"2019-10-01T08:12:01+08:00"<br>}<br>``` | 外出开始时间，具体格式可参考日期控件，如果外出时长单位是半天假，则小于12点则认为是上午，否则认为是下午；如果单位是小时，则会按半小时的粒度向前取整
-widgetOutGroupEndTime | date | ```<br>{<br>"id": "widgetOutGroupEndTime",<br>"type": "date",<br>"value":"2019-10-01T08:12:01+08:00"<br>}<br>``` | 外出结束时间，具体格式可参考日期控件，如果外出时长单位是半天假，则小于12点则认为是上午，否则认为是下午；如果单位是小时，则会按半小时的粒度向后取整
-widgetOutGroupReason | textarea | ```<br>{<br>"id": "widgetOutGroupReason",<br>"type": "textarea",<br>"value":"123213"<br>}<br>``` | 外出事由，具体格式可参考多行文本控件，如果定义中「外出事由」必填，则必须填写该控件，如果定义配置无需填写，则无需填写该控件
-widgetOutGroupImage | image | ```<br>{<br>"id":"widgetOutGroupImage",<br>"type":"image",<br>"value": ["D93653C3-2609-4EE0-8041-61DC1D84F0B5"]<br>}   <br>``` | 外出证明，具体格式可参考图片控件，如果定义中「外出拍照」必填，则必须填写该控件，如果定义配置无需填写，则无需填写该控件
+widgetOutGroupType | radioV2 | ```<br>{<br>"id": "widgetOutGroupType",<br>"type": "radioV2",<br>"value":  "me15yqrf-gmjgbml2vhp-0"      <br>}<br>``` | Outing type. For the specific format, refer to the radio widget. If "Outing type" is configured, this field is required. The outing duration unit will use the unit associated with the selected outing type. If "Outing type" is not configured, this field does not need to be filled in, and the unit configured for "Outing duration" will be used when calculating the outing duration
+widgetOutGroupStartTime | date | ```<br>{<br>"id": "widgetOutGroupStartTime",<br>"type": "date",<br>"value":"2019-10-01T08:12:01+08:00"<br>}<br>``` | Outing start time. For the specific format, refer to the date widget. If the outing duration unit is half-day leave, then a time earlier than 12:00 is considered morning, otherwise it is considered afternoon; if the unit is hours, it will be rounded down to the nearest half hour
+widgetOutGroupEndTime | date | ```<br>{<br>"id": "widgetOutGroupEndTime",<br>"type": "date",<br>"value":"2019-10-01T08:12:01+08:00"<br>}<br>``` | Outing end time. For the specific format, refer to the date widget. If the outing duration unit is half-day leave, then a time earlier than 12:00 is considered morning, otherwise it is considered afternoon; if the unit is hours, it will be rounded up to the nearest half hour
+widgetOutGroupReason | textarea | ```<br>{<br>"id": "widgetOutGroupReason",<br>"type": "textarea",<br>"value":"123213"<br>}<br>``` | Outing reason. For the specific format, refer to the multiline text widget. If "Outing reason" is required in the definition, this widget must be filled in; if the definition is configured as not required, this widget does not need to be filled in
+widgetOutGroupImage | image | ```<br>{<br>"id":"widgetOutGroupImage",<br>"type":"image",<br>"value": ["D93653C3-2609-4EE0-8041-61DC1D84F0B5"]<br>}   <br>``` | Outing proof. For the specific format, refer to the image widget. If "Outing photo" is required in the definition, this widget must be filled in; if the definition is configured as not required, this widget does not need to be filled in
 
-**特殊的参数校验报错信息**
+**Special parameter validation error messages**
 
-message                                               | 说明                           |
+message                                               | Description                           |
 | ----------------------------------------------------- | ---------------------------- |
-| group value is invalid                                | 当前控件组的值无效，请校验是否为空或者校验类型是否为数组 |
-| start time format is not RFC3339                      | 开始时间日期格式非*RFC3339格式*         |
-| end time format is not RFC3339                        | 结束时间日期格式非*RFC3339格式*         |
-| start time and end time must be in the same time zone | 开始时间与结束时间必须是同一时区             |
-| out type is required                                  | 如果定义中设定了「外出类型」，则外出类型必填       |
-| out start time is required                            | 外出开始时间必填                     |
-| out end time is required                              | 外出结束时间必填                     |
-| out duration must be greater than 0                   | 外出间隔不能为0，请检查起止时间并重新选择        |
-| out reason is empty                                   | 如果定义中勾选「外出事由」同时设定必填，则该字段必填   |
-| photo is required                                     | 如果定义中勾选「外出拍照」同时设定必填，则该字段必填   |
-| out time is conflict                                  | 外出时间有冲突，请确认是否已在该时段申请外出
+| group value is invalid                                | The current widget group value is invalid. Please check whether it is empty or whether the validation type is an array |
+| start time format is not RFC3339                      | The start time date format is not *RFC3339 format*         |
+| end time format is not RFC3339                        | The end time date format is not *RFC3339 format*         |
+| start time and end time must be in the same time zone | The start time and end time must be in the same time zone             |
+| out type is required                                  | If "Outing type" is set in the definition, the outing type is required       |
+| out start time is required                            | Outing start time is required                     |
+| out end time is required                              | Outing end time is required                     |
+| out duration must be greater than 0                   | The outing interval cannot be 0. Please check the start and end times and select again        |
+| out reason is empty                                   | If "Outing reason" is checked in the definition and set as required, this field is required   |
+| photo is required                                     | If "Outing photo" is checked in the definition and set as required, this field is required   |
+| out time is conflict                                  | The outing time conflicts. Please confirm whether an outing has already been requested for this period

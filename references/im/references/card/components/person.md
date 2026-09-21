@@ -1,8 +1,10 @@
-# 人员 `person`
+<a id="人员-person"></a>
+# Person `person`
 
-展示单个用户的头像/姓名，点击可看名片。**Card 2.0**。
+Displays a single user's avatar/name; click to view their profile card. **Card 2.0**.
 
-## 最小示例
+<a id="最小示例"></a>
+## Minimal example
 
 ```json
 {
@@ -12,19 +14,21 @@
 }
 ```
 
-## 字段
+<a id="字段"></a>
+## Fields
 
-| 字段 | 必填 | 类型 | 默认 | 说明 |
+| Field | Required | Type | Default | Description |
 |---|---|---|---|---|
-| `tag` | 是 | String | / | 固定 `person` |
-| `user_id` | 是 | String | / | 人员 ID，支持 open_id / union_id / user_id |
-| `size` | 否 | String | medium | `extra_small` / `small` / `medium` / `large` |
-| `show_avatar` | 否 | Boolean | true | 是否显示头像 |
-| `show_name` | 否 | Boolean | false | 是否显示姓名 |
-| `style` | 否 | String | normal | `normal` / `capsule`（胶囊） |
-| `margin` | 否 | String | 0 | 外边距 [-99,99]px |
-| `element_id` | 否 | String | / | 唯一标识，字母开头 ≤20 字符 |
+| `tag` | Yes | String | / | Fixed `person` |
+| `user_id` | Yes | String | / | Person ID; supports open_id / union_id / user_id |
+| `size` | No | String | medium | `extra_small` / `small` / `medium` / `large` |
+| `show_avatar` | No | Boolean | true | Whether to show the avatar |
+| `show_name` | No | Boolean | false | Whether to show the name |
+| `style` | No | String | normal | `normal` / `capsule` (capsule) |
+| `margin` | No | String | 0 | Outer margin [-99,99]px |
+| `element_id` | No | String | / | Unique identifier; starts with a letter, ≤20 characters |
 
-## 易错点
+<a id="易错点"></a>
+## Common pitfalls
 
-- 发卡应用需有访问用户 ID 的权限，否则人员信息无法展示。
+- The app sending the card must have permission to access user IDs; otherwise, person information cannot be displayed.

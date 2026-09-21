@@ -1,14 +1,17 @@
-# 循环容器（搭建工具专属，无 JSON tag）
+<a id="循环容器搭建工具专属无-json-tag"></a>
+# Recycling Container (exclusive to the builder tool, no JSON tag)
 
-批量渲染同版式不同数据的列表（如商品列表、推荐列表）。**仅支持在飞书卡片搭建工具中可视化构建，不支持手写卡片 JSON 代码实现**——因此没有 `tag` 字段可直接编排。
+Batch-render lists with the same layout but different data (such as product lists and recommendation lists). **It can only be visually built in the Feishu Card Builder tool; it does not support being implemented by hand-writing card JSON code**—therefore there is no `tag` field that can be directly orchestrated.
 
-## 使用方式
+<a id="使用方式"></a>
+## Usage
 
-1. 在[卡片搭建工具](https://open.feishu.cn/cardkit)中添加循环容器组件，绑定一个对象数组变量。
-2. 在容器内添加任意展示/交互/分栏组件，并将其字段绑定到对象数组的子变量。
-3. 发布卡片模板后，发送时通过 `template_variable` 传入实际数据数组，数组每个元素对应一条循环项。
+1. In the [Card Builder](https://open.feishu.cn/cardkit), add a recycling container component and bind it to an object array variable.
+2. Add any display/interactive/column components inside the container, and bind their fields to the child variables of the object array.
+3. After publishing the card template, pass in the actual data array via `template_variable` when sending; each element of the array corresponds to one recycling item.
 
-## 发送示例（模板 + 变量赋值）
+<a id="发送示例模板--变量赋值"></a>
+## Sending Example (template + variable assignment)
 
 ```json
 {
@@ -26,10 +29,11 @@
 }
 ```
 
-将以上 JSON 压缩转义后作为 `messages.create` 的 `content`，`msg_type` 为 `interactive`。
+Compress and escape the above JSON, then use it as the `content` of `messages.create`, where `msg_type` is `interactive`.
 
-## 嵌套 / 易错点
+<a id="嵌套--易错点"></a>
+## Nesting / Common Pitfalls
 
-- 不支持再嵌套循环容器（对象数组变量不支持嵌套对象数组类型）。
-- 数组元素个数即渲染条数，可直接控制列表长度。
-- 若循环容器内嵌表单容器的交互组件（如 input），交互组件的 `name`（表单项标识）必须绑定到不重复的子变量，否则预览/发送报错。
+- Nested recycling containers are not supported (object array variables do not support nested object array types).
+- The number of array elements is the number of rendered items, so the list length can be controlled directly.
+- If a recycling container embeds the interactive components of a form container (such as input), the interactive component's `name` (form item identifier) must be bound to a non-duplicate child variable; otherwise, preview/sending will report an error.

@@ -1,132 +1,138 @@
-# lark-drive Workflow 总框架
+<a id="lark-drive-workflow-总框架"></a>
+# lark-drive Workflow General Framework
 
-本文是 `lark-drive` workflow 总框架的运行协议和注册表。它面向 AI Agent 执行，只负责路由已纳入本总框架的 workflow。
+This document is the operating protocol and registry for the `lark-drive` workflow general framework. It is intended for AI Agent execution and is only responsible for routing workflows that have been incorporated into this general framework.
 
-`Workflow Registry` 是本总框架的唯一注册来源。未命中 registry 的请求必须按“未注册 workflow 处理”执行，不要按已有 workflow 类推扩展。
+`Workflow Registry` is the sole registration source for this general framework. Requests that do not match the registry must be handled as "unregistered workflow handling"; do not extend by analogy based on existing workflows.
 
-## 必读上下文
+<a id="必读上下文"></a>
+## Required Context
 
-沿用统一入口中的执行与授权规则。认证出错时才读取 [通用诊断](../../shared/index.md)。
+Follow the execution and authorization rules in the unified entry point. Only read [General Diagnostics](../../shared/index.md) when an authentication error occurs.
 
-下游 reference 只能按需逐步加载。不要因为命中本总框架，就预加载所有 workflow 文件或相关 skill。
+Downstream references may only be loaded progressively on demand. Do not preload all workflow files or related skills just because this general framework is matched.
 
-## 能力边界
+<a id="能力边界"></a>
+## Capability Boundaries
 
-`lark-drive` workflow 总框架以 `lark-drive` 作为 Drive / Docs / Wiki 资产编排的总入口。其他领域 skill 只有在已纳入本总框架的 workflow 明确需要时，才作为辅助能力加载。
+`lark-drive` workflow general framework uses `lark-drive` as the general entry point for Drive / Docs / Wiki asset orchestration. Other domain skills are loaded as auxiliary capabilities only when a workflow already incorporated into this general framework explicitly requires them.
 
 | Layer | Owns | Must Not Own |
 |-------|------|--------------|
-| `../index.md` | 用户意图到具体 workflow entry 的短路由 | 长流程逻辑、未注册场景 |
-| `lark-drive-workflow.md` | 共享运行协议、Artifact Contract、Workflow Registry、加载规则 | 非运行时背景说明、宽泛路线图、场景专项执行细节 |
-| Registered workflow file | 场景范围、状态机、Command Map、确认门槛、验证规则 | 其他场景、隐藏写入、未被 CLI/API 支持的能力声明 |
+| `../index.md` | Short routing from user intent to a specific workflow entry | Long-flow logic, unregistered scenarios |
+| `lark-drive-workflow.md` | Shared operating protocol, Artifact Contract, Workflow Registry, loading rules | Non-runtime background explanations, broad roadmaps, scenario-specific execution details |
+| Registered workflow file | Scenario scope, state machine, Command Map, confirmation thresholds, verification rules | Other scenarios, hidden writes, capability claims not supported by CLI/API |
 
-## 执行协议
+<a id="执行协议"></a>
+## Execution Protocol
 
-每个已纳入本总框架的 workflow 必须遵循同一条执行骨架：
+Every workflow incorporated into this general framework must follow the same execution skeleton:
 
 ```text
 route -> scope -> read -> assess/plan -> confirm -> execute -> verify -> done
 ```
 
-运行规则：
+Operating rules:
 
-1. 在读取或写入资产前，先把用户意图解析到唯一一个已纳入本总框架的 workflow。
-2. 在昂贵读取或写入规划前，先解析并确认 `target_scope`。
-3. 事实必须来自可执行 CLI 命令或被引用 skill；不要只凭目录结构推断治理结论。
-4. 无法执行的检查必须记录到 `unsupported_checks`，不能静默省略。
-5. 写入前必须产出计划。同一已授权计划内的写入连续执行；仅新增范围或实质改变动作时补充确认。
-6. CLI/API 支持验证时，写入后必须用 fresh read 验证。
-7. 结束时进入 `done`，返回已完成事项、验证结果和剩余限制。不要把尚未完成的外部审批描述成已完成。
+1. Before reading or writing assets, first resolve the user intent to exactly one workflow incorporated into this general framework.
+2. Before expensive reads or write planning, first resolve and confirm `target_scope`.
+3. Facts must come from executable CLI commands or referenced skills; do not infer governance conclusions from directory structure alone.
+4. Checks that cannot be executed must be recorded in `unsupported_checks` and must not be silently omitted.
+5. A plan must be produced before writing. Writes within the same authorized plan are executed consecutively; additional confirmation is only needed when scope is added or actions are materially changed.
+6. When CLI/API supports verification, writes must be verified with a fresh read afterward.
+7. At the end, enter `done` and return completed items, verification results, and remaining limitations. Do not describe external approvals that are not yet complete as completed.
 
 ## Artifact Contract
 
-每个已纳入本总框架的 workflow 必须维护以下内部字段：
+Every workflow incorporated into this general framework must maintain the following internal fields:
 
 | Field | Meaning |
 |-------|---------|
-| `workflow_id` | 本总框架注册的 workflow 名称，例如 `permission_governance` |
-| `current_state` | 当前 workflow 状态 |
-| `target_scope` | 已确认的目标范围和用户原始输入 |
-| `identity` | 当前身份和执行视角，通常为 `user` |
-| `facts` | 从 CLI 读取或引用 skill 获取的证据 |
-| `plan_items` | 候选动作；每项包含 command family、target、risk、verification method |
-| `unsupported_checks` | 因 CLI/API 覆盖、目标类型、认证或范围限制而无法执行的检查 |
-| `partial` | 结果是否不完整，以及不完整原因 |
-| `execution_results` | 已确认写入的执行结果 |
-| `verification_results` | fresh read 验证结果，或明确的异步审批限制 |
+| `workflow_id` | The workflow name registered in this general framework, for example `permission_governance` |
+| `current_state` | Current workflow state |
+| `target_scope` | Confirmed target scope and the user's original input |
+| `identity` | Current identity and execution perspective, usually `user` |
+| `facts` | Evidence obtained from CLI reads or referenced skills |
+| `plan_items` | Candidate actions; each item includes command family, target, risk, verification method |
+| `unsupported_checks` | Checks that cannot be executed due to CLI/API coverage, target type, authentication, or scope limitations |
+| `partial` | Whether the result is incomplete, and the reason for incompleteness |
+| `execution_results` | Execution results of confirmed writes |
+| `verification_results` | Fresh read verification results, or explicit asynchronous approval limitations |
 
-用户可见输出默认使用简洁 chat summary。只有在用户要求、结果过大不适合聊天展示，或当前 workflow 明确要求共享产物时，才创建本地文件或飞书文档。
+User-visible output defaults to a concise chat summary. Only create local files or Feishu documents when the user requests it, when the result is too large to display appropriately in chat, or when the current workflow explicitly requires a shared artifact.
 
 ## Workflow Entry Contract
 
-每个已纳入本总框架的 workflow entry file 必须让 Agent 能直接判断和执行：
+Every workflow entry file incorporated into this general framework must enable the Agent to directly judge and execute:
 
-- 何时进入该 workflow，以及哪些需求不属于该 workflow；
-- 如何映射到共享执行骨架的 state machine；
-- 当前 state 需要按需加载哪些 reference；
-- 哪些 command family 可用，以及读写风险边界；
-- 写入前如何确认，写入后如何验证；
-- 最终回复必须包含哪些字段，或使用哪些 output templates。
+- When to enter the workflow, and which requirements do not belong to the workflow;
+- How to map to the state machine of the shared execution skeleton;
+- Which references need to be loaded on demand for the current state;
+- Which command families are available, and the read/write risk boundaries;
+- How to confirm before writing, and how to verify after writing;
+- Which fields the final reply must include, or which output templates to use.
 
-每个纳入本总框架的 workflow 默认从一个独立 reference 文件开始。只有当写入、回滚或验证流程复杂到影响可读性时，才继续拆 phase 文件。
+Each workflow incorporated into this general framework starts by default with a single independent reference file. Only when the write, rollback, or verification flow is complex enough to affect readability should phase files be split out further.
 
 ## Risk / Structure Gate
 
-每个纳入本总框架的 workflow 都必须同时声明 `Risk Level` 和 `Structure Level`。风险等级决定安全门槛；结构等级决定文件拆分。高风险写入不等于必须拆 phase。
+Every workflow incorporated into this general framework must declare both `Risk Level` and `Structure Level`. The risk level determines the safety threshold; the structure level determines file splitting. High-risk writes do not necessarily mean phase files must be split.
 
-Risk Level：
+Risk Level:
 
 | Level | Meaning | Runtime Requirement |
 |-------|---------|---------------------|
-| `R0` | read-only：只读发现、分析、报告 | 记录事实来源、`unsupported_checks` 和 `partial` 原因 |
-| `R1` | low-risk write：创建草稿、生成临时产物等低风险写入 | 写前说明范围，写后返回结果链接或标识 |
-| `R2` | high-risk write：权限变更、批量移动、标签修改等高风险写入 | 写前计划、准确 diff、用户显式确认、fresh read 验证 |
-| `R3` | destructive / recovery-sensitive write：删除、自动归档、双向同步、rollback cleanup | 恢复边界、执行日志、分批策略、失败停止条件和范围授权 |
+| `R0` | read-only: read-only discovery, analysis, reporting | Record fact sources, `unsupported_checks`, and `partial` reasons |
+| `R1` | low-risk write: low-risk writes such as creating drafts and generating temporary artifacts | Explain scope before writing, return result link or identifier after writing |
+| `R2` | high-risk write: high-risk writes such as permission changes, batch moves, label modifications | Pre-write plan, accurate diff, explicit user confirmation, fresh read verification |
+| `R3` | destructive / recovery-sensitive write: deletion, automatic archiving, bidirectional sync, rollback cleanup | Recovery boundaries, execution logs, batching strategy, failure stop conditions, and scope authorization |
 
-Structure Level：
+Structure Level:
 
 | Level | File Shape | When To Use |
 |-------|------------|-------------|
-| `S1` | compact entry only | 只读、轻量审计、简单计划，无复杂写入 |
-| `S2` | entry + optional `commands` / `outputs` / `artifacts` references | 有命令样例、输出模板、少量高风险写入，但状态链可集中表达 |
-| `S3` | entry + phase files + optional shared references | 多阶段写入、复杂验证、恢复 / rollback、长任务或分批执行 |
+| `S1` | compact entry only | Read-only, lightweight audits, simple plans, no complex writes |
+| `S2` | entry + optional `commands` / `outputs` / `artifacts` references | Has command examples, output templates, a small number of high-risk writes, but the state chain can be expressed centrally |
+| `S3` | entry + phase files + optional shared references | Multi-stage writes, complex verification, recovery / rollback, long tasks, or batched execution |
 
-升级规则：
+Escalation rules:
 
-1. 新 workflow 默认从 `S1` 开始。
-2. Entry file 超过约 300 行时，优先拆 `commands`、`outputs` 或 `artifacts` reference。
-3. 只有执行、验证、恢复或 rollback 状态链复杂到影响可读性时，才升级到 `S3` phase files。
-4. 垂直业务包优先作为已有 workflow 的 recipe / policy / template，不默认新增独立 workflow。
-5. 已有样板：`permission_governance` 是 `R2/S2`；`knowledge_organize` 和 `topic_move_collector` 是 `R2-R3/S3`。
+1. New workflows start by default from `S1`.
+2. When an entry file exceeds about 300 lines, prioritize splitting out `commands`, `outputs`, or `artifacts` references.
+3. Only escalate to `S3` phase files when the execution, verification, recovery, or rollback state chain is complex enough to affect readability.
+4. Vertical business packages should preferentially serve as recipes / policies / templates for existing workflows, and should not by default add independent workflows.
+5. Existing examples: `permission_governance` is `R2/S2`; `knowledge_organize` and `topic_move_collector` are `R2-R3/S3`.
 
-## 加载与拆分边界
+<a id="加载与拆分边界"></a>
+## Loading and Splitting Boundaries
 
-- 每个纳入本总框架的场景默认只保留一个紧凑 workflow entry file。
-- 不为未注册或未来场景创建占位 reference / registry entry。
-- 只有 workflow 已经具备可执行规则时，才允许作为本总框架 workflow 出现在 `index.md` 并加入 `Workflow Registry`。
-- 多文件 phase 拆分只用于执行、回滚或验证流程复杂到影响可读性的 `S3` 场景。
+- Each scenario incorporated into this general framework retains by default only one compact workflow entry file.
+- Do not create placeholder references / registry entries for unregistered or future scenarios.
+- Only when a workflow already has executable rules may it appear as a workflow of this general framework in `index.md` and be added to `Workflow Registry`.
+- Multi-file phase splitting is only used for `S3` scenarios where the execution, rollback, or verification flow is complex enough to affect readability.
 
 ## Workflow Registry
 
 | Workflow | Status | Risk | Structure | Entry File | Trigger                                                         |
 |----------|--------|------|-----------|------------|-----------------------------------------------------------------|
-| `permission_governance` | Registered | `R2` | `S2` | [`lark-drive-workflow-permission-governance.md`](lark-drive-workflow-permission-governance.md) | 权限审计、公开链接/外部访问、复制/下载/评论/分享设置、权限申请、owner 转移 / 批量 owner 转移、密级标签调整 |
-| `knowledge_organize` | Registered | `R2-R3` | `S3` | [`lark-drive-workflow-knowledge-organize.md`](lark-drive-workflow-knowledge-organize.md) | 整理云盘 / 文件夹 / 文档库 / 知识库、盘点目录结构、归类资源、生成整理方案，并在用户确认后创建目录或移动资源      |
-| `topic_move_collector` | Registered | `R2-R3` | `S3` | [`lark-drive-workflow-topic-move-collector.md`](lark-drive-workflow-topic-move-collector.md) | 按主题、关键词或内容线索跨容器搜索资料，验证相关性和移动资格，并在用户确认后归档到 Drive 文件夹或 Wiki 节点    |
+| `permission_governance` | Registered | `R2` | `S2` | [`lark-drive-workflow-permission-governance.md`](lark-drive-workflow-permission-governance.md) | Permission audits, public links/external access, copy/download/comment/sharing settings, permission requests, owner transfer / batch owner transfer, confidentiality label adjustments |
+| `knowledge_organize` | Registered | `R2-R3` | `S3` | [`lark-drive-workflow-knowledge-organize.md`](lark-drive-workflow-knowledge-organize.md) | Organize Drive / folders / document libraries / Wiki, inventory directory structure, categorize resources, generate an organization plan, and create directories or move resources after user confirmation      |
+| `topic_move_collector` | Registered | `R2-R3` | `S3` | [`lark-drive-workflow-topic-move-collector.md`](lark-drive-workflow-topic-move-collector.md) | Search materials across containers by topic, keyword, or content clues, verify relevance and move eligibility, and archive to Drive folders or Wiki nodes after user confirmation    |
 
 ## Workflow Loading
 
-当用户意图匹配到本总框架已注册 workflow 时：
+When user intent matches a workflow registered in this general framework:
 
-1. 先读取本总框架文件。
-2. 只读取 `Workflow Registry` 中命中的 entry file。
-3. 按该 workflow 的 progressive load map 继续加载额外 reference。
-4. 除非用户改变意图，或当前 workflow 明确路由到其他 workflow，否则不要读取其他 workflow 文件。
+1. First read this general framework file.
+2. Only read the entry file matched in `Workflow Registry`.
+3. Continue loading additional references according to that workflow's progressive load map.
+4. Unless the user changes intent, or the current workflow explicitly routes to another workflow, do not read other workflow files.
 
-## 未注册 workflow 处理
+<a id="未注册-workflow-处理"></a>
+## Unregistered Workflow Handling
 
-`Workflow Registry` 是本总框架的唯一注册来源。用户请求未列入 registry 的 workflow 或组合型治理场景时：
+`Workflow Registry` is the sole registration source for this general framework. When a user request is not listed in the registry as a workflow or is a combined governance scenario:
 
-1. 将请求拆成已有模块或 CLI 能力可以完成的操作，先核对参数和数据依赖。
-2. 在用户授权内组合这些操作；不必因为 registry 没有预设流程而停止。
-3. 未经接口支持的能力或无法验证的结果应如实说明，不发明 API 或治理结论。
+1. Break the request into operations that existing modules or CLI capabilities can complete, and first verify parameters and data dependencies.
+2. Combine these operations within the user's authorization; there is no need to stop just because the registry has no preset flow.
+3. Capabilities not supported by the interface or results that cannot be verified should be stated truthfully; do not invent APIs or governance conclusions.

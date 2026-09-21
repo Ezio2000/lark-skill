@@ -1,75 +1,81 @@
 # minutes +summary
 
 
-替换妙记的 AI 总结内容。写操作，会覆盖当前总结。
+Replace the AI summary content of a Minutes. This is a write operation and will overwrite the current summary.
 
-本模块 对应 shortcut：`lark-cli minutes +summary`（调用 `PUT /open-apis/minutes/v1/minutes/{minute_token}/summary`）。
+This module corresponds to shortcut: `lark-cli minutes +summary` (calls `PUT /open-apis/minutes/v1/minutes/{minute_token}/summary`).
 
-## 典型触发表达
+<a id="典型触发表达"></a>
+## Typical trigger expressions
 
-- "把这条妙记的总结改成……"
-- "更新 / 替换妙记的 AI 总结"
-- "修正总结内容后写回妙记"
+- "Change the summary of this Minutes to..."
+- "Update / replace the AI summary of a Minutes"
+- "Correct the summary content and write it back to the Minutes"
 
-## 命令
+<a id="命令"></a>
+## Command
 
 ```bash
-# 直接传入总结内容（Markdown 子集）
+# Pass the summary content directly (Markdown subset)
 lark-cli minutes +summary --minute-token obcnxxxxxxxxxxxxxxxxxxxx --summary "**会议结论**\n- 方案 A 通过\n- 下周跟进排期"
 
-# 从文件读取总结内容
+# Read the summary content from a file
 lark-cli minutes +summary --minute-token obcnxxxxxxxxxxxxxxxxxxxx --summary @summary.md
 
-# 从 stdin 读取
+# Read from stdin
 echo "**结论**" | lark-cli minutes +summary --minute-token obcnxxxxxxxxxxxxxxxxxxxx --summary @-
 
-# 预览 API 调用
+# Preview the API call
 lark-cli minutes +summary --minute-token obcnxxxxxxxxxxxxxxxxxxxx --summary @summary.md --dry-run
 ```
 
-## 参数
+<a id="参数"></a>
+## Parameters
 
-| 参数 | 必填 | 说明 |
+| Parameter | Required | Description |
 |------|------|------|
-| `--minute-token <token>` | 是 | 妙记 Token |
-| `--summary <text>` | 是 | 替换后的总结内容，支持 `@file` / `@-`（stdin） |
-| `--dry-run` | 否 | 预览 API 调用，不执行 |
+| `--minute-token <token>` | Yes | Minutes Token |
+| `--summary <text>` | Yes | The replacement summary content, supports `@file` / `@-` (stdin) |
+| `--dry-run` | No | Preview the API call without executing |
 
-## 核心约束
+<a id="核心约束"></a>
+## Core constraints
 
-### 1. 先读后写
+<a id="1-先读后写"></a>
+### 1. Read before write
 
-替换前建议先用 `lark-cli minutes +detail --minute-tokens <token> --summary` 读取当前总结，确认 `minute_token` 与待替换内容无误。
+Before replacing, it is recommended to first use `lark-cli minutes +detail --minute-tokens <token> --summary` to read the current summary and confirm that the `minute_token` and the content to be replaced are correct.
 
-### 2. Markdown 展示说明
+<a id="2-markdown-展示说明"></a>
+### 2. Markdown display notes
 
-接口接受任意总结文本，**不会因 Markdown 格式校验失败而拒绝请求**。妙记客户端通常只能良好渲染以下 Markdown 子集；不支持的语法（如链接、代码块、四级标题等）会**按原始文本展示**（保留 Markdown 标记字符，不会渲染成对应样式）。Agent 写入时应优先使用可展示语法，避免用户在妙记里看到字面量的 `[链接](url)`、`` `code` `` 等：
+The API accepts any summary text and **will not reject the request due to Markdown format validation failure**. The Minutes client can usually only render the following Markdown subset well; unsupported syntax (such as links, code blocks, level-4 headings, etc.) will be **displayed as raw text** (the Markdown marker characters are preserved and will not be rendered into the corresponding style). When writing, the Agent should prefer displayable syntax to avoid users seeing literal `[链接](url)`, `` `code` ``, etc. in the Minutes:
 
-| 支持 | 写法 | 示例 |
+| Supported | Syntax | Example |
 |------|------|------|
-| 纯文本 | 普通段落 | `本次会议讨论了 Q2 预算` |
-| 换行 | `\n` 或空行 | 分段落书写 |
-| 一级标题 | `# ` + 标题文字 | `# 会议结论` |
-| 二级标题 | `## ` + 标题文字 | `## 行动项` |
-| 三级标题 | `### ` + 标题文字 | `### 跟进事项` |
-| 加粗 | `**文字**` | `**重点结论**` |
-| 无序列表 | `- ` 或 `* ` | `- 跟进预算审批` |
-| 有序列表 | `1. ` | `1. 确认需求` |
+| Plain text | Ordinary paragraph | `本次会议讨论了 Q2 预算` |
+| Line break | `\n` or blank line | Write in separate paragraphs |
+| Level-1 heading | `# ` + heading text | `# 会议结论` |
+| Level-2 heading | `## ` + heading text | `## 行动项` |
+| Level-3 heading | `### ` + heading text | `### 跟进事项` |
+| Bold | `**文字**` | `**重点结论**` |
+| Unordered list | `- ` or `* ` | `- 跟进预算审批` |
+| Ordered list | `1. ` | `1. 确认需求` |
 
-> 标题语法建议：`#` 后保留空格，并优先使用 1～3 级（`#` / `##` / `###`）。四级及以上（`####`）无法渲染，会以原始文本形式展示。
+> Heading syntax recommendation: keep a space after `#`, and prefer levels 1 to 3 (`#` / `##` / `###`). Level 4 and above (`####`) cannot be rendered and will be displayed as raw text.
 
-**不建议使用**（会按原始文本展示）：链接、图片、代码块、表格、引用块、斜体、删除线、四级及以上标题等。
+**Not recommended** (will be displayed as raw text): links, images, code blocks, tables, blockquotes, italics, strikethrough, level-4 and above headings, etc.
 
-合法示例：
+Valid example:
 
 ```markdown
-# 会议结论
+# Meeting conclusions
 
-## 核心讨论
+## Core discussion
 
 **方案 A 通过**，下周启动排期。
 
-### 待跟进
+### To follow up
 - 预算审批
 - 排期确认
 
@@ -77,13 +83,15 @@ lark-cli minutes +summary --minute-token obcnxxxxxxxxxxxxxxxxxxxx --summary @sum
 2. 李四负责排期
 ```
 
-### 3. 所需权限
+<a id="3-所需权限"></a>
+### 3. Required permissions
 
-| 身份 | 所需权限 |
+| Identity | Required permission |
 |------|---------|
 | user | `minutes:minutes:update` |
 
-## 输出结果
+<a id="输出结果"></a>
+## Output result
 
 ```json
 {
@@ -92,27 +100,30 @@ lark-cli minutes +summary --minute-token obcnxxxxxxxxxxxxxxxxxxxx --summary @sum
 }
 ```
 
-| 字段 | 说明 |
+| Field | Description |
 |------|------|
-| `minute_token` | 妙记 Token |
-| `updated` | 是否已成功更新 |
+| `minute_token` | Minutes Token |
+| `updated` | Whether the update succeeded |
 
-## 如何获取 minute_token
+<a id="如何获取-minute_token"></a>
+## How to obtain minute_token
 
-| 来源 | 获取方式 |
+| Source | How to obtain |
 |------|---------|
-| 妙记 URL | 从 URL 末尾提取，如 `https://sample.feishu.cn/minutes/obcnxxxxxxxxxxxxxxxxxxxx` |
-| 妙记搜索 | `lark-cli minutes +search --query "关键词"` |
-| 会议产物查询 | `lark-cli vc +detail --meeting-ids <id>` 或 `vc +recording`, 拿到 `minute_token`, 然后走 `minutes +detail` |
+| Minutes URL | Extract from the end of the URL, e.g. `https://sample.feishu.cn/minutes/obcnxxxxxxxxxxxxxxxxxxxx` |
+| Minutes search | `lark-cli minutes +search --query "关键词"` |
+| Meeting artifact query | `lark-cli vc +detail --meeting-ids <id>` or `vc +recording`, get `minute_token`, then go through `minutes +detail` |
 
-## 常见错误与排查
+<a id="常见错误与排查"></a>
+## Common errors and troubleshooting
 
-| 错误现象 | 错误码 | 根本原因 | 解决方案 |
+| Error symptom | Error code | Root cause | Solution |
 |---------|--------|---------|---------|
-| 总结展示为原始 Markdown 文本 | — | 总结含链接、四级标题等妙记端无法渲染的语法 | 改用标题（#～###）、加粗、列表等可展示格式；接口不会因此报错 |
-| 参数无效 | — | `minute_token` 缺失或格式错误 | 检查 token 是否完整 |
-| 权限不足 | — | 缺少 `minutes:minutes:update` | 运行 `auth login --scope "minutes:minutes:update"` |
-| `error.subtype` = `quota_exceeded` | 2091008 | 该妙记生成时 ASR/AI 额度已用尽，AI 总结未完整生成，替换无法落库 | 让用户去该妙记详情页查看额度详细信息；CLI 无法补充额度，重试不会成功 |
+| Summary displayed as raw Markdown text | — | The summary contains syntax that the Minutes client cannot render, such as links or level-4 headings | Switch to displayable formats such as headings (# to ###), bold, and lists; the API will not error because of this |
+| Invalid parameter | — | `minute_token` is missing or malformed | Check whether the token is complete |
+| Insufficient permission | — | Missing `minutes:minutes:update` | Run `auth login --scope "minutes:minutes:update"` |
+| `error.subtype` = `quota_exceeded` | 2091008 | When this Minutes was generated, the ASR/AI quota was already exhausted, the AI summary was not fully generated, and the replacement cannot be persisted | Ask the user to check the quota details on the Minutes detail page; the CLI cannot add quota, and retrying will not succeed |
 
-## 相关场景
-- [生成和修改妙记](../scenes/create-and-edit-minutes.md)
+<a id="相关场景"></a>
+## Related scenarios
+- [Generate and modify Minutes](../scenes/create-and-edit-minutes.md)

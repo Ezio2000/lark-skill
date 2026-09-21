@@ -1,60 +1,66 @@
-# 折线图
+<a id="折线图"></a>
+# Line Chart
 
-## Content 约束
+<a id="content-约束"></a>
+## Content Constraints
 
-- 数据点 ≤ 15
-- Y 轴必须有单位标注（如 "万元"、"%"）
-- 折线系列 ≤ 3（超过太密看不清）
+- Data points ≤ 15
+- The Y axis must have a unit label (such as "ten thousand yuan", "%")
+- Line series ≤ 3 (more than that is too dense to read clearly)
 
-## Layout 选型
+<a id="layout-选型"></a>
+## Layout Selection
 
-- **脚本生成坐标**（推荐）：用 .cjs 脚本计算数据点坐标和折线路径，脚本输出 JSON 文件后调用 `npx -y @larksuite/whiteboard-cli@^0.2.13` 渲染
+- **Script-generated coordinates** (recommended): Use a .cjs script to calculate data point coordinates and line paths, then after the script outputs a JSON file, call `npx -y @larksuite/whiteboard-cli@^0.2.13` to render
 
-## Layout 规则
+<a id="layout-规则"></a>
+## Layout Rules
 
-- 白板坐标系 Y 轴向下为正，图表"底部原点"拥有最大 Y 值，数据点向上分布时 Y 减小
-- 数据点用小 ellipse 标记（width: 12, height: 12）
-- 折线用 connector straight 连接相邻数据点，endArrow: "none"
-- 坐标轴用 connector 直线，末端带箭头（endArrow: "arrow"）
-- 格线用虚线 connector（lineStyle: "dashed"，endArrow: "none"）
-- 刻度线短横线 connector（endArrow: "none"）
-- 数值标注放在数据点上方
-- 类别标签放在 X 轴下方，居中对齐数据点
+- In the whiteboard coordinate system, the positive Y axis points downward; the chart's "bottom origin" has the largest Y value, and as data points are distributed upward, Y decreases
+- Data points are marked with small ellipses (width: 12, height: 12)
+- Lines use connector straight to connect adjacent data points, endArrow: "none"
+- Axes use connector straight lines with an arrow at the end (endArrow: "arrow")
+- Grid lines use dashed connector (lineStyle: "dashed", endArrow: "none")
+- Tick marks use short horizontal line connector (endArrow: "none")
+- Numeric labels are placed above the data points
+- Category labels are placed below the X axis, center-aligned with the data points
 
-## 坐标与尺寸计算指南
+<a id="坐标与尺寸计算指南"></a>
+## Coordinate and Size Calculation Guide
 
-白板坐标系中，**X 轴向右为正，Y 轴向下为正**。图表的"底部原点"拥有最大的 Y 坐标，数据点向上分布时 Y 坐标减小。
+In the whiteboard coordinate system, **the positive X axis points to the right, and the positive Y axis points downward**. The chart's "bottom origin" has the largest Y coordinate, and as data points are distributed upward, the Y coordinate decreases.
 
-1. **确定图表区域**：
-   - 设定图表区高度 `chartHeight` 和宽度 `chartWidth`
-   - 设定左下角坐标原点 `(originX, originY)`
-   - 示例：originX=80, originY=480, chartWidth=900, chartHeight=400
-2. **Y 轴范围自适应**：
-   - 找出数据最小值 `dataMin` 和最大值 `dataMax`
-   - yMin 不一定为 0：若数据集中在 80-120，Y 轴从 0 开始会让折线挤在顶部一小段区域
-   - 推荐：yMin = 向下取整到合适刻度（如 dataMin=82 → yMin=80），yMax = 向上取整（如 dataMax=118 → yMax=120）
-   - 当数据波动极小时（如 98-102），适当扩大范围避免折线过于平坦
-3. **数据点坐标计算**：
-   - X 坐标：在可用宽度内均匀分布。`pointX = originX + (i / (pointCount - 1)) * chartWidth`
-   - Y 坐标：按比例映射到高度。`pointY = originY - ((value - yMin) / (yMax - yMin)) * chartHeight`
-   - ellipse 定位：`ellipseX = pointX - 6, ellipseY = pointY - 6`（圆心对齐数据点）
-4. **连线逻辑**：
-   - 用 connector straight 将相邻数据点连接
-   - `from` = 点[i] 的 (pointX, pointY)，`to` = 点[i+1] 的 (pointX, pointY)
+1. **Determine the chart area**:
+   - Set the chart area height `chartHeight` and width `chartWidth`
+   - Set the coordinate origin at the lower-left corner `(originX, originY)`
+   - Example: originX=80, originY=480, chartWidth=900, chartHeight=400
+2. **Adaptive Y-axis range**:
+   - Find the data minimum `dataMin` and maximum `dataMax`
+   - yMin is not necessarily 0: if the data is concentrated in 80-120, starting the Y axis from 0 will squeeze the line into a small area at the top
+   - Recommended: yMin = round down to a suitable tick (such as dataMin=82 → yMin=80), yMax = round up (such as dataMax=118 → yMax=120)
+   - When data fluctuation is extremely small (such as 98-102), appropriately expand the range to avoid the line being too flat
+3. **Data point coordinate calculation**:
+   - X coordinate: evenly distributed within the available width. `pointX = originX + (i / (pointCount - 1)) * chartWidth`
+   - Y coordinate: proportionally mapped to the height. `pointY = originY - ((value - yMin) / (yMax - yMin)) * chartHeight`
+   - ellipse positioning: `ellipseX = pointX - 6, ellipseY = pointY - 6` (center aligned with the data point)
+4. **Connection logic**:
+   - Use connector straight to connect adjacent data points
+   - `from` = point[i]'s (pointX, pointY), `to` = point[i+1]'s (pointX, pointY)
    - startArrow: "none", endArrow: "none"
-5. **Y 轴刻度计算**：
-   - 将 yMin 到 yMax 等分为 4-5 个刻度
-   - 每个刻度的 Y 坐标：`gridY = originY - ((tickValue - yMin) / (yMax - yMin)) * chartHeight`
+5. **Y-axis tick calculation**:
+   - Divide yMin to yMax equally into 4-5 ticks
+   - Y coordinate of each tick: `gridY = originY - ((tickValue - yMin) / (yMax - yMin)) * chartHeight`
 
-## 完整 JSON 示例
+<a id="完整-json-示例"></a>
+## Complete JSON Example
 
-以下示例：4 个数据点，数据 [120, 200, 150, 180]，yMin=100, yMax=220，originX=80, originY=480, chartWidth=900, chartHeight=400。
+The following example: 4 data points, data [120, 200, 150, 180], yMin=100, yMax=220, originX=80, originY=480, chartWidth=900, chartHeight=400.
 
-- 刻度：100, 130, 160, 190, 220（每 30 一格）
-- 点0 (120): pointX=80, pointY=480-((120-100)/120)*400=480-66.7=413
-- 点1 (200): pointX=80+300=380, pointY=480-((200-100)/120)*400=480-333.3=147
-- 点2 (150): pointX=80+600=680, pointY=480-((150-100)/120)*400=480-166.7=313
-- 点3 (180): pointX=80+900=980, pointY=480-((180-100)/120)*400=480-266.7=213
+- Ticks: 100, 130, 160, 190, 220 (one every 30)
+- Point 0 (120): pointX=80, pointY=480-((120-100)/120)*400=480-66.7=413
+- Point 1 (200): pointX=80+300=380, pointY=480-((200-100)/120)*400=480-333.3=147
+- Point 2 (150): pointX=80+600=680, pointY=480-((150-100)/120)*400=480-166.7=313
+- Point 3 (180): pointX=80+900=980, pointY=480-((180-100)/120)*400=480-266.7=213
 
 ```json
 {
@@ -192,22 +198,23 @@
 }
 ```
 
-坐标推导验证：
-- 点0 (Q1, 120): pointX = 80 + (0/3)*900 = 80, pointY = 480 - ((120-100)/120)*400 = 413
-- 点1 (Q2, 200): pointX = 80 + (1/3)*900 = 380, pointY = 480 - ((200-100)/120)*400 = 147
-- 点2 (Q3, 150): pointX = 80 + (2/3)*900 = 680, pointY = 480 - ((150-100)/120)*400 = 313
-- 点3 (Q4, 180): pointX = 80 + (3/3)*900 = 980, pointY = 480 - ((180-100)/120)*400 = 213
-- ellipse 定位：ellipseX = pointX - 6, ellipseY = pointY - 6
+Coordinate derivation verification:
+- Point 0 (Q1, 120): pointX = 80 + (0/3)*900 = 80, pointY = 480 - ((120-100)/120)*400 = 413
+- Point 1 (Q2, 200): pointX = 80 + (1/3)*900 = 380, pointY = 480 - ((200-100)/120)*400 = 147
+- Point 2 (Q3, 150): pointX = 80 + (2/3)*900 = 680, pointY = 480 - ((150-100)/120)*400 = 313
+- Point 3 (Q4, 180): pointX = 80 + (3/3)*900 = 980, pointY = 480 - ((180-100)/120)*400 = 213
+- ellipse positioning: ellipseX = pointX - 6, ellipseY = pointY - 6
 
-## 陷阱
+<a id="陷阱"></a>
+## Pitfalls
 
-- Y 轴范围不合理：若数据集中在 80-120，Y 轴从 0 到 120 会让折线挤在顶部一小段区域，应设 yMin 接近数据最小值
-- 缺 Y 轴单位标注，读者无法理解数值含义
-- 数据点太密时标注互相遮挡（超过 10 个点考虑隔一个标注一次）
-- 折线段忘记设 endArrow: "none"，默认带箭头
-- 多系列时折线颜色相近难以区分，应使用对比度高的不同色系
+- Unreasonable Y-axis range: if the data is concentrated in 80-120, setting the Y axis from 0 to 120 will squeeze the line into a small area at the top; yMin should be set close to the data minimum
+- Missing Y-axis unit label, so readers cannot understand the meaning of the values
+- When data points are too dense, labels obscure each other (if there are more than 10 points, consider labeling every other point)
+- Forgetting to set endArrow: "none" on line segments, which have arrows by default
+- With multiple series, similar line colors are hard to distinguish; use different color families with high contrast
 
-此场景必须用 .cjs 脚本生成。Agent 使用时只需修改 `data` 数组，其余坐标与折线生成全自动计算。
+This scenario must be generated with a .cjs script. When using it, the Agent only needs to modify the `data` array; all other coordinates and line generation are calculated fully automatically.
 
 ```javascript
 const { writeFileSync } = require('fs');

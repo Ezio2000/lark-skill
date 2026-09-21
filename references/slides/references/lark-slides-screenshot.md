@@ -1,5 +1,6 @@
-# slides +screenshot（兼容入口）
+<a id="slides-screenshot兼容入口"></a>
+# slides +screenshot (compatibility entry point)
 
-本文档已迁移至 [`cli/lark-slides-screenshot.md`](cli/lark-slides-screenshot.md)。
+This document has been migrated to [`cli/lark-slides-screenshot.md`](cli/lark-slides-screenshot.md).
 
-此文件仅保留旧路径兼容性；后续引用请使用新路径。
+This file is retained only for old-path compatibility; use the new path for future references.

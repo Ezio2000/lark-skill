@@ -1,33 +1,37 @@
 # drive +restore-comment
 
 
-恢复 / 重新打开一条已解决的评论。反向操作——把评论标记为已解决——是独立命令 [`lark-drive-resolve-comment.md`](lark-drive-resolve-comment.md)。
+Restore / reopen a resolved comment. The reverse operation—marking a comment as resolved—is a separate command [`lark-drive-resolve-comment.md`](lark-drive-resolve-comment.md).
 
-用户说“重新打开 / 取消解决 / 恢复这条评论”对应本命令。
+When the user says "reopen / unresolve / restore this comment", it corresponds to this command.
 
-## 命令
+<a id="命令"></a>
+## Command
 
 ```bash
-# 推荐：完整 URL + 评论 ID
+# Recommended: full URL + comment ID
 lark-cli drive +restore-comment --url "https://example.larksuite.com/docx/<DOCX_TOKEN>" --comment-id '<id>'
 ```
 
-## 参数
+<a id="参数"></a>
+## Parameters
 
-| 参数 | 必填 | 说明 |
+| Parameter | Required | Description |
 |---|---|---|
-| `--url` | 与 `--token` 二选一 | 推荐入口。支持 doc/docx/sheet/file/slides/base/bitable/apps/wiki URL；apps 妙搭 URL 使用 `/page/<token>`；wiki URL 会自动解析到真实文档。 |
-| `--token` | 与 `--url` 二选一 | 裸 token 或 URL。裸 token 必须搭配 `--type`；wiki token 使用 `--type wiki`。 |
-| `--type` | 裸 token 时必填 | 传 token 对应类型：`doc`、`docx`、`sheet`、`file`、`slides`、`bitable`、`base`、`apps`、`wiki`。wiki token 使用 `wiki`；传 `base` 时，CLI 会按 `bitable` 类型处理。 |
-| `--comment-id` | 是 | 要恢复的评论 ID；来自 `drive +list-comments` 的 `items[].comment_id` |
+| `--url` | Choose one of this and `--token` | Recommended entry point. Supports doc/docx/sheet/file/slides/base/bitable/apps/wiki URLs; for apps Miaoda URLs use `/page/<token>`; wiki URLs are automatically resolved to the real document. |
+| `--token` | Choose one of this and `--url` | Bare token or URL. A bare token must be paired with `--type`; for a wiki token use `--type wiki`. |
+| `--type` | Required when using a bare token | Pass the type corresponding to the token: `doc`, `docx`, `sheet`, `file`, `slides`, `bitable`, `base`, `apps`, `wiki`. For a wiki token use `wiki`; when `base` is passed, the CLI processes it as the `bitable` type. |
+| `--comment-id` | Yes | The ID of the comment to restore; comes from `items[].comment_id` of `drive +list-comments` |
 
-## 行为说明
+<a id="行为说明"></a>
+## Behavior notes
 
-- 这是写操作。
-- **找目标评论必须带 `--solved-status`**：`drive +list-comments` 默认只返回未解决评论，本命令的目标恰好是已解决评论，直接用默认口径查会一条都找不到。先用 `drive +list-comments --solved-status true`（只看已解决）或 `--solved-status all`（全部）取 `items[].comment_id`。
-- 对同一条评论连续翻转解决状态可能触发服务端限流（HTTP 429）；连续调用之间留间隔或短暂延迟后重试。
+- This is a write operation.
+- **Finding the target comment requires `--solved-status`**: `drive +list-comments` by default returns only unresolved comments, and the target of this command is exactly a resolved comment, so querying with the default scope will find none at all. First use `drive +list-comments --solved-status true` (resolved only) or `--solved-status all` (all) to get `items[].comment_id`.
+- Repeatedly toggling the resolved state of the same comment in succession may trigger server-side rate limiting (HTTP 429); leave an interval between consecutive calls or retry after a short delay.
 
-## 输出
+<a id="输出"></a>
+## Output
 
 ```json
 {
@@ -40,6 +44,7 @@ lark-cli drive +restore-comment --url "https://example.larksuite.com/docx/<DOCX_
 }
 ```
 
-## 参考
+<a id="参考"></a>
+## References
 
-- [lark-drive-resolve-comment](lark-drive-resolve-comment.md) -- 解决（标记已解决）评论
+- [lark-drive-resolve-comment](lark-drive-resolve-comment.md) -- Resolve (mark as resolved) a comment

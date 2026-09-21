@@ -1,103 +1,110 @@
 
 # approval instances initiated
 
-查询当前用户已发起的审批实例列表（用户级只读操作）。适合在需要查看“我发起了哪些审批”、筛选某类审批定义、获取 `instance_code` 供后续 `instances get` / `instances cancel` / `instances cc` 等命令使用时调用。
+Query the list of approval instances initiated by the current user (a user-level read-only operation). Suitable for use when you need to view "which approvals have I initiated", filter by a certain approval definition, or obtain `instance_code` for use in subsequent commands such as `instances get` / `instances cancel` / `instances cc`.
 
-需要的 scopes: ["approval:instance:read"]
+Required scopes: ["approval:instance:read"]
 
-## 命令
+<a id="命令"></a>
+## Command
 
 ```bash
-# 查询我发起的审批列表
+# Query the list of approvals I initiated
 lark-cli approval instances initiated --params '{"page_size":20}' --as user
 
-# 只看某个审批定义下我发起的实例
+# View only the instances I initiated under a certain approval definition
 lark-cli approval instances initiated --params '{"definition_code":"<DEFINITION_CODE>","page_size":20}' --as user
 
-# 按关键词搜索我发起的实例
+# Search the instances I initiated by keyword
 lark-cli approval instances initiated --params '{"keyword":"测试","page_size":10}' --as user
 
-# 按发起时间范围筛选（秒级时间戳）
+# Filter by initiation time range (second-level timestamp)
 lark-cli approval instances initiated --params '{"start_timestamp":"<START_SECONDS>","end_timestamp":"<END_SECONDS>","page_size":20}' --as user
 
-# 使用 page_token 翻页
+# Paginate using page_token
 lark-cli approval instances initiated --params '{"page_size":20,"page_token":"example_page_token"}' --as user
 
-# 表格格式输出，便于快速浏览
+# Table format output, for quick browsing
 lark-cli approval instances initiated --params '{"page_size":20}' --format table --as user
 
-# 预览 API 调用，不执行
+# Preview the API call without executing
 lark-cli approval instances initiated --params '{"page_size":20}' --as user --dry-run
 ```
 
-## 参数
+<a id="参数"></a>
+## Parameters
 
-| 参数 | 必填 | 说明 |
+| Parameter | Required | Description |
 |------|------|------|
-| `--params '{...}'` | 否 | 查询参数，使用 JSON 传入；不传时使用默认分页与筛选 |
-| `definition_code` | 否 | 审批定义 Code，用于只查看某个审批定义下我发起的实例 |
-| `keyword` | 否 | 搜索关键词；非空时走搜索链路，空或仅空格时保持普通列表链路 |
-| `start_timestamp` | 否 | 按发起时间筛选，时间范围开始值，秒级时间戳 |
-| `end_timestamp` | 否 | 按发起时间筛选，时间范围结束值，秒级时间戳 |
-| `locale` | 否 | 返回语言：`zh-CN`、`en-US`、`ja-JP` |
-| `page_size` | 否 | 分页大小 |
-| `page_token` | 否 | 翻页标记；首次请求不填，后续使用上一次返回的 `page_token` |
-| `user_id_type` | 否 | 用户 ID 类型：`user_id`、`union_id`、`open_id` |
-| `--as user` | 否 | 建议显式指定用户身份；已发起审批列表查询通常应使用用户身份 |
-| `--format` | 否 | 输出格式：`json`（默认）、`ndjson`、`table`、`csv` |
-| `--dry-run` | 否 | 预览 API 调用，不执行 |
+| `--params '{...}'` | No | Query parameters, passed in as JSON; when not passed, default pagination and filtering are used |
+| `definition_code` | No | Approval definition Code, used to view only the instances I initiated under a certain approval definition |
+| `keyword` | No | Search keyword; when non-empty, the search path is used, when empty or only spaces, the normal list path is kept |
+| `start_timestamp` | No | Filter by initiation time, start value of the time range, second-level timestamp |
+| `end_timestamp` | No | Filter by initiation time, end value of the time range, second-level timestamp |
+| `locale` | No | Return language: `zh-CN`, `en-US`, `ja-JP` |
+| `page_size` | No | Page size |
+| `page_token` | No | Pagination token; leave empty on the first request, then use the `page_token` returned last time |
+| `user_id_type` | No | User ID type: `user_id`, `union_id`, `open_id` |
+| `--as user` | No | It is recommended to explicitly specify the user identity; queries of the initiated approval list should usually use the user identity |
+| `--format` | No | Output format: `json` (default), `ndjson`, `table`, `csv` |
+| `--dry-run` | No | Preview the API call without executing |
 
-## 输出重点字段
+<a id="输出重点字段"></a>
+## Key output fields
 
-返回结果中常见字段：
+Common fields in the returned result:
 
-| 字段 | 说明 |
+| Field | Description |
 |------|------|
-| `count` | 列表计数，只在第一页返回；大于等于 100 个实例时返回 `99` |
-| `has_more` | 是否还有更多数据 |
-| `page_token` | 下一页翻页 Token |
-| `instances[].instance_code` | 审批实例 Code；后续查询详情或执行撤回 / 抄送时通常需要 |
-| `instances[].definition_code` | 审批定义 Code |
-| `instances[].definition_name` | 审批定义名称 |
-| `instances[].definition_group_id` | 审批定义分组 ID |
-| `instances[].definition_group_name` | 审批定义分组名称 |
-| `instances[].initiator` | 发起人 ID |
-| `instances[].initiator_name` | 发起人姓名 |
-| `instances[].instance_status` | 审批实例状态，见下方“instance_status 枚举” |
-| `instances[].instance_external_id` | 第三方审批实例 ID（仅第三方审批实例存在） |
-| `instances[].link` | 三方审批跳转链接 |
-| `instances[].summaries` | 摘要字段列表 |
+| `count` | List count, returned only on the first page; returns `99` when there are 100 or more instances |
+| `has_more` | Whether there is more data |
+| `page_token` | Next page pagination Token |
+| `instances[].instance_code` | Approval instance Code; usually needed for subsequent detail queries or for performing withdrawal / cc |
+| `instances[].definition_code` | Approval definition Code |
+| `instances[].definition_name` | Approval definition name |
+| `instances[].definition_group_id` | Approval definition group ID |
+| `instances[].definition_group_name` | Approval definition group name |
+| `instances[].initiator` | Initiator ID |
+| `instances[].initiator_name` | Initiator name |
+| `instances[].instance_status` | Approval instance status, see "instance_status enum" below |
+| `instances[].instance_external_id` | Third-party approval instance ID (exists only for third-party approval instances) |
+| `instances[].link` | Third-party approval redirect link |
+| `instances[].summaries` | List of summary fields |
 
-## instance_status 枚举
+<a id="instance_status-枚举"></a>
+## instance_status enum
 
-| 值 | 含义 |
+| Value | Meaning |
 |----|------|
-| `0` | 无流程状态，不展示对应标签 |
-| `1` | 流程实例流转中 |
-| `2` | 已通过 |
-| `3` | 已拒绝 |
-| `4` | 已撤销 |
-| `5` | 已终止 |
+| `0` | No process status, the corresponding label is not displayed |
+| `1` | Process instance in progress |
+| `2` | Approved |
+| `3` | Rejected |
+| `4` | Withdrawn |
+| `5` | Terminated |
 
-## 常见使用场景
+<a id="常见使用场景"></a>
+## Common use cases
 
-### 1) 找到我要操作的审批实例
+<a id="1-找到我要操作的审批实例"></a>
+### 1) Find the approval instance I want to operate on
 
 ```bash
 lark-cli approval instances initiated --params '{"page_size":20}' --format table --as user
 ```
 
-拿到 `instances[].instance_code` 后，可继续：
+After obtaining `instances[].instance_code`, you can continue with:
 
 ```bash
-# 查看审批实例详情
+# View approval instance details
 lark-cli approval instances get --params '{"instance_code":"<INSTANCE_CODE>"}' --as user
 
-# 撤回审批实例
+# Withdraw an approval instance
 lark-cli approval instances cancel --data '{"instance_code":"<INSTANCE_CODE>"}' --as user --yes
 ```
 
-### 2) 只看某类审批
+<a id="2-只看某类审批"></a>
+### 2) View only a certain type of approval
 
 ```bash
 lark-cli approval instances initiated \
@@ -106,28 +113,30 @@ lark-cli approval instances initiated \
 ```
 
 
-## 使用建议
+<a id="使用建议"></a>
+## Usage recommendations
 
-- **这是定位“我发起的审批实例”的首选命令**：如果你的目标是撤回、抄送、查看某个已发起审批，优先从这里拿 `instance_code`。
-- **优先用 `definition_code` 缩小范围**：当你已知审批定义时，先筛掉无关实例，可显著提升可读性。
-- **需要搜索时传入 `keyword`**：搜索排序和普通列表排序不同，按搜索服务结果为准。
-- **按时间排查时使用 `start_timestamp` / `end_timestamp`**：这两个值都是秒级时间戳，用于按发起时间缩小结果范围。
-- **结果很多时优先 `--format table`**：适合人工快速浏览。
-- **`count` 只在第一页返回**：做分页处理时不要假设后续页还会带总数。
-- **`instance_status` 可直接判断下一步**：例如状态为 `1` 时通常可继续查看详情或考虑撤回，状态为 `4` 表示已经撤销，无需重复撤回。
-- **摘要字段 `summaries` 很适合做列表预览**：当审批标题不够明确时，可结合摘要值帮助识别目标实例。
+- **This is the preferred command for locating "approval instances I initiated"**: if your goal is to withdraw, cc, or view an already-initiated approval, get `instance_code` from here first.
+- **Prefer using `definition_code` to narrow the scope**: when you already know the approval definition, filter out irrelevant instances first, which can significantly improve readability.
+- **Pass `keyword` when search is needed**: search sorting differs from normal list sorting; rely on the search service results.
+- **Use `start_timestamp` / `end_timestamp` when troubleshooting by time**: both values are second-level timestamps, used to narrow the result range by initiation time.
+- **Prefer `--format table` when there are many results**: suitable for quick manual browsing.
+- **`count` is returned only on the first page**: when handling pagination, do not assume that subsequent pages will also carry the total count.
+- **`instance_status` can directly determine the next step**: for example, when the status is `1`, you can usually continue to view details or consider withdrawal; a status of `4` means it has already been withdrawn, so there is no need to withdraw again.
+- **The summary field `summaries` is very suitable for list previews**: when the approval title is not clear enough, the summary value can help identify the target instance.
 
-## 输出与后续操作
+<a id="输出与后续操作"></a>
+## Output and follow-up operations
 
-拿到列表后，常见下一步：
+After obtaining the list, common next steps:
 
 ```bash
-# 查看单个审批实例详情
+# View details of a single approval instance
 lark-cli approval instances get --params '{"instance_code":"<INSTANCE_CODE>"}' --as user
 
-# 撤回审批实例
+# Withdraw an approval instance
 lark-cli approval instances cancel --data '{"instance_code":"<INSTANCE_CODE>"}' --as user --yes
 
-# 给审批实例追加抄送人
+# Add cc recipients to an approval instance
 lark-cli approval instances cc --data '{"instance_code":"<INSTANCE_CODE>","cc_user_ids":["<USER_ID>"]}' --params '{"user_id_type":"open_id"}' --as user --yes
 ```

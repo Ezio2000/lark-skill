@@ -1,41 +1,45 @@
 # vc +meeting-countdown
 
-设置、延长、提前结束或关闭会中倒计时窗口。
+Set, extend, end early, or close the in-meeting countdown window.
 
-本模块 对应 shortcut：`lark-cli vc +meeting-countdown`（调用 `POST /open-apis/vc/v1/bots/countdown`）。
+This module corresponds to shortcut: `lark-cli vc +meeting-countdown` (calls `POST /open-apis/vc/v1/bots/countdown`).
 
-## 适用场景
+<a id="适用场景"></a>
+## Applicable Scenarios
 
-- 用户要求在正在进行中的会议里设置倒计时，例如“设置 5 分钟倒计时”。
-- 用户要求延长当前倒计时，例如“再延长 2 分钟”。
-- 用户要求提前结束或关闭当前倒计时。
-- 只用于正在进行中的会议；已结束会议不支持。
+- The user requests setting a countdown in an ongoing meeting, for example "set a 5-minute countdown".
+- The user requests extending the current countdown, for example "extend by 2 more minutes".
+- The user requests ending early or closing the current countdown.
+- Only for ongoing meetings; ended meetings are not supported.
 
-## 身份规则
+<a id="身份规则"></a>
+## Identity Rules
 
-`meeting_id` 从哪种身份路径拿到，操作倒计时时就沿用哪种身份：
+Whichever identity path `meeting_id` was obtained from, use that same identity when operating the countdown:
 
-| meeting_id 来源 | 操作时身份 |
+| meeting_id source | Identity when operating |
 | --- | --- |
 | `+meeting-list-active --as user` | `+meeting-countdown --as user` |
 | `+meeting-list-active --as bot --user-id <user_open_id>` | `+meeting-countdown --as bot` |
-| `+meeting-join --as bot` 返回的 `meeting.id` | `+meeting-countdown --as bot` |
+| `+meeting-join --as bot` returned `meeting.id` | `+meeting-countdown --as bot` |
 
-不要把用户身份发现的 `meeting_id` 改用应用身份操作，也不要把应用身份发现的 `meeting_id` 改用用户身份操作，除非用户明确要求切换。
+Do not switch a `meeting_id` discovered with user identity to operate with app identity, and do not switch a `meeting_id` discovered with app identity to operate with user identity, unless the user explicitly requests a switch.
 
-## 参数
+<a id="参数"></a>
+## Parameters
 
-| 参数 | 说明 |
+| Parameter | Description |
 | --- | --- |
-| `--meeting-id` | 必填，长数字 `meeting_id`，不是 9 位会议号 |
-| `--action` | 必填，`set`、`prolong`、`end_in_advance` 或 `close_window` |
-| `--duration` | 倒计时时长，单位是分钟；`set` 和 `prolong` 必填 |
-| `--need-play-audio-at-end` | 仅 `set` 可用，表示倒计时结束时播放提示音 |
-| `--reminder-before-end` | 仅 `set` 可用，提醒点单位是分钟；只支持传一个值 |
+| `--meeting-id` | Required, long numeric `meeting_id`, not the 9-digit meeting number |
+| `--action` | Required, `set`, `prolong`, `end_in_advance`, or `close_window` |
+| `--duration` | Countdown duration, in minutes; `set` and `prolong` are required |
+| `--need-play-audio-at-end` | Only available for `set`, indicates playing a notification sound when the countdown ends |
+| `--reminder-before-end` | Only available for `set`, reminder point unit is minutes; only supports passing one value |
 
-`duration` 和 `reminder_before_end` 都是分钟；提醒时间必须大于 0 且小于 `duration`。
+Both `duration` and `reminder_before_end` are in minutes; the reminder time must be greater than 0 and less than `duration`.
 
-## 设置倒计时
+<a id="设置倒计时"></a>
+## Set Countdown
 
 ```bash
 lark-cli vc +meeting-countdown --as user \
@@ -46,7 +50,7 @@ lark-cli vc +meeting-countdown --as user \
   --reminder-before-end 1
 ```
 
-Dry-run 请求体示例：
+Dry-run request body example:
 
 ```json
 {
@@ -58,7 +62,8 @@ Dry-run 请求体示例：
 }
 ```
 
-## 延长倒计时
+<a id="延长倒计时"></a>
+## Extend Countdown
 
 ```bash
 lark-cli vc +meeting-countdown --as bot \
@@ -67,37 +72,41 @@ lark-cli vc +meeting-countdown --as bot \
   --duration 2
 ```
 
-## 提前结束或关闭倒计时
+<a id="提前结束或关闭倒计时"></a>
+## End Early or Close Countdown
 
 ```bash
 lark-cli vc +meeting-countdown --as user --meeting-id <meeting_id> --action end_in_advance
 lark-cli vc +meeting-countdown --as user --meeting-id <meeting_id> --action close_window
 ```
 
-提前结束或关闭倒计时窗口时不要传 `--duration`、`--need-play-audio-at-end` 或 `--reminder-before-end`。
+When ending early or closing the countdown window, do not pass `--duration`, `--need-play-audio-at-end`, or `--reminder-before-end`.
 
-## 9 位会议号处理
+<a id="9-位会议号处理"></a>
+## Handling 9-Digit Meeting Number
 
-如果用户给的是 9 位会议号并要求操作倒计时：
+If the user provides a 9-digit meeting number and requests operating the countdown:
 
-1. 先按当前身份执行 `+meeting-list-active`。
-2. 在返回结果中按 `meeting_no` 匹配该 9 位会议号。
-3. 匹配到唯一会议后取长数字 `meeting_id`。
-4. 用发现该会议时的同一身份执行 `+meeting-countdown`。
+1. First execute `+meeting-list-active` with the current identity.
+2. In the returned results, match the 9-digit meeting number by `meeting_no`.
+3. After matching a unique meeting, take the long numeric `meeting_id`.
+4. Execute `+meeting-countdown` with the same identity used when discovering that meeting.
 
-匹配失败时不要自动入会。只有用户明确要求“让应用机器人入会/旁听/代参会”时，才改用 `+meeting-join`。
+Do not automatically join the meeting when matching fails. Only when the user explicitly requests "have the app bot join/listen in/attend on behalf" should you switch to `+meeting-join`.
 
-## 权限和前置条件
+<a id="权限和前置条件"></a>
+## Permissions and Prerequisites
 
-- 用户身份：当前用户必须正在该会议中。
-- 应用身份：应用机器人必须正在该会议中。
-- 需要 `vc:meeting.interaction:write` 权限；应用身份还需要应用已安装、数据范围已配置。
+- User identity: the current user must be in that meeting.
+- App identity: the app bot must be in that meeting.
+- Requires `vc:meeting.interaction:write` permission; app identity also requires the app to be installed and the data scope to be configured.
 
-应用身份权限错误时，不要引导用户反复 `auth login`。按主 skill 的“应用身份权限配置检查”处理。
+When there is an app identity permission error, do not guide the user to repeatedly `auth login`. Handle it according to the main skill's "App Identity Permission Configuration Check".
 
-## 相关
+<a id="相关"></a>
+## Related
 
-- [lark-vc-meeting-list-active](lark-vc-meeting-list-active.md) — 发现当前进行中会议 ID
-- [lark-vc-meeting-events](lark-vc-meeting-events.md) — 读取会中事件
-- [lark-vc-meeting-message-send](lark-vc-meeting-message-send.md) — 发送会中文本或 reaction
-- [lark-vc-agent-meeting-join](lark-vc-agent-meeting-join.md) — 应用机器人入会
+- [lark-vc-meeting-list-active](lark-vc-meeting-list-active.md) — discover the current ongoing meeting ID
+- [lark-vc-meeting-events](lark-vc-meeting-events.md) — read in-meeting events
+- [lark-vc-meeting-message-send](lark-vc-meeting-message-send.md) — send in-meeting text or reaction
+- [lark-vc-agent-meeting-join](lark-vc-agent-meeting-join.md) — app bot joins meeting

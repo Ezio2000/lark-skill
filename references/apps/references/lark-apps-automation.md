@@ -1,227 +1,253 @@
-# apps automation 触发器命令族 SOP
+<a id="apps-automation-触发器命令族-sop"></a>
+# apps automation trigger command family SOP
 
-管理妙搭应用的自动化触发器（定时 / 记录变更 / Webhook / 飞书审批四类）。全部操作需 `--as user`（AuthType: user）。`--help` 是参数细节的完整来源；本文件只记录 Agent 不看就会做错的领域规则。
+Manage automation triggers for Miaoda apps (four types: scheduled / record change / Webhook / Feishu approval). All operations require `--as user` (AuthType: user). `--help` is the complete source for parameter details; this file only records domain rules that an Agent will get wrong if it does not read them.
 
-## 何时用本模块（路由锚点）
+<a id="何时用本模块路由锚点"></a>
+## When to use this module (routing anchors)
 
-**当用户消息里出现「妙搭应用名 / app_id」+ 以下任一意图，路由本模块，不要走 lark-event 或 lark-openapi-explorer：**
+**When a user message contains a "Miaoda app name / app_id" + any of the following intents, route to this module, do not go through lark-event or lark-openapi-explorer:**
 
-- 「（每天 / 定时 / 每 N 小时 / 每周 X）自动跑 / 自动触发 / 定时同步」→ `+automation-create --trigger-type cron`
-- 「数据表 / 记录 / 表里 X 字段（新增 / 更新 / 删除 / 变化）时（触发 / 通知 / 处理）」→ `+automation-create --trigger-type record-change`
-- 「（webhook / 外部回调 / 外部系统调用 / HTTP 触发）」→ `+automation-create --trigger-type webhook`
-- 「（审批 / 报销 / 请假 / 出差）（通过 / 拒绝 / 提交 / 撤回）后自动 X」→ `+automation-create --trigger-type feishu-approval`
-- 「这个应用配了哪些（自动化 / 触发器 / 定时任务）」→ `+automation-list`
-- 「（暂停 / 停用 / 先别自动跑 / 关掉自动触发）某个（触发器 / 定时任务 / 自动化）」→ `+automation-disable`（不是 update 改条件、不是 delete——本模块 不提供删除）
-- 「启用 / 启动已有 trigger」→ 先核对现有状态；只启用时不要修改源码或发布应用。
-- 「换 / 重置 webhook 回调地址 / URL」→ `+automation-update --reset-url --app-env <preview|runtime>`
-- 「换 / 重置 / 轮换 webhook token / bearer」→ `+automation-update --reset-token`
-- 「触发器没反应 / enable 了不触发 / 为什么没执行 / 验证一下触发器」→ 先按「未触发时的诊断顺序」诊断；对 UPSERT 和 feishu-approval 仅验证配置边界，不承诺 handler 或 live 验证。
+- "(every day / scheduled / every N hours / every week on X) run automatically / trigger automatically / sync on schedule" → `+automation-create --trigger-type cron`
+- "when a data table / record / field X in the table is (added / updated / deleted / changed) (trigger / notify / process)" → `+automation-create --trigger-type record-change`
+- "(webhook / external callback / external system call / HTTP trigger)" → `+automation-create --trigger-type webhook`
+- "after (approval / reimbursement / leave request / business trip) is (approved / rejected / submitted / withdrawn), automatically X" → `+automation-create --trigger-type feishu-approval`
+- "which (automations / triggers / scheduled tasks) are configured for this app" → `+automation-list`
+- "(pause / disable / stop running automatically for now / turn off automatic triggering) a certain (trigger / scheduled task / automation)" → `+automation-disable` (not update to change conditions, not delete—this module does not provide deletion)
+- "enable / start an existing trigger" → first verify the existing state; when only enabling, do not modify source code or publish the app.
+- "change / reset the webhook callback address / URL" → `+automation-update --reset-url --app-env <preview|runtime>`
+- "change / reset / rotate the webhook token / bearer" → `+automation-update --reset-token`
+- "the trigger is not responding / enabled but not triggering / why did it not execute / verify the trigger" → first diagnose according to "Diagnostic order when not triggered"; for UPSERT and feishu-approval, only verify configuration boundaries, do not promise handler or live verification.
 
-**边界（防误路由）**：`lark-event` 是**实时事件流消费**（agent 长连接订阅事件），不管妙搭应用触发器的**配置**；用户说「配 / 设置一个触发器」而不是「订阅事件流」时，本模块 才是正确选择。「审批通过触发」在妙搭应用语境下属于本模块 的 `feishu-approval` 类型，不是 lark-event。
+**Boundary (prevent mis-routing)**: `lark-event` is **real-time event stream consumption** (agent long-connection event subscription), and does not manage the **configuration** of Miaoda app triggers; when the user says "configure / set up a trigger" rather than "subscribe to an event stream", this module is the correct choice. "Trigger on approval approval" in the context of a Miaoda app belongs to this module's `feishu-approval` type, not lark-event.
 
-### 回应「怎么配」类问题的正确姿势
+<a id="回应怎么配类问题的正确姿势"></a>
+### The correct posture for responding to "how to configure" questions
 
-用户问「怎么配 / 怎么设置一个 X 触发器」时，**先展示完整命令模板 + 你对核心参数的推断**（让用户能确认你理解对了），再追问缺失的必填项（`--name` 之类）或可选项。**不要跳过展示、直接连环追问**，那样用户没法确认你有没有理解意图。
+When the user asks "how to configure / how to set up an X trigger", **first show the complete command template + your inference of the core parameters** (so the user can confirm you understood correctly), then ask about the missing required items (such as `--name`) or optional items. **Do not skip the display and directly ask a chain of questions**, because then the user cannot confirm whether you understood the intent.
 
-示范：用户说「报销审批一旦通过就自动触发处理，怎么配？」
-- ✅ 正确：先写出「这是 feishu-approval 类型，命令模板：`apps +automation-create --app-id <id> --name <name> --trigger-type feishu-approval --event-type approval_instance --instance-status APPROVED [--approval-code <code>]`。需要你确认：(1) 触发器名 `<name>`；(2) 是否限定特定审批流程——限定就传 `--approval-code`（从飞书审批管理后台拿），不传则匹配所有审批定义」。
-- ❌ 错误：直接问「叫什么名字？监听哪个审批？」——用户没法确认你有没有把「审批通过」映射到 `--event-type approval_instance --instance-status APPROVED`。
+Example: the user says "once a reimbursement approval is approved, automatically trigger processing, how do I configure it?"
+- ✅ Correct: first write out "this is the feishu-approval type, command template: `apps +automation-create --app-id <id> --name <name> --trigger-type feishu-approval --event-type approval_instance --instance-status APPROVED [--approval-code <code>]`. I need you to confirm: (1) the trigger name `<name>`; (2) whether to limit it to a specific approval process—if limited, pass `--approval-code` (obtained from the Feishu Approval admin console), if not passed it matches all approval definitions".
+- ❌ Wrong: directly ask "what is it called? which approval does it listen to?"—the user cannot confirm whether you mapped "approval approved" to `--event-type approval_instance --instance-status APPROVED`.
 
-同理，cron/record-change/webhook 三类的「怎么配」都遵循此模式：先给命令 + 参数推断，后追问缺项。
+Similarly, the "how to configure" for the three types cron/record-change/webhook all follow this pattern: first give the command + parameter inference, then ask about missing items.
 
-## 命令路由
+<a id="命令路由"></a>
+## Command routing
 
-| 命令 | 用途 | Risk |
+| Command | Purpose | Risk |
 |---|---|---|
-| `+automation-list` | 列出应用所有触发器（可按类型过滤、`--all` 聚合翻页） | read |
-| `+automation-get` | 查看单个触发器完整配置（Webhook Bearer Token 恒脱敏） | read |
-| `+automation-create` | 创建触发器，四类共用一条命令，按 `--trigger-type` 分派 | write |
-| `+automation-update` | 改条件/描述，或经专用 flag 管理 Webhook URL·Token | high-risk-write |
-| `+automation-enable` | 启用触发器（`status→enabled`，开始自动触发） | write |
-| `+automation-disable` | 停用触发器（`status→disabled`，停止触发，不删除） | write |
+| `+automation-list` | List all triggers of the app (can filter by type, `--all` aggregate pagination) | read |
+| `+automation-get` | View the complete configuration of a single trigger (Webhook Bearer Token always masked) | read |
+| `+automation-create` | Create a trigger, all four types share one command, dispatched by `--trigger-type` | write |
+| `+automation-update` | Change conditions/description, or manage Webhook URL·Token via dedicated flags | high-risk-write |
+| `+automation-enable` | Enable a trigger (`status→enabled`, starts automatic triggering) | write |
+| `+automation-disable` | Disable a trigger (`status→disabled`, stops triggering, does not delete) | write |
 
-触发器以 **应用内唯一的 `--name`** 定位（不是 id）。所有单条命令都用 `--app-id` + `--name`；名字忘了先 `+automation-list` 查。
+Triggers are located by the **app-internal unique `--name`** (not id). All single-item commands use `--app-id` + `--name`; if you forgot the name, first look it up with `+automation-list`.
 
-## 四类触发器 payload
+<a id="四类触发器-payload"></a>
+## Payloads for the four trigger types
 
-`--trigger-type` 用面向 Agent 的 kebab-case（`cron` / `record-change` / `webhook` / `feishu-approval`），CLI 内部转 snake_case 下推。类型专属 flag 只在对应类型生效。
+`--trigger-type` uses Agent-facing kebab-case (`cron` / `record-change` / `webhook` / `feishu-approval`), and the CLI internally converts to snake_case before pushing down. Type-specific flags only take effect for the corresponding type.
 
-### cron（定时）
+<a id="cron定时"></a>
+### cron (scheduled)
 
 ```bash
 +automation-create --app-id <id> --name daily --trigger-type cron \
   --cron '0 9 * * *' [--timezone Asia/Shanghai]
 ```
 
-- `--cron` 是**五段式**（`minute hour day month weekday`），非六段。
-- **最小间隔 30 分钟**：`--cron '* * * * *'`（每分钟）或 `*/n`（n<30）会被 CLI 本地拦截报错；后端也会二次校验。
-- `--timezone` 缺省补 `Asia/Shanghai`（IANA 时区名）。
+- `--cron` is **five-field** (`minute hour day month weekday`), not six-field.
+- **Minimum interval 30 minutes**: `--cron '* * * * *'` (every minute) or `*/n` (n<30) will be intercepted locally by the CLI and report an error; the backend also performs a second validation.
+- If `--timezone` is omitted, it defaults to `Asia/Shanghai` (IANA time zone name).
 
-### record-change（记录变更）
+<a id="record-change记录变更"></a>
+### record-change (record change)
 
 ```bash
 +automation-create --app-id <id> --name onUpd --trigger-type record-change \
   --table <table_name> --event UPDATE [--fields '["status"]']
 ```
 
-- `--event` 是**大写枚举**：`INSERT` / `UPDATE` / `UPSERT` / `DELETE`（CLI 会 uppercase，但请按枚举传）。
-- `--table` 是应用数据库里的**表名**（对应 `+db-table-list` / `+db-table-get` 输出里 `.name` 字段的值），必填。妙搭应用的 dataloom 表以名称作为稳定标识符，没有独立的 `table_id`。
-- `--fields` 是 JSON 字符串数组，仅对 `UPDATE`/`UPSERT` 有意义；`'["*"]'` 表示监听所有字段；不传表示不限定字段。
+- `--event` is an **uppercase enum**: `INSERT` / `UPDATE` / `UPSERT` / `DELETE` (the CLI will uppercase it, but please pass it according to the enum).
+- `--table` is the **table name** in the app database (corresponding to the value of the `.name` field in the `+db-table-list` / `+db-table-get` output), required. Miaoda app dataloom tables use the name as the stable identifier, and there is no independent `table_id`.
+- `--fields` is a JSON string array, meaningful only for `UPDATE`/`UPSERT`; `'["*"]'` means listen to all fields; not passing it means no field restriction.
 
-### webhook（外部回调）
+<a id="webhook外部回调"></a>
+### webhook (external callback)
 
 ```bash
 +automation-create --app-id <id> --name hook --trigger-type webhook \
   [--white-ip-list '["1.1.1.1","2.2.2.2"]']
 ```
 
-- 创建时可选 `--white-ip-list`（JSON 字符串数组）限制回调来源 IP。
-- 回调 URL 分 **preview / runtime 两套**，创建时不回显；用 `+automation-get` 查当前配置，用 `+automation-update --reset-url --app-env <preview|runtime>` 轮换。
-- Bearer Token 是回调鉴权凭证，见下方「凭证脱敏与一次性回显」。
+- At creation, `--white-ip-list` (JSON string array) is optional to restrict the callback source IPs.
+- The callback URL has **two sets: preview / runtime**, and is not echoed back at creation; use `+automation-get` to check the current configuration, and `+automation-update --reset-url --app-env <preview|runtime>` to rotate it.
+- The Bearer Token is the callback authentication credential, see "Credential masking and one-time echo" below.
 
-### feishu-approval（飞书审批）
+<a id="feishu-approval飞书审批"></a>
+### feishu-approval (Feishu approval)
 
 ```bash
 +automation-create --app-id <id> --name apv --trigger-type feishu-approval \
   --event-type approval_instance --instance-status APPROVED [--approval-code <code>]
 ```
 
-- `--event-type` 必填，取 `approval_instance` 或 `approval_task`，决定状态用哪套 flag：
-  - `approval_instance` → `--instance-status`（可重复）
-  - `approval_task` → `--task-status`（可重复）
-- **领域规则**：状态按 `event-type` 分桶校验，两桶枚举**不完全相同**（`PENDING`/`APPROVED`/`REJECTED`/`REVERTED`/`OVERTIME_CLOSE`/`OVERTIME_RECOVER` 两桶共享；`TRANSFERRED`/`ROLLBACK`/`DONE` 仅 task 有；`CANCELED`/`DELETED` 仅 instance 有）；传错桶的状态会被 CLI 本地拦截，错误信息会打印该桶的合法值列表。具体枚举见命令 `--help`。
+- `--event-type` is required, take `approval_instance` or `approval_task`, which determines which set of flags the status uses:
+  - `approval_instance` → `--instance-status` (repeatable)
+  - `approval_task` → `--task-status` (repeatable)
+- **Domain rule**: statuses are validated in buckets by `event-type`, and the two buckets' enums are **not completely identical** (`PENDING`/`APPROVED`/`REJECTED`/`REVERTED`/`OVERTIME_CLOSE`/`OVERTIME_RECOVER` are shared by both buckets; `TRANSFERRED`/`ROLLBACK`/`DONE` exist only for task; `CANCELED`/`DELETED` exist only for instance); passing a status from the wrong bucket will be intercepted locally by the CLI, and the error message will print the list of valid values for that bucket. For the specific enums, see the command `--help`.
 
-## approval-code 获取路径
+<a id="approval-code-获取路径"></a>
+## approval-code acquisition path
 
-`--approval-code` **可选**。不传时匹配所有审批定义；要限定某个审批流程时，从**飞书审批管理后台**获取具体的 code 传给它。触发器 OpenAPI 不提供审批定义查询能力，具体 code 需去审批管理后台查。
+`--approval-code` is **optional**. When not passed, it matches all approval definitions; to limit it to a specific approval process, obtain the specific code from the **Feishu Approval admin console** and pass it. The trigger OpenAPI does not provide approval definition query capability; the specific code must be looked up in the Approval admin console.
 
-## 凭证脱敏与一次性回显（安全关键）
+<a id="凭证脱敏与一次性回显安全关键"></a>
+## Credential masking and one-time echo (security-critical)
 
-- `+automation-get` / `+automation-list`：**恒不返回明文 Bearer Token**——`trigger_condition.token_value` 被抹为 `null`。用户想知道「token 是什么」时，list/get 都查不到明文。
-- `+automation-update --enable-token` / `--reset-token`：明文 Bearer Token **仅当次 stdout 回显一次**，同时 stderr 打印一次性告警：
+- `+automation-get` / `+automation-list`: **never return the plaintext Bearer Token**—`trigger_condition.token_value` is masked as `null`. When the user wants to know "what the token is", neither list nor get can find the plaintext.
+- `+automation-update --enable-token` / `--reset-token`: the plaintext Bearer Token is **echoed only once to stdout for that invocation**, and at the same time a one-time warning is printed to stderr:
   ```text
   warning: this bearer token is shown only once and is NOT stored by lark-cli — copy it now and store it in your own secret manager.
   ```
-- Webhook URL 同理：`--reset-url` 后新 URL 仅当次回显一次，旧 URL 立即失效。
-- CLI 不落盘任何明文 token/URL（不写 cache / config / recent / debug log / 错误信息）。
-- **Token 丢失只能 reset**：找不回，唯一恢复方式是 `+automation-update --reset-token`（旧 token 同时失效）。
+- The Webhook URL is the same: after `--reset-url`, the new URL is echoed only once for that invocation, and the old URL immediately becomes invalid.
+- The CLI does not persist any plaintext token/URL to disk (not written to cache / config / recent / debug log / error messages).
+- **A lost Token can only be reset**: it cannot be recovered, the only way to restore it is `+automation-update --reset-token` (the old token becomes invalid at the same time).
 
-## 高危确认
+<a id="高危确认"></a>
+## High-risk confirmation
 
-`+automation-update` 整体是 `high-risk-write`，任何一次调用都需显式 `--yes`；缺少时框架会要求确认（退出码 10）。**不要自动补 `--yes`**——需用户明确确认后再加。以下 Webhook 动作 flag 尤其不可逆：
+`+automation-update` as a whole is `high-risk-write`, and any invocation requires an explicit `--yes`; when missing, the framework will require confirmation (exit code 10). **Do not automatically add `--yes`**—it must be added only after the user explicitly confirms. The following Webhook action flags are especially irreversible:
 
-- `--reset-url`（旧回调 URL 立即失效，需配 `--app-env preview|runtime`）
-- `--reset-token`（旧 token 立即失效）
-- `--disable-token`（关闭 token 校验，**不可逆**）
+- `--reset-url` (the old callback URL immediately becomes invalid, requires configuring `--app-env preview|runtime`)
+- `--reset-token` (the old token immediately becomes invalid)
+- `--disable-token` (turns off token validation, **irreversible**)
 
-四个 Webhook 动作 flag（`--reset-url` / `--enable-token` / `--disable-token` / `--reset-token`）**每次只能传一个**。不确定影响时先跑 `--dry-run` 看将发出的请求（不含明文）。
+The four Webhook action flags (`--reset-url` / `--enable-token` / `--disable-token` / `--reset-token`) **can only pass one at a time**. When unsure of the impact, first run `--dry-run` to see the request that will be sent (without plaintext).
 
-### 写入目标与授权
+<a id="写入目标与授权"></a>
+### Write target and authorization
 
-解析唯一的 app、trigger name 和环境后执行。重置 URL 必须确定 `--app-env preview|runtime`；两者是独立 URL，不能猜测。重置会立即使旧 URL/Token 失效，新值只在当次响应返回，CLI 不保存；将替换和相关调用方影响纳入用户已授权的范围。范围已明确时可直接带 `--yes`，否则先完成只读定位和 dry-run，再询问缺失选择。无需固定确认口令或重复确认同一请求。
+Resolve the unique app, trigger name, and environment, then execute. Resetting the URL must determine `--app-env preview|runtime`; the two are independent URLs and cannot be guessed. Resetting immediately invalidates the old URL/Token, and the new value is returned only in that invocation's response, the CLI does not save it; include the replacement and the impact on related callers within the scope the user has already authorized. When the scope is already clear, you may directly include `--yes`, otherwise first complete read-only location and dry-run, then ask about the missing choices. There is no need for a fixed confirmation passphrase or repeated confirmation of the same request.
 
-`--disable-token` 与空 `--white-ip-list` 同时使用会允许任何来源触发回调。仅按用户实际要求设置，不主动改变这两项；用户已明确要求该组合时沿用授权，保留平台自身的参数限制。
+Using `--disable-token` together with an empty `--white-ip-list` will allow callbacks from any source to trigger. Set these two only according to the user's actual request, and do not proactively change them; when the user has explicitly requested this combination, follow the authorization and retain the platform's own parameter restrictions.
 
-## 默认 disabled
+<a id="默认-disabled"></a>
+## Default disabled
 
-`+automation-create` 创建后触发器**默认 disabled**，不会自动触发。需 `+automation-enable` 才开始按条件自动运行（且触发器执行的是**线上已发布**的应用代码——应用未发布时即便 enable 也不会有实际效果）。
+After `+automation-create` creates a trigger, it is **disabled by default** and will not trigger automatically. It requires `+automation-enable` to start running automatically according to the conditions (and the trigger executes the **already-published online** app code—if the app is not published, even enabling it will have no actual effect).
 
-**Agent 行为约束**：用户只说"创建/配一个触发器"时，**不要**主动在同一个 turn 里 `+automation-enable`。只创建时保持 disabled；用户已经要求启用或完整运行该自动化时，可在验证配置和发布状态后继续 enable。启用会：
-- 让 webhook 类型立即可被外部调用（原本用户可能只是想"备好 URL 稍后用"）
-- 让 cron 到点真实触发（原本用户可能想"先建好观察配置"）
-- 让 record-change 立即响应表变更
+**Agent behavior constraint**: when the user only says "create/configure a trigger", **do not** proactively `+automation-enable` in the same turn. When only creating, keep it disabled; when the user has already requested enabling or fully running the automation, you may continue to enable after verifying the configuration and publish status. Enabling will:
+- make the webhook type immediately callable externally (the user may originally have just wanted to "prepare the URL for later use")
+- make cron actually trigger at the scheduled time (the user may originally have wanted to "create it first and observe the configuration")
+- make record-change immediately respond to table changes
 
-创建成功后的推荐话术：`已创建 <name>，当前 disabled；需要真正开始自动运行时告诉我，我用 +automation-enable 启用它。` **不要**在创建成功后立即启用，即使 skill 里说"需 enable 才自动触发"——这条是给用户的说明，不是给 agent 的行动指令。
+Recommended wording after successful creation: `已创建 <name>，当前 disabled；需要真正开始自动运行时告诉我，我用 +automation-enable 启用它。` **do not** enable immediately after successful creation, even if the skill says "requires enable to trigger automatically"—this is an explanation for the user, not an action instruction for the agent.
 
-## 本地全栈 Trigger 闭环
+<a id="本地全栈-trigger-闭环"></a>
+## Local full-stack Trigger closed loop
 
-当用户希望触发器实际执行业务代码时，先确认当前工作区是已初始化的应用项目，并读取其中与触发器任务匹配的 guide。
+When the user wants the trigger to actually execute business code, first confirm that the current workspace is an initialized app project, and read the guide in it that matches the trigger task.
 
-`--name` 是应用内唯一的 trigger 定位键；代码侧绑定名称必须与它逐字相同。不得用 trigger ID 或方法名代替它。具体 handler 语法和接入方式以项目 guide 为准。
+`--name` is the app-internal unique trigger location key; the code-side binding name must be verbatim identical to it. Do not use the trigger ID or method name in its place. The specific handler syntax and integration method are subject to the project guide.
 
-### 仅创建/配置触发器
+<a id="仅创建配置触发器"></a>
+### Only create/configure the trigger
 
-适用于 cron、record-change、webhook 和 feishu-approval。用 `+automation-create` 创建，并省略 `--status` 或显式传 `disabled`，然后报告 name 和 disabled 状态。
+Applies to cron, record-change, webhook, and feishu-approval. Create with `+automation-create`, and omit `--status` or explicitly pass `disabled`, then report the name and disabled status.
 
-不要传 `--status enabled`，也不要写 handler、commit/push、release 或 enable；更不能把创建 API 成功称为“可运行”。默认 disabled 是这个意图的终点，不是稍后自动 enable 的待办。
+Do not pass `--status enabled`, and do not write a handler, commit/push, release, or enable; even less should you call the creation API success "runnable". Default disabled is the endpoint of this intent, not a to-do to automatically enable later.
 
-### 仅启用已有 disabled trigger
+<a id="仅启用已有-disabled-trigger"></a>
+### Only enable an existing disabled trigger
 
-用户只要求启用已存在且 disabled 的 trigger、没有要求修改代码或制造真实 runtime 事件时，先用 `+automation-get` 核对 name、类型和 disabled 状态，再用 `+release-list --status finished --page-size 1` 核对是否存在已完成线上 release。release history 只能证明当前线上应用有已发布版本，不能证明该 trigger name 已绑定 handler。不存在 finished release 时说明 enable 只会改变配置状态、当前没有可执行的线上版本；存在时说明它会对当前线上应用激活这条 trigger 配置。随后按用户要求执行 `+automation-enable`，再用 `+automation-get` 确认 enabled。
+When the user only requests enabling an existing and disabled trigger, and does not request modifying code or producing a real runtime event, first use `+automation-get` to verify the name, type, and disabled status, then use `+release-list --status finished --page-size 1` to verify whether a finished online release exists. Release history can only prove that the current online app has a published version, and cannot prove that this trigger name is already bound to a handler. When no finished release exists, explain that enable will only change the configuration state and there is currently no executable online version; when it exists, explain that it will activate this trigger configuration for the current online app. Then execute `+automation-enable` as requested by the user, and use `+automation-get` to confirm enabled.
 
-这条路径不得修改 handler、commit/push 或 release。未发布时不得自动创建 release，也不得声称 trigger 已开始实际运行。即使存在 finished release，也只能把 enable 报告为配置激活；没有 handler 来源或 runtime 结果时，不得声称业务 handler 已存在、已运行或可用。若用户期待尚未发布的本地改动生效，或检查后发现确实需要新增/修改 handler，转到下方“实现或更新 handler 后发布并启动/测试”路径；不要为单纯 enable 发布整个 `sprint/default`。
+This path must not modify the handler, commit/push, or release. When unpublished, do not automatically create a release, and do not claim that the trigger has started actually running. Even if a finished release exists, you may only report enable as configuration activation; when there is no handler source or runtime result, do not claim that the business handler already exists, has run, or is available. If the user expects unpublished local changes to take effect, or after checking you find that a handler really needs to be added/modified, switch to the "implement or update the handler, then publish and start/test" path below; do not publish the entire `sprint/default` just to enable.
 
-对 UPSERT 或 feishu-approval 只改变配置状态；由于本 guide 没有其已证实的 handler、投递或 live 验证契约，启用后也不得声称业务代码已运行或触发器已实测可用。
+For UPSERT or feishu-approval, only change the configuration state; since this guide has no proven handler, delivery, or live verification contract for them, after enabling you must also not claim that the business code has run or that the trigger has been actually verified as usable.
 
-### 测试已有线上 trigger（不改代码）
+<a id="测试已有线上-trigger不改代码"></a>
+### Test an existing online trigger (without changing code)
 
-用户要求测试已经发布的 trigger、没有要求修改 handler 时，先用 `+automation-get` 核对 name、类型、当前状态，再用 `+release-list --status finished --page-size 1` 确认应用存在 finished release，并说明本次测试覆盖当前线上代码。没有 finished release 时停止 runtime test，只报告配置状态；不得为测试自动修改源码、commit/push 或 release。release history 不证明该 name 已绑定 handler，真实 probe 的结果才是本次验证证据；若用户期待本地未发布改动，改走代码变更闭环。
+When the user requests testing an already-published trigger and does not request modifying the handler, first use `+automation-get` to verify the name, type, and current status, then use `+release-list --status finished --page-size 1` to confirm that the app has a finished release, and explain that this test covers the current online code. When there is no finished release, stop the runtime test and only report the configuration state; do not automatically modify source code, commit/push, or release for the test. Release history does not prove that this name is already bound to a handler; the result of a real probe is the verification evidence for this test; if the user expects local unpublished changes, switch to the code change closed loop.
 
-记录测试前状态，并在任何临时 enable 之前完成两类授权和全部 preflight：测试请求已明确包含临时 enable，或另行取得 enable 授权；同时按下方“运行时验证的操作级授权”确定具体事件、影响、载荷、观察结果和清理。原本 disabled 时完成这些门槛后才临时 enable，并在验证结束后恢复 disabled；原本 enabled 时不要无意义切换状态。原本为 disabled 时，无论 probe 成功、失败、结果不确定，还是临时 enable 后提前结束或中断，最终都必须 `+automation-disable` 并回读 disabled，不得停在 enabled。测试意图本身不决定数据库记录、Webhook 请求或其他事件载荷。
+Record the pre-test state, and complete both types of authorization and all preflight before any temporary enable: the test request already explicitly includes temporary enable, or separately obtain enable authorization; at the same time, determine the specific event, impact, payload, observed result, and cleanup according to "Operation-level authorization for runtime verification" below. When it was originally disabled, only temporarily enable after completing these thresholds, and restore disabled after verification ends; when it was originally enabled, do not meaninglessly toggle the state. When it was originally disabled, regardless of whether the probe succeeds, fails, has an uncertain result, or ends early or is interrupted after temporary enable, you must ultimately `+automation-disable` and read back disabled, and must not stop at enabled. The test intent itself does not determine the database record, Webhook request, or other event payload.
 
-### 仅完成 handler（不发布/不启用）
+<a id="仅完成-handler不发布不启用"></a>
+### Only complete the handler (do not publish/do not enable)
 
-仅对 cron、webhook、record-change 的 `INSERT`、`UPDATE`、`DELETE` 使用此路径。
+Use this path only for cron, webhook, record-change's `INSERT`, `UPDATE`, `DELETE`.
 
-创建或定位已明确 name 的 disabled trigger，读取项目 guide，按其要求实现同名业务 handler，完成本地验证。只在既有 Git 确认或预授权下 commit/push；停止在 `+release-create` 和 `+automation-enable` 之前。用户没有明确“发布好”时，先问，不能默认把完整应用上线。
+Create or locate a disabled trigger with an already-clear name, read the project guide, implement the same-named business handler according to its requirements, and complete local verification. Only commit/push under existing Git confirmation or pre-authorization; stop before `+release-create` and `+automation-enable`. When the user has not explicitly said "publish it", ask first, and do not default to putting the complete app online.
 
-### 把 handler 发布好，但先不要启动
+<a id="把-handler-发布好但先不要启动"></a>
+### Publish the handler, but do not start it yet
 
-仅对 cron、webhook、record-change 的 `INSERT`、`UPDATE`、`DELETE` 使用此路径。先用 `+automation-get` 定位；不存在时用 `+automation-create` 创建同名 disabled trigger，再次回读确认。已存在时记录它是否 enabled。按项目 guide 完成同名业务 handler 并本地验证后，commit、`git push origin sprint/default`。若 trigger 已 enabled，先说明发布前必须临时停用以及可能造成的运行中断，并取得这次临时停用授权；未获授权时停止在发布前。取得授权后，在发布前执行 `+automation-disable`，并再次用 `+automation-get` 确认 disabled。随后发布完整应用：
+Use this path only for cron, webhook, record-change's `INSERT`, `UPDATE`, `DELETE`. First locate with `+automation-get`; when it does not exist, use `+automation-create` to create a same-named disabled trigger, and read it back again to confirm. When it already exists, record whether it is enabled. After completing the same-named business handler according to the project guide and verifying locally, commit, `git push origin sprint/default`. If the trigger is already enabled, first explain that it must be temporarily disabled before publishing and the possible runtime interruption, and obtain authorization for this temporary disable; when authorization is not obtained, stop before publishing. After obtaining authorization, execute `+automation-disable` before publishing, and use `+automation-get` again to confirm disabled. Then publish the complete app:
 
 ```bash
 lark-cli apps +release-create --as user --app-id <app_id> --branch sprint/default
 ```
 
-若 `+release-create` 本身返回错误或未返回 `data.release_id`：视为确认未创建本轮 release（新代码未上线），原本 enabled 的 trigger 恢复 enabled 并回读、原本 disabled 的保持 disabled，然后停止；若因超时等导致创建结果未知，保持 disabled，先用 `+release-list --status finished --page-size 1` 核对是否已产生新 release 再决定。取得 `data.release_id` 后，对**这一轮** ID 调用 `+release-get`：`publishing` 时每 20 秒继续轮询，整体最多约 5 分钟；超时且状态仍不确定时报告 `release_id` 和当前 status，并保持 disabled；只有 `data.status=finished` 才算完成。确认 `failed` 且新代码未上线时，原本 enabled 的 trigger 恢复 enabled 并回读，原本 disabled 的保持 disabled。release 是整个应用上线，可能影响既有线上功能；未获得启动或测试授权时，finished 后始终保持 disabled，不执行 `+automation-enable`。
+If `+release-create` itself returns an error or does not return `data.release_id`: treat it as confirmed that no release was created this round (the new code is not live); restore the originally enabled trigger to enabled and read it back, keep the originally disabled one disabled, then stop. If the creation result is unknown due to a timeout or similar, keep it disabled, first use `+release-list --status finished --page-size 1` to check whether a new release has been produced, and then decide. After obtaining `data.release_id`, call `+release-get` for **this round's** ID: when `publishing`, keep polling every 20 seconds, for a total of about 5 minutes at most; if it times out and the status is still uncertain, report `release_id` and the current status, and keep it disabled; only `data.status=finished` counts as complete. When `failed` is confirmed and the new code is not live, restore the originally enabled trigger to enabled and read it back, and keep the originally disabled one disabled. A release puts the entire app live and may affect existing online functionality; when startup or testing authorization has not been obtained, always keep it disabled after finished, and do not execute `+automation-enable`.
 
-### 实现或更新 handler 后发布并启动/测试
+<a id="实现或更新-handler-后发布并启动测试"></a>
+### Publish and start/test after implementing or updating a handler
 
-仅当本轮确实需要新增或修改 cron、webhook、record-change 的 `INSERT`、`UPDATE`、`DELETE` handler，且用户要求把这次代码发布后启动或测试时，才使用此路径。按以下不可跳过的顺序执行：
+Use this path only when this round genuinely requires adding or modifying a cron, webhook, or record-change `INSERT`, `UPDATE`, or `DELETE` handler, and the user asks to start or test after publishing this code. Execute in the following order, which must not be skipped:
 
-1. 用 `+automation-get` 定位并记录发布前状态，再核对其 `--name`、类型并读取项目 guide；不存在时用 `+automation-create` 创建同名 trigger 并保持默认 disabled。
-2. 按项目 guide 完成同名业务 handler 并本地验证。
-3. 在 Git 已确认/预授权时 commit，然后执行 `git push origin sprint/default`。
-4. 若 trigger 当前 enabled，先说明发布前必须临时停用以及可能造成的运行中断，并取得这次临时停用授权；未获授权时停止在发布前。取得授权后执行 `+automation-disable`，并再次用 `+automation-get` 确认 disabled；原本 disabled 时不要无意义切换状态。
-5. 执行 `+release-create --branch sprint/default`。若该命令本身返回错误或未返回 `data.release_id`：视为确认未创建本轮 release（新代码未上线），原本 enabled 的 trigger 恢复 enabled 并回读、原本 disabled 的保持 disabled 后停止；若因超时等导致结果未知，保持 disabled，先用 `+release-list --status finished --page-size 1` 核对是否已产生新 release 再决定。取得 `data.release_id` 后进入下一步。
-6. 对该 ID 执行 `+release-get`，只有 `data.status=finished` 才能继续；`publishing` 时每 20 秒继续轮询，整体最多约 5 分钟。超时且状态仍不确定时停止本轮轮询、报告 `release_id` 和当前 status，并保持 disabled；确认 `failed` 时报告发布失败，原本 enabled 的 trigger 仅在确认新代码未上线后恢复 enabled，原本 disabled 的保持 disabled。发布状态仍不确定时不得进入 enable、probe 或状态恢复分支。`is_published=true` 不能代替这轮发布完成。
-7. **仅启动**：取得持续启动授权后执行 `+automation-enable`，并用 `+automation-get` 确认 enabled；到此结束，不制造 runtime probe。
-8. **测试（含“启动并测试”）**：先按下节“运行时验证的操作级授权”完成全部 preflight，包括具体事件、sibling 影响、载荷、观察结果和清理；完成前保持 disabled，之后才执行 `+automation-enable` 并回读，再由已授权主体制造真实 runtime 条件并核验业务结果。若同时明确要求持续启动，只有 probe 成功后才保持 enabled。
-9. 若用户仅要求测试而不是持续启动，只在本轮 release 已 `finished` 且 probe 成功后恢复到发布前状态：原本 disabled 或本轮新建的 trigger `+automation-disable` 并回读；原本 enabled 的可保持 enabled。无论用户是仅测试还是启动并测试，probe 失败、结果不确定或 enable 后提前结束时，一律 `+automation-disable` 并回读 disabled；不得把“发布前 enabled”当作失败后的恢复依据，因为本轮新代码已经上线。只有旧 release 已回滚并验证，或修复后重新发布且 probe 成功，才可再次 enabled。恢复失败时明确报告当前状态。
+1. Use `+automation-get` to locate and record the pre-publish state, then verify its `--name` and type and read the project guide; if it does not exist, use `+automation-create` to create a trigger with the same name and keep it disabled by default.
+2. Complete the business handler with the same name according to the project guide and verify it locally.
+3. When Git is confirmed/pre-authorized, commit, then execute `git push origin sprint/default`.
+4. If the trigger is currently enabled, first explain that it must be temporarily disabled before publishing and the possible runtime interruption this may cause, and obtain authorization for this temporary disablement; if authorization is not obtained, stop before publishing. After obtaining authorization, execute `+automation-disable`, and use `+automation-get` again to confirm it is disabled; when it was originally disabled, do not toggle the state pointlessly.
+5. Execute `+release-create --branch sprint/default`. If the command itself returns an error or does not return `data.release_id`: treat it as confirmed that no release was created this round (the new code is not live); restore the originally enabled trigger to enabled and read it back, keep the originally disabled one disabled, then stop. If the result is unknown due to a timeout or similar, keep it disabled, first use `+release-list --status finished --page-size 1` to check whether a new release has been produced, and then decide. After obtaining `data.release_id`, proceed to the next step.
+6. Execute `+release-get` for that ID; only `data.status=finished` allows continuing; when `publishing`, keep polling every 20 seconds, for a total of about 5 minutes at most. If it times out and the status is still uncertain, stop polling for this round, report `release_id` and the current status, and keep it disabled; when `failed` is confirmed, report the publish failure; restore the originally enabled trigger to enabled only after confirming the new code is not live, and keep the originally disabled one disabled. When the publish status is still uncertain, do not enter the enable, probe, or state-restoration branches. `is_published=true` cannot substitute for this round's publish completion.
+7. **Start only**: after obtaining continuous-start authorization, execute `+automation-enable`, and use `+automation-get` to confirm it is enabled; end here, and do not create a runtime probe.
+8. **Test (including "start and test")**: first complete all preflight according to the next section "Operation-level authorization for runtime verification", including the specific event, sibling impact, payload, observed results, and cleanup; keep it disabled until that is complete, and only then execute `+automation-enable` and read it back, then have the authorized subject create real runtime conditions and verify the business result. If continuous start is also explicitly required, keep it enabled only after the probe succeeds.
+9. If the user only asks for testing rather than continuous start, restore to the pre-publish state only after this round's release has `finished` and the probe succeeds: for a trigger that was originally disabled or newly created this round, `+automation-disable` and read it back; one that was originally enabled may remain enabled. Whether the user is only testing or starting and testing, if the probe fails, the result is uncertain, or it ends early after enable, always `+automation-disable` and read back disabled; do not use "enabled before publish" as the basis for recovery after failure, because this round's new code is already live. It may be enabled again only after the old release has been rolled back and verified, or after a fix and republish with a successful probe. If restoration fails, clearly report the current state.
 
-没有通用的 `automation-debug` 或 trigger 日志 shortcut。缺少安全事件入口、匹配环境或可观察结果时，记录 blocked，不能编造测试成功。
+There is no general `automation-debug` or trigger log shortcut. When a safe event entry point, matching environment, or observable result is missing, record blocked; do not fabricate test success.
 
-### 运行时验证的操作级授权
+<a id="运行时验证的操作级授权"></a>
+### Operation-level authorization for runtime verification
 
-启用 trigger 的授权不等于制造 runtime 事件的授权，测试授权也不等于任意数据库写入授权。cron 可等待计划时间；webhook 只能向既有 runtime URL 发送已授权、安全且不泄露凭证的请求。record-change 在执行任何 DML 前，必须明确并取得覆盖以下作用域的授权：环境、表、操作、精确测试记录或筛选条件、payload、预期结果和清理方式。
+Authorization to enable a trigger is not authorization to create runtime events, and test authorization is not authorization for arbitrary database writes. cron may wait for the scheduled time; webhook may only send authorized, safe requests that do not leak credentials to an existing runtime URL. Before executing any DML, record-change must clearly define and obtain authorization covering the following scope: environment, table, operation, exact test record or filter condition, payload, expected result, and cleanup method.
 
-优先使用专用测试记录，不要任取线上业务记录。用户已明确授权精确、可撤回的测试夹具及其清理时，不机械追加一轮确认；目标或影响仍不清楚时必须停下。record-change probe 前先执行 `+automation-list --trigger-type record-change --all`，检查同一环境、表和操作可能命中的其他 enabled trigger；若存在 sibling match，必须说明聚合业务影响并取得覆盖这些影响的授权，或换成隔离夹具/经授权临时停用后再测。`UPDATE` 要限定精确条件并保留恢复方式；`INSERT` 要预先约定清理；恢复 UPDATE 或清理 INSERT 也可能再次触发自动化，必须纳入影响说明和授权。`DELETE` 必须遵循 [lark-apps-db-execute.md](lark-apps-db-execute.md)：先 `SELECT count(*)`、执行 `--dry-run`，展示影响后取得针对该删除目标的明确授权，再带 `--yes` 执行；清理动作若包含未预先授权的删除，同样走该门槛。
+Prefer dedicated test records; do not arbitrarily take online business records. When the user has explicitly authorized a precise, revocable test fixture and its cleanup, do not mechanically add another round of confirmation; when the target or impact is still unclear, you must stop. Before a record-change probe, first execute `+automation-list --trigger-type record-change --all` to check other enabled triggers that may be matched by the same environment, table, and operation; if a sibling match exists, you must explain the aggregated business impact and obtain authorization covering those impacts, or switch to an isolated fixture / authorized temporary disablement before testing. `UPDATE` must limit to precise conditions and preserve a restoration method; `INSERT` must pre-arrange cleanup; a restoration UPDATE or cleanup INSERT may also trigger automation again, and must be included in the impact explanation and authorization. `DELETE` must follow [lark-apps-db-execute.md](lark-apps-db-execute.md): first `SELECT count(*)`, execute `--dry-run`, show the impact and obtain explicit authorization for that deletion target, then execute with `--yes`; if the cleanup action includes a deletion that was not pre-authorized, it must also go through that threshold.
 
-缺少安全、已授权且可清理的事件入口时，记录 blocked，不得用“测试一下”推导任意 online 数据写入。
+When a safe, authorized, and cleanable event entry point is missing, record blocked; do not derive arbitrary online data writes from "just test it".
 
-### UPSERT 与飞书审批边界
+<a id="upsert-与飞书审批边界"></a>
+### UPSERT and Feishu approval boundaries
 
-record-change 的 UPSERT 可创建 disabled 配置，但当前没有已证实的运行时代码契约；不得静默按 UPDATE 处理，也不得承诺 handler 或 live 验证。
+record-change UPSERT can create disabled configuration, but there is currently no proven runtime code contract; do not silently treat it as UPDATE, and do not promise handler or live verification.
 
-feishu-approval 可创建 disabled 配置，并读取或更新 `event_type`、对应 status 和可选 `approval_code`。当前没有已证实的运行时 handler 契约或实际投递验证；不要把 enable 或审批 API 成功称为业务代码已执行。
+feishu-approval can create disabled configuration and read or update `event_type`, the corresponding status, and optional `approval_code`. There is currently no proven runtime handler contract or actual delivery verification; do not call enable or approval API success as business code having executed.
 
-### 未触发时的诊断顺序
+<a id="未触发时的诊断顺序"></a>
+### Diagnostic order when not triggered
 
-按 `--name` / 项目 guide 要求的代码接入 → 本轮 release `finished` → enabled 状态 → 类型条件、环境和已有日志的顺序排查。客户审批投递故障属于服务端事件投递排查，不要归因于此 SOP 或改写无关业务代码。
+Troubleshoot in the order of code integration required by `--name` / the project guide → this round's release `finished` → enabled state → type conditions, environment, and existing logs. Customer approval delivery failures belong to server-side event delivery troubleshooting; do not attribute them to this SOP or rewrite unrelated business code.
 
-## 常见错误与决策场景
+<a id="常见错误与决策场景"></a>
+## Common errors and decision scenarios
 
-| 现象 / 用户意图 | 正确处理 |
+| Symptom / user intent | Correct handling |
 |---|---|
-| 创建报名字冲突（`--name` 应用内唯一） | 换名或加后缀重试 |
-| cron 报非法 / 间隔过小 | 检查是否五段式、分钟字段是否 `*` 或 `*/n`(n<30) |
-| `--reset-url` 报缺 app-env | 补 `--app-env preview` 或 `--app-env runtime` |
-| 想把 cron 触发器改成 webhook（跨类型改） | update 不支持换类型，本模块 也不提供删除。旧触发器只能 `+automation-disable` 停用（保留在应用里），另建一个 webhook 触发器；若要真正清理旧触发器，请到妙搭 web 手动删除 |
-| 触发器 enable 了但不触发 | 已证实的 cron、webhook、record-change（INSERT/UPDATE/DELETE）按「未触发时的诊断顺序」排查；UPSERT 和 feishu-approval 仅核对配置边界，不承诺 handler 或 live 验证。 |
-| 「token 泄露了」 | 优先 `+automation-update --reset-token --yes` 轮换（旧 token 立即失效），而非直接 disable-token 关校验 |
-| 「回调 URL 泄露了」 | `+automation-update --reset-url --app-env <env> --yes` 轮换 |
+| Creation reports a name conflict (`--name` is unique within the app) | Change the name or add a suffix and retry |
+| cron reports invalid / interval too small | Check whether it is five-field and whether the minute field is `*` or `*/n`(n<30) |
+| `--reset-url` reports missing app-env | Add `--app-env preview` or `--app-env runtime` |
+| Want to change a cron trigger to webhook (cross-type change) | update does not support changing type, and this module does not provide deletion either. The old trigger can only be disabled with `+automation-disable` (kept in the app), and a new webhook trigger created; if you really want to clean up the old trigger, manually delete it in the Miaoda web UI |
+| Trigger is enabled but does not fire | For proven cron, webhook, and record-change (INSERT/UPDATE/DELETE), troubleshoot according to "Diagnostic order when not triggered"; for UPSERT and feishu-approval, only verify the configuration boundary, and do not promise handler or live verification. |
+| "The token leaked" | Prefer `+automation-update --reset-token --yes` rotation (the old token becomes invalid immediately), rather than directly disable-token to turn off verification |
+| "The callback URL leaked" | `+automation-update --reset-url --app-env <env> --yes` rotation |
 
-## 不在本模块 范围
+<a id="不在本模块-范围"></a>
+## Out of scope for this module
 
-- 审批定义查询、Webhook 消费端实现、实时触发日志 tail：本期不支持。
-- 身份选择、权限不足处理、exit-10 审批、高风险操作通用框架：见 [`../../shared/index.md`](../../shared/index.md)，不在此重复。
+- Approval definition queries, webhook consumer implementation, real-time trigger log tail: not supported in this release.
+- Identity selection, handling insufficient permissions, exit-10 approval, general framework for high-risk operations: see [`../../shared/index.md`](../../shared/index.md), not repeated here.

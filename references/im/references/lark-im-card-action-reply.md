@@ -8,7 +8,7 @@ checkbox toggle, date/time pick, etc.
 ## Setup (required)
 
 > **Console configuration required**: In the Feishu Developer Console, go to
-> **App → Events & Callbacks → Callback Configuration** (应用--事件与回调--回调配置) and enable it.
+> **App → Events & Callbacks → Callback Configuration** (App -- Events & Callbacks -- Callback Configuration) and enable it.
 > The consumer starts without errors even when not configured, but **no events will be received**.
 > There is no preflight check for this setting.
 

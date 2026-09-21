@@ -1,30 +1,36 @@
-# Genre Contract: Business Analysis / 商业分析 (`report.business_analysis`)
+<a id="genre-contract-business-analysis--商业分析-reportbusiness_analysis"></a>
+# Genre Contract: Business Analysis (`report.business_analysis`)
 
-## 体裁规则表（硬约束）
+<a id="体裁规则表硬约束"></a>
+## Genre Rules Table (Hard Constraints)
 
-| 规则项 | 规则 |
+| Rule Item | Rule |
 |-|-|
-| 写作风格 | 结论前置、具体、条件化；模型只用于改变比较或暴露约束，不用管理黑话代替判断 |
-| 内容逻辑 | 围绕一个具体决策，比较现状 / 不行动与真实替代项；用统一目标和口径评价价值、全周期成本、风险、约束与可实施性，给出推荐、暂缓或验证门及翻转条件 |
-| 事实 / 边界 | 事实、估算、假设、未知和外部依赖分开；数字标来源、时点、单位、口径和置信范围；利益相关方、不可货币化影响和权限边界显著；分析建议不等于批准或承诺 |
-| 错误 | 为预选方案找论据；无现状基准或真实替代项；口径不一却排名；单一 ROI / BCR / 评分替代平衡判断；套 SWOT；估算冒充事实；忽略全周期成本、依赖或分配影响；未获批写成已承诺；建议不回链证据 |
+| Writing Style | Conclusion-first, specific, conditional; models are used only to change comparisons or expose constraints, not to replace judgment with management jargon |
+| Content Logic | Centered on one specific decision, compare the status quo / no action against real alternatives; evaluate value, full-lifecycle cost, risk, constraints, and implementability using a unified objective and consistent basis, and give a recommendation, deferral, or validation gate with flip conditions |
+| Facts / Boundaries | Separate facts, estimates, assumptions, unknowns, and external dependencies; label numbers with source, time point, unit, basis, and confidence range; stakeholders, non-monetizable impacts, and authority boundaries are prominent; analysis recommendations do not equal approval or commitment |
+| Errors | Finding arguments for a preselected option; no status quo baseline or real alternatives; ranking with inconsistent bases; replacing balanced judgment with a single ROI / BCR / score; applying SWOT as a template; passing estimates off as facts; ignoring full-lifecycle cost, dependencies, or distributional impacts; writing unapproved items as committed; recommendations not linked back to evidence |
 
-## 适用与消歧
+<a id="适用与消歧"></a>
+## Applicability and Disambiguation
 
-比较投资、资源、市场、产品、经营或供应选项并支持判断，但正文不要求具名决策者作出选择 / 批准，也不形成授权、资源拨付或执行承诺入口。`商业`、`市场分析`、`SWOT`单独只用于召回；回答研究问题走 [`research-report.md`](research-report.md)，纯指标解读走 [`data-report.md`](data-report.md)，命中上述 ask / 授权入口时走 Workplace Proposal，接口、不变量和实现取舍为主走 Technical RFC。
+Compare investment, resource, market, product, operational, or supply options and support judgment, but the main text does not require a named decision-maker to make a choice / approval, nor does it form an entry point for authorization, resource allocation, or execution commitment. `商业`, `市场分析`, and `SWOT` are used only for recall on their own; for answering research questions go to [`research-report.md`](research-report.md), for pure metric interpretation go to [`data-report.md`](data-report.md), when the above ask / authorization entry points are hit go to Workplace Proposal, and when interfaces, invariants, and implementation trade-offs are primary go to Technical RFC.
 
-## 子类型
+<a id="子类型"></a>
+## Subtypes
 
-投资 / 资源配置；build-buy-partner 或 vendor；市场进入 / 扩张；产品 / 组合优先级；经营模式 / 流程；定价 / 商业模式；高不确定性的试点或阶段门。分析深度随金额、复杂度、不可逆性、影响范围和风险提高。
+Investment / resource allocation; build-buy-partner or vendor; market entry / expansion; product / portfolio prioritization; operating model / process; pricing / business model; high-uncertainty pilots or stage gates. Analysis depth increases with amount, complexity, irreversibility, scope of impact, and risk.
 
-## 证据与方法
+<a id="证据与方法"></a>
+## Evidence and Method
 
-- 定义问题、目标、成功标准、范围、约束、决策 owner / 时点和现状 / 不行动基准；记录选项生成与排除理由。
-- 对每个可行选项用相同维度比较收益、全生命周期成本、时间、能力 / 依赖、风险、受影响方、不可货币化影响和可逆性。
-- 现状数据与预测分开；按需说明币种、价格时点、折现和估算方法。不得从官网标价推断销量、收入或份额。
-- 对可能翻转结论的假设做范围、情景或敏感性分析，并给 switching value、决策门或验证信号；评分模型须解释权重和证据，不能只报总分。
-- 缺目标、成功标准、基准或可行选项时只产出 decision frame / options discovery；关键估算用 `[成本区间待核]` 和验证计划，可能翻转结论且无法界定时标记 `blocked`。
+- Define the problem, objective, success criteria, scope, constraints, decision owner / timing, and status quo / no-action baseline; record option generation and exclusion rationale.
+- For each viable option, compare benefits, full-lifecycle cost, time, capabilities / dependencies, risk, affected parties, non-monetizable impacts, and reversibility using the same dimensions.
+- Separate status quo data from forecasts; explain currency, price time point, discounting, and estimation method as needed. Do not infer sales, revenue, or share from official website list prices.
+- Conduct range, scenario, or sensitivity analysis on assumptions that could flip the conclusion, and give switching values, decision gates, or validation signals; scoring models must explain weights and evidence, not just report a total score.
+- When objectives, success criteria, baselines, or viable options are missing, produce only a decision frame / options discovery; use `[成本区间待核]` and a validation plan for key estimates, and mark `blocked` when something could flip the conclusion and cannot be bounded.
 
-## 结构与高质量写法
+<a id="结构与高质量写法"></a>
+## Structure and High-Quality Writing
 
-推荐与条件 → case for change / 目标 / 现状基准 → 选项生成、排除理由与同口径比较 → 关键假设、风险、情景与翻转条件 → 建议为何优于替代 → 阶段门、监测 / 学习计划与未决条件。把现状当真实选项，用区间和场景替代伪精确单点，显著说明谁获益、谁承担成本，以及什么新证据会改变建议。
+Recommendation and conditions → case for change / objective / status quo baseline → option generation, exclusion rationale, and same-basis comparison → key assumptions, risks, scenarios, and flip conditions → why the recommendation is better than alternatives → stage gates, monitoring / learning plan, and open conditions. Treat the status quo as a real option, replace false-precision point estimates with ranges and scenarios, and prominently explain who benefits, who bears the cost, and what new evidence would change the recommendation.

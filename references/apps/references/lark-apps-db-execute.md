@@ -1,75 +1,83 @@
 # apps +db-execute
 
-经妙搭服务端在应用数据库执行 SQL。运行时命令事实以 `lark-cli apps +db-execute --help` 为准。
+Executes SQL in the application database via the Miaoda server side. For runtime command facts, `lark-cli apps +db-execute --help` is authoritative.
 
-> **写 SQL 前先看文末「平台 SQL 规范」**：妙搭底层是 PostgreSQL + 一层平台约束，SQL 内容不符合会被服务端直接拒或建出行为不对的表。最容易踩的三条：① 建业务表必须带 4 个审计列（`_created_at`/`_updated_at`/`_created_by`/`_updated_by`）+ 启用 RLS + 4 条 policy，一次调用里写全；② 人员字段用内置复合类型 `user_profile`（写入 `ROW('<user_id>')::user_profile`，查询解引用 `(field).user_id`）；③ `CREATE/DROP DATABASE·SCHEMA·USER·ROLE`、非白名单 `CREATE EXTENSION`、平台保留表 `auth`/`users` 会被硬拒，`online` 环境禁 DDL。
+> **Before writing SQL, read the "Platform SQL Specification" at the end of this document**: Miaoda's underlying layer is PostgreSQL plus a layer of platform constraints; SQL content that does not comply will be directly rejected by the server side or will create tables with incorrect behavior. The three most easily tripped items: ① Creating a business table must include 4 audit columns (`_created_at`/`_updated_at`/`_created_by`/`_updated_by`) + enable RLS + 4 policies, all written in a single call; ② Personnel fields use the built-in composite type `user_profile` (write with `ROW('<user_id>')::user_profile`, query by dereferencing `(field).user_id`); ③ `CREATE/DROP DATABASE·SCHEMA·USER·ROLE`, non-whitelisted `CREATE EXTENSION`, and platform-reserved tables `auth`/`users` will be hard-rejected, and the `online` environment prohibits DDL.
 
-## 何时用
+<a id="何时用"></a>
+## When to use
 
-用于通过妙搭服务端执行应用数据库 SQL。不要从环境变量里取连接串裸连数据库；本地调试也走这个 shortcut。写什么样的 SQL（平台约束、建表模板、`user_profile`、审计列、禁用 SQL、PG 陷阱）见文末「平台 SQL 规范」。
+Used to execute application database SQL via the Miaoda server side. Do not take the connection string from environment variables and connect to the database directly; local debugging also goes through this shortcut. For what kind of SQL to write (platform constraints, table creation templates, `user_profile`, audit columns, prohibited SQL, PG pitfalls), see the "Platform SQL Specification" at the end of this document.
 
-## 命令骨架
+<a id="命令骨架"></a>
+## Command skeleton
 
-- 必填：`--app-id`，以及 `--sql` / `--file` 二选一（互斥）。
-- `--sql`：内联 SQL 文本；传 `-` 时从 stdin 读。绝对路径文件经 stdin 传入：`--sql - < <absolute-path>`（shell 解析路径，CLI 仅接收内容）。
-- `--file`：`.sql` 文件路径，需为工作目录内的相对路径（如 `--file ./migration.sql`）；绝对路径、或经 `..`/符号链接越出工作目录的路径会被拒绝。文件不在工作目录内时，改用 `--sql - < <文件路径>` 经 stdin 传入。
-- `--environment` 枚举：`dev` / `online`，**不传则由服务端按应用是否开启多环境自动选择（多环境→`dev`，未开启多环境→`online`）**；要固定环境就显式传 `--environment dev|online`。**未开启多环境的应用显式传 `--environment dev` 会报错（无 dev 分支）——这类应用不传 `--environment`（走 `online`）或显式 `--environment online`**。旧名 `--env` 已**移除**：传入会报 validation 错（提示改用 `--environment`），一律用 `--environment`。
-- risk 是 `high-risk-write`（SQL 可含 DML/DDL）：任何执行都需 `--yes`，否则返回 `confirmation_required` / exit 10。`--dry-run` 预览不需要 `--yes`。
-- **不会自动为你包事务，事务边界需自己在 SQL 里控制**：多语句默认逐条独立提交，中间某条失败时前序语句已生效、不会回滚；若需要「要么全部成功、要么全部回滚」的原子性，请在 SQL 内显式写 `BEGIN … COMMIT`（详见下「Agent 规则」）。
+- Required: `--app-id`, plus one of `--sql` / `--file` (mutually exclusive).
+- `--sql`: inline SQL text; when `-` is passed, read from stdin. Absolute-path files are passed in via stdin: `--sql - < <absolute-path>` (the shell resolves the path; the CLI only receives the content).
+- `--file`: `.sql` file path, which must be a relative path within the working directory (such as `--file ./migration.sql`); absolute paths, or paths that escape the working directory via `..`/symbolic links, will be rejected. When the file is not within the working directory, use `--sql - < <文件路径>` to pass it in via stdin instead.
+- `--environment` enum: `dev` / `online`, **if not passed, the server side automatically selects based on whether the application has multi-environment enabled (multi-environment → `dev`, multi-environment not enabled → `online`)**; to fix the environment, explicitly pass `--environment dev|online`. **For applications without multi-environment enabled, explicitly passing `--environment dev` will error (no dev branch) — such applications should not pass `--environment` (go with `online`) or explicitly pass `--environment online`**. The old name `--env` has been **removed**: passing it will cause a validation error (prompting to use `--environment` instead); always use `--environment`.
+- risk is `high-risk-write` (SQL may contain DML/DDL): any execution requires `--yes`, otherwise it returns `confirmation_required` / exit 10. `--dry-run` preview does not require `--yes`.
+- **It will not automatically wrap a transaction for you; transaction boundaries must be controlled by yourself in the SQL**: multiple statements are by default committed independently one by one; if one in the middle fails, the preceding statements have already taken effect and will not be rolled back; if you need the atomicity of "either all succeed or all roll back", explicitly write `BEGIN … COMMIT` within the SQL (see "Agent rules" below for details).
 
-## 示例
+<a id="示例"></a>
+## Examples
 
 ```bash
 lark-cli apps +db-execute --app-id app_xxx --environment dev --sql "select * from orders limit 5" --yes
 lark-cli apps +db-execute --app-id app_xxx --environment dev --file ./migration.sql --dry-run
-# 绝对路径文件 / cwd 不固定：经 stdin 传入
+# Absolute-path file / cwd not fixed: pass in via stdin
 lark-cli apps +db-execute --app-id app_xxx --environment dev --sql - --yes < /Users/.../migrations/0001_init.sql
 ```
 
-## 输出契约
+<a id="输出契约"></a>
+## Output contract
 
-- 成功默认 JSON 的 `data` 按 SQL 类型自适应（不透传后端原始串）：
-  - 单 SELECT → `data` 是行数组 `[{...}]`（空 → `[]`），直接 `-q '.data[].col'` 取字段。
-  - 单 DML → `data = {command, rows_affected}`（如 `{"command":"INSERT","rows_affected":1}`）。
-  - 单 DDL → `data = {command}`（如 `{"command":"CREATE_TABLE"}`）。
-  - 多语句 → `data` 是元素数组：SELECT 为 `{command:"SELECT", rows:[...]}`，DML 为 `{command, rows_affected}`，DDL 为 `{command}`。
-- pretty 会按 SELECT/DML/DDL 自适应渲染；多语句会逐条显示 Statement 摘要。
-- 失败返回 typed `error`（`type:"api"`、`subtype:"server_error"`、`code`、`message`、`hint`）：失败位置在 `message` 的「(at statement N of M)」；前序是否落地 / 是否整批回滚写在 `hint`——事务内失败「Transaction rolled back; no changes persisted.」；非事务多语句前序已落地「Earlier statements were committed and not rolled back; fix statement N and re-run the remaining statements.」；首句即失败（无前序落地）「No statements were applied; fix the SQL and re-run.」。据此决定整段重跑还是只跑剩余语句。
+- On success, the default JSON's `data` adapts to the SQL type (does not pass through the backend's raw string):
+  - Single SELECT → `data` is a row array `[{...}]` (empty → `[]`), directly `-q '.data[].col'` to get fields.
+  - Single DML → `data = {command, rows_affected}` (such as `{"command":"INSERT","rows_affected":1}`).
+  - Single DDL → `data = {command}` (such as `{"command":"CREATE_TABLE"}`).
+  - Multiple statements → `data` is an array of elements: SELECT is `{command:"SELECT", rows:[...]}`, DML is `{command, rows_affected}`, DDL is `{command}`.
+- pretty renders adaptively by SELECT/DML/DDL; multiple statements display a Statement summary one by one.
+- On failure, returns a typed `error` (`type:"api"`, `subtype:"server_error"`, `code`, `message`, `hint`): the failure position is in `message`'s "(at statement N of M)"; whether the preceding statements landed / whether the whole batch rolled back is written in `hint` — failure within a transaction: "Transaction rolled back; no changes persisted."; non-transactional multiple statements with preceding statements already landed: "Earlier statements were committed and not rolled back; fix statement N and re-run the remaining statements."; failure on the first statement (no preceding statements landed): "No statements were applied; fix the SQL and re-run.". Based on this, decide whether to re-run the whole segment or only the remaining statements.
 
-## Agent 规则
+<a id="agent-规则"></a>
+## Agent rules
 
-- 该命令为 high-risk-write，执行一律需 `--yes`；无 `--yes` 会返回 `confirmation_required` / exit 10。
-  - **只读查询、以及不删除/不丢失既有数据且可撤回的语句**：已授权时可直接带 `--yes` 执行。
-  - **会删除或丢失既有数据、或难以撤回的语句**：先 `--dry-run` 预览（无需 `--yes`），向用户确认后再带 `--yes` 执行；不要在用户不知情时自动补 `--yes`。
-- 多语句失败时，失败前的语句可能已经 commit 落地。不要整批重跑；按错误 message/hint 修失败语句，并从剩余语句继续。
-- 如果需要原子性，让用户在 SQL 内显式写 `BEGIN` / `COMMIT`，不要假设 CLI 会包事务。
-- 不要把数据库连接串从 env 中取出来裸连。
+- This command is high-risk-write; execution always requires `--yes`; without `--yes` it returns `confirmation_required` / exit 10.
+  - **Read-only queries, and statements that do not delete/lose existing data and are retractable**: when already authorized, can be executed directly with `--yes`.
+  - **Statements that delete or lose existing data, or are difficult to retract**: first `--dry-run` preview (no `--yes` needed), confirm with the user, then execute with `--yes`; do not automatically add `--yes` without the user's knowledge.
+- When multiple statements fail, the statements before the failure may already have been committed and landed. Do not re-run the whole batch; fix the failed statement according to the error message/hint, and continue from the remaining statements.
+- If atomicity is needed, have the user explicitly write `BEGIN` / `COMMIT` within the SQL; do not assume the CLI will wrap a transaction.
+- Do not take the database connection string from env and connect to the database directly.
 
 ---
 
-# 平台 SQL 规范
+<a id="平台-sql-规范"></a>
+# Platform SQL Specification
 
-上面讲命令怎么调，这里讲**该写出什么样的 SQL**：妙搭底层是 PostgreSQL + 一层平台约束（RLS、审计列、`user_profile` 复合类型、禁用 SQL 白名单），不符合会被服务端直接拒或建出行为不对的表。看表 / 看结构用 [`+db-table-list`/`+db-table-get`](lark-apps-db.md)，别手写系统表查询模拟。
+The above explains how to call the command; here we explain **what kind of SQL should be written**: Miaoda's underlying layer is PostgreSQL plus a layer of platform constraints (RLS, audit columns, `user_profile` composite type, prohibited SQL whitelist); non-compliant SQL will be directly rejected by the server side or will create tables with incorrect behavior. To view tables / view structure, use [`+db-table-list`/`+db-table-get`](lark-apps-db.md); do not hand-write system table queries to simulate it.
 
-## 平台禁用 SQL（硬拒绝）
+<a id="平台禁用-sql硬拒绝"></a>
+## Platform-prohibited SQL (hard rejection)
 
-以下命中会被服务端拒，`error`（`type:"api"`）的 message/hint 会说明原因——先按 hint 修再重试，不要反复重试同一句。
+The following hits will be rejected by the server side; `error` (`type:"api"`)'s message/hint will explain the reason — first fix according to the hint and then retry; do not repeatedly retry the same statement.
 
-| 类别 | 禁止 |
+| Category | Prohibited |
 |---|---|
-| 数据库级 | `CREATE / DROP / ALTER DATABASE` |
-| Schema 级 | `CREATE / DROP SCHEMA` |
-| 用户 / 角色级 | `CREATE / DROP USER`、`CREATE / DROP / ALTER ROLE` |
-| Owner 切换 | `REASSIGN OWNED` / `DROP OWNED` |
+| Database level | `CREATE / DROP / ALTER DATABASE` |
+| Schema level | `CREATE / DROP SCHEMA` |
+| User / role level | `CREATE / DROP USER`, `CREATE / DROP / ALTER ROLE` |
+| Owner switching | `REASSIGN OWNED` / `DROP OWNED` |
 
-## 建表规范（CREATE TABLE）
+<a id="建表规范create-table"></a>
+## Table creation specification (CREATE TABLE)
 
-新建业务表必须：4 个审计列 + 启用 RLS + 4 条默认 policy，**放在同一次 `+db-execute` 调用里**（RLS / policy / COMMENT / INDEX 一起）。裸表名，不写 `public.` 或 schema 前缀。
+Creating a new business table must: 4 audit columns + enable RLS + 4 default policies, **placed in the same `+db-execute` call** (RLS / policy / COMMENT / INDEX together). Bare table name; do not write `public.` or a schema prefix.
 
 ```sql
 CREATE TABLE IF NOT EXISTS <table> (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  -- ... 业务列 ...
+  -- ... business columns ...
   name varchar(100) NOT NULL,
   _created_at TIMESTAMP(3) WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
   _created_by user_profile DEFAULT (
@@ -105,96 +113,101 @@ CREATE POLICY "修改本人数据" ON <table>
   );
 ```
 
-建表流程：先 `+db-table-list` / `+db-table-get` 确认表不存在或看现有结构 → 生成 DDL → 向用户展示影响并取得授权 → `+db-execute ... --yes` 执行。
+Table creation flow: first `+db-table-list` / `+db-table-get` to confirm the table does not exist or to view the existing structure → generate DDL → show the user the impact and obtain authorization → `+db-execute ... --yes` execute.
 
-## 审计列
+<a id="审计列"></a>
+## Audit columns
 
-- 平台自动维护的四列固定叫 `_created_at` / `_updated_at` / `_created_by` / `_updated_by`（**下划线开头**）。查询 / 排序 / 过滤一律用这些名字，别写 `created_at`。
-- `_created_at` / `_updated_at` 在 INSERT 时可省略（有默认值）；需要业务归属时显式写 `_created_by` / `_updated_by`。
-- UPDATE 业务字段时建议同步 `_updated_at = CURRENT_TIMESTAMP` 和 `_updated_by`。
+- The four columns automatically maintained by the platform are fixed as `_created_at` / `_updated_at` / `_created_by` / `_updated_by` (**starting with an underscore**). Queries / sorting / filtering always use these names; do not write `created_at`.
+- `_created_at` / `_updated_at` may be omitted on INSERT (they have default values); when business attribution is needed, explicitly write `_created_by` / `_updated_by`.
+- When UPDATEing business fields, it is recommended to also update `_updated_at = CURRENT_TIMESTAMP` and `_updated_by`.
 
-## `user_profile` 复合类型
+<a id="user_profile-复合类型"></a>
+## `user_profile` composite type
 
-平台内置类型 `(user_id varchar, name varchar, email varchar, avatar text, status integer)`，无需创建。**业务 SQL 只允许访问 `(field).user_id`**，不要依赖 `name` / `email` / `avatar` / `status`（可能为空或过期）。
+The platform has a built-in type `(user_id varchar, name varchar, email varchar, avatar text, status integer)`; no need to create it. **Business SQL is only allowed to access `(field).user_id`**; do not rely on `name` / `email` / `avatar` / `status` (they may be empty or stale).
 
 ```sql
--- 写入 / 更新：用 ROW()::user_profile，更新时替换整个字段，不改单个属性
+-- Write / update: use ROW()::user_profile; on update, replace the entire field, do not change individual attributes
 INSERT INTO teacher (teacher_profile, class_id)
 VALUES (ROW('<user_id>')::user_profile, gen_random_uuid());
 
 UPDATE teacher SET teacher_profile = ROW('<user_id>')::user_profile
 WHERE (teacher_profile).user_id = '<old_user_id>';
 
--- 查询 / 过滤：解引用取 user_id；raw SQL 返回给前端前必须解引用，别直接返回复合类型
+-- Query / filter: dereference to get user_id; raw SQL must dereference before returning to the frontend; do not return the composite type directly
 SELECT (teacher_profile).user_id AS teacher_profile, class_id FROM teacher;
 
--- 索引 / 唯一性：表达式列用三重括号；表达式唯一性用 CREATE UNIQUE INDEX，
--- 不能用 ALTER TABLE ADD CONSTRAINT UNIQUE（不支持表达式列）
+-- Index / uniqueness: expression columns use triple parentheses; expression uniqueness uses CREATE UNIQUE INDEX,
+-- cannot use ALTER TABLE ADD CONSTRAINT UNIQUE (does not support expression columns)
 CREATE INDEX idx_teacher_user_id ON teacher (((teacher_profile).user_id));
 CREATE UNIQUE INDEX uk_teacher_user_id ON teacher (((teacher_profile).user_id));
 ```
 
-## DDL 规则
+<a id="ddl-规则"></a>
+## DDL rules
 
-| 场景 | 做法 |
+| Scenario | Approach |
 |---|---|
-| 加列 | `ALTER TABLE <t> ADD COLUMN IF NOT EXISTS <col> <type>`，相关 `COMMENT ON` 同次执行 |
-| 加索引 | `CREATE INDEX IF NOT EXISTS idx_<t>_<cols> ON <t>(...)` |
-| JSONB 类型声明 | 必须 `COMMENT ON COLUMN <t>.<col> IS '@type { ... }'` 声明 TypeScript 类型，和 CREATE / ALTER 同次调用 |
-| 加 NOT NULL 列 | 必须带 `DEFAULT` 让存量行自动填：`ADD COLUMN <col> <type> NOT NULL DEFAULT <值>` |
-| 删表 / 删列 | 有业务数据默认禁止；必须用户明确授权后才执行，并说明数据丢失风险 |
-| 强约束 | `UNIQUE` / `FOREIGN KEY` / `NOT NULL` 默认谨慎，不确定不加 |
+| Add column | `ALTER TABLE <t> ADD COLUMN IF NOT EXISTS <col> <type>`, related `COMMENT ON` executed in the same call |
+| Add index | `CREATE INDEX IF NOT EXISTS idx_<t>_<cols> ON <t>(...)` |
+| JSONB type declaration | Must `COMMENT ON COLUMN <t>.<col> IS '@type { ... }'` declare the TypeScript type, in the same call as CREATE / ALTER |
+| Add NOT NULL column | Must include `DEFAULT` so existing rows are automatically filled: `ADD COLUMN <col> <type> NOT NULL DEFAULT <值>` |
+| Drop table / drop column | Prohibited by default when there is business data; execute only after the user explicitly authorizes, and explain the data loss risk |
+| Strong constraints | `UNIQUE` / `FOREIGN KEY` / `NOT NULL` are cautious by default; if unsure, do not add |
 
-**多环境库加约束前先查 online 存量**：`dev` 干净不代表 `online` 干净，约束发布到 online 会撞线上存量数据而失败。发布前一律先用 `--environment online` 查清楚，按约束类型分三种：
+**Before adding constraints to a multi-environment database, first check the online existing data**: `dev` being clean does not mean `online` is clean; publishing the constraint to online will fail by colliding with online existing data. Before publishing, always first use `--environment online` to check clearly; there are three types by constraint type:
 
-- **加唯一约束（`UNIQUE` / 唯一索引）**：线上不能有重复值。先查重复，有则先清理再加：
+- **Adding a unique constraint (`UNIQUE` / unique index)**: online must not have duplicate values. First check for duplicates; if any, clean them up first and then add:
 
   ```bash
   lark-cli apps +db-execute --app-id app_xxx --environment online --sql \
     "SELECT <cols>, count(*) FROM t GROUP BY <cols> HAVING count(*) > 1" --yes
   ```
 
-- **已有列改 `NOT NULL`（收紧约束）**：线上该列不能有 NULL。先查 NULL 行数，有就先回填（`UPDATE t SET <col> = <默认值> WHERE <col> IS NULL`）再加约束：
+- **Changing an existing column to `NOT NULL` (tightening the constraint)**: online, that column must not have NULLs. First check the NULL row count; if any, backfill first (`UPDATE t SET <col> = <默认值> WHERE <col> IS NULL`) and then add the constraint:
 
   ```bash
   lark-cli apps +db-execute --app-id app_xxx --environment online --sql \
     "SELECT count(*) FROM t WHERE <col> IS NULL" --yes
   ```
 
-- **新加 `NOT NULL` 字段**：必须带 `DEFAULT`，且要求线上该表**无存量数据**，否则发布报错。线上已有数据时别直接加，改走三步安全变更：先 `ADD COLUMN <col> <type>`（可空）→ 回填 `UPDATE t SET <col> = <值>` → 再 `ALTER COLUMN <col> SET NOT NULL`。先查线上行数判断走哪条：
+- **Adding a new `NOT NULL` field**: must include `DEFAULT`, and requires that the online table **has no existing data**, otherwise publishing will error. When online already has data, do not add it directly; instead use the three-step safe change: first `ADD COLUMN <col> <type>` (nullable) → backfill `UPDATE t SET <col> = <值>` → then `ALTER COLUMN <col> SET NOT NULL`. First check the online row count to determine which path to take:
 
   ```bash
   lark-cli apps +db-execute --app-id app_xxx --environment online --sql \
     "SELECT count(*) FROM t" --yes
   ```
 
-## SELECT 规则
+<a id="select-规则"></a>
+## SELECT rules
 
-| 规则 | 要求                                                               |
+| Rule | Requirement                                                               |
 |---|------------------------------------------------------------------|
-| 行数 | 结果集有硬上限（平台限制 1000 行），超限**报错而非静默截断**；大表必须显式 `LIMIT`、聚合或游标分页       |
-| 分页 | 大表优先游标分页 `WHERE id > <last_id> ORDER BY id LIMIT n`，避免大 `OFFSET` |
-| user_profile | 返回给前端前解引用：`(owner).user_id AS owner`                             |
-| 统计 | 总数用 `count(*)`、分组用 `GROUP BY`，别把全量拉到 agent 侧再统计                  |
-| 慢查询 | 用 `EXPLAIN (ANALYZE, BUFFERS)`；大表 Seq Scan 考虑加索引                 |
+| Row count | The result set has a hard limit (platform limit 1000 rows); exceeding the limit **errors rather than silently truncating**; large tables must explicitly `LIMIT`, aggregate, or use cursor pagination       |
+| Pagination | For large tables, prefer cursor pagination `WHERE id > <last_id> ORDER BY id LIMIT n`, avoiding large `OFFSET` |
+| user_profile | Dereference before returning to the frontend: `(owner).user_id AS owner`                             |
+| Statistics | Use `count(*)` for totals and `GROUP BY` for grouping; do not pull the full set to the agent side and then compute statistics                  |
+| Slow queries | Use `EXPLAIN (ANALYZE, BUFFERS)`; for large-table Seq Scan, consider adding an index                 |
 
-## DML 规则
+<a id="dml-规则"></a>
+## DML rules
 
 **INSERT**
-- UUID 主键省略，交给 `DEFAULT gen_random_uuid()`；外键 UUID 用子查询取父表 id，不手写。
-- NOT NULL 且无默认值的列必须给值；批量 INSERT 每行列数一致。
-- 需要幂等用 `ON CONFLICT ... DO NOTHING / DO UPDATE`。
-- 标量子查询必须保证单行，非唯一条件加 `ORDER BY ... LIMIT 1`。
+- Omit the UUID primary key; leave it to `DEFAULT gen_random_uuid()`; for foreign key UUIDs, use a subquery to get the parent table id; do not hand-write it.
+- Columns that are NOT NULL and have no default value must be given values; in batch INSERT, each row must have the same number of columns.
+- For idempotency, use `ON CONFLICT ... DO NOTHING / DO UPDATE`.
+- Scalar subqueries must guarantee a single row; for non-unique conditions, add `ORDER BY ... LIMIT 1`.
 
 **UPDATE**
-- **必须有明确 `WHERE`，禁止无条件 UPDATE**。
-- 用户说「修改 / 更新 / 改一下」数据时用 UPDATE，**禁止 DELETE + INSERT** 模式。
-- 更新 `user_profile` / 复合类型时替换整个字段。
-- 批量更新前影响范围不明确，先 `SELECT count(*)` 给用户确认。
+- **Must have an explicit `WHERE`; unconditional UPDATE is prohibited**.
+- When the user says "modify / update / change" data, use UPDATE; the **DELETE + INSERT** pattern is prohibited.
+- When updating `user_profile` / composite types, replace the entire field.
+- Before batch updates, if the impact scope is unclear, first `SELECT count(*)` for user confirmation.
 
-**DELETE / TRUNCATE**（属会丢数据的高影响操作，按上面「Agent 规则」的确认流程走）
-- 已有表 / 已有数据默认禁止；先 `SELECT count(*)` 展示命中行数、取得用户明确授权，再带 `--yes` 执行。
-- `TRUNCATE` 影响整表，视同高风险删除。
+**DELETE / TRUNCATE** (these are high-impact operations that lose data; follow the confirmation flow in "Agent rules" above)
+- Prohibited by default for existing tables / existing data; first `SELECT count(*)` to show the number of matched rows, obtain the user's explicit authorization, then execute with `--yes`.
+- `TRUNCATE` affects the entire table; treat it as a high-risk deletion.
 
 ```sql
 UPDATE task
@@ -202,27 +215,29 @@ SET status = 'done', _updated_at = CURRENT_TIMESTAMP, _updated_by = ROW('<user_i
 WHERE id = (SELECT id FROM task WHERE title = '梳理需求' ORDER BY _created_at DESC LIMIT 1);
 ```
 
-## 常见 PostgreSQL 陷阱
+<a id="常见-postgresql-陷阱"></a>
+## Common PostgreSQL pitfalls
 
-| 陷阱 | 正确做法 |
+| Pitfall | Correct approach |
 |---|---|
-| 表名带 schema 前缀 | 业务表一律裸表名 `FROM orders`，别写 `public.orders` |
-| 保留字作标识符 | 避免 `user` / `order` / `desc` / `offset` / `references` 等 |
-| 内联 COMMENT | 禁止 `col TEXT COMMENT 'xx'`，用独立 `COMMENT ON COLUMN` |
-| 手写系统表查结构 | 常规结构查询用 `+db-table-list` / `+db-table-get`，别手写 `information_schema` / `pg_indexes` 模拟 |
-| 空数组类型不明 | 写 `ARRAY[]::text[]` 或 `'{}'::text[]` |
-| `ROUND` 报错 | 用 `ROUND(num::numeric, n)` 或 `ROUND(num::double precision)` |
-| `DISTINCT` + 窗口函数 | 分两层查询，先 DISTINCT 再窗口函数 |
-| MySQL 方言 | 不用 `SHOW TABLES` / `DESCRIBE` / 内联 `COMMENT`；用 `+db-table-*` 和 `COMMENT ON` |
-| 多语句以为自动回滚 | `A; B; C` 不自动包事务，B 失败时 A 已提交；要原子性显式 `BEGIN; ... COMMIT;`（见上「命令骨架」「Agent 规则」） |
+| Table name with schema prefix | Business tables always use bare table names `FROM orders`; do not write `public.orders` |
+| Reserved words as identifiers | Avoid `user` / `order` / `desc` / `offset` / `references` etc. |
+| Inline COMMENT | Prohibited `col TEXT COMMENT 'xx'`; use a separate `COMMENT ON COLUMN` |
+| Hand-writing system table structure queries | For conventional structure queries use `+db-table-list` / `+db-table-get`; do not hand-write `information_schema` / `pg_indexes` to simulate |
+| Empty array type unclear | Write `ARRAY[]::text[]` or `'{}'::text[]` |
+| `ROUND` error | Use `ROUND(num::numeric, n)` or `ROUND(num::double precision)` |
+| `DISTINCT` + window functions | Query in two layers: first DISTINCT, then window functions |
+| MySQL dialect | Do not use `SHOW TABLES` / `DESCRIBE` / inline `COMMENT`; use `+db-table-*` and `COMMENT ON` |
+| Assuming multiple statements auto-rollback | `A; B; C` does not automatically wrap a transaction; when B fails, A has already been committed; for atomicity, explicitly `BEGIN; ... COMMIT;` (see "Command skeleton" and "Agent rules" above) |
 
-## 数据类型与设计
+<a id="数据类型与设计"></a>
+## Data types and design
 
-| 项目 | 规则 |
+| Item | Rule |
 |---|---|
-| 主键 | 默认 `id uuid PRIMARY KEY DEFAULT gen_random_uuid()` |
-| 命名 | 表名单数、全小写、snake_case、无冗余后缀 |
-| 枚举 / 状态 | 用 `varchar(255)`，值用小写英文 + 下划线 |
-| JSONB | 必须 `COMMENT ON COLUMN ... IS '@type { ... }'` 声明类型 |
-| 附件 / 图片 | URL 用 `TEXT`，命名 `xxx_url` |
-| 约束 | `UNIQUE` / `FOREIGN KEY` / `NOT NULL` 默认谨慎，新增 NOT NULL 列优先带 `DEFAULT` |
+| Primary key | Default `id uuid PRIMARY KEY DEFAULT gen_random_uuid()` |
+| Naming | Table names singular, all lowercase, snake_case, no redundant suffixes |
+| Enum / status | Use `varchar(255)`, values in lowercase English + underscores |
+| JSONB | Must `COMMENT ON COLUMN ... IS '@type { ... }'` declare the type |
+| Attachments / images | URLs use `TEXT`, named `xxx_url` |
+| Constraints | `UNIQUE` / `FOREIGN KEY` / `NOT NULL` are cautious by default; for newly added NOT NULL columns, prefer including `DEFAULT` |

@@ -1,18 +1,21 @@
 # apps +update
 
-部分更新妙搭应用元信息。运行时命令事实以 `lark-cli apps +update --help` 为准。
+Partially update Miaoda app metadata. For runtime command facts, refer to `lark-cli apps +update --help`.
 
-## 何时用
+<a id="何时用"></a>
+## When to use
 
-只更新应用展示元信息。用户要改代码、发布内容、可见范围或数据库时，不走 `+update`。
+Only update app display metadata. When the user wants to change code, published content, visibility scope, or the database, do not use `+update`.
 
-## 命令骨架
+<a id="命令骨架"></a>
+## Command skeleton
 
-- 必填：`--app-id`。
-- 至少提供一个：`--name` 或 `--description`。
-- 只发送用户提供的字段，不会清空未提供字段。
+- Required: `--app-id`.
+- Provide at least one of: `--name` or `--description`.
+- Only the fields provided by the user are sent; fields not provided are not cleared.
 
-## 示例
+<a id="示例"></a>
+## Examples
 
 ```bash
 lark-cli apps +update --app-id app_xxx --name "审批系统"
@@ -20,11 +23,13 @@ lark-cli apps +update --app-id app_xxx --description "用于部门审批流转"
 lark-cli apps +update --app-id app_xxx --name "审批系统" --description "用于部门审批流转" --dry-run
 ```
 
-## 输出契约
+<a id="输出契约"></a>
+## Output contract
 
-- 成功读取 `data.app`；响应是完整应用对象，不只是被修改字段。
-- 缺 `--app-id` 或没有提供 `--name` / `--description` 会在本地 validation 失败。
+- On success, read `data.app`; the response is the complete app object, not just the modified fields.
+- Missing `--app-id` or not providing `--name` / `--description` will fail local validation.
 
-## Agent 规则
+<a id="agent-规则"></a>
+## Agent rules
 
-更新前复述要变更的字段；用户没有提到的字段不要补默认值。执行后只转述新的名称/描述和 app_id，不需要展开原始响应。
+Before updating, restate the fields to be changed; do not add default values for fields the user did not mention. After execution, only relay the new name/description and app_id; there is no need to expand the raw response.

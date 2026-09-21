@@ -1,187 +1,201 @@
 
-# drive +search（云空间/云盘/云存储搜索：扁平 flag，面向自然语言场景）
+<a id="drive-search云空间云盘云存储搜索扁平-flag面向自然语言场景"></a>
+# drive +search (Drive/Cloud Drive/Cloud Storage search: flat flags, for natural language scenarios)
 
 
-基于 Search v2 接口 `POST /open-apis/search/v2/doc_wiki/search`，支持以**用户身份或应用身份**统一搜索云空间（云盘/云存储）对象。
+Based on the Search v2 API `POST /open-apis/search/v2/doc_wiki/search`, supports unified search of Drive (Cloud Drive/Cloud Storage) objects as **a user identity or an app identity**.
 
-核心特性：
+Core features:
 
-- 把常用过滤条件全部**扁平化为独立 flag**（`--edited-since`、`--created-by-me`、`--mine`、`--doc-types`、`--folder-tokens` 等），不再要求用户或 AI 手写嵌套 `--filter` JSON
-- 额外暴露了 4 个"我"维度：`my_edit_time`（我编辑过）、`my_comment_time`（我评论过）、`open_time`（我打开过）、`create_time`（文档创建时间）——直接对应用户自然语言里的"最近我编辑过的"、"我评论过的"等表达
-- 自动处理 `my_edit_time` / `my_comment_time` 的小时级聚合（服务端存储粒度）：亚小时输入会向整点 snap，并在 stderr 打出提示
-- `--created-by-me` 一键从当前登录用户的 open_id 填 `original_creator_ids`，匹配“我最初创建的”；`--mine` 仍填 `creator_ids`，匹配 owner / 文档归属人
+- Flattens all common filter conditions into **independent flags** (`--edited-since`, `--created-by-me`, `--mine`, `--doc-types`, `--folder-tokens`, etc.), no longer requiring users or AI to hand-write nested `--filter` JSON
+- Additionally exposes 4 "me" dimensions: `my_edit_time` (edited by me), `my_comment_time` (commented on by me), `open_time` (opened by me), `create_time` (document creation time) — directly corresponding to user natural language expressions like "recently edited by me", "commented on by me", etc.
+- Automatically handles hour-level aggregation for `my_edit_time` / `my_comment_time` (server-side storage granularity): sub-hour inputs snap to the hour, with a notice printed to stderr
+- `--created-by-me` fills `original_creator_ids` from the currently logged-in user's open_id with one click, matching "originally created by me"; `--mine` still fills `creator_ids`, matching owner / document owner
 
-> **资源发现入口统一**：`drive +search` 同样返回 `SHEET` / `Base` / `FOLDER` 等全部云空间（云盘/云存储）对象，不只是文档 / Wiki。用户说"找一个表格"、"找报表"、"最近打开的表格"时，也从这里开始；定位后再切到对应业务 skill（如 `lark-sheets`）做对象内部操作。
+> **Unified resource discovery entry**: `drive +search` also returns all Drive (Cloud Drive/Cloud Storage) objects such as `SHEET` / `Base` / `FOLDER`, not just documents / Wiki. When the user says "find a spreadsheet", "find a report", "recently opened spreadsheet", also start here; after locating, switch to the corresponding business skill (e.g. `lark-sheets`) for operations within the object.
 
-> **身份边界**：普通关键词、类型、文件夹、Wiki 空间、owner/open_id 等显式过滤支持 `--as user` 或 `--as bot`。`--mine` / `--created-by-me` 依赖当前登录用户 open_id 自动填充过滤条件；应用身份下如果没有配置用户 open_id，请改用显式 `--creator-ids` / `--original-creator-ids`。
+> **Identity boundary**: Explicit filters such as ordinary keywords, type, folder, Wiki space, owner/open_id support `--as user` or `--as bot`. `--mine` / `--created-by-me` rely on the currently logged-in user's open_id to auto-fill filter conditions; under app identity, if no user open_id is configured, use explicit `--creator-ids` / `--original-creator-ids` instead.
 
-## 命令
+<a id="命令"></a>
+## Command
 
-> **关键约束：搜索关键词必须通过 `--query` 传递。**
-> 正确：`lark-cli drive +search --query "方案"`
-> 错误：`lark-cli drive +search 方案`
-> `+search` 不接受位置参数；空 `--query` 或省略 `--query` 表示纯靠 filter 浏览（合法）。
+> **Key constraint: search keywords must be passed via `--query`.**
+> Correct: `lark-cli drive +search --query "方案"`
+> Incorrect: `lark-cli drive +search 方案`
+> `+search` does not accept positional arguments; an empty `--query` or omitting `--query` means browsing purely by filter (valid).
 >
-> **`--query` 最长 30 个字符**：按字符数（Unicode 码点）算，中文每字算 1 个，与 ASCII 同口径；超过 30 会被服务端拒绝（`99992402 field validation failed`，**是报错不是截断**）。长关键词必须先压缩成核心实体 + 主题词（如把整句问题压成「项目名 + 主题」再搜），不要把整句原问塞进 `--query`。
+> **`--query` is at most 30 characters**: counted by number of characters (Unicode code points), each Chinese character counts as 1, same measure as ASCII; exceeding 30 will be rejected by the server (`99992402 field validation failed`, **it is an error, not truncation**). Long keywords must first be compressed into core entity + topic words (e.g. compress a whole-sentence question into "project name + topic" before searching), do not stuff the entire original question into `--query`.
 >
-> **按完整标题定位：** 使用 `--only-title`；标题不超过 30 个字符时直接查询，超长标题使用不超过限制的稳定片段召回，再按返回标题严格匹配。使用相同 query 和过滤条件按 `page_token` 检查，最多 3 页；仅在 `has_more=false` 且跨页恰好一个严格匹配时继续写操作，否则请用户缩小范围或补充信息。`drive files list` 只用于枚举已知文件夹的直接子项。
+> **Locating by full title:** Use `--only-title`; when the title does not exceed 30 characters, query directly; for overly long titles, use a stable fragment within the limit to recall, then strictly match against the returned title. Use the same query and filter conditions to check by `page_token`, up to 3 pages; only continue with write operations when `has_more=false` and there is exactly one strict match across pages, otherwise ask the user to narrow the scope or provide more information. `drive files list` is only used to enumerate the direct children of a known folder.
 >
-> **列表型请求不要硬塞关键词**：如果用户只是要求"我这月创建的所有文档"、"最近半年我编辑过的文档"、"按类型分类统计"这类范围浏览 / 汇总请求，且没有给出标题片段或业务关键词，应使用 `--query ""` 搭配 `--created-by-me`、`--mine`、`--created-*`、`--edited-*`、`--doc-types` 等过滤条件。不要把"查找"、"所有文档"、"最近更新过"、"按类型分类统计"这类动作词或统计意图放进 `--query`，否则会把本来应靠 filter 命中的结果过度收窄。
+> **Do not force keywords into list-type requests**: if the user only requests scope browsing / summarization such as "all documents I created this month", "documents I edited in the last six months", "statistics by type", and no title fragment or business keyword is given, use `--query ""` with filter conditions such as `--created-by-me`, `--mine`, `--created-*`, `--edited-*`, `--doc-types`. Do not put action words or statistical intents such as "find", "all documents", "recently updated", "statistics by type" into `--query`, otherwise results that should have been matched by filter will be overly narrowed.
 >
-> **标题词 + 正文词联合搜索**：如果用户同时给出标题关键词和正文关键词，并要求同一资源同时满足两项条件，优先执行一条普通联合搜索：`lark-cli drive +search --query "标题词 正文词"`，并在同一条命令中叠加用户指定的 `--folder-tokens`、`--doc-types` 等过滤条件。不要把这种联合搜索拆成“标题搜索 + 正文搜索”后自行拼交集；也不要把 `--only-title` 或 `intitle:` 用作主候选路径。只有用户明确只查标题时，才使用 `--only-title` 或 `intitle:`。
+> **Joint search of title words + body words**: if the user gives both title keywords and body keywords and requires the same resource to satisfy both conditions, prioritize executing one ordinary joint search: `lark-cli drive +search --query "标题词 正文词"`, and in the same command stack the user-specified filter conditions such as `--folder-tokens`, `--doc-types`. Do not split this joint search into "title search + body search" and then intersect them yourself; also do not use `--only-title` or `intitle:` as the primary candidate path. Only when the user explicitly asks to search titles only, use `--only-title` or `intitle:`.
 >
-> 用户要求最终返回 N 条时，N 是输出上限，不等于 `--page-size N`。逐页根据 `title` 和 `summary_highlighted` 保留同时满足两项条件的候选；有效候选不足 N 且 `has_more=true` 时，保持同一 query 和过滤条件，使用 `--page-token` 继续，最多检查 3 页。摘要不足以判断正文条件时，只对标题已匹配的候选串行读取正文，确认一个再处理下一个，找到 N 条后停止；不要并发拉取正文。检查 3 页后仍不足时，返回已确认结果并建议用户调整标题词、正文词或搜索范围，不要无界扫描。
+> When the user requests N final results, N is the output upper limit, not equal to `--page-size N`. Page by page, based on `title` and `summary_highlighted`, keep candidates that satisfy both conditions; when valid candidates are fewer than N and `has_more=true`, keep the same query and filter conditions, use `--page-token` to continue, checking up to 3 pages. When the summary is insufficient to judge body conditions, only serially read the body of candidates whose titles already match, confirm one before processing the next, and stop after finding N; do not fetch bodies concurrently. If still insufficient after checking 3 pages, return the confirmed results and suggest the user adjust the title words, body words, or search scope; do not scan unboundedly.
 
-### 自然语言 → 命令映射速查
+<a id="自然语言--命令映射速查"></a>
+### Natural language → command mapping quick reference
 
-| 用户说 | 命令 |
+| User says | Command |
 |---|---|
-| 标题含某词且正文含某词，限定文件夹内最多 N 个结果（N 为最终输出上限；按上文规则分页筛选，勿作为 `--page-size`） | `lark-cli drive +search --query "标题词 正文词" --folder-tokens <FOLDER_TOKEN>` |
-| 我这月创建的所有文档，按类型分类统计 | `lark-cli drive +search --query "" --created-by-me --created-since "<YYYY-MM-DD>" --created-until "<YYYY-MM-DD>"` |
-| 最近半年我编辑过的文档，看看哪些最近更新过 | `lark-cli drive +search --query "" --edited-since 6m --sort edit_time` |
-| 最近一个月我编辑过的文档 | `lark-cli drive +search --query "" --edited-since 1m` |
-| 最近一个月我编辑过 且 我评论过的 | `lark-cli drive +search --query "" --edited-since 1m --commented-since 1m` |
-| 最近一周我打开过的表格 | `lark-cli drive +search --query "" --opened-since 7d --doc-types sheet` |
-| 我 owner 的所有文档（owner 语义，非"我最初创建"） | `lark-cli drive +search --query "" --mine` |
-| 我最初创建、后来转给王五 owner 的文档 | `lark-cli drive +search --query "" --created-by-me --creator-ids ou_wangwu` |
-| 我 owner、30-60 天前创建的文档（粗略"上个月"，按 30 天滑窗算；`--mine` 是 owner，`--created-*` 才是文档创建时间） | `lark-cli drive +search --query "" --mine --created-since 2m --created-until 1m` |
-| 我 owner、2026 年 3 月创建的文档（精确日历月；同上，owner + 创建时间窗两个维度） | `lark-cli drive +search --query "" --mine --created-since 2026-03-01 --created-until 2026-04-01` |
-| 关键词"预算"，最近一周我打开过，按编辑时间降序 | `lark-cli drive +search --query 预算 --opened-since 7d --sort edit_time` |
-| 某个 wiki space 下、我 owner 且 30-60 天前创建的 | `lark-cli drive +search --query "" --mine --space-ids space_xxx --created-since 2m --created-until 1m` |
-| 张三 owner / 负责的文档（注意是 owner 语义，不是张三最初创建的）| `lark-cli drive +search --query "" --creator-ids ou_zhangsan` |
-| 我最近 3 个月评论过的 docx | `lark-cli drive +search --query "" --commented-since 3m --doc-types docx` |
+| Title contains a word and body contains a word, limited to at most N results in a folder (N is the final output upper limit; paginate and filter per the rules above, do not use as `--page-size`) | `lark-cli drive +search --query "标题词 正文词" --folder-tokens <FOLDER_TOKEN>` |
+| All documents I created this month, statistics by type | `lark-cli drive +search --query "" --created-by-me --created-since "<YYYY-MM-DD>" --created-until "<YYYY-MM-DD>"` |
+| Documents I edited in the last six months, see which were recently updated | `lark-cli drive +search --query "" --edited-since 6m --sort edit_time` |
+| Documents I edited in the last month | `lark-cli drive +search --query "" --edited-since 1m` |
+| Edited by me in the last month and commented on by me | `lark-cli drive +search --query "" --edited-since 1m --commented-since 1m` |
+| Spreadsheets I opened in the last week | `lark-cli drive +search --query "" --opened-since 7d --doc-types sheet` |
+| All documents I own (owner semantics, not "originally created by me") | `lark-cli drive +search --query "" --mine` |
+| Documents I originally created and later transferred to Wang Wu as owner | `lark-cli drive +search --query "" --created-by-me --creator-ids ou_wangwu` |
+| Documents I own, created 30-60 days ago (rough "last month", calculated by 30-day sliding window; `--mine` is owner, `--created-*` is document creation time) | `lark-cli drive +search --query "" --mine --created-since 2m --created-until 1m` |
+| Documents I own, created in March 2026 (exact calendar month; same as above, owner + creation time window are two dimensions) | `lark-cli drive +search --query "" --mine --created-since 2026-03-01 --created-until 2026-04-01` |
+| Keyword "budget", opened by me in the last week, sorted by edit time descending | `lark-cli drive +search --query 预算 --opened-since 7d --sort edit_time` |
+| Under a certain wiki space, owned by me and created 30-60 days ago | `lark-cli drive +search --query "" --mine --space-ids space_xxx --created-since 2m --created-until 1m` |
+| Documents owned by / in the charge of Zhang San (note this is owner semantics, not originally created by Zhang San) | `lark-cli drive +search --query "" --creator-ids ou_zhangsan` |
+| docx I commented on in the last 3 months | `lark-cli drive +search --query "" --commented-since 3m --doc-types docx` |
 
-### 更多示例
+<a id="更多示例"></a>
+### More examples
 
 ```bash
-# 纯关键词搜索
+# Pure keyword search
 lark-cli drive +search --query "季度总结"
 
-# 使用服务端 query 高级语法
+# Use server-side query advanced syntax
 lark-cli drive +search --query 'intitle:方案'
 lark-cli drive +search --query '"季度 总结"'
 lark-cli drive +search --query '方案 OR 草稿'
 lark-cli drive +search --query '方案 -草稿'
 
-# 只搜某个文件夹下的文档
+# Search only documents under a certain folder
 lark-cli drive +search --query 方案 --folder-tokens fld_123456
 
-# 只搜某个知识空间下的 Wiki
+# Search only Wiki under a certain knowledge space
 lark-cli drive +search --query 研发规范 --space-ids space_1234567890fedcba
 
-# 指定群内分享过的文档
+# Documents shared in a specified group
 lark-cli drive +search --query 方案 --chat-ids oc_1234567890abcdef
 
-# 只搜标题 / 只搜评论
+# Search only titles / search only comments
 lark-cli drive +search --query 周报 --only-title
 lark-cli drive +search --query 延期原因 --only-comment
 
-# 人类可读格式
+# Human-readable format
 lark-cli drive +search --query OKR --format pretty
 
-# 翻页（--format json 先拿 page_token）
+# Pagination (use --format json to get page_token first)
 lark-cli drive +search --query 方案 --format json
 lark-cli drive +search --query 方案 --page-token '<PAGE_TOKEN>'
 ```
 
-### 列表 / 统计型请求的执行步骤
+<a id="列表--统计型请求的执行步骤"></a>
+### Execution steps for list / statistics-type requests
 
-对"所有文档"、"按类型分类统计"、"最近更新过"这类请求，不要只跑一次搜索后直接回答。标准流程：
+For requests such as "all documents", "statistics by type", "recently updated", do not just run one search and answer directly. Standard process:
 
-1. 先把自然语言拆成过滤条件：原始创建者（`--created-by-me` / `--original-creator-ids`）、所有权（`--mine` / `--creator-ids`）、时间维度（`--created-*` / `--edited-*` / `--opened-*` / `--commented-*`）、类型（`--doc-types`）、空间或文件夹范围。
-2. 没有真实业务关键词时保持 `--query ""`；不要把"所有文档"、"统计"、"最近更新"放进 query。
-3. 检查返回结果的 `doc_type` / `result_meta.doc_types`、创建/编辑时间和 URL/token 是否与过滤目标一致；明显不符合的结果不要计入答案。
-4. 用户要求"所有 / 全量 / 统计"时按 `has_more` 翻页并累积去重；不要只用第一页推断总量。返回体里的 `total` 不可靠，统计要以实际去重后的结果为准。
-5. 汇总时按真实返回字段分组，例如按 `doc_type` 统计 DOCX、SHEET、BITABLE、WIKI、FILE 等，不要凭标题猜类型。
+1. First break the natural language into filter conditions: original creator (`--created-by-me` / `--original-creator-ids`), ownership (`--mine` / `--creator-ids`), time dimension (`--created-*` / `--edited-*` / `--opened-*` / `--commented-*`), type (`--doc-types`), space or folder scope.
+2. When there is no real business keyword, keep `--query ""`; do not put "all documents", "statistics", "recently updated" into query.
+3. Check whether the returned results' `doc_type` / `result_meta.doc_types`, creation/edit time, and URL/token are consistent with the filter target; do not count obviously non-matching results in the answer.
+4. When the user requests "all / full / statistics", paginate by `has_more` and accumulate with deduplication; do not infer the total from only the first page. The `total` in the response body is unreliable; statistics must be based on the actual deduplicated results.
+5. When summarizing, group by the actual returned fields, e.g. count DOCX, SHEET, BITABLE, WIKI, FILE, etc. by `doc_type`; do not guess the type from the title.
 
-### 内容检索型请求的 query 扩展
+<a id="内容检索型请求的-query-扩展"></a>
+### Query expansion for content retrieval-type requests
 
-用户问的是原因、结论、方案、对比等内容问题时，`--query` 应保留业务关键词，但不要只用整句原问。先用核心实体 + 主题词搜索，再按结果调整：
+When the user asks content questions such as reasons, conclusions, plans, comparisons, `--query` should retain business keywords, but do not use only the whole original question. First search with core entity + topic words, then adjust based on results:
 
-- "东南亚服务器成本为何较其他区域贵" → 先搜 `"东南亚 服务器 成本"`，如果召回不足，再搜 `"服务器 成本 区域"`、`"非洲 欧洲 服务器 成本"`、`"机房 成本 费用"` 等同主题扩展词。
-- "某项目发布会重点" → 先搜项目名 + "发布会" + "重点/功能/一览"，再按标题和摘要判断是否需要只搜标题或扩大到正文。
+- "Why are Southeast Asia server costs more expensive than other regions" → first search `"东南亚 服务器 成本"`, if recall is insufficient, then search `"服务器 成本 区域"`, `"非洲 欧洲 服务器 成本"`, `"机房 成本 费用"` and other same-topic expansion words.
+- "Key points of a certain project launch event" → first search project name + "launch event" + "key points/features/overview", then judge from titles and summaries whether to search only titles or expand to bodies.
 
-每轮扩展都要保留非污染、可解释的 evidence（URL/token/标题/摘要）；不能因为某个扩展词搜到高相似标题就跳过证据核验。
-扩展 query 时，优先保留用户已经指定的空间、文件夹、群聊、人员、时间和类型等 filter；确需放宽检索范围时，先向用户说明原因并征得确认。
+Each round of expansion must retain non-polluting, explainable evidence (URL/token/title/summary); do not skip evidence verification just because some expansion word found a highly similar title.
+When expanding query, prioritize retaining the space, folder, group chat, personnel, time, and type filters already specified by the user; if the search scope truly needs to be relaxed, first explain the reason to the user and obtain confirmation.
 
-## 参数
+<a id="参数"></a>
+## Parameters
 
-### 核心
+<a id="核心"></a>
+### Core
 
-| 参数 | 必填 | 说明 |
+| Parameter | Required | Description |
 |---|---|---|
-| `--query <text>` | 否 | 搜索关键词；支持服务端高级语法（`intitle:`、`""`、`OR`、`-`）。空字符串或省略表示纯 filter 浏览。**长度上限 30 个字符（按 Unicode 码点算，中文每字算 1 个，与 ASCII 同口径）；超过 30 服务端直接报 `99992402 field validation failed`，不会截断** |
-| `--page-size <n>` | 否 | 每页数量，默认 15，最大 20。超过 20 自动 clamp；非正数（≤0）回落 15；**非数字值直接返回 validation 错误** |
-| `--page-token <token>` | 否 | 上一次响应里的 `page_token`，用于翻页 |
-| `--format` | 否 | `json`（默认）/ `pretty` |
+| `--query <text>` | No | Search keywords; supports server-side advanced syntax (`intitle:`, `""`, `OR`, `-`). Empty string or omission means browsing purely by filter. **Length limit 30 characters (counted by Unicode code points, each Chinese character counts as 1, same measure as ASCII); exceeding 30 the server directly reports `99992402 field validation failed`, no truncation** |
+| `--page-size <n>` | No | Number per page, default 15, maximum 20. Exceeding 20 is automatically clamped; non-positive (≤0) falls back to 15; **non-numeric values directly return a validation error** |
+| `--page-token <token>` | No | The `page_token` from the previous response, used for pagination |
+| `--format` | No | `json` (default) / `pretty` |
 
-### 身份维度
+<a id="身份维度"></a>
+### Identity dimensions
 
-> **语义说明（重要）**：`creator_ids`（含 `--mine` / `--creator-ids`）虽然字段名是 “creator”，但服务端实际按 **owner（文档归属人 / 负责人）** 语义匹配，**不是“最初创建人”**。真正的原始创建者使用 `original_creator_ids`（CLI 为 `--created-by-me` / `--original-creator-ids`）。
+> **Semantic note (important)**: Although the field name of `creator_ids` (including `--mine` / `--creator-ids`) is "creator", the server actually matches by **owner (document owner / person in charge)** semantics, **not "original creator"**. The true original creator uses `original_creator_ids` (CLI is `--created-by-me` / `--original-creator-ids`).
 
-| 参数 | 映射 | 说明 |
+| Parameter | Mapping | Description |
 |---|---|---|
-| `--mine` | `creator_ids = [当前用户 open_id]` | bool。一键“我 owner 的”（**不是**“我最初创建的”）；从当前登录用户身份（`runtime.UserOpenId()`）解析 open_id，取不到直接报错（提示运行 `lark-cli auth login`） |
-| `--creator-ids ou_x,ou_y` | `creator_ids = [...]` | 显式 open_id 列表，逗号分隔，按 **owner** 匹配；**与 `--mine` 互斥** |
-| `--created-by-me` | `original_creator_ids = [当前用户 open_id]` | bool。一键“我最初创建的”；从当前登录用户身份解析 open_id，取不到直接报错 |
-| `--original-creator-ids ou_x,ou_y` | `original_creator_ids = [...]` | 显式 open_id 列表，逗号分隔，按**原始创建者**匹配；**与 `--created-by-me` 互斥** |
+| `--mine` | `creator_ids = [当前用户 open_id]` | bool. One-click "owned by me" (**not** "originally created by me"); resolves open_id from the currently logged-in user identity (`runtime.UserOpenId()`), errors directly if it cannot be obtained (prompts to run `lark-cli auth login`) |
+| `--creator-ids ou_x,ou_y` | `creator_ids = [...]` | Explicit open_id list, comma-separated, matched by **owner**; **mutually exclusive with `--mine`** |
+| `--created-by-me` | `original_creator_ids = [当前用户 open_id]` | bool. One-click "originally created by me"; resolves open_id from the currently logged-in user identity, errors directly if it cannot be obtained |
+| `--original-creator-ids ou_x,ou_y` | `original_creator_ids = [...]` | Explicit open_id list, comma-separated, matched by **original creator**; **mutually exclusive with `--created-by-me`** |
 
-### 时间维度（每个维度一对 since/until）
+<a id="时间维度每个维度一对-sinceuntil"></a>
+### Time dimensions (each dimension has a pair of since/until)
 
-| 参数 | 映射 API 字段 | 是否小时 snap |
+| Parameter | Mapped API field | Hour snap? |
 |---|---|---|
-| `--edited-since` / `--edited-until` | `my_edit_time.start` / `.end` | ✅ start 向下取整，end 向上取整 |
-| `--commented-since` / `--commented-until` | `my_comment_time.start` / `.end` | ✅ 同上 |
-| `--opened-since` / `--opened-until` | `open_time.start` / `.end` | ❌ 原样透传 |
-| `--created-since` / `--created-until` | `create_time.start` / `.end` | ❌ 原样透传（文档创建时间，非"我"语义）|
+| `--edited-since` / `--edited-until` | `my_edit_time.start` / `.end` | ✅ start rounds down, end rounds up |
+| `--commented-since` / `--commented-until` | `my_comment_time.start` / `.end` | ✅ same as above |
+| `--opened-since` / `--opened-until` | `open_time.start` / `.end` | ❌ passed through as-is |
+| `--created-since` / `--created-until` | `create_time.start` / `.end` | ❌ passed through as-is (document creation time, not "me" semantics) |
 
-### 作用域
+<a id="作用域"></a>
+### Scope
 
-| 参数 | 映射 | 说明 |
+| Parameter | Mapping | Description |
 |---|---|---|
-| `--doc-types docx,sheet` | `doc_types` | 逗号分隔。允许值：`doc,sheet,bitable,mindnote,file,wiki,docx,folder,catalog,slides,shortcut` |
-| `--folder-tokens fld_a,fld_b` | `folder_tokens`（仅 doc_filter） | 存在时只发 `doc_filter`；**与 `--space-ids` 互斥** |
-| `--space-ids sp_x` | `space_ids`（仅 wiki_filter） | 存在时只发 `wiki_filter`；**与 `--folder-tokens` 互斥** |
-| `--chat-ids oc_x` | `chat_ids` | 逗号分隔 |
-| `--sharer-ids ou_x` | `sharer_ids` | 逗号分隔，open_id |
+| `--doc-types docx,sheet` | `doc_types` | Comma-separated. Allowed values: `doc,sheet,bitable,mindnote,file,wiki,docx,folder,catalog,slides,shortcut` |
+| `--folder-tokens fld_a,fld_b` | `folder_tokens` (doc_filter only) | When present, only sends `doc_filter`; **mutually exclusive with `--space-ids`** |
+| `--space-ids sp_x` | `space_ids` (wiki_filter only) | When present, only sends `wiki_filter`; **mutually exclusive with `--folder-tokens`** |
+| `--chat-ids oc_x` | `chat_ids` | Comma-separated |
+| `--sharer-ids ou_x` | `sharer_ids` | Comma-separated, open_id |
 
-### 其他
+<a id="其他"></a>
+### Others
 
-| 参数 | 映射 | 说明 |
+| Parameter | Mapping | Description |
 |---|---|---|
 | `--only-title` | `only_title: true` | bool |
 | `--only-comment` | `only_comment: true` | bool |
-| `--sort <value>` | `sort_type`（转大写枚举） | 允许值：`default, edit_time, edit_time_asc, open_time, create_time` |
+| `--sort <value>` | `sort_type` (converted to uppercase enum) | Allowed values: `default, edit_time, edit_time_asc, open_time, create_time` |
 
-> `--sort`：CLI 只暴露服务端**正式支持**的 5 个值。服务端 enum 里 `CREATE_TIME_ASC` 协议标注"暂不支持"，`ENTITY_CREATE_TIME_ASC` / `ENTITY_CREATE_TIME_DESC` 已废弃，CLI 直接不放出来，传了会被 cobra enum 校验拒掉。
+> `--sort`: The CLI only exposes the 5 values **officially supported** by the server. In the server enum, `CREATE_TIME_ASC` is marked in the protocol as "not yet supported", and `ENTITY_CREATE_TIME_ASC` / `ENTITY_CREATE_TIME_DESC` are deprecated; the CLI simply does not expose them, and passing them will be rejected by cobra enum validation.
 
-## 时间值格式
+<a id="时间值格式"></a>
+## Time value formats
 
-所有 `--*-since` / `--*-until` 共用：
+All `--*-since` / `--*-until` share:
 
-| 输入 | 含义 |
+| Input | Meaning |
 |---|---|
-| `7d` / `30d` | N 天前的当前时刻 |
-| `1m` | 30 天前（固定 30 天，**不是**日历月）|
-| `3m` / `6m` | 90 / 180 天前 |
-| `1y` | 365 天前 |
-| `2026-04-01` | 本地时区 00:00:00 |
-| `2026-04-01 10:00:00` / `2026-04-01T10:00:00` | 本地时区具体时刻 |
-| `2026-04-01T10:00:00+08:00` | RFC3339 带时区 |
-| `1743523200`（≥ 10 位纯数字）| Unix 秒直接透传 |
+| `7d` / `30d` | The current moment N days ago |
+| `1m` | 30 days ago (fixed 30 days, **not** a calendar month) |
+| `3m` / `6m` | 90 / 180 days ago |
+| `1y` | 365 days ago |
+| `2026-04-01` | Local timezone 00:00:00 |
+| `2026-04-01 10:00:00` / `2026-04-01T10:00:00` | Specific moment in local timezone |
+| `2026-04-01T10:00:00+08:00` | RFC3339 with timezone |
+| `1743523200` (≥ 10 pure digits) | Unix seconds passed through directly |
 
-> `m` 绑定 month（30 天），不支持 minute——因为 `my_edit_time` / `my_comment_time` 在服务端是小时聚合，分钟粒度没意义。
+> `m` binds month (30 days), does not support minute — because `my_edit_time` / `my_comment_time` are hour-aggregated on the server, minute granularity is meaningless.
 
-## 小时聚合（my_edit_time / my_comment_time）
+<a id="小时聚合my_edit_time--my_comment_time"></a>
+## Hour aggregation (my_edit_time / my_comment_time)
 
-服务端对这两个字段按整点聚合，亚小时输入会被 CLI 向整点对齐：
+The server aggregates these two fields by the hour; sub-hour inputs are aligned to the hour by the CLI:
 
 ```text
-start: floor 到整点   16:23:45 → 16:00:00
-end:   ceil  到整点   16:23:45 → 17:00:00
+start: floor to the hour   16:23:45 → 16:00:00
+end:   ceil  to the hour   16:23:45 → 17:00:00
 ```
 
-发生对齐时，stderr 会打印一条 notice，例如：
+When alignment occurs, a notice is printed to stderr, for example:
 
 ```text
 notice: my_edit_time has hour-level granularity server-side;
@@ -189,68 +203,73 @@ notice: my_edit_time has hour-level granularity server-side;
         end   2026-04-22 16:28:00 → 2026-04-22 17:00:00
 ```
 
-stdout 的 JSON 输出不受影响。`open_time` / `create_time` 不做 snap。
+The JSON output on stdout is unaffected. `open_time` / `create_time` do not perform snapping.
 
-## 输出
+<a id="输出"></a>
+## Output
 
-- `--format json`（默认）：`{ total, has_more, page_token, results: [...] }`；所有 `*_time` 字段递归补 `*_time_iso`
-- `--format pretty`：4 列 table —— `type | title | edit_time | url`
-- `title_highlighted` / `summary_highlighted` 可能包含 `<h>` / `<hb>` 高亮标签，客户端对比前需先剥离
+- `--format json` (default): `{ total, has_more, page_token, results: [...] }`; all `*_time` fields are recursively filled with `*_time_iso`
+- `--format pretty`: 4-column table —— `type | title | edit_time | url`
+- `title_highlighted` / `summary_highlighted` may contain `<h>` / `<hb>` highlight tags; the client must strip them before comparison
 
-> **注意**：返回体里的 `total` 字段不够准确（官方确认，仅供参考）。需要精确统计的场景，按实际 `results` 做去重和累加，不要把 `total` 当结果数承诺。
+> **Note**: The `total` field in the response body is not accurate enough (officially confirmed, for reference only). For scenarios requiring precise counts, deduplicate and accumulate based on the actual `results`; do not treat `total` as a promised result count.
 
-## 决策规则
+<a id="决策规则"></a>
+## Decision Rules
 
-- **身份快捷方式**：用户说“我创建的 / 我新建的 / 我最初创建的”文档，用 `--created-by-me`；用户说“我的 / 我负责的 / 我 owner 的”文档，用 `--mine`。`--mine` 是 owner 语义：转交出去的不算、转交给我的算。
-- **时间维度选择**：
-  - "我编辑的"、"我修改的" → `--edited-since` / `--edited-until`
-  - "我评论的"、"我回复过的" → `--commented-since` / `--commented-until`
-  - "我看过的"、"我打开过的"、"最近看过的" → `--opened-since` / `--opened-until`
-  - "创建于"、"新建的"（文档整体维度，与"我"无关）→ `--created-since` / `--created-until`
-- **作用域选择**：
-  - "某个文件夹下" → `--folder-tokens`（doc-only）
-  - "某个 wiki 空间下" → `--space-ids`（wiki-only）
-  - 两者不能同时使用，混用会报错
-- **身份 flag 互斥**：`--mine` 和 `--creator-ids` 不要同时传；`--created-by-me` 和 `--original-creator-ids` 不要同时传。owner 维度与原始创建者维度可以组合，例如“我创建后转给王五 owner”用 `--created-by-me --creator-ids ou_wangwu`。
-- **实体补全**：
-  - 用户说"某个群里"，先用 `lark-im` 查 `chat_id`
-  - 用户说“某人负责/owner 的 / 某人创建的 / 某人分享的”（非自己），先用 `lark-contact` 查 open_id，再按语义填 `--creator-ids` / `--original-creator-ids` / `--sharer-ids`
-- **查询语义下推**：`--query` 支持的服务端高级语法（`intitle:`、`""`、`OR`、`-`）优先使用，不要先模糊搜再在客户端二次过滤。
-- **query 填写边界**：只有标题片段、业务名词、项目名、会议名、文件内容关键词才应进入 `--query`。仅描述动作、时间范围、所有权、统计方式的词不算关键词，保持 `--query ""` 并依赖 filters。
-- **证据核验**：列表/统计类答案必须来自搜索结果中的实际 URL/token 和类型/时间字段；内容问答必须能指出使用了哪些非污染候选。没有可验证候选时先扩大 query 或翻页，不要直接编总结。
-- **时间表达**：
-  - 模糊相对时间（"最近半年"、"过去 30 天"、"最近一周"）→ `--*-since 6m` / `--*-since 30d` / `--*-since 7d`，不展开成 ISO 时间
-  - **日历表达**（"上个月"、"上周"、"本月"、"前年"、"今年 3 月"等明确日历单位）→ **必须算出绝对 `YYYY-MM-DD` 边界**（如"上个月" = 上一个日历月的 1 号 → 当月 1 号），**不要近似成 `1m`/`2m`**：CLI 里 `m` 是固定 30 天、`y` 固定 365 天，跟日历差 0-3 天，月末月初尤其容易偏出去
-  - 文档中的 `"<YYYY-MM-DD>"` 是运行时占位符：执行命令前按当前日期计算并替换。例如"本月"应替换为本月第一天和下月第一天，不要把示例生成时的月份硬编码进答案
-  - 绝对日期 → 直接 `YYYY-MM-DD` 或 RFC3339
-- **分页策略**：默认只返回第一页，并说明 `has_more` 和下一页命令。用户明确要"全部 / 全量 / 继续翻"时继续；标题词 + 正文词联合搜索尚未找到足够的有效 Top N 候选时，按上文规则最多检查 3 页。其他场景单轮翻页上限 5 页。
-- **原始返回**：用户要求"原始数据"、"接口返回"时用 `--format json`，不做客户端精确过滤或摘要重写。
+- **Identity shortcuts**: When the user says documents "I created / I newly created / I originally created", use `--created-by-me`; when the user says documents "mine / I'm responsible for / I own", use `--mine`. `--mine` has owner semantics: documents transferred away do not count, documents transferred to me do count.
+- **Time dimension selection**:
+  - "I edited", "I modified" → `--edited-since` / `--edited-until`
+  - "I commented on", "I replied to" → `--commented-since` / `--commented-until`
+  - "I viewed", "I opened", "recently viewed" → `--opened-since` / `--opened-until`
+  - "created on", "newly created" (document-wide dimension, unrelated to "me") → `--created-since` / `--created-until`
+- **Scope selection**:
+  - "under a certain folder" → `--folder-tokens` (doc-only)
+  - "under a certain wiki space" → `--space-ids` (wiki-only)
+  - The two cannot be used simultaneously; mixing them will cause an error
+- **Identity flags are mutually exclusive**: Do not pass `--mine` and `--creator-ids` at the same time; do not pass `--created-by-me` and `--original-creator-ids` at the same time. The owner dimension and the original creator dimension can be combined, e.g. "I created it then transferred ownership to Wang Wu" uses `--created-by-me --creator-ids ou_wangwu`.
+- **Entity completion**:
+  - When the user says "in a certain group", first use `lark-im` to look up `chat_id`
+  - When the user says "someone's responsible/owned / someone's created / someone's shared" (not oneself), first use `lark-contact` to look up the open_id, then fill in `--creator-ids` / `--original-creator-ids` / `--sharer-ids` according to the semantics
+- **Query semantics pushdown**: `--query` supports server-side advanced syntax (`intitle:`, `""`, `OR`, `-`); prefer using it rather than doing a fuzzy search first and then filtering again on the client.
+- **Query field boundaries**: Only title fragments, business terms, project names, meeting names, and file content keywords should go into `--query`. Words that merely describe actions, time ranges, ownership, or counting methods are not keywords; keep `--query ""` and rely on filters.
+- **Evidence verification**: List/statistics answers must come from the actual URL/token and type/time fields in the search results; content Q&A must be able to point out which non-polluted candidates were used. When there are no verifiable candidates, first broaden the query or paginate; do not directly fabricate a summary.
+- **Time expressions**:
+  - Vague relative times ("last half year", "past 30 days", "last week") → `--*-since 6m` / `--*-since 30d` / `--*-since 7d`, do not expand into ISO times
+  - **Calendar expressions** ("last month", "last week", "this month", "the year before last", "March this year", etc. with explicit calendar units) → **must compute absolute `YYYY-MM-DD` boundaries** (e.g. "last month" = the 1st of the previous calendar month → the 1st of the current month), **do not approximate as `1m`/`2m`**: in the CLI, `m` is a fixed 30 days and `y` is a fixed 365 days, which differs from the calendar by 0-3 days, and is especially prone to drifting off at month boundaries
+  - `"<YYYY-MM-DD>"` in the documentation is a runtime placeholder: compute and replace it based on the current date before executing the command. For example, "this month" should be replaced with the first day of this month and the first day of next month; do not hardcode the month from when the example was generated into the answer
+  - Absolute dates → directly `YYYY-MM-DD` or RFC3339
+- **Pagination strategy**: By default, only return the first page, and explain `has_more` and the next-page command. When the user explicitly asks for "all / full / keep paginating", continue; when a combined search of title words + body words has not yet found enough valid Top N candidates, check at most 3 pages per the rules above. In other scenarios, the single-round pagination limit is 5 pages.
+- **Raw response**: When the user requests "raw data" or "API response", use `--format json`, without client-side precise filtering or summary rewriting.
 
-## 权限
+<a id="权限"></a>
+## Permissions
 
-| 操作 | 所需 scope |
+| Operation | Required scope |
 |---|---|
-| 搜索云空间（云盘/云存储）对象（文档 / Wiki / 表格等资源发现） | `search:docs:read` |
+| Search cloud space (cloud drive/cloud storage) objects (document / Wiki / Sheets and other resource discovery) | `search:docs:read` |
 
-## 常见错误
+<a id="常见错误"></a>
+## Common Errors
 
-| code | 含义 | 处理 |
+| code | Meaning | Handling |
 |---|---|---|
-| `99992351` | `--creator-ids` / `--original-creator-ids` / `--sharer-ids` 里有 open_id 超出**应用的通讯录可见范围**，服务端拒绝识别 | 让管理员在开发者后台把这些用户加进应用的"通讯录可见性"授权里；或把超出范围的 open_id 从参数里去掉。这和 `search:docs:read` scope 不是一回事 —— 是"应用能看见哪些人"而不是"应用能调用哪个接口" |
+| `99992351` | An open_id in `--creator-ids` / `--original-creator-ids` / `--sharer-ids` is outside the **app's contact visibility scope**, and the server refuses to recognize it | Have the administrator add these users to the app's "contact visibility" authorization in the developer console; or remove the out-of-scope open_id from the parameters. This is not the same as the `search:docs:read` scope —— it is about "which people the app can see" rather than "which API the app can call" |
 
-## 时间范围自动裁剪（`--opened-*` 专有）
+<a id="时间范围自动裁剪--opened--专有"></a>
+## Automatic Time Range Trimming (`--opened-*` only)
 
-服务端对 `open_time` 过滤**每次请求最多支持 3 个月**（90 天）窗口。其他三个时间维度（`--edited-*` / `--commented-*` / `--created-*`）**不受影响**。
+The server supports **at most a 3-month** (90-day) window per request for `open_time` filtering. The other three time dimensions (`--edited-*` / `--commented-*` / `--created-*`) are **unaffected**.
 
-CLI 在发请求前会检查 `--opened-since` 到有效 `--opened-until`（没传则取 `now`）的跨度：
+Before sending the request, the CLI checks the span from `--opened-since` to the effective `--opened-until` (if not passed, `now` is used):
 
-| 跨度 | 行为 |
+| Span | Behavior |
 |---|---|
-| ≤ 90 天 | 原样透传 |
-| 91 ~ 365 天 | **自动裁剪**到"最近一个 90 天 slice"，stderr 打一条 notice 列出所有剩余 slice 的 `--opened-since` / `--opened-until` 参数值 |
-| > 365 天 | 直接报 validation 错，要求缩小范围或自行拆分多次查询 |
+| ≤ 90 days | Passed through as-is |
+| 91 ~ 365 days | **Automatically trimmed** to the "most recent 90-day slice", and a notice is printed to stderr listing the `--opened-since` / `--opened-until` parameter values for all remaining slices |
+| > 365 days | Directly reports a validation error, requiring the range to be narrowed or split into multiple queries manually |
 
-Notice 示例（用户原本要求"过去 8 个月"，会被拆成 3 个 slice）：
+Notice example (the user originally asked for "the past 8 months", which will be split into 3 slices):
 
 ```text
 notice: --opened-* window spans 240 days (~8 months), exceeds the server-side 3-month (90-day) limit.
@@ -261,20 +280,22 @@ notice: --opened-* window spans 240 days (~8 months), exceeds the server-side 3-
         pagination: paginate within a slice via --page-token using that slice's --opened-since / --opened-until values verbatim (NOT the original relative time like '1y' / '8m' — relative times re-resolve against time.Now() and would mismatch the page_token); switch to the next slice's --opened-* flags only after has_more=false, and do not carry --page-token across slices.
 ```
 
-### Agent 看到 notice 时的处理
+<a id="agent-看到-notice-时的处理"></a>
+### How the Agent Should Handle the Notice
 
-**标准流程（分页 × slice 的先后顺序）：**
+**Standard flow (order of pagination × slice):**
 
-1. **跑 slice 1**（本次请求已自动裁剪到这个窗口），把结果呈现给用户
-2. **先在当前 slice 内翻页**：返回的 `has_more = true` 且用户想看更多时，把 `--opened-since` / `--opened-until` 改成 notice 里 `[slice 1/N current]` 行给出的**具体时间值**（**不要继续用原始的 `--opened-since 1y` 这种相对值**——CLI 每次调用都按 `time.Now()` 重算窗口，相对值 + `--page-token` 一起跑会让 page_token 绑到一个漂移的窗口上、结果静默失真），加 `--page-token` 继续翻，直到 `has_more = false`
-3. **再切换到下一个 slice**：当前 slice 翻完后，如果用户还要"更老的"，用 notice 里列的 slice 2 的 `--opened-since` / `--opened-until` 值，**其他 flag（`--query`、`--doc-types`、`--page-size`、`--sort`……）保持原样，`--page-token` 不带**，重新发请求
-4. **依次递推**：slice 2 翻完后切 slice 3，以此类推
-5. 用户只对最近一段感兴趣时，跳过第 3 步及以后 —— 避免无意义的 API 调用
+1. **Run slice 1** (this request has already been automatically trimmed to this window), and present the results to the user
+2. **First paginate within the current slice**: when `has_more = true` is returned and the user wants to see more, change `--opened-since` / `--opened-until` to the **specific time values** given in the `[slice 1/N current]` line of the notice (**do not keep using the original relative value like `--opened-since 1y`** —— the CLI recalculates the window based on `time.Now()` on every call, and running a relative value together with `--page-token` will bind the page_token to a drifting window, causing silent result distortion), add `--page-token` and continue paginating until `has_more = false`
+3. **Then switch to the next slice**: after the current slice is fully paginated, if the user still wants "older" results, use the `--opened-since` / `--opened-until` values of slice 2 listed in the notice, **keep all other flags (`--query`, `--doc-types`, `--page-size`, `--sort`……) unchanged, and do not carry `--page-token`**, and send a new request
+4. **Proceed in sequence**: after slice 2 is fully paginated, switch to slice 3, and so on
+5. When the user is only interested in the most recent period, skip step 3 and beyond —— to avoid meaningless API calls
 
-> `--page-token` 只在单 slice 上下文内有效；切 slice 时不要把上一个 slice 的 `page_token` 带过去。
+> `--page-token` is only valid within a single-slice context; when switching slices, do not carry over the `page_token` from the previous slice.
 
-### 注意事项
+<a id="注意事项"></a>
+### Notes
 
-- `--sort` 在**单 slice 内部**是正确的。跨 slice 的全局 sort（例如"过去一年我打开过的，按 edit_time desc 排"）不被 CLI 保证，需要 agent 自行拉完多个 slice 后在客户端 re-sort 再呈现
-- 裁剪只改 request 发出去的 `open_time` 范围，`--query` / 其他 filter 不动
-- 最后一个（最老的）slice 常常不足 90 天，这是正常的截断
+- `--sort` is correct **within a single slice**. Global sorting across slices (e.g. "what I opened in the past year, sorted by edit_time desc") is not guaranteed by the CLI; the agent needs to pull all slices and re-sort on the client before presenting
+- Trimming only changes the `open_time` range sent in the request; `--query` / other filters are untouched
+- The last (oldest) slice is often less than 90 days, which is normal truncation

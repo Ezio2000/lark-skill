@@ -1,27 +1,32 @@
-# 颜色枚举
+<a id="颜色枚举"></a>
+# Color Enumeration
 
-卡片所有颜色字段（`font_color` / `text_color` / `background_style` / `border_color` / icon `color` 等）共用同一套枚举，按属性名区分用途，无单独的文字/背景色表。
+All color fields on cards (`font_color` / `text_color` / `background_style` / `border_color` / icon `color`, etc.) share the same enumeration, with usage distinguished by property name; there is no separate text/background color table.
 
-## 基础色名（14 色系）
+<a id="基础色名14-色系"></a>
+## Base Color Names (14 Color Families)
 
 `blue` `carmine` `green` `indigo` `lime` `orange` `purple` `red` `sunflower` `turquoise` `violet` `wathet` `yellow` `grey`
 
-> **标签例外**：`text_tag` / `<text_tag>` 的灰色用 `neutral`（不是 `grey`）；标签枚举无 `grey`。
+> **Tag exception**: The gray for `text_tag` / `<text_tag>` uses `neutral` (not `grey`); the tag enumeration has no `grey`.
 
-## 深浅后缀
+<a id="深浅后缀"></a>
+## Light/Dark Suffixes
 
-- 彩色系（13 个非 grey）：`-50 -100 -200 -300 -350 -400 -500 -600 -700 -800 -900`，数字越大越深。
-- **无后缀基础名（如 `blue`）= `-600`**（同色值）。
-- grey 范围更细：`-00 -50 -100 … -650 … -950 -1000`。
-- 用法语义：`-50` 区块背景 · `-100` 标签背景 · `-500` 正文 · `-600/-700` 强调文字。
+- Color families (13 non-grey): `-50 -100 -200 -300 -350 -400 -500 -600 -700 -800 -900`, the larger the number, the darker.
+- **Base name without suffix (e.g., `blue`) = `-600`** (same color value).
+- grey has a finer range: `-00 -50 -100 … -650 … -950 -1000`.
+- Usage semantics: `-50` block background · `-100` tag background · `-500` body text · `-600/-700` emphasized text.
 
-## 特殊值
+<a id="特殊值"></a>
+## Special Values
 
-`white`（白）· `bg-white`（背景白：浅色 #ffffff / 深色 #1A1A1A）。无 `transparent` 枚举。
+`white` (white) · `bg-white` (background white: light mode #ffffff / dark mode #1A1A1A). There is no `transparent` enumeration.
 
-## 自定义 RGBA
+<a id="自定义-rgba"></a>
+## Custom RGBA
 
-在 `config.style.color` 定义 token 再引用：
+Define a token in `config.style.color` and then reference it:
 
 ```json
 "config": { "style": { "color": {
@@ -29,6 +34,6 @@
 } } }
 ```
 
-组件里写 `"font_color": "cus-0"`。RGBA 支持的属性同枚举（font/text_color、background_style、border_color、icon color 等）。
+In the component, write `"font_color": "cus-0"`. The properties supported by RGBA are the same as the enumeration (font/text_color, background_style, border_color, icon color, etc.).
 
-> `column` 的 `background_style` 需客户端 v7.9+。配色搭配规则见 `../lark-im-card-style.md` 视觉规范。
+> `column`'s `background_style` requires client v7.9+. For color matching rules, see `../lark-im-card-style.md` visual guidelines.

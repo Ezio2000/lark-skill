@@ -1,33 +1,35 @@
 # Base Role Permission Schema
 
-> **模块入口**: [Advanced Permission 与 Role](lark-base-advanced-permission-and-role.md) | **相关命令**: `+role-create` · `+role-update` · `+role-get`
+> **Module entry**: [Advanced Permission and Role](lark-base-advanced-permission-and-role.md) | **Related commands**: `+role-create` · `+role-update` · `+role-get`
 
-本文档是角色权限 JSON（AdvPermBaseRoleConfig）的单一事实来源（SSOT），供 `+role-create` 和 `+role-update` 构造 `--json` 参数时参考。
+This document is the single source of truth (SSOT) for the role permission JSON (AdvPermBaseRoleConfig), for reference by `+role-create` and `+role-update` when constructing the `--json` parameter.
 
-## 📋 目录
+<a id="-目录"></a>
+## 📋 Table of Contents
 
-- [顶层结构 (AdvPermBaseRoleConfig)](#顶层结构-advpermbaseroleconfig)
-- [角色类型 (RoleType)](#角色类型-roletype)
-- [读取与更新角色](#读取与更新角色)
-- [Base 级权限 (BaseRuleMap)](#base-级权限-baserulemap)
-- [仪表盘权限 (DashboardRule)](#仪表盘权限-dashboardrule)
-- [文档权限 (DocxRule)](#文档权限-docxrule)
-- [数据表权限 (TableRule)](#数据表权限-tablerule)
-    - [表级权限 (TablePerm)](#表级权限-tableperm)
-    - [视图权限 (ViewRule)](#视图权限-viewrule)
-    - [字段权限 (FieldRule)](#字段权限-fieldrule)
-    - [记录权限 (RecordRule)](#记录权限-recordrule)
-    - [筛选条件 (FilterRuleGroup)](#筛选条件-filterrulegroup)
-- [默认权限策略与风控规则](#默认权限策略与风控规则)
-    - [默认关闭项](#默认关闭项)
-    - [权限对象选择](#权限对象选择)
-    - [记录操作默认策略](#记录操作默认策略)
-    - [field_perms 构造 SOP](#field_perms-构造-sop)
-    - [视图权限默认策略](#视图权限默认策略)
+- [Top-level structure (AdvPermBaseRoleConfig)](#顶层结构-advpermbaseroleconfig)
+- [Role type (RoleType)](#角色类型-roletype)
+- [Reading and updating roles](#读取与更新角色)
+- [Base-level permissions (BaseRuleMap)](#base-级权限-baserulemap)
+- [Dashboard permissions (DashboardRule)](#仪表盘权限-dashboardrule)
+- [Document permissions (DocxRule)](#文档权限-docxrule)
+- [Table permissions (TableRule)](#数据表权限-tablerule)
+    - [Table-level permissions (TablePerm)](#表级权限-tableperm)
+    - [View permissions (ViewRule)](#视图权限-viewrule)
+    - [Field permissions (FieldRule)](#字段权限-fieldrule)
+    - [Record permissions (RecordRule)](#记录权限-recordrule)
+    - [Filter conditions (FilterRuleGroup)](#筛选条件-filterrulegroup)
+- [Default permission policies and risk control rules](#默认权限策略与风控规则)
+    - [Items disabled by default](#默认关闭项)
+    - [Permission object selection](#权限对象选择)
+    - [Default record operation policies](#记录操作默认策略)
+    - [field_perms construction SOP](#field_perms-构造-sop)
+    - [Default view permission policies](#视图权限默认策略)
 
 ---
 
-## 顶层结构 (AdvPermBaseRoleConfig)
+<a id="顶层结构-advpermbaseroleconfig"></a>
+## Top-level structure (AdvPermBaseRoleConfig)
 
 ```json
 {
@@ -40,44 +42,47 @@
 }
 ```
 
-| 字段 | 类型 | 必填 | 说明 |
+| Field | Type | Required | Description |
 |------|------|----|------|
-| `role_name` | string | 是  | 角色名称，不能为空 |
-| `role_type` | string | 是  | 角色类型，见 [RoleType](#角色类型-roletype) |
-| `base_rule_map` | map\<string, bool\> | 是  | Base 级权限，见 [BaseRuleMap](#base-级权限-baserulemap) |
-| `table_rule_map` | map\<string, TableRule\> | 否  | 数据表权限，key 为表名 |
-| `dashboard_rule_map` | map\<string, DashboardRule\> | 否  | 仪表盘权限，key 为仪表盘名称 |
-| `docx_rule_map` | map\<string, DocxRule\> | 否  | 文档权限（仅单品模式），key 为文档名称 |
+| `role_name` | string | Yes  | Role name, cannot be empty |
+| `role_type` | string | Yes  | Role type, see [RoleType](#角色类型-roletype) |
+| `base_rule_map` | map\<string, bool\> | Yes  | Base-level permissions, see [BaseRuleMap](#base-级权限-baserulemap) |
+| `table_rule_map` | map\<string, TableRule\> | No  | Table permissions, key is the table name |
+| `dashboard_rule_map` | map\<string, DashboardRule\> | No  | Dashboard permissions, key is the dashboard name |
+| `docx_rule_map` | map\<string, DocxRule\> | No  | Document permissions (single-item mode only), key is the document name |
 
 ---
 
-## 角色类型 (RoleType)
+<a id="角色类型-roletype"></a>
+## Role type (RoleType)
 
-| 值 | 说明 |
+| Value | Description |
 |------|------|
-| `editor` | 系统角色：编辑者 |
-| `reader` | 系统角色：阅读者 |
-| `custom_role` | 自定义角色 |
+| `editor` | System role: Editor |
+| `reader` | System role: Reader |
+| `custom_role` | Custom role |
 
-**注意**:
-- 创建接口（`+role-create`）仅支持 `custom_role`
-- 更新接口（`+role-update`）支持  `editor` / `reader` / `custom_role`
-
----
-
-## 读取与更新角色
-
-- `+role-list` 用于定位角色，返回角色摘要；系统角色和自定义角色都可能出现在列表中。
-- `+role-get` 返回完整权限配置。更新前先用它确认当前 `role_name`、`role_type` 和已有权限结构。
-- `+role-update` 是 delta merge，只提交需要变更的字段；但 `role_name` 和 `role_type` 仍要带当前值，避免误改角色身份信息。
-- `+role-delete` 仅适用于自定义角色；系统角色可以在权限上限内调整配置，但不可删除。
+**Note**:
+- The create API (`+role-create`) only supports `custom_role`
+- The update API (`+role-update`) supports `editor` / `reader` / `custom_role`
 
 ---
 
-## Base 级权限 (BaseRuleMap)
+<a id="读取与更新角色"></a>
+## Reading and updating roles
 
-1. 默认值均为 `false`，当需要启用时设置为 `true`。
-2. 在新增角色和修改角色时需要默认带上这个字段，**严禁**在用户未明确要求的情况下将其设置为 `true`。
+- `+role-list` is used to locate a role and returns a role summary; both system roles and custom roles may appear in the list.
+- `+role-get` returns the complete permission configuration. Before updating, use it to confirm the current `role_name`, `role_type`, and existing permission structure.
+- `+role-update` is a delta merge; submit only the fields that need to change; however, `role_name` and `role_type` must still carry their current values to avoid accidentally changing role identity information.
+- `+role-delete` applies only to custom roles; system roles can have their configuration adjusted within the permission ceiling, but cannot be deleted.
+
+---
+
+<a id="base-级权限-baserulemap"></a>
+## Base-level permissions (BaseRuleMap)
+
+1. The default value is `false`; set it to `true` when it needs to be enabled.
+2. This field must be included by default when creating and modifying roles; it is **strictly prohibited** to set it to `true` when the user has not explicitly requested it.
 
 ```json
 {
@@ -88,14 +93,15 @@
 }
 ```
 
-| Key | 说明 |
+| Key | Description |
 |-----|------|
-| `copy` | 允许复制多维表格内容 |
-| `download` | 允许创建副本、下载、打印多维表格 |
+| `copy` | Allow copying Base content |
+| `download` | Allow creating copies, downloading, and printing the Base |
 
 ---
 
-## 仪表盘权限 (DashboardRule)
+<a id="仪表盘权限-dashboardrule"></a>
+## Dashboard permissions (DashboardRule)
 
 ```json
 {
@@ -106,22 +112,23 @@
 }
 ```
 
-| 字段 | 类型 | 说明 |
+| Field | Type | Description |
 |------|------|------|
-| `perm` | string | 仪表盘权限 |
+| `perm` | string | Dashboard permission |
 
-**perm 可选值**:
+**perm possible values**:
 
-| 值 | 说明 |
+| Value | Description |
 |----|------|
-| `read_only` | 仅可阅读 |
-| `no_perm` | 无权限 |
+| `read_only` | Read only |
+| `no_perm` | No permission |
 
 ---
 
-## 文档权限 (DocxRule)
+<a id="文档权限-docxrule"></a>
+## Document permissions (DocxRule)
 
-> ⚠️ 仅在单品模式（`is_base_solo = true`）下可用。
+> ⚠️ Available only in single-item mode (`is_base_solo = true`).
 
 ```json
 {
@@ -132,22 +139,23 @@
 }
 ```
 
-| 字段 | 类型 | 必填 | 说明 |
+| Field | Type | Required | Description |
 |------|------|------|------|
-| `perm` | string | 是 | 文档权限 |
-| `allow_download` | bool | 否 | 是否允许下载/导出 |
+| `perm` | string | Yes | Document permission |
+| `allow_download` | bool | No | Whether downloading/exporting is allowed |
 
-**perm 可选值**:
+**perm possible values**:
 
-| 值 | 说明 |
+| Value | Description |
 |----|------|
-| `edit` | 可编辑 |
-| `read_only` | 仅可阅读 |
-| `no_perm` | 无权限 |
+| `edit` | Editable |
+| `read_only` | Read only |
+| `no_perm` | No permission |
 
 ---
 
-## 数据表权限 (TableRule)
+<a id="数据表权限-tablerule"></a>
+## Table permissions (TableRule)
 
 ```json
 {
@@ -187,33 +195,35 @@
 }
 ```
 
-| 字段 | 类型 | 说明 |
+| Field | Type | Description |
 |------|------|------|
-| `perm` | string | 表级权限，见 [TablePerm](#表级权限-tableperm) |
-| `view_rule` | ViewRule | 视图权限配置 |
-| `record_rule` | RecordRule | 记录权限配置 |
-| `field_rule` | FieldRule | 字段权限配置 |
+| `perm` | string | Table-level permission, see [TablePerm](#表级权限-tableperm) |
+| `view_rule` | ViewRule | View permission configuration |
+| `record_rule` | RecordRule | Record permission configuration |
+| `field_rule` | FieldRule | Field permission configuration |
 
-**`+role-create` 硬约束**:
+**`+role-create` hard constraints**:
 
-- 当 `perm` 为 `no_perm` 时，不要设置 `view_rule`、`record_rule`、`field_rule`。
-- 当 `perm` 为其他值时，必须同时提供完整的 `view_rule`、`record_rule`、`field_rule`，缺少任意一项都会导致创建失败。
-- `+role-update` 是 delta merge，只提交要修改的字段；不要为局部更新补造未变更配置。
+- When `perm` is `no_perm`, do not set `view_rule`, `record_rule`, or `field_rule`.
+- When `perm` is any other value, complete `view_rule`, `record_rule`, and `field_rule` must all be provided; missing any one of them will cause creation to fail.
+- `+role-update` is a delta merge; submit only the fields to be modified; do not fabricate unchanged configuration for a partial update.
 
 ---
 
-### 表级权限 (TablePerm)
+<a id="表级权限-tableperm"></a>
+### Table-level permissions (TablePerm)
 
-| 值 | 说明 |
+| Value | Description |
 |----|------|
-| `manage` | 可管理 |
-| `edit` | 可编辑 |
-| `read_only` | 仅可阅读 |
-| `no_perm` | 无权限（此时不能再设置视图、记录和字段的权限） |
+| `manage` | Can manage |
+| `edit` | Can edit |
+| `read_only` | Read only |
+| `no_perm` | No permission (in this case, view, record, and field permissions cannot be set) |
 
 ---
 
-### 视图权限 (ViewRule)
+<a id="视图权限-viewrule"></a>
+### View permissions (ViewRule)
 
 ```json
 {
@@ -227,19 +237,19 @@
 }
 ```
 
-| 字段 | 类型 | 说明                         |
+| Field | Type | Description                         |
 |------|------|----------------------------|
-| `allow_edit` | bool | 可新增、删除、修改视图；表权限为 `edit` 时默认为 `true`，表权限为 `read_only` 或用户明确限制时为 `false` |
-| `visibility` | object | 可见的视图配置                    |
-| `visibility.all_visible` | bool | 是否全部可见                     |
-| `visibility.visible_views` | []string | 可见视图名称 列表                  |
+| `allow_edit` | bool | Can add, delete, and modify views; defaults to `true` when the table permission is `edit`, and to `false` when the table permission is `read_only` or the user explicitly restricts it |
+| `visibility` | object | Visible view configuration                    |
+| `visibility.all_visible` | bool | Whether all are visible                     |
+| `visibility.visible_views` | []string | List of visible view names                  |
 
-**⚠️ 核心规则：`view_rule` 必须同时包含 `allow_edit` 和 `visibility` 两个字段，缺一不可。**
+**⚠️ Core rule: `view_rule` must contain both the `allow_edit` and `visibility` fields; neither can be omitted.**
 
-输出 `view_rule` 时，**必须**使用以下完整结构，根据场景选择对应模板：
+When outputting `view_rule`, you **must** use the following complete structure, choosing the corresponding template based on the scenario:
 
 ```json
-// 情况 A：表权限为 edit 且用户未明确限制 → allow_edit 默认为 true，全部可见
+// Case A: Table permission is edit and the user has not explicitly restricted it → allow_edit defaults to true, all visible
 {
   "view_rule": {
     "allow_edit": true,
@@ -249,7 +259,7 @@
   }
 }
 
-// 情况 B：表权限为 read_only，或用户明确说不可编辑视图 → 全部可见、不可编辑
+// Case B: Table permission is read_only, or the user explicitly says views cannot be edited → all visible, not editable
 {
   "view_rule": {
     "allow_edit": false,
@@ -259,7 +269,7 @@
   }
 }
 
-// 情况 C：用户提及了具体视图 → 仅指定视图可见（allow_edit 仍按 A/B 规则判断）
+// Case C: The user mentioned specific views → only the specified views are visible (allow_edit is still determined by the A/B rules)
 {
   "view_rule": {
     "allow_edit": true,
@@ -271,13 +281,14 @@
 }
 ```
 
-**注意**:
-- 当 `all_visible` 为 `false` 时，`visible_views` 不可为空，必须指定至少一个可见视图
-- `biz_type` 为 `query_form_view` 的视图不可放在 `visible_views` 中（不能配置可见性）
+**Note**:
+- When `all_visible` is `false`, `visible_views` cannot be empty; at least one visible view must be specified
+- Views whose `biz_type` is `query_form_view` cannot be placed in `visible_views` (visibility cannot be configured)
 
 ---
 
-### 字段权限 (FieldRule)
+<a id="字段权限-fieldrule"></a>
+### Field permissions (FieldRule)
 
 ```json
 {
@@ -294,41 +305,42 @@
 }
 ```
 
-| 字段 | 类型 | 说明 |
+| Field | Type | Description |
 |------|------|------|
-| `field_perm_mode` | string | 字段权限模式 |
-| `field_perms` | map\<string, string\> | 字段名 → 权限，仅 `field_perm_mode` 为 `specify` 时有效 |
-| `allow_edit_and_modify_option_fields` | []string | 允许增删改选项的字段名列表 |
-| `allow_edit_and_download_file_fields` | []string | 允许下载附件的字段名列表 |
+| `field_perm_mode` | string | Field permission mode |
+| `field_perms` | map\<string, string\> | Field name → permission, valid only when `field_perm_mode` is `specify` |
+| `allow_edit_and_modify_option_fields` | []string | List of field names that allow adding, deleting, and modifying options |
+| `allow_edit_and_download_file_fields` | []string | List of field names that allow downloading attachments |
 
-**field_perm_mode 可选值**:
+**field_perm_mode possible values**:
 
-| 值 | 说明 |
+| Value | Description |
 |----|------|
-| `all_edit` | 所有字段可编辑，但选项不可增删改 |
-| `all_read` | 所有字段可读 |
-| `specify` | 指定字段权限（可进一步设置 `field_perms` 和选项增删改权限） |
-| `no_perm` | 无权限 |
+| `all_edit` | All fields editable, but options cannot be added, deleted, or modified |
+| `all_read` | All fields readable |
+| `specify` | Specify field permissions (can further set `field_perms` and option add/delete/modify permissions) |
+| `no_perm` | No permission |
 
-**field_perms 中单个字段的权限值**:
+**Permission value for a single field in field_perms**:
 
-| 值 | 说明 |
+| Value | Description |
 |----|------|
-| `edit` | 可编辑（含新增和阅读权限） |
-| `create` | 可新增（含阅读权限） |
-| `read` | 可阅读 |
-| `no_perm` | 无权限 |
+| `edit` | Editable (includes add and read permissions) |
+| `create` | Can add (includes read permission) |
+| `read` | Readable |
+| `no_perm` | No permission |
 
-**⚠️ field_perms 重要规则**:
-1. 写入前必须先查看字段的 `type`
-2. `formula` / `lookup` / `auto_number` 类型字段**必须强制**降级为 `read` 或 `no_perm`，**严禁**设为 `edit`
-3. 必须输出除 4 个系统字段外的所有字段
-4. `allow_edit_and_modify_option_fields`：仅当用户明确要求"允许增删改选项"时才配置，否则必须为空数组 `[]`。仅支持 `select` 类型字段
-5. `allow_edit_and_download_file_fields`：用户没有要求时不要设置，且仅 `field_perm_mode` 为 `specify` 时才能设置
+**⚠️ Important field_perms rules**:
+1. Before writing, you must first check the field's `type`
+2. Fields of type `formula` / `lookup` / `auto_number` **must be forcibly** downgraded to `read` or `no_perm`; setting them to `edit` is **strictly prohibited**
+3. All fields except the 4 system fields must be output
+4. `allow_edit_and_modify_option_fields`: configure only when the user explicitly requests "allow adding, deleting, and modifying options"; otherwise it must be an empty array `[]`. Only fields of type `select` are supported
+5. `allow_edit_and_download_file_fields`: do not set it when the user has not requested it, and it can be set only when `field_perm_mode` is `specify`
 
 ---
 
-### 记录权限 (RecordRule)
+<a id="记录权限-recordrule"></a>
+### Record permissions (RecordRule)
 
 ```json
 {
@@ -354,23 +366,24 @@
 }
 ```
 
-| 字段 | 类型 | 说明 |
+| Field | Type | Description |
 |------|------|------|
-| `record_operations` | []string | 记录操作权限，仅 `TablePerm = edit` 时有效 |
-| `edit_filter_rule_group` | FilterRuleGroup | 可编辑记录的筛选条件，范围为所有记录时此字段为空 |
-| `other_record_all_read` | bool | 是否可阅读所有记录。都可读时为 `true`，其他情况为 `false` |
-| `read_filter_rule_group` | FilterRuleGroup | 可阅读记录的额外筛选规则。仅当可阅读范围与可编辑范围不一致时设置（依赖 `other_record_all_read = false`） |
+| `record_operations` | []string | Record operation permissions, valid only when `TablePerm = edit` |
+| `edit_filter_rule_group` | FilterRuleGroup | Filter conditions for editable records; this field is empty when the scope is all records |
+| `other_record_all_read` | bool | Whether all records are readable. It is `true` when all are readable, and `false` otherwise |
+| `read_filter_rule_group` | FilterRuleGroup | Additional filter rules for readable records. Set only when the readable scope differs from the editable scope (depends on `other_record_all_read = false`) |
 
-**record_operations 可选值**:
+**record_operations possible values**:
 
-| 值 | 说明 |
+| Value | Description |
 |----|------|
-| `add` | 可新增记录 |
-| `delete` | 可删除记录 |
+| `add` | Can add records |
+| `delete` | Can delete records |
 
 ---
 
-### 筛选条件 (FilterRuleGroup)
+<a id="筛选条件-filterrulegroup"></a>
+### Filter conditions (FilterRuleGroup)
 
 ```json
 {
@@ -390,186 +403,196 @@
 }
 ```
 
-**FilterRuleGroup 结构**:
+**FilterRuleGroup structure**:
 
-| 字段 | 类型 | 说明 |
+| Field | Type | Description |
 |------|------|------|
-| `conjunction` | string | 逻辑连接词：`and` / `or` |
-| `filter_rules` | []FilterRule | 筛选规则数组 |
+| `conjunction` | string | Logical connective: `and` / `or` |
+| `filter_rules` | []FilterRule | Array of filter rules |
 
-**FilterRule 结构**:
+**FilterRule structure**:
 
-| 字段 | 类型 | 说明 |
+| Field | Type | Description |
 |------|------|------|
-| `conjunction` | string | 逻辑连接词，默认 `and` |
-| `filters` | []Filter | 筛选条件数组 |
+| `conjunction` | string | Logical connective, defaults to `and` |
+| `filters` | []Filter | Array of filter conditions |
 
-**Filter 结构**:
+**Filter structure**:
 
-| 字段 | 类型 | 必填 | 说明 |
+| Field | Type | Required | Description |
 |------|------|------|------|
-| `field_name` | string | 是 | 字段名。仅限 `can_filter` 为 `true` 的字段。若服务端要求当前用户类条件，可按 API 返回结构处理 |
-| `operator` | string | 是 | 操作符，见下表 |
-| `field_type` | string | 否 | 通常由服务端 filterFiller 补全；Agent 判断字段类型时以 `+field-list` / 字段操作接口的 `type` 为准，常见可筛选类型包括 `select`、`user`、`created_by`、`number` 及部分 `formula` / `lookup` |
-| `reference_type` | string | 条件 | 引用类型。`field_type` 为公式或引用字段时必须赋值，其他情况不能赋值 |
-| `filter_values` | []string | 条件 | 筛选值。`operator` 为 `isEmpty` / `isNotEmpty` 时不设置，字段类型为 `user` 时也无需设置，其他情况必须设置。值为选项的 `name` |
-| `field_ui_type` | string | 条件 | 该字段有值时一定要填 |
-| `is_invalid` | bool | 否 | 判断筛选条件是否有效 |
+| `field_name` | string | Yes | Field name. Limited to fields whose `can_filter` is `true`. If the server requires current-user-type conditions, handle it according to the API response structure |
+| `operator` | string | Yes | Operator, see the table below |
+| `field_type` | string | No | Usually filled in by the server-side filterFiller; when the Agent determines the field type, use `+field-list` / the `type` of the field operation API as the basis; common filterable types include `select`, `user`, `created_by`, `number`, and some `formula` / `lookup` |
+| `reference_type` | string | Conditional | Reference type. Must be assigned when `field_type` is a formula or reference field; it cannot be assigned in other cases |
+| `filter_values` | []string | Conditional | Filter value. Not set when `operator` is `isEmpty` / `isNotEmpty`; also not required when the field type is `user`; must be set in other cases. The value is the option's `name` |
+| `field_ui_type` | string | Conditional | Must be filled in when this field has a value |
+| `is_invalid` | bool | No | Determines whether the filter condition is valid |
 
-**operator 可选值**:
+**operator possible values**:
 
-| 值 | 说明 |
+| Value | Description |
 |----|------|
-| `is` | 等于 |
-| `isNot` | 不等于 |
-| `contains` | 包含 |
-| `doesNotContain` | 不包含 |
-| `isEmpty` | 为空 |
-| `isNotEmpty` | 不为空 |
-| `isGreater` | 大于 |
-| `isGreaterEqual` | 大于等于 |
-| `isLess` | 小于 |
-| `isLessEqual` | 小于等于 |
+| `is` | Equals |
+| `isNot` | Does not equal |
+| `contains` | Contains |
+| `doesNotContain` | Does not contain |
+| `isEmpty` | Is empty |
+| `isNotEmpty` | Is not empty |
+| `isGreater` | Greater than |
+| `isGreaterEqual` | Greater than or equal to |
+| `isLess` | Less than |
+| `isLessEqual` | Less than or equal to |
 
-**注意**:
-- `field_type`、`field_ui_type`、`reference_type` 在创建/更新角色时由服务端 filterFiller 自动补全，客户端通常只需传 `field_name`、`operator`、`filter_values`
+**Note**:
+- `field_type`, `field_ui_type`, and `reference_type` are automatically filled in by the server-side filterFiller when creating/updating a role; the client usually only needs to pass `field_name`, `operator`, and `filter_values`
 
 ---
 
-## 默认权限策略与风控规则
+<a id="默认权限策略与风控规则"></a>
+## Default permission policies and risk control rules
 
-构造角色配置 JSON 时，采用 **默认拒绝与权限最小化** 策略。用户未明确提及的权限一律不开放，不因"合理猜测""常见做法"主动扩展权限范围。
+When constructing the role configuration JSON, adopt a **default-deny and least-privilege** policy. Any permission the user has not explicitly mentioned is not granted; do not proactively expand the permission scope based on "reasonable guesses" or "common practice".
 
-### 默认关闭项
+<a id="默认关闭项"></a>
+### Items disabled by default
 
-以下能力在用户未明确说明时**默认关闭**：
+The following capabilities are **disabled by default** when the user has not explicitly stated otherwise:
 
-| 能力 | 默认值 | 开启条件 |
+| Capability | Default value | Enabling condition |
 |------|--------|----------|
-| 未提及的数据表的任何访问 | `no_perm` | 用户明确提及该表 |
-| 仪表盘访问 | 不配置 | 用户明确提及该仪表盘 |
-| `base_rule_map.copy` | `false` | 用户明确要求"允许复制" |
-| `base_rule_map.download` | `false` | 用户明确要求"允许下载/打印/副本" |
+| Any access to tables not mentioned | `no_perm` | The user explicitly mentions the table |
+| Dashboard access | Not configured | The user explicitly mentions the dashboard |
+| `base_rule_map.copy` | `false` | The user explicitly requests "allow copying" |
+| `base_rule_map.download` | `false` | The user explicitly requests "allow downloading/printing/copies" |
 
-### 默认开启项（条件性）
+<a id="默认开启项条件性"></a>
+### Items enabled by default (conditional)
 
-以下能力在特定条件下**默认开启**，用户明确限制时才排除：
+The following capabilities are **enabled by default** under specific conditions, and are excluded only when the user explicitly restricts them:
 
-| 能力 | 默认值 | 排除条件 |
+| Capability | Default value | Exclusion condition |
 |------|--------|----------|
-| `record_operations` 中的 `delete` | **包含**（`perm = edit` 时） | 用户明确限制时才排除 |
-| `view_rule.allow_edit` | **`true`**（`perm = edit` 时） | 用户明确限制"不可编辑视图"或 `perm = read_only` 时设为 `false` |
+| `record_operations` in `delete` | **Included** (when `perm = edit`) | Excluded only when the user explicitly restricts it |
+| `view_rule.allow_edit` | **`true`** (when `perm = edit`) | Set to `false` when the user explicitly restricts "views cannot be edited" or when `perm = read_only` |
 
 ---
 
-### Editor / Reader 的权限上限规则
-1. 对 Editor 与 Reader，系统允许修改其权限配置，但同时施加以下封顶约束：
-2. Reader 的任一权限项 不允许超过「仅可阅读」
-3. Reader 不允许拥有任何可编辑、可新增、可删除相关权限; Editor 的权限可被修改，但其能力范围受高级权限能力封顶。
+<a id="editor--reader-的权限上限规则"></a>
+### Permission ceiling rules for Editor / Reader
+1. For Editor and Reader, the system allows modifying their permission configuration, but simultaneously imposes the following ceiling constraints:
+2. No permission item of a Reader may exceed "read only"
+3. A Reader is not allowed to have any edit-, add-, or delete-related permissions; an Editor's permissions can be modified, but its capability scope is capped by the advanced permission capabilities.
 
-### 权限对象选择
+<a id="权限对象选择"></a>
+### Permission object selection
 
-**注意**:
-- 仅对用户明确指向的权限对象生成配置（明确提及的表名、仪表盘名，或可解析为唯一对象的指代如"当前表""这张表"）
-- **严禁**基于业务常识、岗位职责、名称相似性或其他角色的历史配置推断或扩展权限对象
-- 用户未明确提及的对象不生成任何权限配置，视为 `no_perm`
-
----
-
-### 记录操作默认策略
-
-**注意**:
-- 用户未提及时，表权限为 `edit` 时默认同时包含 `add` 和 `delete`，默认不包含 `delete` 的情况仅适用于用户明确限制操作的场景
-- 阅读范围默认对齐编辑范围：用户仅描述可编辑范围、未说明阅读范围时，可阅读范围与可编辑范围保持一致，不主动扩大
-- 当可读范围与可编辑范围一致时，**不得**生成 `read_filter_rule_group`；应设置 `other_record_all_read = false` 且 `read_filter_rule_group = null`
-
-**⚠️ 记录操作限制**:
-1. `perm` 为 `read_only` 时，`record_rule.record_operations` **只能为空**
-2. 同步表（`is_sync = true`）**严禁**新增和删除记录
+**Note**:
+- Generate configuration only for permission objects the user explicitly points to (explicitly mentioned table names, dashboard names, or references that can be resolved to a unique object such as "the current table" or "this table")
+- It is **strictly prohibited** to infer or expand permission objects based on business common sense, job responsibilities, name similarity, or other roles' historical configurations
+- Objects the user has not explicitly mentioned generate no permission configuration and are treated as `no_perm`
 
 ---
 
-### field_perms 构造 SOP
+<a id="记录操作默认策略"></a>
+### Default Record Operation Policy
 
-在生成 `field_perms` 时，**严禁**依赖模糊的"继承"概念，必须按以下步骤执行：
+**Note**:
+- When the user does not mention it, when the table permission is `edit`, it includes both `add` and `delete` by default; the default exclusion of `delete` applies only to scenarios where the user explicitly restricts operations
+- The read scope defaults to aligning with the edit scope: when the user only describes the editable scope and does not specify the read scope, the readable scope stays consistent with the editable scope and is not proactively expanded
+- When the readable scope and the editable scope are consistent, `read_filter_rule_group` **must not** be generated; instead, set `other_record_all_read = false` and `read_filter_rule_group = null`
 
-| 步骤 | 操作 | 说明 |
+**⚠️ Record Operation Restrictions**:
+1. When `perm` is `read_only`, `record_rule.record_operations` **can only be empty**
+2. For sync tables (`is_sync = true`), adding and deleting records is **strictly prohibited**
+
+---
+
+<a id="field_perms-构造-sop"></a>
+### field_perms Construction SOP
+
+When generating `field_perms`, **strictly do not** rely on the vague concept of "inheritance"; the following steps must be executed:
+
+| Step | Operation | Description |
 |------|------|------|
-| 1. 基准设定 | `perm = edit` → 全部字段预设 `"edit"`；`perm = read_only` → 全部预设 `"read"` | 基于 `base_table_info` 中的全量字段 |
-| 2. 物理降级 | `formula` / `lookup` / `auto_number` 及系统字段 → 强制降级为 `"read"` | 不可变字段严禁设为 `edit` |
-| 3. 用户覆盖 | 仅对用户**显式指定**了特定权限的字段应用 `no_perm` / `read` / `create` | 未显式指定的保持基准值 |
-| 4. 反筛选误判 | 用于 `filter_rules` 的字段，若基准为 `"edit"` 且用户未要求降级 → **保持 `"edit"`** | 筛选条件不影响字段可编辑性 |
-| 5. 筛选依赖兜底 | 出现在 `filter_rules` 中的字段**不允许**遗漏，权限至少为 `"read"` | 最终校验步骤 |
+| 1. Baseline setting | `perm = edit` → all fields preset to `"edit"`; `perm = read_only` → all preset to `"read"` | Based on all fields in `base_table_info` |
+| 2. Physical downgrade | `formula` / `lookup` / `auto_number` and system fields → forcibly downgraded to `"read"` | Immutable fields must never be set to `edit` |
+| 3. User override | Apply `no_perm` / `read` / `create` only to fields for which the user has **explicitly specified** particular permissions | Fields not explicitly specified retain the baseline value |
+| 4. Anti-filtering misjudgment | For fields used in `filter_rules`, if the baseline is `"edit"` and the user has not requested a downgrade → **keep `"edit"`** | Filter conditions do not affect field editability |
+| 5. Filter dependency fallback | Fields appearing in `filter_rules` **must not** be omitted; permission is at least `"read"` | Final validation step |
 
-**⚠️ field_perm_mode 选择规则**:
-1. 用户以"所有字段""全字段"等整体性表述描述且不要求选项增删改时，**必须**使用 `all_edit` / `all_read`，**严禁**变为逐字段 `specify`
-2. 仅在以下情况使用 `specify`：用户明确提出字段级差异需求、不同字段权限目标存在显著差异、或明确要求配置选项增删改权限
-3. 系统字段硬性约束导致的自动降级**不视为**差异，不触发 `specify`
-4. 对"仅""只能""部分"等约束定语，范围外的字段按定语的反方向设置
+**⚠️ field_perm_mode Selection Rules**:
+1. When the user describes it with holistic expressions such as "all fields" or "the entire field set" and does not require adding, deleting, or modifying options, `all_edit` / `all_read` **must** be used, and it is **strictly prohibited** to switch to per-field `specify`
+2. Use `specify` only in the following cases: the user explicitly raises a field-level differentiation requirement, there are significant differences between permission targets for different fields, or the user explicitly requires configuring add/delete/modify option permissions
+3. Automatic downgrades caused by hard constraints on system fields are **not considered** differences and do not trigger `specify`
+4. For restrictive modifiers such as "only", "can only", or "partial", fields outside the scope are set in the opposite direction of the modifier
 
-**⚠️ 同步表限制**: `is_sync = true` 的表**严禁**设置字段为 `edit` 或 `create`
+**⚠️ Sync Table Restriction**: For tables in `is_sync = true`, setting fields to `edit` or `create` is **strictly prohibited**
 
 ---
 
-### 视图权限默认策略
+<a id="视图权限默认策略"></a>
+### Default View Permission Policy
 
-**判断流程（必须按顺序执行，命中即停）**:
+**Decision flow (must be executed in order; stop once a match is hit)**:
 
-1. **先判断用户是否提及了具体视图名称**（如"看板视图可见""甘特图不可编辑"等）
-  - **是** → `all_visible = false`，`visible_views` 仅包含用户明确提及为"可见"的视图名称（非 viewID）；未提及的视图视为不可见
-  - **否**（用户完全未提及任何视图）→ `all_visible = true`
-2. `allow_edit` 在表权限为 `edit` 时**默认为 `true`**；仅当用户明确限制"不可编辑视图"时才设为 `false`。设为 `true` 时仍**必须**包含 `visibility` 字段（参考视图权限 情况 A）
-3. `all_visible` 为 `false` 时，`visible_views` **不可为空**，必须至少包含一个视图
+1. **First determine whether the user mentioned a specific view name** (such as "kanban view visible", "Gantt chart not editable", etc.)
+  - **Yes** → `all_visible = false`, and `visible_views` includes only the view names the user explicitly mentioned as "visible" (not viewID); views not mentioned are considered invisible
+  - **No** (the user did not mention any view at all) → `all_visible = true`
+2. When the table permission is `edit`, `allow_edit` **defaults to `true`**; set it to `false` only when the user explicitly restricts "views cannot be edited". When set to `true`, it **must** still include the `visibility` field (refer to View Permission Case A)
+3. When `all_visible` is `false`, `visible_views` **must not be empty** and must include at least one view
 
-**❌ 常见错误 — 缺少 `visibility` 字段：**
+**❌ Common Error — Missing `visibility` field:**
 ```json
-// 错误！缺少 visibility
+// Error! Missing visibility
 { "view_rule": { "allow_edit": false } }
 ```
-**✅ 正确写法：**
+**✅ Correct form:**
 ```json
-// 即使全部可见，也必须显式写出 visibility
+// Even if all are visible, visibility must still be written explicitly
 { "view_rule": { "allow_edit": false, "visibility": { "all_visible": true } } }
 ```
 
 ---
 
-### 字段类型与筛选算子的强约束关系
+<a id="字段类型与筛选算子的强约束关系"></a>
+### Strong Constraint Relationship Between Field Types and Filter Operators
 
-当字段被用于记录筛选条件时，字段操作接口返回的 `type` 与可用算子存在固定绑定关系：
+When a field is used in record filter conditions, the `type` returned by the field operation interface has a fixed binding relationship with the available operators:
 
-**`user` / `created_by` 类型字段：**
-- 仅允许使用 `contains` 算子
-- 不允许使用 `is`、`isNot` 等精确匹配算子
-- 这是当前成员匹配模式，筛选条件中无需填写具体成员值；不要在 `filter_values` 中写入姓名或用户 ID
+**`user` / `created_by` type fields:**
+- Only the `contains` operator is allowed
+- Exact-match operators such as `is` and `isNot` are not allowed
+- This is the current member matching mode; there is no need to fill in a specific member value in the filter condition; do not write a name or user ID into `filter_values`
 
-**`select` (`multiple=false`) 类型字段：**
-- `is` 与 `isNot` 算子仅允许用于匹配**单一选项**，不得用于多个值
-- 当用户表达"字段值等于/不等于某一个具体选项"（如"出勤状态不等于出勤"）时，Agent 必须使用 `is` / `isNot`，且 filter_values 仅包含单一值。
-- 当用户表达"字段值等于/不等于多个选项集合"（如"学历不是专科和其他"）时，Agent 必须使用 `contains` / `doesNotContain`，并将多个选项填入 filter_values。
-- `contains` / `doesNotContain`中的filter_values可包含多个值，表示或关系
+**`select` (`multiple=false`) type fields:**
+- The `is` and `isNot` operators are only allowed for matching a **single option** and must not be used for multiple values
+- When the user expresses "the field value equals/does not equal one specific option" (such as "attendance status does not equal present"), the Agent must use `is` / `isNot`, and filter_values contains only a single value.
+- When the user expresses "the field value equals/does not equal a set of multiple options" (such as "education is not associate degree and others"), the Agent must use `contains` / `doesNotContain`, and put multiple options into filter_values.
+- filter_values in `contains` / `doesNotContain` may contain multiple values, representing an OR relationship
 
-**`select` (`multiple=true`) 类型字段：**
-- `is` / `isNot`：filter_values 允许填写多个选项
-  - 当 operator = is 且勾选 A、B 时，语义为该字段**同时包含** A 和 B（A&B），不是"等于 A 或等于 B"
-  - 当用户表达"包含任一选项"时，除了可以使用 contains 实现外，也可以使用 is 并且配套通过 filter_rules.conjunction = or 实现
-- `contains` / `doesNotContain`：用于表达"包含任一选项/不包含任一选项"，filter_values 可填写多个选项（系统按"任一匹配"处理）；若要表达"等于 A 或等于 B"，应拆成多条筛选条件并用「或」组合。
+**`select` (`multiple=true`) type fields:**
+- `is` / `isNot`: filter_values allows multiple options to be filled in
+  - When operator = is and A and B are checked, the semantics are that the field **contains both** A and B (A&B), not "equals A or equals B"
+  - When the user expresses "contains any option", in addition to using contains, it can also be implemented using is together with filter_rules.conjunction = or
+- `contains` / `doesNotContain`: used to express "contains any option / does not contain any option"; filter_values may contain multiple options (the system handles it as "any match"); to express "equals A or equals B", it should be split into multiple filter conditions and combined with "or".
 
-**百分比字段**
-- 对于 query 中“数字”的筛选条件时，如果涉及到百分比，要原封不动地还原用户给你的数值（百分比都变成小数）。比如“大于 20%”则变成“大于 0.2”、“xx 率小于 60”则变成“小于 0.6”。
+**Percentage fields**
+- For "number" filter conditions in query, if percentages are involved, restore the value the user gave you exactly as is (percentages all become decimals). For example, "greater than 20%" becomes "greater than 0.2", and "xx rate less than 60" becomes "less than 0.6".
 
-### 被用于筛选的字段的 field_perms 权限强制要求
+<a id="被用于筛选的字段的-field_perms-权限强制要求"></a>
+### Mandatory field_perms Permission Requirements for Fields Used in Filtering
 
-当某字段（系统字段没有此要求）被用于「满足特定条件的记录」中的筛选条件时，系统将根据当前数据表权限与记录权限，自动施加以下**不可变约束**：
+When a field (system fields do not have this requirement) is used in a filter condition in "records that meet specific conditions", the system will automatically impose the following **immutable constraints** based on the current data table permissions and record permissions:
 
-**筛选字段的读写一致性：**
-- 若表权限为 edit，且字段类型属于【可编辑字段】，则筛选字段必须保持 edit 权限，除非用户显式要求降级。
-- 严禁因为字段被用作筛选条件而将其降级为 read。筛选条件仅要求字段可见，不要求字段只读。
+**Read-write consistency of filter fields:**
+- If the table permission is edit and the field type belongs to [editable fields], the filter field must retain edit permission unless the user explicitly requests a downgrade.
+- It is strictly prohibited to downgrade a field to read merely because it is used as a filter condition. Filter conditions only require the field to be visible, not read-only.
 
-**新增记录时的字段最低权限：**
-- 当且仅当记录权限包含「可新增记录」时，字段至少为可新增（create），用于保证在新增记录时筛选条件字段可被正确写入。
-- 若当前记录权限为「仅可阅读」，则不触发该约束。
+**Minimum field permission when adding records:**
+- If and only if the record permission includes "can add records", the field must be at least creatable (create), to ensure that filter condition fields can be written correctly when adding records.
+- If the current record permission is "read only", this constraint is not triggered.
 
-**字段是否可编辑（edit）不作强制要求**，由具体权限方案决定，不属于 infra 强制约束范围。
+**Whether a field is editable (edit) is not a mandatory requirement**; it is determined by the specific permission scheme and is not within the scope of infra mandatory constraints.
 
-上述由系统自动施加的字段权限，不可被手动取消或降级。
+The field permissions automatically imposed by the system above cannot be manually removed or downgraded.

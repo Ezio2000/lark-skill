@@ -1,44 +1,48 @@
 # mail +thread-trash
 
 
-已有 `thread_id` 且要按会话维度软删除邮件时，优先使用 `mail +thread-trash`。执行前取得真实 `thread_id` 并核对已有删除授权；范围未明确时才让用户选择。
+When you already have `thread_id` and want to soft-delete emails by conversation, prefer `mail +thread-trash`. Before executing, obtain the real `thread_id` and verify the existing deletion authorization; only let the user choose when the scope is unclear.
 
-如果操作对象是具体邮件 `message_id`，不是整个会话，使用 [`mail +message-trash`](./lark-mail-message-trash.md)。
+If the target is a specific email `message_id` rather than an entire conversation, use [`mail +message-trash`](./lark-mail-message-trash.md).
 
-## 命令
+<a id="命令"></a>
+## Command
 
 ```bash
-# 软删除多个会话
+# Soft-delete multiple conversations
 lark-cli mail +thread-trash --thread-ids <thread_id1>,<thread_id2> --yes
 
-# 指定公共邮箱或共享邮箱
+# Specify a public mailbox or shared mailbox
 lark-cli mail +thread-trash --mailbox shared@example.com --thread-ids <thread_id> --yes
 
-# 使用 bot 身份时必须显式指定邮箱
+# When using bot identity, the mailbox must be explicitly specified
 lark-cli mail +thread-trash --as bot --mailbox user@example.com --thread-ids <thread_id> --yes
 
-# Dry Run：只预览请求，不执行
+# Dry Run: preview the request only, do not execute
 lark-cli mail +thread-trash --thread-ids <thread_id1> --thread-ids <thread_id2> --dry-run
 ```
 
-## 参数
+<a id="参数"></a>
+## Parameters
 
-| 参数 | 必填 | 说明 |
+| Parameter | Required | Description |
 |------|------|------|
-| `--mailbox <email>` | 否 | 会话所属邮箱，默认 `me`；使用 `--as bot` 时必须显式传邮箱地址 |
-| `--thread-ids <ids>` | 是 | 会话 ID 列表，支持逗号分隔和重复传参；超过 20 个时自动分批提交 |
-| `--yes` | 执行时必填 | 高风险写操作确认。只有用户确认删除预览后才加 |
+| `--mailbox <email>` | No | The mailbox the conversation belongs to; defaults to `me`; when using `--as bot`, the email address must be explicitly passed |
+| `--thread-ids <ids>` | Yes | List of conversation IDs; supports comma separation and repeated parameters; automatically submitted in batches when more than 20 |
+| `--yes` | Required at execution | Confirmation for high-risk write operations. Only add after the user confirms the deletion preview |
 
-## 注意事项
+<a id="注意事项"></a>
+## Notes
 
-- `thread_id` 必须来自 `+triage`、`+message`、`+thread`、会话列表或搜索等真实查询结果；不要用数字主键或占位符。
-- 软删除属于高风险写操作。先用真实查询结果展示删除预览，包括受影响会话数量和关键邮件摘要；用户确认后再执行并加 `--yes`。
-- 命令在本地解析逗号分隔和重复 flag，按首次出现顺序去重，并按 20 个一批提交。
-- 单个 batch 请求失败时，该批次的所有 `thread_id` 都记录为同一个失败原因；后续批次继续执行。
+- `thread_id` must come from real query results such as `+triage`, `+message`, `+thread`, conversation lists, or search; do not use numeric primary keys or placeholders.
+- Soft deletion is a high-risk write operation. First show the deletion preview using real query results, including the number of affected conversations and key email summaries; after the user confirms, execute and add `--yes`.
+- The command parses comma separation and repeated flags locally, deduplicates in order of first appearance, and submits in batches of 20.
+- If a single batch request fails, all `thread_id` in that batch are recorded with the same failure reason; subsequent batches continue to execute.
 
-## 返回值
+<a id="返回值"></a>
+## Return Value
 
-返回示例：
+Example return:
 
 ```json
 {
@@ -49,13 +53,15 @@ lark-cli mail +thread-trash --thread-ids <thread_id1> --thread-ids <thread_id2> 
 }
 ```
 
-## 原生 API 适用场景
+<a id="原生-api-适用场景"></a>
+## When to Use the Native API
 
-只有在需要精确复现后端/API 行为做诊断时，才直接调用 `mail user_mailbox.threads batch_trash`。普通会话软删除优先使用本 shortcut，因为它内置了 ID 校验、分批、批量输出、dry-run 预览和 `--yes` 确认。
+Only call `mail user_mailbox.threads batch_trash` directly when you need to precisely reproduce backend/API behavior for diagnostics. For ordinary conversation soft deletion, prefer this shortcut, because it has built-in ID validation, batching, batch output, dry-run preview, and `--yes` confirmation.
 
-## 相关命令
+<a id="相关命令"></a>
+## Related Commands
 
-- `lark-cli mail +triage` — 浏览邮件摘要，获取 `thread_id`
-- `lark-cli mail +thread` — 读取完整会话
-- `lark-cli mail +message-trash` — 按 `message_id` 软删除具体邮件
-- `lark-cli mail +thread-modify` — 按 `thread_id` 修改会话标签或移动文件夹
+- `lark-cli mail +triage` — browse email summaries and obtain `thread_id`
+- `lark-cli mail +thread` — read the full conversation
+- `lark-cli mail +message-trash` — soft-delete specific emails by `message_id`
+- `lark-cli mail +thread-modify` — modify conversation labels or move folders by `thread_id`

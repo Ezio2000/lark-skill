@@ -1,32 +1,36 @@
 # drive +batch-query-comments
 
 
-按评论 ID 批量获取评论卡片。已知 comment_id 时用它精确取；要分页遍历、全量统计或找最新/最早评论，用 [`lark-drive-list-comments.md`](lark-drive-list-comments.md)。
+Batch retrieve comment cards by comment ID. When comment_id is known, use it for precise retrieval; to paginate, do a full count, or find the latest/earliest comments, use [`lark-drive-list-comments.md`](lark-drive-list-comments.md).
 
-## 命令
+<a id="命令"></a>
+## Command
 
 ```bash
-# 推荐：完整 URL + 评论 ID（逗号分隔或重复 --comment-ids，单次上限 100）
+# Recommended: full URL + comment IDs (comma-separated or repeat --comment-ids, max 100 per call)
 lark-cli drive +batch-query-comments --url "https://example.larksuite.com/docx/<DOCX_TOKEN>" --comment-ids '<id1>,<id2>'
 ```
 
-## 参数
+<a id="参数"></a>
+## Parameters
 
-| 参数 | 必填 | 说明 |
+| Parameter | Required | Description |
 |---|---|---|
-| `--url` | 与 `--token` 二选一 | 推荐入口。支持 doc/docx/sheet/file/slides/base/bitable/apps/wiki URL；apps 妙搭 URL 使用 `/page/<token>`；wiki URL 会自动解析到真实文档。 |
-| `--token` | 与 `--url` 二选一 | 裸 token 或 URL。裸 token 必须搭配 `--type`；wiki token 使用 `--type wiki`。 |
-| `--type` | 裸 token 时必填 | 传 token 对应类型：`doc`、`docx`、`sheet`、`file`、`slides`、`bitable`、`base`、`apps`、`wiki`。wiki token 使用 `wiki`；传 `base` 时，CLI 会按 `bitable` 类型处理。 |
-| `--comment-ids` | 是 | 评论 ID，逗号分隔或重复传，单次最多 100 个；来自 `drive +list-comments` 的 `items[].comment_id` |
-| `--need-reaction` | 否 | 返回评论卡片上的 reaction 数据，见 [`lark-drive-reactions.md`](lark-drive-reactions.md) |
-| `--need-relation` | 否 | docx 评论定位关系；仅 docx 生效，非 docx 静默忽略，见 [`lark-drive-comment-location.md`](lark-drive-comment-location.md) |
+| `--url` | Choose one of `--token` | Recommended entry point. Supports doc/docx/sheet/file/slides/base/bitable/apps/wiki URLs; for apps Miaoda URLs use `/page/<token>`; wiki URLs are automatically resolved to the real document. |
+| `--token` | Choose one of `--url` | Bare token or URL. A bare token must be paired with `--type`; for a wiki token use `--type wiki`. |
+| `--type` | Required when using a bare token | Pass the type corresponding to the token: `doc`, `docx`, `sheet`, `file`, `slides`, `bitable`, `base`, `apps`, `wiki`. For a wiki token use `wiki`; when `base` is passed, the CLI processes it as type `bitable`. |
+| `--comment-ids` | Yes | Comment ID, comma-separated or passed repeatedly, at most 100 per call; the `items[].comment_id` from `drive +list-comments` |
+| `--need-reaction` | No | Return reaction data on the comment cards, see [`lark-drive-reactions.md`](lark-drive-reactions.md) |
+| `--need-relation` | No | docx comment location relationship; only takes effect for docx, silently ignored for non-docx, see [`lark-drive-comment-location.md`](lark-drive-comment-location.md) |
 
-## 行为说明
+<a id="行为说明"></a>
+## Behavior notes
 
-- `--need-relation` 通过请求 **body** 发送（`+list-comments` 是 query param），只在解析后的目标是 docx 时发送；该参数未收录于平台 metadata，但服务端支持，返回 `items[].relation` 及块位置。
-- 输出的 `items` 始终是 JSON 数组（服务端省略时归一化为 `[]`），外层补 `file_token`、`file_type`、`count`。
+- `--need-relation` is sent via the request **body** (`+list-comments` is a query param), and is only sent when the resolved target is docx; this parameter is not included in the platform metadata, but the server supports it, returning `items[].relation` and the block location.
+- The output `items` is always a JSON array (normalized to `[]` when omitted by the server), with `file_token`, `file_type`, and `count` added at the outer level.
 
-## 输出
+<a id="输出"></a>
+## Output
 
 ```json
 {
@@ -37,9 +41,10 @@ lark-cli drive +batch-query-comments --url "https://example.larksuite.com/docx/<
 }
 ```
 
-`items` 是命中的评论卡片数组（外层补 `file_token`/`file_type`，wiki 输入再加 `wiki_token`）；`count` 是命中数。
+`items` is the array of matched comment cards (with `file_token`/`file_type` added at the outer level, and `wiki_token` additionally for wiki input); `count` is the number of matches.
 
-## 参考
+<a id="参考"></a>
+## References
 
-- [lark-drive-list-comments](lark-drive-list-comments.md) -- 分页获取评论列表
-- [lark-drive-comment-location](lark-drive-comment-location.md) -- `need_relation` 评论定位
+- [lark-drive-list-comments](lark-drive-list-comments.md) -- paginated retrieval of the comment list
+- [lark-drive-comment-location](lark-drive-comment-location.md) -- `need_relation` comment location

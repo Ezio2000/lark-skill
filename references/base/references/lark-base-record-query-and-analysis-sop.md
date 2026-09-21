@@ -1,123 +1,131 @@
-# Base Record 数据语义与专业分析 SOP
+<a id="base-record-数据语义与专业分析-sop"></a>
+# Base Record Data Semantics and Professional Analysis SOP
 
-本 SOP 不讲解通用 jq / Python / pandas 语法、统计公式或数据科学算法。Agent 应使用已有的数据分析能力；本文只负责把 Base 的查询范围、NDJSON 物理结构、Field / Record / View / Link 语义和完整性约束，正确映射到专业分析任务。
+This SOP does not cover general jq / Python / pandas syntax, statistical formulas, or data science algorithms. The Agent should use its existing data analysis capabilities; this document is only responsible for correctly mapping Base's query scope, NDJSON physical structure, Field / Record / View / Link semantics, and integrity constraints to professional analysis tasks.
 
-普通预览、已知记录读取、关键词搜索和小规模直接处理按主 skill 的 [Record 核心路径](../index.md#record) 执行。以下情况读取本文：大表完整读取、`has_more=true`、View 范围读取、复杂多表 JOIN、集合或多值运算、分组与 Top-K、窗口或严格时序、时间周期对齐、层级递归、数据重塑、派生与指定规则清洗、临时语义转换，以及需要可靠样本范围的描述性或推断性分析。
+For ordinary previews, reading known records, keyword searches, and small-scale direct processing, follow the main skill's [Record core path](../index.md#record-values-and-queries). Read this document in the following cases: full reads of large tables, `has_more=true`, View-scoped reads, complex multi-table JOINs, set or multi-value operations, grouping and Top-K, window or strict time series, time period alignment, hierarchical recursion, data reshaping, derivation and specified-rule cleaning, temporary semantic transformation, and descriptive or inferential analysis that requires a reliable sample scope.
 
-## 1. 先选数据路径
+<a id="1-先选数据路径"></a>
+## 1. Choose the data path first
 
-| 任务条件 | 路径 | 完整性要求 |
+| Task condition | Path | Integrity requirement |
 | --- | --- | --- |
-| 当前查询最多 2000 行且 `has_more=false` | NDJSON 本地分析 | 直接处理 artifact |
-| 用户指定 View | 记录工具添加 `--view-id` 返回视图范围内的记录 | 结论只代表该 View；记录范围写入 `query_context` |
-| 超过 2000 行且必须取得逐条原始记录 | 调整 `--offset` 后继续查询 | 直到 `has_more=false` 代表所有记录已读取 |
-| 超过 2000 行，只需单表基础统计、分组或 Top-K | `+data-query` | 由 Base 云端在完整单表范围计算 |
-| 多表 JOIN、窗口、递归、严格漏斗、语义分析或任意需要逐条明细的高级计算 | 完整 NDJSON 后由合适的本地分析引擎处理 | 每张参与表都必须完整；不能用 `data-query` 代替原始明细 |
+| Current query is at most 2000 rows and `has_more=false` | NDJSON local analysis | Process the artifact directly |
+| User specifies a View | Record tool adds `--view-id` to return records within the view scope | Conclusions only represent that View; record the record scope in `query_context` |
+| More than 2000 rows and per-record raw records must be obtained | Adjust `--offset` and continue querying | Until `has_more=false` indicates all records have been read |
+| More than 2000 rows, only single-table basic statistics, grouping, or Top-K needed | `+data-query` | Computed by Base cloud over the complete single-table scope |
+| Multi-table JOIN, window, recursion, strict funnel, semantic analysis, or any advanced computation requiring per-record detail | Process with a suitable local analysis engine after complete NDJSON | Every participating table must be complete; `data-query` cannot replace raw detail |
 
-局部预览、固定前 N 条或 `has_more=true` 的 artifact 不能支持全局结论。采样只在用户明确要求抽样时使用，并必须说明抽样范围和方法。
+Artifacts from partial previews, fixed first N rows, or `has_more=true` cannot support global conclusions. Sampling is used only when the user explicitly requests sampling, and the sampling scope and method must be stated.
 
-## 2. 范围、View、选择与投影
+<a id="2-范围view选择与投影"></a>
+## 2. Scope, View, selection, and projection
 
-先明确分析总体，再导出数据：
+Clarify the analysis population first, then export data:
 
-- **整表范围：** 省略 `--view-id`；`query_context.record_scope` 应为 `all_records` 或 `filtered_records`。
-- **View 范围：** 传真实 `--view-id`。View 的 filter 决定记录范围，sort 决定顺序，`query_context.record_scope` 应为 `view_filtered_records`；结论必须表述为“该 View 内”。
-- **临时条件：** `--filter-json` 覆盖 View filter，`--sort-json` 覆盖 View sort；排序示例：`--sort-json '[{"field":"Updated","desc":true},{"field":"Title","desc":false}]'`，数组顺序是排序优先级，`desc=true` 为降序。两者只覆盖对应部分，不能把“指定 View”与“手工替换后的范围”混称为同一口径。tuple 条件的完整示例和协议见 [Filter 条件结构](lark-base-filter-condition.md)。
-- **关键词与结构化条件：** 展示文本关键词用 `+record-search`；数值、日期、选项、人员、群组、Link、空值等用 `--filter-json`。两者可以叠加。
-- **字段投影：** 重复 `--field-id`，只导出筛选、分组、排序、JOIN、解释、回查所需字段。系统 `record_id` 自动保留；跨表任务还必须投影 Link 或经过验证的业务 key。
+- **Whole-table scope:** omit `--view-id`; `query_context.record_scope` should be `all_records` or `filtered_records`.
+- **View scope:** pass the real `--view-id`. The View's filter determines the record scope, sort determines the order, and `query_context.record_scope` should be `view_filtered_records`; conclusions must be phrased as "within this View".
+- **Temporary conditions:** `--filter-json` overrides the View filter, `--sort-json` overrides the View sort; sort example: `--sort-json '[{"field":"Updated","desc":true},{"field":"Title","desc":false}]'`, array order is sort priority, `desc=true` is descending. The two only override their corresponding parts; "specifying a View" and "a manually replaced scope" must not be conflated as the same basis. For complete examples and the protocol of tuple conditions, see [Filter condition structure](lark-base-filter-condition.md).
+- **Keywords and structured conditions:** use `+record-search` for displayed text keywords; use `--filter-json` for numbers, dates, options, people, groups, Link, null values, etc. The two can be combined.
+- **Field projection:** repeat `--field-id` to export only the fields needed for filtering, grouping, sorting, JOIN, interpretation, and lookup. The system `record_id` is automatically retained; cross-table tasks must also project Link or a verified business key.
 
-manifest 的 `query_context` 是本次 artifact 范围的记录，不是完整查询语言的替代品。复用旧 artifact 前同时核对 `base_token`、`table_id`、View / filter / sort、投影字段和 `rev`。
+The manifest's `query_context` is the record scope of this artifact, not a substitute for the complete query language. Before reusing an old artifact, verify `base_token`, `table_id`, View / filter / sort, projected fields, and `rev` at the same time.
 
-## 3. 大表完整读取
+<a id="3-大表完整读取"></a>
+## 3. Full reads of large tables
 
-NDJSON 单次最多返回 2000 条。必须取得超过 2000 条逐行原始记录时：
+A single NDJSON response returns at most 2000 records. When more than 2000 per-row raw records must be obtained:
 
-1. 固定 `base_token`、`table_id`、`view-id`、filter、sort 和字段投影；首块从 `offset=0` 开始，每块 `limit=2000`，输出到不同 artifact。
-2. 每块读取 manifest 的 `records_count`、`has_more`、`next_offset`、`rev` 和 `query_context`；`has_more=true` 时只使用返回的 `next_offset` 继续。
-3. 所有块的 `rev` 与 `query_context` 必须一致。读取期间 `rev` 改变表示数据快照已变化，可能产生遗漏或重复；需要严格完整时从头重读，否则明确披露非快照一致。
-4. 以最后一块 `has_more=false` 作为终止条件。分析引擎可逐块消费，不必为了分析先把所有文件拼成一个巨型文件。
-5. 多表任务分别完成每张表的完整性检查；任一输入不完整，JOIN、集合、窗口或统计结果都不完整。
+1. Fix `base_token`, `table_id`, `view-id`, filter, sort, and field projection; the first chunk starts from `offset=0`, each chunk is `limit=2000`, and output to different artifacts.
+2. For each chunk, read the manifest's `records_count`, `has_more`, `next_offset`, `rev`, and `query_context`; when `has_more=true`, continue using only the returned `next_offset`.
+3. The `rev` and `query_context` of all chunks must be consistent. If `rev` changes during reading, it means the data snapshot has changed, which may cause omissions or duplicates; if strict completeness is required, re-read from the beginning, otherwise explicitly disclose that it is not snapshot-consistent.
+4. Use the last chunk's `has_more=false` as the termination condition. The analysis engine can consume chunk by chunk; it is not necessary to concatenate all files into one giant file before analysis.
+5. For multi-table tasks, complete the integrity check for each table separately; if any input is incomplete, JOIN, set, window, or statistical results are incomplete.
 
-如果任务只需要单表基础统计，不应为了拿到所有原始行而分块下载，优先使用下方 `+data-query`。
+If the task only needs single-table basic statistics, do not download in chunks just to get all raw rows; prefer the `+data-query` below.
 
-## 4. `data-query`：大规模单表基础统计逃生路径
+<a id="4-data-query大规模单表基础统计逃生路径"></a>
+## 4. `data-query`: escape path for large-scale single-table basic statistics
 
-`+data-query` 的 datasource 是单个 Base Table，适合在超过 2000 行时由云端完成：
+`+data-query`'s datasource is a single Base Table, suitable when more than 2000 rows need to be completed in the cloud:
 
-- `filters`：聚合前筛选，类似 WHERE；它使用 LiteQuery 特有的 DSL，不是 Record/View 的 tuple filter，注意不要混淆。
-- `dimensions`：分组字段。
-- `measures`：`sum`、`avg`、`min`、`max`、`count`、`count_all`、`distinct_count`。
-- `sort`：排序字段
+- `filters`: filter before aggregation, similar to WHERE; it uses a LiteQuery-specific DSL, not the Record/View tuple filter, so be careful not to confuse them.
+- `dimensions`: grouping fields.
+- `measures`: `sum`, `avg`, `min`, `max`, `count`, `count_all`, `distinct_count`.
+- `sort`: sort fields
 
-SOP 选定这条路径后再读取 [data-query DSL](lark-base-data-query.md)。典型适用范围是**单表**总数、分组计数、数值汇总、去重计数、分组排序和 Top-K。
+After this SOP selects this path, read [data-query DSL](lark-base-data-query.md). Typical applicable scope is **single-table** totals, grouped counts, numeric summaries, distinct counts, grouped sorting, and Top-K.
 
-能力边界：
+Capability boundaries:
 
-- 只传 dimensions 时返回去重后的维度组合，不返回 `record_id`，不能视为逐条记录。
-- 不承担多表 JOIN、窗口函数、递归、原始明细导出或语义分析。
-- 没有独立 HAVING 语义；可先由 `data-query` 聚合，再对已收敛的聚合结果做本地条件过滤。
-- 条件聚合只有所有 measures 共用同一前置条件时才能直接下推到 `filters`；不同 measures 使用不同条件时，拆成可复核的查询或在完整明细上计算。
-- 聚合后需要展示原始记录时，用返回的真实业务 key / 维度值通过 `+record-list --filter-json` 或 `+record-get` 回查；不要从聚合行臆造 `record_id`。
+- Passing only dimensions returns deduplicated dimension combinations, does not return `record_id`, and cannot be regarded as per-record records.
+- It does not handle multi-table JOIN, window functions, recursion, raw detail export, or semantic analysis.
+- There is no independent HAVING semantics; you can first aggregate with `data-query`, then apply local condition filtering to the already-converged aggregation results.
+- Conditional aggregation can be pushed down directly to `filters` only when all measures share the same precondition; when different measures use different conditions, split into reviewable queries or compute on complete detail.
+- When raw records need to be displayed after aggregation, use the returned real business key / dimension values to look up via `+record-list --filter-json` or `+record-get`; do not fabricate `record_id` from aggregated rows.
 
-## 5. Manifest 与 NDJSON 结构
+<a id="5-manifest-与-ndjson-结构"></a>
+## 5. Manifest and NDJSON structure
 
-`--output ./records.ndjson` 生成记录文件和同名 `.manifest.json`。高频 manifest 字段：
+`--output ./records.ndjson` generates a record file and a same-named `.manifest.json`. High-frequency manifest fields:
 
-| 字段 | 分析用途 |
+| Field | Analysis use |
 | --- | --- |
-| `records_count` / `has_more` / `next_offset` | 判断当前块大小、是否完整以及下一块起点 |
-| `base_token` / `table_id` / `query_context` | 固定来源表和读取范围 |
-| `rev` | 检查多块或复用 artifact 时的数据版本一致性 |
-| `timezone` | 解释 Base 本地日历边界 |
-| `columns.*.field_id/field_type/physical_type` | 确认 NDJSON 实际列类型与稳定字段标识 |
-| `columns.*.stats/example/hint` | 估算空值、数组展开规模和文本体量；只描述本次导出 |
-| `record_file_size_bytes` | 决定一次读取还是分块处理 artifact |
+| `records_count` / `has_more` / `next_offset` | Determine current chunk size, whether it is complete, and the next chunk's starting point |
+| `base_token` / `table_id` / `query_context` | Fix the source table and read scope |
+| `rev` | Check data version consistency across multiple chunks or when reusing artifacts |
+| `timezone` | Interpret Base local calendar boundaries |
+| `columns.*.field_id/field_type/physical_type` | Confirm the actual NDJSON column types and stable field identifiers |
+| `columns.*.stats/example/hint` | Estimate null values, array expansion scale, and text volume; describes only this export |
+| `record_file_size_bytes` | Decide whether to read the artifact in one pass or process it in chunks |
 
-NDJSON 每行是一条 Record，以字段 `name` 为 key，并额外包含系统 `record_id`；`field_id` 位于 manifest。字段改名会改变 NDJSON key，跨批次或长期脚本应通过 manifest 复核 `field_id → name`。
+Each NDJSON line is one Record, keyed by field `name`, and additionally contains the system `record_id`; `field_id` is located in the manifest. Renaming a field changes the NDJSON key; cross-batch or long-term scripts should verify `field_id → name` via the manifest.
 
-| `field_type` | NDJSON 结构 | Base 特有的分析语义 |
+| `field_type` | NDJSON structure | Base-specific analysis semantics |
 | --- | --- | --- |
-| `record_id` | `string` | 表内唯一主键，用于定位和块间去重 |
-| `text`、`formula`、`lookup`、`auto_number`、`not_support` | `string|null` | Formula / Lookup 不保留原始计算类型；需要数值运算时必须显式验证转换规则 |
-| `datetime`、`created_at`、`updated_at` | RFC3339 `string|null` | 带 offset；区分绝对时刻与 Base 本地日历语义 |
-| `number` | `number|null` | 空值不是零，是否纳入分母由任务口径决定 |
-| `checkbox` | `boolean` | 上游空值在 NDJSON 中规范化为 `false` |
-| `select` | `array<string>` | 单选、多选都读取为选项名称数组；空值为 `[]` |
-| `location` | `{lng,lat,full_address}|null` | 地理计算用坐标，文本范围分析用地址 |
-| `user`、`group_chat`、`created_by`、`updated_by` | `array<{id,name}>` | 连接与去重使用 `id`，展示使用 `name` |
-| `link` | `array<{id}>` | `id` 是 Field schema 指定目标表中的 `record_id` |
-| `attachment` | `array<{file_token,size,name}>` | 文件 token 是稳定定位信息；数组展开会改变粒度 |
+| `record_id` | `string` | Unique primary key within the table, used for locating and deduplication across chunks |
+| `text`, `formula`, `lookup`, `auto_number`, `not_support` | `string|null` | Formula / Lookup do not retain the original computed type; when numeric operations are needed, conversion rules must be explicitly verified |
+| `datetime`, `created_at`, `updated_at` | RFC3339 `string|null` | With offset; distinguish absolute instants from Base local calendar semantics |
+| `number` | `number|null` | Null is not zero; whether to include it in the denominator is determined by the task basis |
+| `checkbox` | `boolean` | Upstream null values are normalized to `false` in NDJSON |
+| `select` | `array<string>` | Both single-select and multi-select are read as arrays of option names; null is `[]` |
+| `location` | `{lng,lat,full_address}|null` | Use coordinates for geographic computation, addresses for textual range analysis |
+| `user`, `group_chat`, `created_by`, `updated_by` | `array<{id,name}>` | Use `id` for joining and deduplication, `name` for display |
+| `link` | `array<{id}>` | `id` is the `record_id` in the target table specified by the Field schema |
+| `attachment` | `array<{file_token,size,name}>` | The file token is stable locating information; array expansion changes the grain |
 
-除 `record_id` 外，不假设任何列满足非空或唯一。标量空值通常是 `null`，多值列空值是 `[]`；未显式排序时不依赖 NDJSON 行顺序。
+Except for `record_id`, do not assume any column is non-null or unique. Scalar null values are usually `null`, multi-value column nulls are `[]`; do not rely on NDJSON row order unless explicitly sorted.
 
-## 6. 专业分析场景中的 Base 映射
+<a id="6-专业分析场景中的-base-映射"></a>
+## 6. Base mapping in professional analysis scenarios
 
-下表不教授算法，只指出开始计算前必须解决的 Base 特有问题：
+The table below does not teach algorithms; it only points out Base-specific issues that must be resolved before starting computation:
 
-| 场景 | Base 数据结构映射与正确性约束 |
+| Scenario | Base data structure mapping and correctness constraints |
 | --- | --- |
-| 复杂多表 JOIN | Link 先展开为 `(source_record_id, target_record_id)` 边，再按目标表 `record_id` 连接；目标 `table_id` 来自 Field schema。无 Link 时只能使用已验证唯一性和空值规则的业务 key，必须统计未匹配与重复 key。 |
-| 集合运算 | Select 是名称数组，人员/群组按 `id`，Link 按目标 `record_id`；先明确是 record 级包含/交并差，还是 element 级集合，不能把数组字符串化比较。 |
-| 多值展开与数据重塑 | Select、人员、群组、Link、附件都是 nested relation。一次展开把粒度从 record 变为 record-element；两个数组同时展开会产生行内笛卡尔积，除非任务明确分析共现，否则分别展开并聚合回目标粒度。 |
-| 分组、条件聚合与 HAVING | 先确定 record / element / entity grain 和空值口径。单表基础聚合可走 `data-query`；HAVING 在聚合结果上本地过滤。不同条件的 measures 不要错误共用一个全局 filter。 |
-| 排序与 Top-K | 原始记录 Top-K 用 Record sort；大表单表聚合 Top-K 用 `data-query`。并列值是否全部保留、如何稳定打破 ties 必须按任务口径明确。 |
-| 窗口计算与严格时序漏斗 | NDJSON 不保证默认顺序；显式选择实体 key、事件时间、分区字段和同时间 tie-breaker。`data-query` 不提供窗口或逐事件漏斗语义。 |
-| 时间边界与周期对齐 | 真实时长和跨时区排序按完整 RFC3339 instant；按来源 Base 的日/周/月分组使用值中的本地日期和 manifest `timezone`，不要先转 UTC 后再切日历周期。 |
-| 层级与递归 | Link 是有向邻接边；逐跳保持各 Table 的 record-id domain，记录已访问节点以处理环，并明确深度或终止条件。 |
-| 派生变量与指定规则的数据质量处理 | 保留原字段和 `record_id`，派生列另命名；只执行用户给定或业务已确认的缺失、异常、去重、标准化规则，不把通用清洗习惯当成业务事实。 |
-| 临时语义转换 | LLM 产生的标签、主题或实体映射以 `record_id` 回连并保留判断依据；默认只作为本地临时派生结果，用户未要求时不写回 Base。 |
-| 描述性统计、差异分解、关联分析与统计推断 | 先确认总体是整表还是 View、输入是否完整、分析粒度是否因多值展开改变，以及 Formula / Lookup 是否需要类型恢复；把选择偏差、缺失和重复实体视为 Base 数据口径问题，而不是静默用算法默认值处理。 |
+| Complex multi-table JOIN | Link is first expanded into `(source_record_id, target_record_id)` edges, then joined by the target table's `record_id`; the target `table_id` comes from the Field schema. When there is no Link, only business keys with verified uniqueness and null rules can be used, and unmatched and duplicate keys must be counted. |
+| Set operations | Select is an array of names, people/groups by `id`, Link by target `record_id`; first clarify whether it is record-level containment/intersection-union-difference or element-level sets, and do not compare arrays as stringified values. |
+| Multi-value expansion and data reshaping | Select, people, groups, Link, and attachments are all nested relations. One expansion changes the grain from record to record-element; expanding two arrays simultaneously produces an in-row Cartesian product, so unless the task explicitly analyzes co-occurrence, expand separately and aggregate back to the target grain. |
+| Grouping, conditional aggregation, and HAVING | First determine record / element / entity grain and the null basis. Single-table basic aggregation can use `data-query`; HAVING is filtered locally on the aggregation results. Measures with different conditions must not incorrectly share one global filter. |
+| Sorting and Top-K | Use Record sort for raw-record Top-K; use `data-query` for large-table single-table aggregation Top-K. Whether all tied values are retained and how ties are stably broken must be clarified according to the task basis. |
+| Window computation and strict time-series funnels | NDJSON does not guarantee default order; explicitly choose the entity key, event time, partition fields, and same-time tie-breaker. `data-query` does not provide window or per-event funnel semantics. |
+| Time boundaries and period alignment | Use the complete RFC3339 instant for real duration and cross-time-zone sorting; for day/week/month grouping by the source Base, use the local date in the value and the manifest `timezone`, and do not convert to UTC first and then cut calendar periods. |
+| Hierarchy and recursion | Link is a directed adjacency edge; preserve each Table's record-id domain hop by hop, record visited nodes to handle cycles, and clarify the depth or termination condition. |
+| Derived variables and data quality handling for specified rules | Preserve original fields and `record_id`, and name derived columns separately; execute only missing, anomaly, deduplication, and standardization rules given by the user or confirmed by the business, and do not treat general cleaning habits as business facts. |
+| Temporary semantic transformation | Labels, topics, or entity mappings produced by the LLM are linked back with `record_id` and retain the basis for judgment; by default they are only local temporary derived results and are not written back to Base unless the user requests it. |
+| Descriptive statistics, variance decomposition, association analysis, and statistical inference | First confirm whether the population is the whole table or a View, whether the input is complete, whether the analysis grain has changed due to multi-value expansion, and whether Formula / Lookup require type recovery; treat selection bias, missingness, and duplicate entities as Base data basis issues, rather than silently handling them with algorithm defaults. |
 
-跨多个同类事实表时，先投影为一致的长表结构，例如 `(source_table, source_record_id, entity_id, metric...)` 再纵向合并；横向比较时，各表先聚合到相同 entity grain 再 JOIN，避免原始事实间 many-to-many fan-out。
+When spanning multiple similar fact tables, first project to a consistent long-table structure, for example `(source_table, source_record_id, entity_id, metric...)`, then merge vertically; for horizontal comparison, first aggregate each table to the same entity grain before JOIN, avoiding many-to-many fan-out between raw facts.
 
-## 7. 交付前检查
+<a id="7-交付前检查"></a>
+## 7. Pre-delivery checklist
 
-最终结果至少说明：
+The final result should at least state:
 
-- 数据来自哪些 Base / Table / View，应用了哪些 filter、时间范围和字段投影。
-- 每张输入表是否读到 `has_more=false`，或是否由 `data-query` 在云端完成完整单表聚合。
-- 分析粒度、空值口径、多值展开方式、JOIN key、重复 key 和未匹配数量。
-- 时间采用 instant 还是 Base local-calendar 语义。
-- 临时派生、清洗、语义标签或推断使用了哪些用户指定规则；哪些结果没有写回 Base。
+- Which Base / Table / View the data comes from, and which filters, time ranges, and field projections were applied.
+- Whether each input table was read to `has_more=false`, or whether complete single-table aggregation was performed in the cloud by `data-query`.
+- Analysis grain, null basis, multi-value expansion method, JOIN key, duplicate keys, and unmatched count.
+- Whether time uses instant or Base local-calendar semantics.
+- Which user-specified rules were used for temporary derivation, cleaning, semantic labels, or inference; which results were not written back to Base.
 
-只有范围完整且口径与问题一致时，才给出全局结论。
+Only give global conclusions when the scope is complete and the basis is consistent with the question.

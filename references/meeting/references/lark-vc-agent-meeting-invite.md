@@ -1,6 +1,6 @@
 # vc +meeting-invite
 
-通过 Agent Bot API 邀请指定用户，或一键邀请符合条件的 Calendar 参会人。
+Invite specified users through the Agent Bot API, or invite eligible Calendar participants with one click.
 
 ```bash
 lark-cli vc +meeting-invite --as bot --meeting-id 7628568141510692381 --type SELECTED --open-ids ou_xxx,ou_yyy
@@ -8,25 +8,27 @@ lark-cli vc +meeting-invite --as bot --meeting-id 7628568141510692381 --type ALL
 lark-cli vc +meeting-invite --as bot --meeting-id 7628568141510692381 --type ALL_SUGGESTED --dry-run
 ```
 
-## 参数
+<a id="参数"></a>
+## Parameters
 
-| 参数 | 必填 | 说明 |
+| Parameter | Required | Description |
 | --- | --- | --- |
-| `--meeting-id` | 是 | 长数字 Meeting ID，不是 9 位会议号。 |
-| `--type` | 是 | `SELECTED` 或 `ALL_SUGGESTED`，大小写不敏感。 |
-| `--open-ids` | `SELECTED` 时必填 | 用户 `open_id`（`ou_xxx`），支持逗号分隔或重复传入，最多 200 个；`ALL_SUGGESTED` 时不得传入。 |
+| `--meeting-id` | Yes | Long numeric Meeting ID, not the 9-digit meeting number. |
+| `--type` | Yes | `SELECTED` or `ALL_SUGGESTED`, case-insensitive. |
+| `--open-ids` | Required when `SELECTED` | User `open_id` (`ou_xxx`), supports comma-separated or repeated passing, up to 200; must not be passed when `ALL_SUGGESTED`. |
 
-该 shortcut 仅支持 bot 身份，调用 `POST /open-apis/vc/v1/bots/invite`。
+This shortcut only supports bot identity, calling `POST /open-apis/vc/v1/bots/invite`.
 
-- `SELECTED` 显式发送用户 `open_id`；本地会在请求前拒绝超过 200 个 ID 的输入。
-- `ALL_SUGGESTED` 只发送邀请类型。服务端根据 Calendar 状态解析一键邀请候选集，并应用 200 人上限。
-- 请求契约：`SELECTED` 发送 `invite_type=2`、`invitees=[{"id":"ou_xxx","user_type":1}]` 和查询参数 `user_id_type=open_id`；`ALL_SUGGESTED` 发送 `invite_type=1` 且省略 `invitees`。
-- 返回契约：`SELECTED` 可返回显式受邀人的 `invite_results`；CLI 会按响应 `id` 展示每项 `invited` 或 `failed` 状态。`ALL_SUGGESTED` 仅返回聚合字段，不返回逐用户 `invite_results`。
-- `ALL_SUGGESTED` 的 `has_more=true` 表示候选人超过服务端单次 200 人上限，不是可翻页信号。该接口没有 continuation 或 `page_token`；CLI 会显示截断提示而不输出 `has_more`。
+- `SELECTED` explicitly sends user `open_id`; locally, input with more than 200 IDs is rejected before the request.
+- `ALL_SUGGESTED` sends only the invite type. The server resolves the one-click invite candidate set based on Calendar status and applies the 200-person limit.
+- Request contract: `SELECTED` sends `invite_type=2`, `invitees=[{"id":"ou_xxx","user_type":1}]`, and the query parameter `user_id_type=open_id`; `ALL_SUGGESTED` sends `invite_type=1` and omits `invitees`.
+- Response contract: `SELECTED` can return the `invite_results` of explicitly invited people; the CLI displays each item's `invited` or `failed` status according to the response `id`. `ALL_SUGGESTED` returns only aggregate fields, not per-user `invite_results`.
+- The `has_more=true` of `ALL_SUGGESTED` indicates that the candidates exceed the server's single-request limit of 200 people, and is not a pagination signal. This API has no continuation or `page_token`; the CLI displays a truncation notice without outputting `has_more`.
 
-## 权限与前置条件
+<a id="权限与前置条件"></a>
+## Permissions and Prerequisites
 
-- 目标必须是 Calendar VC 会议，且应用 Bot 已在会中。
-- Agent Invite 依赖会议的 Agent 加入能力。日程未开启 AI/Agent 会议设置时，邀请请求会失败。
-- 仅包含一名受邀人的 `SELECTED` 复用普通单点邀请策略，普通会中参会人也可能有权邀请该用户。
-- `ALL_SUGGESTED` 和多用户 `SELECTED` 使用批量/建议列表邀请策略。实际调用时 Bot 应为当前 host 或 co-host；普通参会 Bot 可能没有批量邀请权限。
+- The target must be a Calendar VC meeting, and the app Bot must already be in the meeting.
+- Agent Invite depends on the meeting's Agent join capability. If the calendar does not have AI/Agent meeting settings enabled, the invite request will fail.
+- `SELECTED` containing only one invitee reuses the regular single-point invite policy, and regular in-meeting participants may also have permission to invite that user.
+- `ALL_SUGGESTED` and multi-user `SELECTED` use the batch/suggested-list invite policy. In actual calls, the Bot should be the current host or co-host; a regular participant Bot may not have batch invite permission.

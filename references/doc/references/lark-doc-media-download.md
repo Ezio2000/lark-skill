@@ -1,50 +1,57 @@
 
-# docs +media-download（下载文档素材/画板缩略图）
+<a id="docs-media-download下载文档素材画板缩略图"></a>
+# docs +media-download (Download document media/whiteboard thumbnails)
 
 
-下载文档中的图片/文件素材（`file_token`），或下载画板缩略图（`whiteboard_id`）。当 `--output` 不带扩展名时，会根据响应的 `Content-Type` 自动补全扩展名。
+Download image/file media in a document (`file_token`), or download a whiteboard thumbnail (`whiteboard_id`). When `--output` has no extension, the extension is automatically appended based on the response's `Content-Type`.
 
-## 选择规则
+<a id="选择规则"></a>
+## Selection rules
 
-- 用户明确说“下载素材”时，使用 `docs +media-download`
-- 用户只是想查看、预览图片或文件素材时，优先使用 [`docs +media-preview`](lark-doc-media-preview.md)
-- 如果目标明确是画板 / whiteboard / 画板缩略图，继续使用 `docs +media-download --type whiteboard`；`+media-preview` 不支持画板
+- When the user explicitly says "download media", use `docs +media-download`
+- When the user only wants to view or preview image or file media, prefer [`docs +media-preview`](lark-doc-media-preview.md)
+- If the target is explicitly a whiteboard / whiteboard thumbnail, continue to use `docs +media-download --type whiteboard`; `+media-preview` does not support whiteboards
 
-## 命令
+<a id="命令"></a>
+## Command
 
 ```bash
-# 下载图片/文件素材（默认 type=media）
+# Download image/file media (default type=media)
 lark-cli docs +media-download --token "Z1Fjxxxxxxxx" --output ./asset
 
-# 指定输出文件名（带扩展名则不会自动补全）
+# Specify the output file name (if it has an extension, it will not be auto-completed)
 lark-cli docs +media-download --token "Z1Fjxxxxxxxx" --output ./asset.png
 
-# 下载画板缩略图（whiteboard token）
+# Download whiteboard thumbnail (whiteboard token)
 lark-cli docs +media-download --type whiteboard --token "wbcnxxxxxxxx" --output ./whiteboard
 ```
 
-## 参数
+<a id="参数"></a>
+## Parameters
 
-| 参数 | 必填 | 说明 |
+| Parameter | Required | Description |
 |------|------|------|
-| `--token <token>` | 是 | 资源 token：素材为 `file_token`，画板为 `whiteboard_id` |
-| `--output <path>` | 是 | 本地保存路径；不带扩展名会自动补全 |
-| `--type <type>` | 否 | `media`（默认）或 `whiteboard` |
+| `--token <token>` | Yes | Resource token: for media it is `file_token`, for whiteboards it is `whiteboard_id` |
+| `--output <path>` | Yes | Local save path; if it has no extension, it will be auto-completed |
+| `--type <type>` | No | `media` (default) or `whiteboard` |
 
-## token 从哪里来
+<a id="token-从哪里来"></a>
+## Where does the token come from
 
-- 若你是从文档内容里提取：`lark-doc-fetch` 返回的内容里可能包含：
-  - 图片：`<img token="..." .../>`
-  - 文件：`<source token="..." name="..."/>`
-  - 画板：`<whiteboard token="..."/>`
+- If you are extracting it from document content: the content returned by `lark-doc-fetch` may contain:
+  - Images: `<img token="..." .../>`
+  - Files: `<source token="..." name="..."/>`
+  - Whiteboards: `<whiteboard token="..."/>`
 
-## 排障
+<a id="排障"></a>
+## Troubleshooting
 
-- 如果返回 `permission_denied`，或最终下载返回 `HTTP 403`，按错误 `hint` 改用 [`docs +media-preview`](lark-doc-media-preview.md) 预览内容。
-- 如果返回限流错误，停止立即重试，稍后按指数退避重试。
+- If `permission_denied` is returned, or the final download returns `HTTP 403`, follow the error `hint` and switch to [`docs +media-preview`](lark-doc-media-preview.md) to preview the content.
+- If a rate limit error is returned, stop retrying immediately and retry later with exponential backoff.
 
-## 参考
+<a id="参考"></a>
+## References
 
-- [lark-doc-fetch](lark-doc-fetch.md) — 获取文档内容（用于提取 token）
-- [lark-doc-media-preview](lark-doc-media-preview.md) — 预览素材
-- [lark-shared](../../shared/index.md) — 认证和全局参数
+- [lark-doc-fetch](lark-doc-fetch.md) — Fetch document content (used to extract tokens)
+- [lark-doc-media-preview](lark-doc-media-preview.md) — Preview media
+- [lark-shared](../../shared/index.md) — Authentication and global parameters

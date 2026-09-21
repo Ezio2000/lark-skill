@@ -1,17 +1,20 @@
 # apps +get
 
-按 app_id 查询单个应用详情。运行时命令事实以 `lark-cli apps +get --help` 为准。
+Query details of a single app by app_id. For runtime command facts, refer to `lark-cli apps +get --help`.
 
-## 何时用
+<a id="何时用"></a>
+## When to use
 
-需要查看一个应用的类型、名称、描述、发布状态等详情时使用。如果只是按应用名模糊搜索定位 app_id，用 `+list --keyword`。
+Use this when you need to view details of an app such as its type, name, description, and publish status. If you only need to fuzzy-search by app name to locate an app_id, use `+list --keyword`.
 
-## 命令骨架
+<a id="命令骨架"></a>
+## Command skeleton
 
-- 必填：`--app-id`。
-- 返回应用的完整信息：`app_id`、`app_type`、`name`、`description`、`icon_url`、`created_at`、`updated_at`、`is_published`。
+- Required: `--app-id`.
+- Returns the app's complete information: `app_id`, `app_type`, `name`, `description`, `icon_url`, `created_at`, `updated_at`, `is_published`.
 
-## 示例
+<a id="示例"></a>
+## Examples
 
 ```bash
 lark-cli apps +get --app-id app_xxx
@@ -19,25 +22,27 @@ lark-cli apps +get --app-id app_xxx --dry-run
 lark-cli apps +get --app-id app_xxx -q '.data.app.app_type'
 ```
 
-## 输出契约
+<a id="输出契约"></a>
+## Output contract
 
-- 成功读取 `data.app` 对象，包含以下字段：
+- On success, reads the `data.app` object, containing the following fields:
 
-| 字段 | 类型 | 说明 |
+| Field | Type | Description |
 |------|------|------|
-| `app_id` | string | 应用唯一标识 |
-| `app_type` | string | 应用类型（如 HTML、FRONTEND、FULL_STACK、MODERN_HTML） |
-| `name` | string | 应用显示名称 |
-| `description` | string | 应用功能说明 |
-| `icon_url` | string | 应用图标 URL |
-| `created_at` | string | 创建时间（ISO 8601 UTC） |
-| `updated_at` | string | 最后更新时间（ISO 8601 UTC） |
-| `is_published` | boolean | 是否已发布 |
+| `app_id` | string | Unique app identifier |
+| `app_type` | string | App type (such as HTML, FRONTEND, FULL_STACK, MODERN_HTML) |
+| `name` | string | App display name |
+| `description` | string | App feature description |
+| `icon_url` | string | App icon URL |
+| `created_at` | string | Creation time (ISO 8601 UTC) |
+| `updated_at` | string | Last update time (ISO 8601 UTC) |
+| `is_published` | boolean | Whether it has been published |
 
-- pretty 输出展示核心字段：`app_id`、`app_type`、`name`、`is_published`、`updated_at`。
-- `is_published=true` 只代表应用历史上有发布版本，不代表最新代码已部署。
+- pretty output displays the core fields: `app_id`, `app_type`, `name`, `is_published`, `updated_at`.
+- `is_published=true` only means the app has had a published version in its history; it does not mean the latest code has been deployed.
 
-## Agent 规则
+<a id="agent-规则"></a>
+## Agent rules
 
-- 用户已有 `app_id` 想查看详情时用 `+get`；只有应用名时用 `+list --keyword`。
-- 不要把 `cli_` 开头的飞书应用 ID 传给 `+get`，只接受 `app_` 开头的应用 ID。
+- When the user already has `app_id` and wants to view details, use `+get`; when only the app name is available, use `+list --keyword`.
+- Do not pass a Feishu app ID starting with `cli_` to `+get`; only app IDs starting with `app_` are accepted.

@@ -1,38 +1,44 @@
-# Genre Contract: Opinion / 观点评论 (`router.opinion`)
+<a id="genre-contract-opinion--观点评论-routeropinion"></a>
+# Genre Contract: Opinion / Opinion Commentary (`router.opinion`)
 
-## 体裁规则表（硬约束）
+<a id="体裁规则表硬约束"></a>
+## Genre Rules Table (Hard Constraints)
 
-| 规则项 | 规则 |
+| Rule Item | Rule |
 |-|-|
-| 写作风格 | 立场鲜明但措辞精确、公平，论证密度高于情绪密度，锋利不等于侮辱或夸张 |
-| 内容逻辑 | 明确可争辩的中心判断及其重要性，用理由和证据推进；对有实质争议的主张呈现最强相关反论并回应，结论说明判断边界或行动含义 |
-| 事实 / 边界 | 区分事实、推断、价值判断、预测和个人经验；事实可追溯，证据强度匹配主张强度，不把相关性写成因果或把个案外推为普遍规律；引语、图片和作品片段须有可核来源、必要语境与使用权限，非文字证据须有文字等价信息，重要利益关系须显著披露；关键事实缺失时收窄主张，无法成立则 blocked |
-| 错误 | 只有态度没有论点、稻草人反驳、选择性证据、人格攻击、标题先定罪、把经验冒充统计、隐藏重大反例或利益关系、结论超出论证，任一出现即失败 |
+| Writing Style | Clear stance but precise and fair wording; argument density higher than emotional density; sharpness does not equal insult or exaggeration |
+| Content Logic | A clearly arguable central judgment and its importance, advanced with reasons and evidence; for substantively contested claims, present the strongest relevant counterargument and respond to it; the conclusion states the boundaries of the judgment or its action implications |
+| Facts / Boundaries | Distinguish fact, inference, value judgment, prediction, and personal experience; facts must be traceable, evidence strength must match claim strength, do not write correlation as causation or extrapolate a single case into a general rule; quotations, images, and excerpts of works must have verifiable sources, necessary context, and usage permission; non-textual evidence must have textual equivalent information; significant conflicts of interest must be prominently disclosed; when key facts are missing, narrow the claim, and if it cannot hold, blocked |
+| Errors | Attitude without argument, straw-man rebuttal, selective evidence, personal attack, conviction by headline, passing off experience as statistics, hiding major counterexamples or conflicts of interest, conclusion exceeding the argument—any one of these appearing means failure |
 
-## 适用与消歧
+<a id="适用与消歧"></a>
+## Applicability and Disambiguation
 
-用于帮助读者评估一个判断、立场或解释框架。事件复述和独立核实走 Media；围绕购买选择的测评走 Consumer；组织为行动或转化发声走 Marketing。出现“评论、专栏、观点”只是召回词，正文必须有可辨认的判断和论证任务。
+Used to help readers evaluate a judgment, stance, or interpretive framework. Event retelling and independent verification go to Media; reviews centered on purchasing choices go to Consumer; organizations speaking out for action or conversion go to Marketing. The appearance of "review, column, opinion" is only a recall word; the body must have a recognizable judgment and argumentative task.
 
-文化评论关注作品、现象的意义和判断；若主要提供剧情复述或故事体验，不走本合同。个人经历可以作为观察入口，但若目标是展示经历与能力，走 Personal Brand。
+Cultural commentary focuses on the meaning and judgment of works and phenomena; if it mainly provides plot retelling or story experience, it does not follow this contract. Personal experience can serve as an observational entry point, but if the goal is to showcase experience and ability, go to Personal Brand.
 
-## 子类型
+<a id="子类型"></a>
+## Subtypes
 
-| 子类型 | 读者任务与推进 |
+| Subtype | Reader Task and Progression |
 |-|-|
-| 时评 / 公共议题评论 | 判断事件意味着什么；争点 → 判断 → 证据与机制 → 反论 → 后果 / 建议 |
-| 商业 / 行业评论 | 评估策略、趋势或制度；基线 → 驱动因素 → 证据 → 替代解释 → 适用条件 |
-| 文化评论 | 理解作品或现象的价值；分析对象 → 解释框架 → 细读证据 → 限度 → 判断 |
-| 专栏 / 随笔 | 从观察或经验形成可迁移洞见；具体场景 → 反思 → 关联 → 有边界的结论 |
+| Current affairs commentary / public issue commentary | Judge what the event means; issue → judgment → evidence and mechanism → counterargument → consequences / recommendations |
+| Business / industry commentary | Evaluate strategy, trends, or institutions; baseline → drivers → evidence → alternative explanations → applicable conditions |
+| Cultural commentary | Understand the value of a work or phenomenon; object of analysis → interpretive framework → close-reading evidence → limits → judgment |
+| Column / essay | Form transferable insights from observation or experience; concrete scene → reflection → connections → bounded conclusion |
 
-## 证据与论证
+<a id="证据与论证"></a>
+## Evidence and Argumentation
 
-- 开头尽早写出“我主张什么”和“为什么现在值得讨论”，避免用大段背景延迟论点。每个理由回答一个潜在质疑，并由事实、例子、机制或可靠来源支持。
-- 反论选择真正能动摇中心判断的版本，不挑最弱说法；回应可以承认条件、修改范围或解释为何仍不改变结论。观点平衡不是机械分配篇幅。
-- 公共争议先拆清事实真伪、规则 / 权利、价值取舍、责任归属和 unknown，再分别判断；行动建议须对应具体主体、权限 / 义务、可用杠杆与代价，不用“多方协同”抹平责任边界。
-- 预测写明前提和时间范围；价值判断说明采用的标准。涉及他人动机、违法或伤害的判断不得凭语气升级为事实。
+- State early in the opening "what I claim" and "why it is worth discussing now"; avoid delaying the argument with large blocks of background. Each reason answers a potential challenge and is supported by facts, examples, mechanisms, or reliable sources.
+- Choose the version of the counterargument that can genuinely shake the central judgment, not the weakest formulation; the response may acknowledge conditions, modify scope, or explain why the conclusion still does not change. Balance of opinion is not mechanical allocation of space.
+- For public controversies, first separate factual truth, rules / rights, value trade-offs, attribution of responsibility, and unknown, then judge each separately; action recommendations must correspond to specific actors, authority / obligations, available levers, and costs, and must not use "multi-party coordination" to flatten responsibility boundaries.
+- Predictions must state premises and time range; value judgments must explain the standard adopted. Judgments involving others' motives, illegality, or harm must not be escalated into facts based on tone.
 
-## 结构与高质量写法
+<a id="结构与高质量写法"></a>
+## Structure and High-Quality Writing
 
-段落之间形成“主张 → 理由 → 证据 → 推论”的可追链条，过渡词只标真实关系。文化评论选择一个能统摄正文的主分析轴，把情节、语言、镜头、声音、表演或结构写成“形式选择 → 产生效果 → 支持何种解释 / 评价”的证据链；比较或综述可有多个对象，但不能退化成剧情复述或维度清单，也不把效果直接冒充创作者意图。
+Paragraphs form a traceable chain of "claim → reason → evidence → inference," and transition words mark only real relationships. Cultural commentary chooses one main analytical axis that can govern the body, writing plot, language, camera, sound, performance, or structure as an evidence chain of "formal choice → produced effect → what interpretation / evaluation it supports"; comparisons or reviews may have multiple objects, but must not degenerate into plot retelling or a list of dimensions, nor directly pass off effects as the creator's intent.
 
-结尾不复述全文，而是给出经反论校准后的判断、仍然未知的部分，或读者下一步应重新考虑什么。随笔可弱化显式论证标记，但不能牺牲观察与结论之间的可理解联系。
+The ending does not restate the whole text, but gives a judgment calibrated by counterarguments, the parts still unknown, or what readers should reconsider next. Essays may weaken explicit argumentative markers, but must not sacrifice the understandable connection between observation and conclusion.

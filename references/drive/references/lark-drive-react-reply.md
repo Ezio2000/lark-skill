@@ -1,37 +1,41 @@
 # drive +react-reply
 
 
-给一条回复添加或删除表情回应（reaction）。操作对象始终是 `reply_id`。
+Add or remove an emoji reaction on a reply. The operation target is always `reply_id`.
 
-## 命令
+<a id="命令"></a>
+## Command
 
 ```bash
-# 加 reaction
+# add reaction
 lark-cli drive +react-reply --url "https://example.larksuite.com/docx/<DOCX_TOKEN>" --reply-id '<id>' --emoji THUMBSUP --action add
 
-# 删除自己加的 reaction：仍需传要删除的那个 --emoji
+# delete a reaction you added yourself: you still need to pass the --emoji to delete
 lark-cli drive +react-reply --url "https://example.larksuite.com/docx/<DOCX_TOKEN>" --reply-id '<id>' --emoji THUMBSUP --action delete
 ```
 
-## 参数
+<a id="参数"></a>
+## Parameters
 
-| 参数 | 必填 | 说明 |
+| Parameter | Required | Description |
 |---|---|---|
-| `--url` | 与 `--token` 二选一 | 推荐入口。支持 doc/docx/sheet/file/slides/base/bitable/apps/wiki URL；apps 妙搭 URL 使用 `/page/<token>`；wiki URL 会自动解析到真实文档。 |
-| `--token` | 与 `--url` 二选一 | 裸 token 或 URL。裸 token 必须搭配 `--type`；wiki token 使用 `--type wiki`。 |
-| `--type` | 裸 token 时必填 | 传 token 对应类型：`doc`、`docx`、`sheet`、`file`、`slides`、`bitable`、`base`、`apps`、`wiki`。wiki token 使用 `wiki`；传 `base` 时，CLI 会按 `bitable` 类型处理。 |
-| `--reply-id` | 是 | 要操作的回复 ID；来自 `drive +list-replies` 的 `items[].reply_id`。给“这条评论”加/删表情时取该评论根回复（第一页 `items[0]`）的 `reply_id` |
-| `--emoji` | 是 | `reaction_type` 值，大小写敏感；本地按平台枚举校验。完整列表与语义映射见 [`lark-drive-reactions.md`](lark-drive-reactions.md) |
-| `--action` | 是 | `add` 添加；`delete` 删除当前身份自己加的 reaction |
+| `--url` | Choose one of this and `--token` | Recommended entry point. Supports doc/docx/sheet/file/slides/base/bitable/apps/wiki URLs; for apps Miaoda URLs use `/page/<token>`; wiki URLs are automatically resolved to the real document. |
+| `--token` | Choose one of this and `--url` | A bare token or URL. A bare token must be paired with `--type`; for a wiki token use `--type wiki`. |
+| `--type` | Required when using a bare token | Pass the type corresponding to the token: `doc`, `docx`, `sheet`, `file`, `slides`, `bitable`, `base`, `apps`, `wiki`. For a wiki token use `wiki`; when `base` is passed, the CLI processes it as the `bitable` type. |
+| `--reply-id` | Yes | The reply ID to operate on; comes from `items[].reply_id` of `drive +list-replies`. To add/remove an emoji on "this comment", take the `reply_id` of that comment's root reply (the first page's `items[0]`) |
+| `--emoji` | Yes | The `reaction_type` value, case-sensitive; validated locally against the platform enum. For the full list and semantic mapping, see [`lark-drive-reactions.md`](lark-drive-reactions.md) |
+| `--action` | Yes | `add` adds; `delete` deletes a reaction added by the current identity itself |
 
-## 行为说明
+<a id="行为说明"></a>
+## Behavior notes
 
-- `--emoji` 大小写敏感（如 `THUMBSUP` 与 `ThumbsDown`），并做本地枚举校验兜底。服务端不校验 `reaction_type`：任意字符串都会被接受并持久化成一条损坏的 reaction，所以本地校验是唯一防线；直接调原生命令时必须自行保证取值合法。
-- add / delete 幂等：重复添加已有 reaction、删除不存在的 reaction 都会成功返回且无副作用；delete 只取消当前身份自己加的 reaction。
-- 对根回复操作等价于给评论本身加 / 删表情。
-- 读回 reaction：在 `drive +list-replies` / `drive +batch-query-comments` 上带 `--need-reaction`；`count=0` 的条目是已删除 reaction 的残留，判断存在与否按 `count>0` 过滤。
+- `--emoji` is case-sensitive (for example `THUMBSUP` and `ThumbsDown`), and local enum validation serves as a fallback. The server does not validate `reaction_type`: any string will be accepted and persisted as a corrupted reaction, so local validation is the only line of defense; when calling the native command directly, you must ensure the value is valid yourself.
+- add / delete are idempotent: repeatedly adding an existing reaction or deleting a nonexistent reaction both return success with no side effects; delete only removes a reaction added by the current identity itself.
+- Operating on the root reply is equivalent to adding/removing an emoji on the comment itself.
+- To read back reactions: include `--need-reaction` on `drive +list-replies` / `drive +batch-query-comments`; entries in `count=0` are remnants of deleted reactions, so filter by `count>0` to determine whether one exists.
 
-## 输出
+<a id="输出"></a>
+## Output
 
 ```json
 {
@@ -44,7 +48,8 @@ lark-cli drive +react-reply --url "https://example.larksuite.com/docx/<DOCX_TOKE
 }
 ```
 
-## 参考
+<a id="参考"></a>
+## References
 
-- [lark-drive-reactions](lark-drive-reactions.md) -- reaction 查询规则、语义与完整枚举
-- [lark-drive-list-replies](lark-drive-list-replies.md) -- 获取 reply_id
+- [lark-drive-reactions](lark-drive-reactions.md) -- reaction query rules, semantics, and the full enum
+- [lark-drive-list-replies](lark-drive-list-replies.md) -- get reply_id

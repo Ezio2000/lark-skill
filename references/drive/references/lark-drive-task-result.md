@@ -2,79 +2,84 @@
 # drive +task_result
 
 
-查询异步任务结果。该 shortcut 聚合了导入、导出、Drive 文件/文件夹移动/删除、Wiki 节点 / 文档迁入 Wiki、Wiki 节点移出 Wiki、Wiki 删除等多种异步任务的结果查询，统一接口方便调用。
+Query asynchronous task results. This shortcut aggregates result queries for various asynchronous tasks, including import, export, Drive file/folder move/delete, Wiki node / document move into Wiki, Wiki node move out of Wiki, Wiki delete, and more, providing a unified interface for convenient invocation.
 
 > [!IMPORTANT]
-> 对于 `import` 场景，如果使用 `--as bot` 且这次查询**已经拿到最终在线文档目标**（`ready=true` 且返回了最终 `token` / `url`），CLI 会**再次尝试为当前 CLI 用户自动授予该资源的 `full_access`（可管理权限）**。
+> For the `import` scenario, if `--as bot` is used and this query **has already obtained the final online document target** (`ready=true` and returned the final `token` / `url`), the CLI will **attempt once more to automatically grant the current CLI user `full_access` (manageable permission) for that resource**.
 >
-> 此时结果里会额外返回 `permission_grant` 字段，明确说明授权结果：
-> - `status = granted`：当前 CLI 用户已获得该导入结果的可管理权限
-> - `status = skipped`：本地没有可用的当前用户 `open_id`，或最终结果缺少可授权的在线文档目标，因此不会自动授权；可提示用户先完成 `lark-cli auth login`，再让 AI / agent 继续使用应用身份（bot）授予当前用户权限
-> - `status = failed`：导入结果已就绪，但自动授权用户失败；会带上失败原因，并提示稍后重试或继续使用 bot 身份处理该文档
+> In this case, the result will additionally return a `permission_grant` field that explicitly states the authorization result:
+> - `status = granted`: the current CLI user has obtained manageable permission for the import result
+> - `status = skipped`: there is no available current-user `open_id` locally, or the final result lacks an online document target that can be authorized, so no automatic authorization occurs; you may prompt the user to complete `lark-cli auth login` first, then have the AI / agent continue using the app identity (bot) to grant the current user permission
+> - `status = failed`: the import result is ready, but automatically authorizing the user failed; the failure reason will be included, and you should prompt to retry later or continue handling the document using the bot identity
 >
-> `permission_grant.perm = full_access` 表示该资源已授予“可管理权限”。
+> `permission_grant.perm = full_access` indicates that the resource has been granted "manageable permission".
 >
-> **不要擅自执行 owner 转移。** 创建或导入不隐含 owner 转移；用户已明确要求转移且目标已确定时沿用授权执行。
+> **Do not perform owner transfer on your own initiative.** Creating or importing does not imply owner transfer; if the user has explicitly requested a transfer and the target is determined, proceed with the authorization execution.
 
-## 命令
+<a id="命令"></a>
+## Command
 
 ```bash
-# 查询导入任务结果
+# Query import task result
 lark-cli drive +task_result \
   --scenario import \
   --ticket <IMPORT_TICKET>
 
-# 查询导出任务结果
+# Query export task result
 lark-cli drive +task_result \
   --scenario export \
   --ticket <EXPORT_TICKET> \
   --file-token <SOURCE_DOC_TOKEN>
 
-# 查询 Drive 文件/文件夹移动/删除任务状态
+# Query Drive file/folder move/delete task status
 lark-cli drive +task_result \
   --scenario task_check \
   --task-id <TASK_ID>
 
-# 查询 Wiki 移动任务结果（wiki +move 异步超时后的续跑）
+# Query Wiki move task result (continuation after wiki +move asynchronous timeout)
 lark-cli drive +task_result \
   --scenario wiki_move \
   --task-id <TASK_ID>
 
-# 查询 Wiki 节点移出知识库任务结果（wiki +move-to-drive 异步超时后的续跑）
+# Query Wiki node move-out-of-wiki task result (continuation after wiki +move-to-drive asynchronous timeout)
 lark-cli drive +task_result \
   --scenario wiki_move_to_drive \
   --task-id <TASK_ID>
 
-# 查询 Wiki 删除知识空间任务结果（wiki +delete-space 异步超时后的续跑）
+# Query Wiki delete-space task result (continuation after wiki +delete-space asynchronous timeout)
 lark-cli drive +task_result \
   --scenario wiki_delete_space \
   --task-id <TASK_ID>
 ```
 
-## 参数
+<a id="参数"></a>
+## Parameters
 
-| 参数 | 必填 | 说明 |
+| Parameter | Required | Description |
 |------|------|------|
-| `--scenario` | 是 | 任务场景，可选值：`import` (导入任务)、`export` (导出任务)、`task_check` (Drive 文件/文件夹移动/删除任务)、`wiki_move` (Wiki 移动任务)、`wiki_move_to_drive` (Wiki 节点移出知识库任务)、`wiki_delete_space` (Wiki 删除知识空间任务)、`wiki_delete_node` (Wiki 删除节点任务) |
-| `--ticket` | 条件必填 | 异步任务 ticket，**import/export 场景必填** |
-| `--task-id` | 条件必填 | 异步任务 ID，**task_check 及所有 wiki 场景必填**；必须原样传递完整 ID |
-| `--file-token` | 条件必填 | 导出任务对应的源文档 token，**export 场景必填** |
+| `--scenario` | Yes | Task scenario, possible values: `import` (import task), `export` (export task), `task_check` (Drive file/folder move/delete task), `wiki_move` (Wiki move task), `wiki_move_to_drive` (Wiki node move-out-of-wiki task), `wiki_delete_space` (Wiki delete-space task), `wiki_delete_node` (Wiki delete-node task) |
+| `--ticket` | Conditionally required | Asynchronous task ticket, **required for import/export scenarios** |
+| `--task-id` | Conditionally required | Asynchronous task ID, **required for task_check and all wiki scenarios**; the complete ID must be passed through as-is |
+| `--file-token` | Conditionally required | Source document token corresponding to the export task, **required for export scenarios** |
 
-## 场景说明
+<a id="场景说明"></a>
+## Scenario Description
 
-| 场景 | 说明 | 所需参数 |
+| Scenario | Description | Required Parameters |
 |------|------|----------|
-| `import` | 文档导入任务（如将本地文件导入为云文档） | `--ticket` |
-| `export` | 文档导出任务（如云文档导出为 PDF/Word） | `--ticket`、`--file-token` |
-| `task_check` | Drive 文件/文件夹移动/删除任务 | `--task-id` |
-| `wiki_move` | Wiki 移动任务（`wiki +move` 的 docs-to-wiki 异步流程，超时后续跑用） | `--task-id` |
-| `wiki_move_to_drive` | Wiki 节点移出知识库任务（`wiki +move-to-drive` 超时后续跑用） | `--task-id` |
-| `wiki_delete_space` | Wiki 删除知识空间任务（`wiki +delete-space` 的异步流程，超时后续跑用） | `--task-id` |
-| `wiki_delete_node` | Wiki 删除节点任务（`wiki +node-delete` 的异步流程，超时后续跑用） | `--task-id` |
+| `import` | Document import task (e.g., importing a local file as a cloud document) | `--ticket` |
+| `export` | Document export task (e.g., exporting a cloud document as PDF/Word) | `--ticket`, `--file-token` |
+| `task_check` | Drive file/folder move/delete task | `--task-id` |
+| `wiki_move` | Wiki move task (the docs-to-wiki asynchronous flow of `wiki +move`, used for continuation after timeout) | `--task-id` |
+| `wiki_move_to_drive` | Wiki node move-out-of-wiki task (used for continuation after `wiki +move-to-drive` timeout) | `--task-id` |
+| `wiki_delete_space` | Wiki delete-space task (the asynchronous flow of `wiki +delete-space`, used for continuation after timeout) | `--task-id` |
+| `wiki_delete_node` | Wiki delete-node task (the asynchronous flow of `wiki +node-delete`, used for continuation after timeout) | `--task-id` |
 
-## 返回结果
+<a id="返回结果"></a>
+## Return Results
 
-### Import 场景返回
+<a id="import-场景返回"></a>
+### Import Scenario Return
 
 ```json
 {
@@ -99,16 +104,17 @@ lark-cli drive +task_result \
 }
 ```
 
-**字段说明：**
-- `ready`: 是否已经导入完成，可直接使用 `token` / `url`
-- `failed`: 是否已经失败
-- `job_status`: 服务端返回的原始状态码
-- `job_status_label`: 便于阅读的状态标签，例如 `success` / `processing`
-- `token`: 导入后的文档 token
-- `url`: 导入后的文档链接
-- `permission_grant`: 仅 `--as bot` 且这次查询已经拿到最终在线文档目标时返回，用于说明是否已自动为当前 CLI 用户授予可管理权限；如果当前仍是 `ready=false`，则不会返回这个字段
+**Field descriptions:**
+- `ready`: whether the import has completed, and `token` / `url` can be used directly
+- `failed`: whether it has failed
+- `job_status`: the raw status code returned by the server
+- `job_status_label`: a human-readable status label, for example `success` / `processing`
+- `token`: the document token after import
+- `url`: the document link after import
+- `permission_grant`: returned only for `--as bot` and when this query has already obtained the final online document target, used to indicate whether manageable permission has been automatically granted to the current CLI user; if it is still `ready=false`, this field will not be returned
 
-### Export 场景返回
+<a id="export-场景返回"></a>
+### Export Scenario Return
 
 ```json
 {
@@ -127,16 +133,17 @@ lark-cli drive +task_result \
 }
 ```
 
-**字段说明：**
-- `ready`: 是否已经完成导出，可直接使用 `file_token`
-- `failed`: 是否已经失败
-- `job_status`: 服务端返回的原始状态码
-- `job_status_label`: 便于阅读的状态标签，例如 `success` / `processing`
-- `file_token`: 导出文件的 token，用于下载
-- `file_extension`: 导出文件扩展名
-- `file_size`: 导出文件大小（字节）
+**Field descriptions:**
+- `ready`: whether the export has completed, and `file_token` can be used directly
+- `failed`: whether it has failed
+- `job_status`: the raw status code returned by the server
+- `job_status_label`: a human-readable status label, for example `success` / `processing`
+- `file_token`: the token of the exported file, used for download
+- `file_extension`: the exported file extension
+- `file_size`: the exported file size (bytes)
 
-### Task_check 场景返回
+<a id="task_check-场景返回"></a>
+### Task_check Scenario Return
 
 ```json
 {
@@ -148,12 +155,13 @@ lark-cli drive +task_result \
 }
 ```
 
-**字段说明：**
-- `status`: 任务状态，`success`=成功，`failed`=失败，`pending`=处理中
-- `ready`: 是否已经完成
-- `failed`: 是否已经失败
+**Field descriptions:**
+- `status`: task status, `success`=success, `failed`=failed, `pending`=processing
+- `ready`: whether it has completed
+- `failed`: whether it has failed
 
-### Wiki_move 场景返回
+<a id="wiki_move-场景返回"></a>
+### Wiki_move Scenario Return
 
 ```json
 {
@@ -194,15 +202,16 @@ lark-cli drive +task_result \
 }
 ```
 
-**字段说明：**
-- `ready`: 所有 `move_results[].status` 都为 `0` 时为 `true`
-- `failed`: 任一 `move_results[].status` 小于 `0` 时为 `true`
-- `status` / `status_msg`: 第一个 move_result 的状态码 / 标签（无结果时回退为 `1` / `processing`）
-- `wiki_token` / `node_token`: 移入 Wiki 后的目标节点 token（首个结果有 `node.node_token` 时镜像到顶层，便于下游脚本使用）
-- `space_id`、`obj_token`、`obj_type`、`title` 等：从首个 `move_results[0].node` 平铺到顶层，方便直接引用
-- `move_results`: 保留完整列表（适用于一次任务移动多个文档的场景）
+**Field descriptions:**
+- `ready`: `true` when all `move_results[].status` are `0`
+- `failed`: `true` when any `move_results[].status` is less than `0`
+- `status` / `status_msg`: the status code / label of the first move_result (falls back to `1` / `processing` when there is no result)
+- `wiki_token` / `node_token`: the target node token after moving into Wiki (mirrored to the top level when the first result has `node.node_token`, for ease of use by downstream scripts)
+- `space_id`, `obj_token`, `obj_type`, `title`, etc.: flattened from the first `move_results[0].node` to the top level, for convenient direct reference
+- `move_results`: retains the complete list (suitable for scenarios where one task moves multiple documents)
 
-### Wiki_move_to_drive 场景返回
+<a id="wiki_move_to_drive-场景返回"></a>
+### Wiki_move_to_drive Scenario Return
 
 ```json
 {
@@ -218,14 +227,15 @@ lark-cli drive +task_result \
 }
 ```
 
-**字段说明：**
-- `ready`: `move_wiki_to_docs_result.status=0` 时为 `true`
-- `failed`: `status<0` 时为 `true`；`status=1` 表示仍在处理
-- `status` / `status_msg`: 协议返回的数值状态与可读消息；不要把字符串状态当作成功值解析
-- `obj_token` / `obj_type` / `url`: 成功后新 Drive 文档的资源信息
-- `task_id`: 签名后的 opaque ID，可能包含多个连字符；服务端响应省略 `task.task_id` 时回退为请求中的完整 ID
+**Field descriptions:**
+- `ready`: `true` when `move_wiki_to_docs_result.status=0`
+- `failed`: `true` when `status<0`; `status=1` indicates it is still processing
+- `status` / `status_msg`: the numeric status and readable message returned by the protocol; do not parse the string status as a success value
+- `obj_token` / `obj_type` / `url`: resource information of the new Drive document after success
+- `task_id`: a signed opaque ID that may contain multiple hyphens; falls back to the complete ID from the request when the server response omits `task.task_id`
 
-### Wiki_delete_space 场景返回
+<a id="wiki_delete_space-场景返回"></a>
+### Wiki_delete_space Scenario Return
 
 ```json
 {
@@ -238,106 +248,114 @@ lark-cli drive +task_result \
 }
 ```
 
-**字段说明：**
-- `ready`: `status=success` 时为 `true`
-- `failed`: `status=failure` 或 `failed` 时为 `true`；未知非成功状态（如 `processing`）视为进行中
-- `status`: 服务端返回的原始 `delete_space_result.status`
-- `status_msg`: 优先使用 `delete_space_result.status_msg`，否则回落到 `status`，再回落到 `processing`
+**Field descriptions:**
+- `ready`: `true` when `status=success`
+- `failed`: `true` when `status=failure` or `failed`; unknown non-success statuses (such as `processing`) are treated as in progress
+- `status`: the raw `delete_space_result.status` returned by the server
+- `status_msg`: prefer `delete_space_result.status_msg`, otherwise fall back to `status`, then fall back to `processing`
 
-## 使用场景
+<a id="使用场景"></a>
+## Usage Scenarios
 
-### 配合 +import 使用
+<a id="配合-import-使用"></a>
+### Used with +import
 
 ```bash
-# 1. 创建导入任务
+# 1. Create an import task
 lark-cli drive +import --file ./data.xlsx --type sheet
-# 若任务很快完成：直接返回 token / url
-# 若内置轮询超时：返回 ready=false、ticket 和 next_command
+# If the task completes quickly: return token / url directly
+# If the built-in polling times out: return ready=false, ticket, and next_command
 
-# 2. 轮询导入结果
+# 2. Poll the import result
 lark-cli drive +task_result --scenario import --ticket <IMPORT_TICKET>
-# 如果这里返回 ready=true 且使用 --as bot，结果还会包含 permission_grant
+# If ready=true is returned here and --as bot is used, the result will also include permission_grant
 ```
 
-### 配合 +move 使用
+<a id="配合-move-使用"></a>
+### Used with +move
 
 ```bash
-# 1. 移动文件夹（异步操作）
+# 1. Move a folder (asynchronous operation)
 lark-cli drive +move --file-token <FOLDER_TOKEN> --type folder --folder-token <TARGET_FOLDER_TOKEN>
-# 若轮询窗口内完成：直接返回 ready=true
-# 若内置轮询结束仍未完成：返回 ready=false、task_id 和 next_command
+# If it completes within the polling window: return ready=true directly
+# If the built-in polling ends and it is still not complete: return ready=false, task_id, and next_command
 
-# 2. 轮询移动结果
+# 2. Poll the move result
 lark-cli drive +task_result --scenario task_check --task-id <TASK_ID>
 ```
 
-### 配合 wiki +move 使用
+<a id="配合-wiki-move-使用"></a>
+### Used with wiki +move
 
 ```bash
-# 1. 把 Drive 文档迁入 Wiki（异步任务可能返回 task_id）
+# 1. Move a Drive document into Wiki (the asynchronous task may return task_id)
 lark-cli wiki +move --obj-type docx --obj-token <DOC_TOKEN> --target-space-id <TARGET_SPACE_ID>
-# 若内置轮询窗口内完成：直接返回 ready=true 和 wiki_token
-# 若轮询窗口结束仍未完成：返回 ready=false、task_id、timed_out=true 和 next_command
+# If it completes within the built-in polling window: return ready=true and wiki_token directly
+# If the polling window ends and it is still not complete: return ready=false, task_id, timed_out=true, and next_command
 
-# 2. 续跑查询 Wiki 移动结果（next_command 即下面这条）
+# 2. Continue querying the Wiki move result (next_command is the following command)
 lark-cli drive +task_result --scenario wiki_move --task-id <TASK_ID> --as user
 ```
 
-> **身份保持一致**：续跑命令的 `--as` 必须与原 `wiki +move` 调用一致；`wiki +move` 的 `next_command` 已自动带上正确的 `--as`。
+> **Keep the identity consistent**: the `--as` of the continuation command must match the original `wiki +move` call; the `next_command` of `wiki +move` already automatically carries the correct `--as`.
 
-### 配合 wiki +move-to-drive 使用
+<a id="配合-wiki-move-to-drive-使用"></a>
+### Used with wiki +move-to-drive
 
 ```bash
-# 1. 把 Wiki 节点移到 Drive 文件夹；省略 --folder-token 表示当前身份的“我的空间”根目录
+# 1. Move a Wiki node to a Drive folder; omitting --folder-token means the "My Space" root directory of the current identity
 lark-cli wiki +move-to-drive \
   --node-token <WIKI_NODE_TOKEN> \
   --folder-token <TARGET_FOLDER_TOKEN> \
   --as user
-# 若轮询窗口内完成：直接返回 ready=true、obj_token、obj_type 和 url
-# 若轮询窗口结束仍未完成：返回 ready=false、完整 task_id、timed_out=true 和 next_command
+# If it completes within the polling window: return ready=true, obj_token, obj_type, and url directly
+# If the polling window ends and it is still not complete: return ready=false, the complete task_id, timed_out=true, and next_command
 
-# 2. 使用完整 task_id 和相同身份续跑
+# 2. Continue using the complete task_id and the same identity
 lark-cli drive +task_result \
   --scenario wiki_move_to_drive \
   --task-id <COMPLETE_TASK_ID> \
   --as user
 ```
 
-> **调用上下文和 ID 都要保持原样**：续跑的 `--profile` 与 `--as` 必须与初始移动一致；`task_id` 可能包含多个连字符，不要拆分或截断。`wiki +move-to-drive` 返回的 `next_command` 会保留 profile 与身份。
+> **Both the invocation context and the ID must be kept as-is**: the `--profile` and `--as` of the continuation must match the initial move; `task_id` may contain multiple hyphens, so do not split or truncate it. The `next_command` returned by `wiki +move-to-drive` will preserve the profile and identity.
 
-### 配合 wiki +delete-space 使用
+<a id="配合-wiki-delete-space-使用"></a>
+### Used with wiki +delete-space
 
 ```bash
-# 1. 删除知识空间（高风险写操作，必须显式带 --yes；接口可能同步返回空 task_id，也可能返回异步 task_id）
+# 1. Delete a wiki space (a high-risk write operation, must explicitly include --yes; the API may return an empty task_id synchronously, or may return an asynchronous task_id)
 lark-cli wiki +delete-space --space-id <SPACE_ID> --yes
-# 若同步返回：直接 ready=true
-# 若轮询窗口结束仍未完成：返回 ready=false、task_id、timed_out=true 和 next_command
+# If returned synchronously: ready=true directly
+# If the polling window ends and it is still not complete: return ready=false, task_id, timed_out=true, and next_command
 
-# 2. 续跑查询 Wiki 删除结果（next_command 即下面这条）
+# 2. Continue querying the Wiki delete result (next_command is the following command)
 lark-cli drive +task_result --scenario wiki_delete_space --task-id <TASK_ID> --as user
 ```
 
-### 配合 +export 使用
+<a id="配合-export-使用"></a>
+### Used with +export
 
 ```bash
-# 1. 发起导出
+# 1. Initiate the export
 lark-cli drive +export --token <SOURCE_DOC_TOKEN> --doc-type docx --file-extension pdf
-# 若轮询窗口内完成：直接下载本地文件
-# 若内置轮询结束仍未完成：返回 ready=false、ticket 和 next_command
+# If it completes within the polling window: download the local file directly
+# If the built-in polling ends and it is still not complete: return ready=false, ticket, and next_command
 
-# 2. 继续查询导出结果
+# 2. Continue querying the export result
 lark-cli drive +task_result --scenario export --ticket <EXPORT_TICKET> --file-token <SOURCE_DOC_TOKEN>
 
-# 如果返回 rate_limit / 99991400：至少等待 1 分钟后重试同一条 +task_result；
-# 若仍限频，以 1 分钟为起点继续指数退避。
+# If rate_limit / 99991400 is returned: wait at least 1 minute before retrying the same +task_result;
+# If still rate-limited, continue exponential backoff starting from 1 minute.
 
-# 3. 拿到 file_token 后下载
+# 3. Download after obtaining file_token
 lark-cli drive +export-download --file-token <EXPORTED_FILE_TOKEN>
 ```
 
-## 权限要求
+<a id="权限要求"></a>
+## Permission Requirements
 
-| 场景 | 所需 scope |
+| Scenario | Required scope |
 |------|-----------|
 | import | `drive:drive.metadata:readonly` |
 | export | `drive:drive.metadata:readonly` |
@@ -348,10 +366,11 @@ lark-cli drive +export-download --file-token <EXPORTED_FILE_TOKEN>
 | wiki_delete_node | `wiki:space:read` |
 
 > [!NOTE]
-> `import` 场景在 `--as bot` 且任务最终就绪时，还可能额外尝试一次协作者授权；如果 `permission_grant.status = failed`，请根据失败信息检查应用是否具备相应的文档协作者授权能力。
+> In the `import` scenario, when `--as bot` and the task is finally ready, an additional collaborator authorization attempt may be made; if `permission_grant.status = failed`, check based on the failure information whether the app has the corresponding document collaborator authorization capability.
 
-## 参考
+<a id="参考"></a>
+## References
 
-- [lark-drive](../index.md) -- 云空间（云盘/云存储）全部命令
-- [wiki +move-to-drive](../../wiki/references/lark-wiki-move-to-drive.md) -- 将 Wiki 节点移出知识库并放入 Drive
-- [lark-shared](../../shared/index.md) -- 认证和全局参数
+- [lark-drive](../index.md) -- all commands for cloud space (Drive/cloud storage)
+- [wiki +move-to-drive](../../wiki/references/lark-wiki-move-to-drive.md) -- move a Wiki node out of the wiki and into Drive
+- [lark-shared](../../shared/index.md) -- authentication and global parameters

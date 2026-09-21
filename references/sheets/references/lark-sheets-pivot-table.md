@@ -1,121 +1,124 @@
 # Lark Sheet Pivot Table
 
-## 真对象硬约束
+<a id="真对象硬约束"></a>
+## Hard Constraints on Real Objects
 
-当用户要求"透视表 / 分组汇总 / 交叉分析 / 按 X 统计 Y"时，**必须**通过 `+pivot-{create|update|delete}` 创建真实的透视表对象。**禁止**用 `SUMIFS` / `COUNTIFS` 等普通公式 + `+cells-set` 在原表中拼一张"看起来像透视表的汇总表"来代替。判断标准：交付后 `+pivot-list` 必须能返回该对象。
+When the user requests "pivot table / grouped summary / cross-tabulation / count Y by X", you **must** create a real pivot table object via `+pivot-{create|update|delete}`. It is **forbidden** to use ordinary formulas such as `SUMIFS` / `COUNTIFS` plus `+cells-set` to assemble a "summary table that looks like a pivot table" in the original sheet as a substitute. The criterion: after delivery, `+pivot-list` must be able to return that object.
 
-## 使用场景
+<a id="使用场景"></a>
+## Use Cases
 
-读写透视表对象。本 reference 覆盖 4 个 shortcut：
+Read and write pivot table objects. This reference covers 4 shortcuts:
 
-| 操作需求 | 使用工具 | 说明 |
+| Operation need | Tool to use | Description |
 |---------|---------|------|
-| 查看已有透视表 | `+pivot-list` | 获取透视表的结构、数据源和配置 |
-| 创建/更新/删除透视表 | `+pivot-{create|update|delete}` | 对透视表执行写入操作 |
+| View an existing pivot table | `+pivot-list` | Get the pivot table's structure, data source, and configuration |
+| Create/update/delete a pivot table | `+pivot-{create|update|delete}` | Perform write operations on the pivot table |
 
-典型工作流：先读取现有透视表了解配置 → 执行创建/更新/删除 → **必须再次读取验证结果**。
+Typical workflow: first read the existing pivot table to understand its configuration → perform create/update/delete → **must read again to verify the result**.
 
-## 行/值字段映射（创建前必做）
+<a id="行值字段映射创建前必做"></a>
+## Row/Value Field Mapping (Must Do Before Creating)
 
-创建透视表前先识别用户需求中的分组维度和聚合指标，**不要搞反**：
+Before creating a pivot table, first identify the grouping dimensions and aggregation metrics in the user's request. **Do not get them reversed**:
 
-- **rows（行字段）** = 分组维度，即"按什么分组"。例：部门、地区、医生、产品类别
-- **values（值字段）** = 聚合指标，即"统计什么数值"。例：销售额（聚合方式 `sum`）、订单数（聚合方式 `count`）
-- **columns（列字段）** = 交叉维度（可选），即"再按什么横向展开"。例：月份、性别
+- **rows (row fields)** = grouping dimensions, i.e. "group by what". Example: department, region, doctor, product category
+- **values (value fields)** = aggregation metrics, i.e. "which numeric value to aggregate". Example: sales amount (aggregation `sum`), order count (aggregation `count`)
+- **columns (column fields)** = cross-tabulation dimensions (optional), i.e. "what to expand horizontally by". Example: month, gender
 
-| 用户说 | rows | values | columns |
+| User says | rows | values | columns |
 |--------|------|--------|---------|
-| "按部门统计人数" | 部门 | 姓名（`summarize_by: "count"`） | — |
-| "按医生统计费用和结余" | 主管医生 | 费用（`"sum"`）、结余（`"sum"`） | — |
-| "各部门男女人数" | 部门 | 姓名（`"count"`） | 性别 |
+| "Count people by department" | Department | Name (`summarize_by: "count"`) | — |
+| "Count cost and balance by doctor" | Attending doctor | Cost (`"sum"`), balance (`"sum"`) | — |
+| "Number of males and females per department" | Department | Name (`"count"`) | Gender |
 
-**常见配置错误（必须注意）**：
-- **值字段类型与聚合器匹配**：`sum/average/median/product/stdDev/stdDevp/var/varp` 只用于数值列；数字个数用 `countNums`，非空记录数用 `count`。mixed 列先保留原值并新增清洗结果/失败标记，记录总数、成功、失败、空值和统计分母，再对清洗后的数值列聚合。
-- **数据源范围必须精确**：透视表的数据源范围必须包含表头行，且精确覆盖全部数据行列。范围过大（包含空行/空列）或过小（遗漏数据列）都会导致透视表结果错误
-- **行列字段选择要匹配用户意图**：用户说"按商品统计金额"→ 行字段=商品，值字段=金额（`summarize_by: "sum"`）。不要把行列字段搞反
-- **聚合类型要匹配**：用户说"统计数量"→ `summarize_by: "count"`；"统计总额"→ `"sum"`；"统计平均"→ `"average"`。完整合法值：`sum` / `count` / `average` / `max` / `min` / `product` / `countNums` / `stdDev` / `stdDevp` / `var` / `varp` / `distinct` / `median`。按用户意图选聚合方式，不要拿 `count` 顶替 `sum`
-- **`--properties` 还原生支持**：计算字段 `calculated_fields[].summarize_by ∈ {sum, custom}`、重复行标签 `repeat_row_labels: true`——别因速查表没列就判"不支持"绕路
-- **参数长度限制**：如果透视表配置 JSON 过长（数据源范围跨越大量行列），可能导致工具调用失败。此时应先确认数据范围的精确边界，避免传入过大的 range
-- **落点不能覆盖任何已有数据（不只是 `--source` 范围）**：透视表创建后会向右下**展开**，展开区域哪怕只盖到一个已有单元格（即便已避开源数据），也会报「目标位置不能与数据源重叠」并产生 `#REF!`。创建前无法精确预知展开尺寸，故**强烈优先默认策略**（不传 `--target-sheet-id/-name` 与 `--target-position`/`--range`，后端自动新建空白子表），零覆盖风险；非要落到已有子表，必须挑一片足够大的纯空白区
-- **创建后轮询并校验**：调用 `+pivot-list --sheet-id/--sheet-name <落点表> --pivot-table-id <id>`。`Loading` / `ServiceCalcLoading` 是瞬态，继续轮询到 `info.loaded=true` 且 `error_state=None`；`Cover` / `Shrink` 等终态错误再删除重建。随后用 `info.content_range/page_range` 回读展开区，确认非空、尺寸、总计位置和用户点名的指标。
+**Common configuration errors (must pay attention)**:
+- **Value field type must match the aggregator**: `sum/average/median/product/stdDev/stdDevp/var/varp` is only for numeric columns; use `countNums` for count of numbers, and `count` for count of non-empty records. For mixed columns, first keep the original values and add cleaning result/failure markers, record the total count, successes, failures, empty values, and the statistical denominator, then aggregate the cleaned numeric column.
+- **Data source range must be precise**: the pivot table's data source range must include the header row and precisely cover all data rows and columns. A range that is too large (including empty rows/columns) or too small (missing data columns) will cause incorrect pivot table results
+- **Row/column field selection must match user intent**: when the user says "count amount by product" → row field = product, value field = amount (`summarize_by: "sum"`). Do not reverse the row and column fields
+- **Aggregation type must match**: when the user says "count quantity" → `summarize_by: "count"`; "count total" → `"sum"`; "count average" → `"average"`. Complete valid values: `sum` / `count` / `average` / `max` / `min` / `product` / `countNums` / `stdDev` / `stdDevp` / `var` / `varp` / `distinct` / `median`. Choose the aggregation method according to user intent; do not substitute `count` for `sum`
+- **`--properties` also natively supports**: calculated fields `calculated_fields[].summarize_by ∈ {sum, custom}`, repeated row labels `repeat_row_labels: true` — do not judge it as "unsupported" and take a detour just because the quick reference table does not list them
+- **Parameter length limit**: if the pivot table configuration JSON is too long (the data source range spans a large number of rows and columns), the tool call may fail. In this case, first confirm the precise boundaries of the data range to avoid passing an overly large range
+- **The placement point must not overwrite any existing data (not just the `--source` range)**: after creation, the pivot table **expands** to the right and down. Even if the expanded area covers only one existing cell (even if the source data has been avoided), it will report "target position cannot overlap with data source" and produce `#REF!`. The expansion size cannot be precisely predicted before creation, so **strongly prefer the default strategy** (do not pass `--target-sheet-id/-name` and `--target-position`/`--range`; the backend automatically creates a new blank sub-sheet), with zero overwrite risk; if you must place it in an existing sub-sheet, you must choose a sufficiently large pure blank area
+- **Poll and verify after creation**: call `+pivot-list --sheet-id/--sheet-name <落点表> --pivot-table-id <id>`. `Loading` / `ServiceCalcLoading` are transient; continue polling until `info.loaded=true` and `error_state=None`; for terminal errors such as `Cover` / `Shrink`, delete and recreate. Then use `info.content_range/page_range` to read back the expanded area and confirm it is non-empty, its size, the grand total position, and the metrics the user named.
 
 ## Shortcuts
 
-| Shortcut | Risk | 分组 |
+| Shortcut | Risk | Group |
 | --- | --- | --- |
-| `+pivot-list` | read | 对象 |
-| `+pivot-create` | write | 对象 |
-| `+pivot-update` | write | 对象 |
-| `+pivot-delete` | high-risk-write | 对象 |
+| `+pivot-list` | read | Object |
+| `+pivot-create` | write | Object |
+| `+pivot-update` | write | Object |
+| `+pivot-delete` | high-risk-write | Object |
 
 ## Flags
 
 ### `+pivot-list`
 
-_公共四件套 · 系统：`--dry-run`_
+_Common four-piece set · System: `--dry-run`_
 
-| Flag | Type | 必填 | 说明 |
+| Flag | Type | Required | Description |
 | --- | --- | --- | --- |
-| `--pivot-table-id` | string | optional | 按 id 过滤 |
+| `--pivot-table-id` | string | optional | Filter by id |
 
 ### `+pivot-create`
 
-_公共：URL/token（无 sheet 定位） · 系统：`--dry-run`_
+_Common: URL/token (no sheet positioning) · System: `--dry-run`_
 
-| Flag | Type | 必填 | 说明 |
+| Flag | Type | Required | Description |
 | --- | --- | --- | --- |
-| `--properties` | string + File + Stdin（复合 JSON） | required | JSON：{"rows":[...],"columns":[...],"values":[...],"filters":[...],"show_row_grand_total":true,"show_col_grand_total":true}（数据源走 --source，不要再放进 properties.source） |
-| `--target-position` | string | optional | 透视表落点子表内的起始 cell（A1 格式，如 `A1`），默认 `A1`（值为 A1 时不下发）。它与 `--range` 落在同一 wire 字段 `properties.range`，给非默认值时优先于 `--range`；两者同时给非默认值会被拒绝，只传其一 |
-| `--target-sheet-id` | string | xor | 透视表落点目标子表的 reference_id（与 `--target-sheet-name` 互斥，优先于 --target-sheet-name；都不传时自动新建一张子表放置透视表——推荐）。与数据源 sheet 区分：数据源 sheet 写在 --source 的 A1 引用里（带 sheet 前缀，形如 `'Sheet1'!A1:D100`）。 |
-| `--target-sheet-name` | string | xor | 透视表落点目标子表的名称（与 `--target-sheet-id` 互斥；都不传时自动新建一张子表放置透视表——推荐）。与数据源 sheet 区分：数据源 sheet 写在 --source 的 A1 引用里（带 sheet 前缀，形如 `'Sheet1'!A1:D100`）。 |
-| `--source` | string | required | 透视表源数据区域（A1 表示法，格式 `'SheetName'!StartCell:EndCell`，如 `'Sheet1'!A1:D100`） |
-| `--range` | string | optional | 透视表左上角放置位置（A1 单值，如 `F1`，仅 create 生效），映射到 `properties.range`；省略时放在落点子表（默认新建子表）的左上角。它与 `--target-position` 落在同一 wire 字段，两者同时给非默认值会被拒绝，只传其一 |
+| `--properties` | string + File + Stdin (composite JSON) | required | JSON: {"rows":[...],"columns":[...],"values":[...],"filters":[...],"show_row_grand_total":true,"show_col_grand_total":true} (the data source goes through --source; do not put it into properties.source again) |
+| `--target-position` | string | optional | The starting cell within the pivot table's placement sub-sheet (A1 format, e.g. `A1`), default `A1` (not sent when the value is A1). It and `--range` land on the same wire field `properties.range`; when a non-default value is given, it takes precedence over `--range`; if both are given non-default values, it will be rejected; pass only one of them |
+| `--target-sheet-id` | string | xor | The reference_id of the target sub-sheet where the pivot table is placed (mutually exclusive with `--target-sheet-name`, takes precedence over --target-sheet-name; when neither is passed, a new sub-sheet is automatically created to hold the pivot table — recommended). Distinguish from the data source sheet: the data source sheet is written in the A1 reference of --source (with a sheet prefix, in the form `'Sheet1'!A1:D100`). |
+| `--target-sheet-name` | string | xor | The name of the target sub-sheet where the pivot table is placed (mutually exclusive with `--target-sheet-id`; when neither is passed, a new sub-sheet is automatically created to hold the pivot table — recommended). Distinguish from the data source sheet: the data source sheet is written in the A1 reference of --source (with a sheet prefix, in the form `'Sheet1'!A1:D100`). |
+| `--source` | string | required | The pivot table source data range (A1 notation, format `'SheetName'!StartCell:EndCell`, e.g. `'Sheet1'!A1:D100`) |
+| `--range` | string | optional | The top-left placement position of the pivot table (A1 single value, e.g. `F1`, only effective for create), mapped to `properties.range`; when omitted, it is placed at the top-left corner of the placement sub-sheet (a new sub-sheet by default). It and `--target-position` land on the same wire field; if both are given non-default values, it will be rejected; pass only one of them |
 
 ### `+pivot-update`
 
-_公共四件套 · 系统：`--dry-run`_
+_Common four-piece set · System: `--dry-run`_
 
-| Flag | Type | 必填 | 说明 |
+| Flag | Type | Required | Description |
 | --- | --- | --- | --- |
-| `--pivot-table-id` | string | required | 目标透视表 id |
-| `--properties` | string + File + Stdin（复合 JSON） | required | 完整或足够完整的配置（先 `+pivot-list --pivot-table-id <id>` 回读再 patch） |
+| `--pivot-table-id` | string | required | Target pivot table id |
+| `--properties` | string + File + Stdin (composite JSON) | required | Complete or sufficiently complete configuration (first read back with `+pivot-list --pivot-table-id <id>`, then patch) |
 
 ### `+pivot-delete`
 
-_公共四件套 · 系统：`--yes`、`--dry-run`_
+_Common four-piece set · System: `--yes`, `--dry-run`_
 
-| Flag | Type | 必填 | 说明 |
+| Flag | Type | Required | Description |
 | --- | --- | --- | --- |
-| `--pivot-table-id` | string | required | 目标透视表 id |
+| `--pivot-table-id` | string | required | Target pivot table id |
 
 ## Schemas
 
-> 复合 JSON flag 字段速查（只列顶层 + 一层嵌套）。深层结构看下方 `## Examples`，或用 `--print-schema` 读完整 JSON Schema（用法见 index.md「公共 flag 速查」与「Agent 使用提示」）。
+> Composite JSON flag field quick reference (only top level + one level of nesting). For deeper structures, see `## Examples` below, or use `--print-schema` to read the complete JSON Schema (usage see index.md "Common flag quick reference" and "Agent usage tips").
 
 ### `+pivot-create` `--properties` / `+pivot-update` `--properties`
 
-_创建/更新的透视表属性_
+_Pivot table properties for create/update_
 
-**顶层字段**：
-- `range` (string?) — 放置透视表的左上角单元格 A1 地址（例如：'F1'）（仅 create 时有效） — ⚠️ 已拎为独立 flag `--range`，请勿在此 JSON 内重复填写（同名以独立 flag 为准）
-- `source` (string?) — 源数据区域地址，格式为 'SheetName!StartCell:EndCell'（例如：'Sheet1!A1:D100'） — ⚠️ 已拎为独立 flag `--source`，请勿在此 JSON 内重复填写（同名以独立 flag 为准）
-- `rows` (array<object>?) — 纵向分组字段（行字段） each: { field: string, display_name?: string, sort?: object, filter?: object, condition_filter?: object, …共 6 项 }
-- `columns` (array<object>?) — 横向分组字段（列字段） each: { field: string, display_name?: string, sort?: object, filter?: object, condition_filter?: object, …共 6 项 }
-- `filters` (array<object>?) — 筛选区域字段（页字段） each: { field: string, display_name?: string, filter?: object, condition_filter?: object, group?: object }
-- `values` (array<object>?) — 要汇总的字段（至少需要 1 个） each: { field: string, display_name?: string, summarize_by?: enum, show_data_as?: enum, base_field?: string }
-- `auto_fit_col` (boolean?) — 是否自动调整列宽以适应内容
-- `show_row_grand_total` (boolean?) — 是否显示行总计（默认 true）
-- `show_col_grand_total` (boolean?) — 是否显示列总计（默认 true）
-- `show_subtotals` (boolean?) — 是否显示分类小计（默认 true，应用于所有字段）
-- `repeat_row_labels` (boolean?) — 是否显示重复项标签
-- `calculated_fields` (array<object>?) — 计算字段列表 each: { name: string, formula: string, summarize_by?: enum }
-- `collapse` (object?) — 行字段展开/折叠状态：字段名 -> 要折叠的项目列表
+**Top-level fields**:
+- `range` (string?) — The A1 address of the top-left cell where the pivot table is placed (e.g. 'F1') (only effective for create) — ⚠️ Already extracted as an independent flag `--range`; do not fill it in again in this JSON (for the same name, the independent flag takes precedence)
+- `source` (string?) — Source data range address, in the format 'SheetName!StartCell:EndCell' (e.g. 'Sheet1!A1:D100') — ⚠️ Already extracted as an independent flag `--source`; do not fill it in again in this JSON (for the same name, the independent flag takes precedence)
+- `rows` (array<object>?) — Vertical grouping fields (row fields) each: { field: string, display_name?: string, sort?: object, filter?: object, condition_filter?: object, …6 items total }
+- `columns` (array<object>?) — Horizontal grouping fields (column fields) each: { field: string, display_name?: string, sort?: object, filter?: object, condition_filter?: object, …6 items total }
+- `filters` (array<object>?) — Filter area fields (page fields) each: { field: string, display_name?: string, filter?: object, condition_filter?: object, group?: object }
+- `values` (array<object>?) — Fields to summarize (at least 1 required) each: { field: string, display_name?: string, summarize_by?: enum, show_data_as?: enum, base_field?: string }
+- `auto_fit_col` (boolean?) — Whether to automatically adjust column width to fit content
+- `show_row_grand_total` (boolean?) — Whether to show row grand totals (default true)
+- `show_col_grand_total` (boolean?) — Whether to show column grand totals (default true)
+- `show_subtotals` (boolean?) — Whether to show category subtotals (default true, applied to all fields)
+- `repeat_row_labels` (boolean?) — Whether to show repeated item labels
+- `calculated_fields` (array<object>?) — List of calculated fields each: { name: string, formula: string, summarize_by?: enum }
+- `collapse` (object?) — Row field expand/collapse state: field name -> list of items to collapse
 
 ## Examples
 
-公共四件套：所有 shortcut 顶部排列 `--url` / `--spreadsheet-token` / `--sheet-id` / `--sheet-name`，其中 `--sheet-id` / `--sheet-name` 在 `+pivot-update` / `+pivot-delete` / `+pivot-list` 上是公共四件套语义（定位透视表所在 sheet，XOR 必传一个）。
+Common four-piece set: all shortcuts have `--url` / `--spreadsheet-token` / `--sheet-id` / `--sheet-name` arranged at the top, where `--sheet-id` / `--sheet-name` have the common four-piece set semantics on `+pivot-update` / `+pivot-delete` / `+pivot-list` (locating the sheet where the pivot table resides; XOR, exactly one must be passed).
 
-**`+pivot-create` 例外**：placement 选择器用 `--target-sheet-id` / `--target-sheet-name`（至多一个、都可省略；省略时后端自动新建子表，推荐）。数据源 sheet 写在 `--source` 的 `'SheetName'!Range` 里。
+**`+pivot-create` exception**: the placement selector uses `--target-sheet-id` / `--target-sheet-name` (at most one, both may be omitted; when omitted, the backend automatically creates a new sub-sheet, recommended). The data source sheet is written in the `'SheetName'!Range` of `--source`.
 
 ### `+pivot-list`
 
@@ -123,39 +126,39 @@ _创建/更新的透视表属性_
 lark-cli sheets +pivot-list --url "..." --sheet-id "$SID"
 ```
 
-> **返回值含 `info`（展开后的占用区域与状态）**：每个透视表对象除 `position` / `snapshot` 外，还返回 `info`，标明它在 sheet 上的平铺区域与状态——`info.page_range`（筛选/分页区 A1）、`info.content_range`（主体数据区 A1）、`info.span_range`（空表合并区 A1）、`info.error_state`（错误状态，如 `None`/`Cover`/`Shrink`/`Loading`）、`info.is_empty` / `info.is_hidden`、`info.row`/`info.col`（锚点）等。
-> **用途 1（判断改值还是改配置）**：当用户描述某个单元格要改动时，先 `+pivot-list` 拿到 `info`，判断该单元格是否落在 `page_range` / `content_range` 内——**落在区域内 = 属于透视表，应走 `+pivot-update` 改配置**（透视表单元格不能直接 `+cells-set` 改值）；**落在区域外 = 普通单元格，正常 `+cells-set` 改值**。
-> **用途 2（创建后校验覆盖）**：建完后轮询 `info.loaded/error_state`；`Loading` / `ServiceCalcLoading` 继续等待，`Cover` / `Shrink` 等终态错误才表示冲突。成功后用 `content_range/page_range` 核对真实占用区域与原数据边界。
+> **The return value includes `info` (the occupied area and status after expansion)**: in addition to `position` / `snapshot`, each pivot table object also returns `info`, indicating its tiled area and status on the sheet — `info.page_range` (filter/pagination area A1), `info.content_range` (main data area A1), `info.span_range` (empty table merge area A1), `info.error_state` (error status, such as `None`/`Cover`/`Shrink`/`Loading`), `info.is_empty` / `info.is_hidden`, `info.row`/`info.col` (anchors), etc.
+> **Use 1 (decide whether to change a value or change the configuration)**: when the user describes that a certain cell needs to be changed, first use `+pivot-list` to get `info`, and determine whether that cell falls within `page_range` / `content_range` — **falling within the area = it belongs to the pivot table, and you should use `+pivot-update` to change the configuration** (pivot table cells cannot be directly changed via `+cells-set`); **falling outside the area = an ordinary cell, change the value normally via `+cells-set`**.
+> **Use 2 (verify overwrite after creation)**: after creation, poll `info.loaded/error_state`; for `Loading` / `ServiceCalcLoading`, continue waiting; only terminal errors such as `Cover` / `Shrink` indicate a conflict. After success, use `content_range/page_range` to check the actual occupied area against the original data boundaries.
 
 ### `+pivot-create`
 
-> 数据源 `--source` 必须从表头行开始；空行 / 汇总行会被当作数据参与聚合，需提前用 `+csv-get` 确认起止边界。`--source` 和 `--range` 是独立 flag（不要再放 `--properties`）；`rows` / `columns` / `values` 等数组字段走 `--properties`。
+> The data source `--source` must start from the header row; empty rows / summary rows will be treated as data and participate in aggregation, so you need to confirm the start and end boundaries in advance with `+csv-get`. `--source` and `--range` are independent flags (do not put them into `--properties` again); array fields such as `rows` / `columns` / `values` go through `--properties`.
 >
-> **先理清 `+pivot-create` 上 4 个位置类入参（语义不同，别混）**：
-> - `--source`（**必填**）：**源数据**区域，须自带 `Sheet!` 前缀（如 `'Sheet1'!A1:D100`，sheet 名按 A1 标准单引号包裹）。源 sheet 的名字在 `--source` 字符串里，**不**通过单独 flag 传。
-> - `--target-sheet-id` / `--target-sheet-name`：**透视表的落点 sheet**（即产物放哪张子表）。两个互斥（最多传一个），都不传时后端自动新建子表存放产物（强烈推荐）。
-> - `--target-position`（可选，默认 `A1`）与 `--range`（可选）都映射到 `properties.range`，表达同一落点；不要同时给两个非默认值。
+> **First clarify the 4 position-type input parameters on `+pivot-create` (different semantics, do not mix them up)**:
+> - `--source` (**required**): the **source data** range, which must carry a `Sheet!` prefix (e.g. `'Sheet1'!A1:D100`; the sheet name is wrapped in single quotes per the A1 standard). The name of the source sheet is in the `--source` string, and is **not** passed via a separate flag.
+> - `--target-sheet-id` / `--target-sheet-name`: the **placement sheet of the pivot table** (i.e. which sub-sheet the output goes into). The two are mutually exclusive (pass at most one); when neither is passed, the backend automatically creates a new sub-sheet to hold the output (strongly recommended).
+> - `--target-position` (optional, default `A1`) and `--range` (optional) both map to `properties.range`, expressing the same placement point; do not give both non-default values at the same time.
 >
-> **落点 3 种策略（互斥，选其一）**：
-> 1. **默认（强烈推荐）**：`--target-sheet-id` / `--target-sheet-name` / `--target-position` / `--range` **全都不传** → 服务端**自动新建子表**存放产物，绝不碰任何已有数据。
-> 2. **放进指定的已有子表**：传 `--target-sheet-id <落点子表 id>`（或 `--target-sheet-name`），可选 `--target-position <子表内起点 cell>`。⚠️ **若落点子表就是源数据所在的 sheet**，必须配 `--target-position` 或 `--range` 指向源数据范围**之外**的位置，否则产物默认从 A1 起会盖在源数据上。
-> 3. **`--range`**：跟策略 2 等价（同样需要 `--target-sheet-id` / `--target-sheet-name` 指定落点子表，不然落到自动新建子表），只是改用 `--range` 表达同一落点（与 `--target-position` 同一 wire 字段）。同样的覆盖风险，同样需要避开源数据范围。
+> **3 placement strategies (mutually exclusive, choose one)**:
+> 1. **Default (strongly recommended)**: `--target-sheet-id` / `--target-sheet-name` / `--target-position` / `--range` **all not passed** → the server **automatically creates a new sub-sheet** to hold the output, never touching any existing data.
+> 2. **Place into a specified existing sub-sheet**: pass `--target-sheet-id <落点子表 id>` (or `--target-sheet-name`), optionally `--target-position <子表内起点 cell>`. ⚠️ **If the placement sub-sheet is the sheet where the source data resides**, you must configure `--target-position` or `--range` to point to a position **outside** the source data range; otherwise the output, starting from A1 by default, will overwrite the source data.
+> 3. **`--range`**: equivalent to strategy 2 (likewise requires `--target-sheet-id` / `--target-sheet-name` to specify the placement sub-sheet, otherwise it falls into an automatically created sub-sheet), except that `--range` is used to express the same placement point (the same wire field as `--target-position`). The same overwrite risk, and likewise you need to avoid the source data range.
 >
-> 一般用策略 1（默认新建子表）即可，零覆盖风险，无需任何 `--target-*` / `--range` flag。
+> Generally strategy 1 (default new sub-sheet) is sufficient, with zero overwrite risk and no need for any `--target-*` / `--range` flag.
 
 ```bash
-# 策略 1（强烈推荐）：不传任何落点 flag → 后端自动新建子表，零覆盖风险
+# Strategy 1 (strongly recommended): do not pass any placement flag → the backend automatically creates a new sub-sheet, zero overwrite risk
 lark-cli sheets +pivot-create --url "..." \
   --source "'Sheet1'!A1:D100" --properties @pivot.json
 
-# 策略 2：落进指定的已有目标子表（注意目标 sheet ≠ 源 sheet，否则要配 --target-position 避开源数据）
+# Strategy 2: place into a specified existing target sub-sheet (note that the target sheet ≠ the source sheet, otherwise you must configure --target-position to avoid the source data)
 lark-cli sheets +pivot-create --url "..." \
   --source "'Sheet1'!A1:D100" --target-sheet-id "$DEST_SID" --target-position "A1" --properties @pivot.json
 ```
 
 ### `+pivot-update`
 
-> 不允许改落点 range；更新配置前先 `+pivot-list --sheet-id/--sheet-name <落点表> --pivot-table-id <id>` 回读完整 snapshot，再 patch rows / columns / values / filters。需要切换数据源时，可在 `--properties` 中提供新的 `source`。
+> Changing the placement range is not allowed; before updating the configuration, first read back the complete snapshot with `+pivot-list --sheet-id/--sheet-name <落点表> --pivot-table-id <id>`, then patch rows / columns / values / filters. When you need to switch the data source, you can provide a new `source` in `--properties`.
 
 ### `+pivot-delete`
 
@@ -163,10 +166,11 @@ lark-cli sheets +pivot-create --url "..." \
 lark-cli sheets +pivot-delete --url "..." --sheet-id "$SHEET_ID" --pivot-table-id "$PIVOT_TABLE_ID" --yes
 ```
 
-### Validate / DryRun / Execute 约束
+<a id="validate--dryrun--execute-约束"></a>
+### Validate / DryRun / Execute Constraints
 
-- `Validate`：`--url` / `--spreadsheet-token` XOR 必填；update/delete/list 的 `--sheet-id` / `--sheet-name` XOR 必填；create 的 target selector 至多一个、可都省略；`--source` 与合法 `--properties` 必填；delete 强制 `--yes` 或 `--dry-run`。schema 校验类型与枚举，但允许创建空壳配置，业务完整性须靠创建后 list/data 验证。
-- `DryRun`：输出将发送的 pivot 请求模板和本地 placement_warning；不联网、不预估实际展开尺寸。
-- `Execute`：写后不自动回读；create/update 后必须按落点 sheet + pivot id 轮询 `+pivot-list` 到 loaded，核 error_state/content_range 与数据；delete 后 list 确认目标不存在。
+- `Validate`: `--url` / `--spreadsheet-token` XOR required; for update/delete/list, `--sheet-id` / `--sheet-name` XOR required; for create, at most one target selector, and both may be omitted; `--source` and a valid `--properties` are required; delete enforces `--yes` or `--dry-run`. The schema validates types and enums, but allows creating an empty-shell configuration; business completeness must be verified via list/data after creation.
+- `DryRun`: outputs the pivot request template to be sent and the local placement_warning; does not go online and does not estimate the actual expansion size.
+- `Execute`: does not automatically read back after writing; after create/update, you must poll `+pivot-list` by placement sheet + pivot id until loaded, and check error_state/content_range and the data; after delete, use list to confirm the target no longer exists.
 
-> ⚠️ pivot 输出包含总计 / 小计行；后续 chart 引用 pivot 时，`snapshot.data.refs` 必须排除这些行（见 `references/lark-sheets-chart.md` 的「⚠️ chart 数据源引用 pivot 时必须排除总计行」段）。
+> ⚠️ pivot output includes grand total / subtotal rows; when a subsequent chart references the pivot, `snapshot.data.refs` must exclude these rows (see the "⚠️ chart data source must exclude grand total rows when referencing a pivot" section of `references/lark-sheets-chart.md`).

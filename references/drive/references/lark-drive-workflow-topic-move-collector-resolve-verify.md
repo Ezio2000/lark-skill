@@ -1,181 +1,195 @@
-# 主题资料收集工作流：资源解析与内容验证
+<a id="主题资料收集工作流资源解析与内容验证"></a>
+# Topic Material Collection Workflow: Resource Resolution and Content Verification
 
-由状态 `RESOURCE_RESOLVE`、`CONTENT_VERIFY` 加载。
+Loaded by states `RESOURCE_RESOLVE`, `CONTENT_VERIFY`.
 
-本文档负责资源解析、结构化父级、移动资格、内容验证和 `ResourceItem`。不得判断相关性、生成移动计划、创建目标、移动资源或执行恢复操作。
+This document is responsible for resource resolution, structured parent, move eligibility, content verification, and `ResourceItem`. It must not judge relevance, generate move plans, create targets, move resources, or perform recovery operations.
 
-本文档只服务 `topic_move_collector`。进入本文档时，`workflow_id` 必须是 `topic_move_collector`；不得把当前任务改路由到其他 workflow。
+This document serves only `topic_move_collector`. When entering this document, `workflow_id` must be `topic_move_collector`; the current task must not be rerouted to another workflow.
 
-## 必读上下文
+<a id="必读上下文"></a>
+## Required Context
 
-执行本文档规则前：
+Before executing the rules in this document:
 
-1. 按 [`../../shared/index.md`](../../shared/index.md) 处理身份、认证和权限。
-2. 按 [`lark-drive-inspect.md`](lark-drive-inspect.md) 处理 URL / token 解析。
-3. 使用 `drive metas batch_query` 补齐 Drive 资源 owner、标题和 URL。
-4. 必要时使用 `drive permission.members auth` 读取权限信号；该接口不提供 `full_access` / 移动权限的直接判定，不能把 `manage_public` 等同为可移动。
-5. 按 [`../../wiki/references/lark-wiki-node-get.md`](../../wiki/references/lark-wiki-node-get.md) 处理 Wiki 节点解析。
-6. 按 [`../../doc/references/lark-doc-fetch.md`](../../doc/references/lark-doc-fetch.md) 读取文档内容。
-7. 需要验证 Sheet 内容时，按 [`../../sheets/index.md`](../../sheets/index.md) 执行。
+1. Handle identity, authentication, and permissions per [`../../shared/index.md`](../../shared/index.md).
+2. Handle URL / token resolution per [`lark-drive-inspect.md`](lark-drive-inspect.md).
+3. Use `drive metas batch_query` to fill in the Drive resource owner, title, and URL.
+4. When necessary, use `drive permission.members auth` to read permission signals; this interface does not provide a direct determination of `full_access` / move permission, and `manage_public` must not be equated with movable.
+5. Handle Wiki node resolution per [`../../wiki/references/lark-wiki-node-get.md`](../../wiki/references/lark-wiki-node-get.md).
+6. Read document content per [`../../doc/references/lark-doc-fetch.md`](../../doc/references/lark-doc-fetch.md).
+7. When Sheet content needs to be verified, execute per [`../../sheets/index.md`](../../sheets/index.md).
 
-## 进入解析与验证阶段前校验
+<a id="进入解析与验证阶段前校验"></a>
+## Pre-Check Before Entering the Resolution and Verification Phase
 
-进入本文档后，如果 `resource_items` 还不存在，当前状态必须是 `RESOURCE_RESOLVE`。
+After entering this document, if `resource_items` does not yet exist, the current state must be `RESOURCE_RESOLVE`.
 
-禁止从 `candidate_items` 直接进入 `CONTENT_VERIFY` 或 `RELEVANCE_CLASSIFY`，也禁止从 `RESOURCE_RESOLVE` 直接进入 `RELEVANCE_CLASSIFY`。即使候选项已有标题、URL、摘要或 token，也必须依次执行 `RESOURCE_RESOLVE` 和 `CONTENT_VERIFY`；两个状态不得合并。
+It is forbidden to go directly from `candidate_items` to `CONTENT_VERIFY` or `RELEVANCE_CLASSIFY`, and it is also forbidden to go directly from `RESOURCE_RESOLVE` to `RELEVANCE_CLASSIFY`. Even if the candidate items already have titles, URLs, summaries, or tokens, `RESOURCE_RESOLVE` and `CONTENT_VERIFY` must still be executed in sequence; the two states must not be merged.
 
-## 状态：`RESOURCE_RESOLVE`
+<a id="状态resource_resolve"></a>
+## State: `RESOURCE_RESOLVE`
 
-进入条件：候选列表已准备。
+Entry condition: the candidate list is ready.
 
-必须：
+Must:
 
-1. 为每个 `CandidateItem` 生成稳定 `resource_id`，并转换为标准化 `ResourceItem`。
-2. 解析 canonical token、资源类型、URL、结构化当前父级、Wiki 节点身份和读取权限状态。
-3. 对 Wiki 资源同时保留 `wiki_node_token` 和 `wiki_obj_token`。
-4. 按 `move_method` 补齐 `owner_id`、`is_owner`、`source_move_state`、`source_parent_write_state`、`target_write_state`、`move_permission_state` 和 `move_permission_basis`。
-5. 基于 `target_location` 检测不支持的移动方向。
-6. 未解析成功的资源仍保留在审核分组中，不得静默丢弃。
-7. 即使搜索结果已经包含标题、URL 或 token，也必须经过本状态生成 `ResourceItem`；不得从召回结果直接进入相关性分级。
-8. 只有确认 `move_permission_state=movable` 且 `target_write_state=confirmed` 的资源，才能进入后续默认移动链路。
-9. 解析耗时超过约 60 秒时，必须输出进度提示，之后约每 60 秒提示一次。
+1. Generate a stable `resource_id` for each `CandidateItem`, and convert it into a normalized `ResourceItem`.
+2. Resolve the canonical token, resource type, URL, structured current parent, Wiki node identity, and read permission status.
+3. For Wiki resources, retain both `wiki_node_token` and `wiki_obj_token`.
+4. Fill in `owner_id`, `is_owner`, `source_move_state`, `source_parent_write_state`, `target_write_state`, `move_permission_state`, and `move_permission_basis` per `move_method`.
+5. Detect unsupported move directions based on `target_location`.
+6. Resources that fail to resolve must still remain in the review grouping and must not be silently discarded.
+7. Even if the search results already contain titles, URLs, or tokens, `ResourceItem` must still be generated through this state; it is forbidden to go directly from recall results to relevance grading.
+8. Only resources confirmed to have `move_permission_state=movable` and `target_write_state=confirmed` may enter the subsequent default move chain.
+9. When resolution takes longer than about 60 seconds, a progress prompt must be output, and then prompted once about every 60 seconds thereafter.
 
-### 解析规则
+<a id="解析规则"></a>
+### Resolution Rules
 
-| 候选类型 | agent 必须执行 |
+| Candidate Type | What the agent must do |
 |----------------|---------------|
-| Drive URL / token | token 或类型不确定时，使用 `drive +inspect`。 |
-| Wiki URL / token | 使用 `drive +inspect` 或 `wiki +node-get`；保留节点身份和对象身份。 |
-| 文件夹候选 | 标记为容器；不要当作普通文档做内容验证。 |
-| 快捷方式候选 | 能解析源资源时解析源资源；同时保留快捷方式身份。 |
-| 无读取权限 | 保留可见元数据，并设置 `permission_state=denied`。 |
-| 无移动权限或移动权限未知 | 保留可见元数据和召回证据，并设置对应 `move_permission_state`。 |
-| 无法解析当前父级 | 设置 `current_parent_kind=unknown`，保留已知路径，后续计划项设置 `rollback_supported=false` 和明确 blocker；不得编造父级 token。 |
+| Drive URL / token | When the token or type is uncertain, use `drive +inspect`. |
+| Wiki URL / token | Use `drive +inspect` or `wiki +node-get`; retain both node identity and object identity. |
+| Folder candidate | Mark as a container; do not treat it as an ordinary document for content verification. |
+| Shortcut candidate | When the source resource can be resolved, resolve the source resource; at the same time retain the shortcut identity. |
+| No read permission | Retain the visible metadata and set `permission_state=denied`. |
+| No move permission or move permission unknown | Retain the visible metadata and recall evidence, and set the corresponding `move_permission_state`. |
+| Unable to resolve the current parent | Set `current_parent_kind=unknown`, retain the known path, and set `rollback_supported=false` and an explicit blocker for subsequent plan items; do not fabricate a parent token. |
 
-### 资源解析进度 UI
+<a id="资源解析进度-ui"></a>
+### Resource Resolution Progress UI
 
-当 `RESOURCE_RESOLVE` 持续超过约 60 秒时，输出当前进度：
-
-```text
-资源解析进度：已解析 <resolved_count>/<total_count> 项，已确认可移动 <movable_count> 项，无移动权限 <denied_count> 项，移动权限未知 <unknown_count> 项，解析失败 <failed_count> 项。
-当前资源：<title>
-继续解析中，不会创建或移动资源。
-```
-
-如果正在处理权限或 owner 元数据，可补充：
+When `RESOURCE_RESOLVE` lasts longer than about 60 seconds, output the current progress:
 
 ```text
-当前步骤：解析 owner / 当前父级 / 移动资格。
+Resource resolution progress: resolved <resolved_count>/<total_count> items, confirmed movable <movable_count> items, no move permission <denied_count> items, move permission unknown <unknown_count> items, resolution failed <failed_count> items.
+Current resource: <title>
+Continuing resolution; no resources will be created or moved.
 ```
 
-`RESOURCE_RESOLVE` 完成后，输出摘要：
+If permission or owner metadata is being processed, you may add:
 
 ```text
-资源解析完成：
-- 候选总数：N 项
-- 可进入内容验证：N 项
-- 无移动权限：N 项
-- 移动权限未知：N 项
-- 解析失败或无读取权限：N 项
-
-下一步会对可移动资源做内容验证；不会创建或移动资源。
+Current step: resolving owner / current parent / move eligibility.
 ```
 
-### 资源解析出口门禁
+After `RESOURCE_RESOLVE` completes, output a summary:
 
-`RESOURCE_RESOLVE` 完成后必须：
+```text
+Resource resolution complete:
+- Total candidates: N items
+- Eligible for content verification: N items
+- No move permission: N items
+- Move permission unknown: N items
+- Resolution failed or no read permission: N items
 
-1. 将 `content_verify_completed` 重置为 `false`。
-2. 将下一状态设置为 `CONTENT_VERIFY`，不得设置为 `RELEVANCE_CLASSIFY` 或 `PLAN_MOVE`。
-3. 不得在本状态生成 `relevance`、`relevance_groups` 或移动计划。
-4. 即使可读取正文的资源数量为 0，也必须进入 `CONTENT_VERIFY`，为每项记录跳过验证原因并输出验证摘要。
+The next step will perform content verification on movable resources; no resources will be created or moved.
+```
 
-### 移动资格判定
+<a id="资源解析出口门禁"></a>
+### Resource Resolution Exit Gate
 
-`owner` 只能作为部分权限证据，不得单独把资源判为 `movable`。`RESOURCE_RESOLVE` 必须先按 `move_method` 记录以下独立状态：
+After `RESOURCE_RESOLVE` completes, you must:
 
-| 字段 | 说明 |
+1. Reset `content_verify_completed` to `false`.
+2. Set the next state to `CONTENT_VERIFY`, and must not set it to `RELEVANCE_CLASSIFY` or `PLAN_MOVE`.
+3. Do not generate `relevance`, `relevance_groups`, or a move plan in this state.
+4. Even if the number of resources whose body can be read is 0, you must still enter `CONTENT_VERIFY`, record a skip-verification reason for each item, and output a verification summary.
+
+<a id="移动资格判定"></a>
+### Move Eligibility Determination
+
+`owner` can only serve as partial permission evidence and must not by itself judge a resource as `movable`. `RESOURCE_RESOLVE` must first record the following independent states per `move_method`:
+
+| Field | Description |
 |------|------|
-| `source_move_state` | 当前身份是否确认可以对源资源执行对应移动；Drive owner 只可作为 Drive 源资源可管理的证据，Wiki 底层资源 owner 不能证明 Wiki 节点可移动。 |
-| `source_parent_write_state` | 当前身份是否确认可编辑源位置；仅 `drive_move` 必须确认，其他移动方式为 `not_required`。 |
-| `target_write_state` | 当前身份是否确认可写目标位置；待创建目标以父级位置的创建 / 写入权限为准。 |
+| `source_move_state` | Whether the current identity is confirmed to be able to perform the corresponding move on the source resource; Drive owner can only serve as evidence that a Drive source resource is manageable, and the owner of the underlying Wiki resource cannot prove that the Wiki node is movable. |
+| `source_parent_write_state` | Whether the current identity is confirmed to be able to edit the source location; only `drive_move` must be confirmed, and other move methods are `not_required`. |
+| `target_write_state` | Whether the current identity is confirmed to be able to write to the target location; for targets to be created, the creation / write permission of the parent location applies. |
 
-#### 按移动方式的权限矩阵
+<a id="按移动方式的权限矩阵"></a>
+#### Permission Matrix by Move Method
 
-| `move_method` | `source_move_state=confirmed` 的证据 | `source_parent_write_state` | `target_write_state` |
+| `move_method` | Evidence for `source_move_state=confirmed` | `source_parent_write_state` | `target_write_state` |
 |---------------|--------------------------------------|-----------------------------|----------------------|
-| `drive_move` | 当前用户是可靠解析出的 Drive 资源 owner，或有明确资源可管理证据 | 必须为 `confirmed` | 必须为 `confirmed` |
-| `wiki_move_docs_to_wiki` | 有明确的 Drive 文档直接迁入权限；仅 owner 元数据不足以证明可直接迁入 | `not_required` | 必须确认目标 Wiki 节点 / 空间可写 |
-| `wiki_move_node` | 有明确的 Wiki 节点 / 源空间移动权限；不得从底层资源 owner 推导 | `not_required` | 必须确认目标 Wiki 节点 / 空间可写 |
-| `wiki_move_to_drive` | 有明确的 Wiki 节点移出权限；不得从底层资源 owner 推导 | `not_required` | 必须确认目标 Drive 文件夹可写 |
+| `drive_move` | The current user is the reliably resolved owner of the Drive resource, or there is explicit evidence that the resource is manageable | Must be `confirmed` | Must be `confirmed` |
+| `wiki_move_docs_to_wiki` | There is explicit permission to directly migrate a Drive document in; owner metadata alone is insufficient to prove direct migration is possible | `not_required` | Must confirm that the target Wiki node / space is writable |
+| `wiki_move_node` | There is explicit move permission for the Wiki node / source space; it must not be inferred from the underlying resource owner | `not_required` | Must confirm that the target Wiki node / space is writable |
+| `wiki_move_to_drive` | There is explicit permission to move the Wiki node out; it must not be inferred from the underlying resource owner | `not_required` | Must confirm that the target Drive folder is writable |
 
-#### 聚合顺序
+<a id="聚合顺序"></a>
+#### Aggregation Order
 
-1. 目标方向或资源类型不支持时，设置 `move_permission_state=denied`、`move_permission_basis=["unsupported_direction"]`。
-2. 任一必需状态为 `denied` 时，设置 `move_permission_state=denied`，并在 `move_permission_basis` 记录 `source_denied`、`source_parent_denied` 或 `target_denied`。
-3. 任一必需状态为 `unknown` 时，设置 `move_permission_state=unknown`，并记录对应的 `source_unknown`、`source_parent_unknown` 或 `target_unknown`。
-4. 只有权限矩阵中的全部必需状态都为 `confirmed` 时，才能设置 `move_permission_state=movable`、`move_permission_basis=["permission_matrix_confirmed"]`。
+1. When the target direction or resource type is unsupported, set `move_permission_state=denied`, `move_permission_basis=["unsupported_direction"]`.
+2. When any required state is `denied`, set `move_permission_state=denied`, and record `source_denied`, `source_parent_denied`, or `target_denied` in `move_permission_basis`.
+3. When any required state is `unknown`, set `move_permission_state=unknown`, and record the corresponding `source_unknown`, `source_parent_unknown`, or `target_unknown`.
+4. Only when all required states in the permission matrix are `confirmed` may you set `move_permission_state=movable`, `move_permission_basis=["permission_matrix_confirmed"]`.
 
-注意：
+Notes:
 
-1. `drive permission.members auth` 不提供 `full_access` 或 `move` action；不能用 `view`、`edit`、`share` 或 `manage_public` 结果推断源位置或目标位置可写。
-2. `target_write_state=unknown|denied` 的资源不得进入高 / 中相关可执行分组或移动计划。
-3. `move_permission_state=unknown` 的资源默认不进入内容验证、相关性高 / 中分组或移动计划。
-4. 当 `owner_scope=mine` 但解析出的 owner 不是当前用户时，将该资源视为异常候选，设置 `source_move_state=unknown` 和 `move_permission_state=unknown`，不得加入移动计划。
+1. `drive permission.members auth` does not provide `full_access` or `move` action; the results of `view`, `edit`, `share`, or `manage_public` must not be used to infer that the source location or target location is writable.
+2. Resources with `target_write_state=unknown|denied` must not enter the high / medium relevance executable grouping or the move plan.
+3. Resources with `move_permission_state=unknown` by default do not enter content verification, the high / medium relevance grouping, or the move plan.
+4. When `owner_scope=mine` but the resolved owner is not the current user, treat the resource as an anomalous candidate, set `source_move_state=unknown` and `move_permission_state=unknown`, and do not add it to the move plan.
 
-## 状态：`CONTENT_VERIFY`
+<a id="状态content_verify"></a>
+## State: `CONTENT_VERIFY`
 
-进入条件：资源列表已准备。
+Entry condition: the resource list is ready.
 
-必须：
+Must:
 
-1. 本状态不可跳过，也不得与 `RESOURCE_RESOLVE` 或 `RELEVANCE_CLASSIFY` 合并；没有可读取正文的资源时仍须执行。
-2. 只在资源解析后读取支持的内容。
-3. 按数量、大小和类型能力限制读取范围。
-4. 结合搜索证据和内容证据；除非标题精确且足够强，否则不要仅凭标题判为高相关。
-5. 将不可读取资源标记为 `unverifiable` 或 `permission_denied`。
-6. 不得自动申请权限。
-7. 为每个资源写入验证状态：已读取内容证据、仅可使用搜索证据、无权限、无移动权限、移动权限未知、无法验证或不支持内容验证。
-8. 对 `move_permission_state=denied|unknown` 的资源，不再读取正文内容，写入跳过验证原因并保留召回证据；写入跳过原因属于执行本状态，不等于跳过本状态。
-9. 所有资源都有验证状态或跳过原因后，将 `content_verify_completed` 设置为 `true` 并输出验证摘要。
-10. `content_verify_completed=true` 前不得进入 `RELEVANCE_CLASSIFY`。
+1. This state cannot be skipped, and must not be merged with `RESOURCE_RESOLVE` or `RELEVANCE_CLASSIFY`; it must still be executed when there are no resources whose body can be read.
+2. Only read supported content after resource resolution.
+3. Limit the read scope by count, size, and type capability.
+4. Combine search evidence and content evidence; unless the title is exact and sufficiently strong, do not judge high relevance based on title alone.
+5. Mark unreadable resources as `unverifiable` or `permission_denied`.
+6. Do not automatically request permissions.
+7. Write a verification status for each resource: content evidence read, search evidence only available, no permission, no move permission, move permission unknown, unable to verify, or content verification unsupported.
+8. For resources with `move_permission_state=denied|unknown`, do not read the body content further; write the skip-verification reason and retain the recall evidence; writing the skip reason is part of executing this state and does not equal skipping this state.
+9. After all resources have a verification status or skip reason, set `content_verify_completed` to `true` and output a verification summary.
+10. Do not enter `RELEVANCE_CLASSIFY` before `content_verify_completed=true`.
 
-### 验证方式
+<a id="验证方式"></a>
+### Verification Methods
 
-| 资源类型 | 验证方式 |
+| Resource Type | Verification Method |
 |---------------|---------------------|
-| `docx` / `doc` | 允许时使用 `docs +fetch --api-version v2`。 |
-| `sheet` | 使用 `sheets +cells-search` 查关键词证据，或用 `sheets +cells-get` 读取有界范围。 |
-| `bitable` | 只有必要且已加载 Base 能力时验证。 |
-| `slides` | 除非具备幻灯片读取能力，否则使用元数据 / 预览 / 标题证据。 |
-| `file` | 仅在支持时使用标题、元数据、预览或导出文本。 |
-| `wiki` 节点 | 按 `obj_type` 验证底层对象；节点本身不是内容 token。 |
-| `folder` | 除非用户明确要移动容器，否则通常不作为主题证据移动。 |
+| `docx` / `doc` | Use `docs +fetch --api-version v2` when allowed. |
+| `sheet` | Use `sheets +cells-search` to look up keyword evidence, or use `sheets +cells-get` to read a bounded range. |
+| `bitable` | Verify only when necessary and Base capability has been loaded. |
+| `slides` | Unless slide reading capability is available, use metadata / preview / title evidence. |
+| `file` | Use title, metadata, preview, or exported text only when supported. |
+| `wiki` node | Verify the underlying object per `obj_type`; the node itself is not a content token. |
+| `folder` | Unless the user explicitly wants to move the container, it is usually not moved as topic evidence. |
 
-### 内容验证完成 UI
+<a id="内容验证完成-ui"></a>
+### Content Verification Complete UI
 
-完成 `CONTENT_VERIFY` 后必须输出：
+After completing `CONTENT_VERIFY`, you must output:
 
 ```text
-内容验证完成：
-- 已读取内容证据：N 项
-- 仅复用搜索证据：N 项
-- 因无权限或移动资格跳过：N 项
-- 无法验证或不支持验证：N 项
+Content verification complete:
+- Content evidence read: N items
+- Search evidence reused only: N items
+- Skipped due to no permission or move eligibility: N items
+- Unable to verify or verification unsupported: N items
 
-下一步会基于以上证据进行相关性分组；不会创建或移动资源。
+The next step will perform relevance grouping based on the above evidence; no resources will be created or moved.
 ```
 
-如果没有任何资源可以读取正文，仍须输出该摘要，并明确说明所有资源采用的搜索证据或跳过原因。
+If no resource's body can be read, this summary must still be output, and it must clearly state the search evidence or skip reason adopted for all resources.
 
-### 内容验证出口门禁
+<a id="内容验证出口门禁"></a>
+### Content Verification Exit Gate
 
-`CONTENT_VERIFY` 完成后必须：
+After `CONTENT_VERIFY` completes, you must:
 
-1. 确认 `content_verify_completed=true`，且每个 `ResourceItem` 都已有验证状态或跳过原因。
-2. 将下一状态设置为 `RELEVANCE_CLASSIFY`。
-3. 加载 [`lark-drive-workflow-topic-move-collector-review-plan.md`](lark-drive-workflow-topic-move-collector-review-plan.md)。
-4. 不得直接进入 `PLAN_MOVE`。
+1. Confirm `content_verify_completed=true`, and that every `ResourceItem` already has a verification status or skip reason.
+2. Set the next state to `RELEVANCE_CLASSIFY`.
+3. Load [`lark-drive-workflow-topic-move-collector-review-plan.md`](lark-drive-workflow-topic-move-collector-review-plan.md).
+4. Do not go directly to `PLAN_MOVE`.
 
 ## ResourceItem
 
@@ -209,23 +223,23 @@
 }
 ```
 
-| 字段 | 说明 |
+| Field | Description |
 |-------|------|
-| `canonical_token` | 内容读取、Drive 对象操作或底层对象操作使用的标准 token；Wiki 节点移动不得使用该字段。 |
-| `resource_id` | 资源解析时生成的稳定 ID，用于连接 `ResourceItem` 和 `MovePlanItem`。 |
-| `wiki_node_token` | Wiki 节点身份，用于 Wiki 节点移动。 |
-| `wiki_obj_token` | Wiki 节点背后的真实文档 token。 |
-| `current_parent_kind` / `current_parent_token` / `current_parent_space_id` | 结构化执行前父级，用于 `already_at_target` 判断和恢复；未知值不得猜测。 |
-| `current_path` | 仅用于用户展示的当前位置，不得代替父级 token。 |
-| `owner_id` | 资源 owner；Drive 资源优先来自 `drive metas batch_query`，Wiki 节点优先来自 `wiki +node-get`。 |
-| `is_owner` | 当前用户是否为资源 owner。 |
-| `permission_state` | 当前身份下的读取权限状态。 |
-| `source_move_state` | 当前身份是否确认能对源资源执行所选 `move_method`；必须按权限矩阵判断。 |
-| `source_parent_write_state` | Drive 内移动所需的源位置编辑状态；非 `drive_move` 为 `not_required`。 |
-| `move_permission_state` | 权限矩阵聚合结果；只有 `movable` 且目标写入状态为 `confirmed` 才可进入默认移动链路。 |
-| `move_permission_basis` | 移动资格判断依据，用于解释为什么纳入或排除。 |
-| `target_write_state` | 目标位置是否确认可写。 |
-| `item_resolve_status` | 资源项解析状态；不要和 `TargetLocation.target_resolve_status` 混用。 |
-| `content_verify_state` | 内容验证状态或跳过验证原因。 |
-| `content_evidence` | 支撑相关性判断的命中证据。 |
-| `relevance` | 相关性和可执行性分组。 |
+| `canonical_token` | The canonical token used for content reading, Drive object operations, or underlying object operations; this field must not be used for Wiki node moves. |
+| `resource_id` | A stable ID generated during resource resolution, used to connect `ResourceItem` and `MovePlanItem`. |
+| `wiki_node_token` | Wiki node identity, used for Wiki node moves. |
+| `wiki_obj_token` | The real document token behind the Wiki node. |
+| `current_parent_kind` / `current_parent_token` / `current_parent_space_id` | The structured pre-execution parent, used for `already_at_target` determination and recovery; unknown values must not be guessed. |
+| `current_path` | The current location for user display only, and must not replace the parent token. |
+| `owner_id` | Resource owner; for Drive resources it preferentially comes from `drive metas batch_query`, and for Wiki nodes it preferentially comes from `wiki +node-get`. |
+| `is_owner` | Whether the current user is the resource owner. |
+| `permission_state` | Read permission status under the current identity. |
+| `source_move_state` | Whether the current identity is confirmed to be able to perform the selected `move_method` on the source resource; it must be determined per the permission matrix. |
+| `source_parent_write_state` | Source location edit status required for in-Drive moves; non-`drive_move` is `not_required`. |
+| `move_permission_state` | Permission matrix aggregation result; only when `movable` and the target write status is `confirmed` may it enter the default move chain. |
+| `move_permission_basis` | The basis for the move eligibility determination, used to explain why it is included or excluded. |
+| `target_write_state` | Whether the target location is confirmed writable. |
+| `item_resolve_status` | Resource item resolution status; do not confuse it with `TargetLocation.target_resolve_status`. |
+| `content_verify_state` | Content verification status or skip-verification reason. |
+| `content_evidence` | Hit evidence supporting the relevance judgment. |
+| `relevance` | Relevance and executability grouping. |

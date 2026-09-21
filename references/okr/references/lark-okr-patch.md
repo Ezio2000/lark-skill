@@ -1,24 +1,25 @@
 # okr +patch
 
 
-部分更新 OKR 目标（Objective）或关键结果（Key Result）的 content、notes、score、deadline 字段。支持增量更新，只需提供要修改的字段。
+Partially update the content, notes, score, or deadline fields of an OKR Objective or Key Result. Supports incremental updates; only provide the fields you want to modify.
 
-## 推荐命令
+<a id="推荐命令"></a>
+## Recommended Commands
 
 ```bash
-# 更新目标的 content（默认 simple 风格，半纯文本格式）
+# Update the Objective's content (default simple style, semi-plain-text format)
 lark-cli okr +patch \
   --level objective \
   --target-id 1234567890123456789 \
   --content '{"text":"更新后的目标内容","mention":["ou_123"]}'
 
-# 更新关键结果的分数（0.0-1.0 的一位小数）
+# Update the Key Result's score (one decimal place, 0.0-1.0)
 lark-cli okr +patch \
   --level key-result \
   --target-id 2345678901234567890 \
   --score 0.7
 
-# 同时更新目标的多个字段（richtext 风格，完整 ContentBlock 格式）
+# Update multiple fields of the Objective at once (richtext style, full ContentBlock format)
 lark-cli okr +patch \
   --level objective \
   --target-id 1234567890123456789 \
@@ -28,7 +29,7 @@ lark-cli okr +patch \
   --score 0.5 \
   --deadline 1735776000000
 
-# 预览 API 调用而不实际执行
+# Preview the API call without actually executing it
 lark-cli okr +patch \
   --level objective \
   --target-id 1234567890123456789 \
@@ -36,38 +37,41 @@ lark-cli okr +patch \
   --dry-run
 ```
 
-## 参数
+<a id="参数"></a>
+## Parameters
 
-| 参数             | 必填 | 默认值       | 说明                                                                                                                                   |
+| Parameter             | Required | Default       | Description                                                                                                                                   |
 |----------------|----|-----------|--------------------------------------------------------------------------------------------------------------------------------------|
-| `--level`      | 是  | —         | 更新级别：`objective`（目标） \| `key-result`（关键结果）                                                                                    |
-| `--target-id`  | 是  | —         | 目标 ID 或关键结果 ID（int64 类型，正整数）                                                                                                         |
-| `--style`      | 否  | `simple`  | 输入风格：`simple`（半纯文本 JSON，推荐） \| `richtext`（完整 ContentBlock JSON）。请参考 [ContentBlock 格式](lark-okr-contentblock.md) 了解两种格式。          |
-| `--content`    | 否¹ | —         | 内容。根据 `--style` 指定格式。支持 `@文件路径` 从文件读取。                                                                                                |
-| `--notes`      | 否¹ | —         | 备注（仅 `--level=objective` 时支持）。根据 `--style` 指定格式。支持 `@文件路径` 从文件读取。                                                                           |
-| `--score`      | 否¹ | —         | 分数值，0-1 之间，最多一位小数（如 0.5、1.0）。                                                                                                            |
-| `--deadline`   | 否¹ | —         | 截止时间，毫秒级时间戳（如 1735776000000）。                                                                                                      |
-| `--user-id-type` | 否  | `open_id` | 用户 ID 类型：`open_id` \| `union_id` \| `user_id`                                                                                        |
-| `--dry-run`    | 否  | —         | 预览 API 调用而不实际执行。                                                                                                                     |
-| `--format`     | 否  | `json`    | 输出格式。                                                                                                                                |
+| `--level`      | Yes  | —         | Update level: `objective` (Objective) \| `key-result` (Key Result)                                                                                    |
+| `--target-id`  | Yes  | —         | Objective ID or Key Result ID (int64 type, positive integer)                                                                                                         |
+| `--style`      | No  | `simple`  | Input style: `simple` (semi-plain-text JSON, recommended) \| `richtext` (full ContentBlock JSON). Please refer to [ContentBlock Format](lark-okr-contentblock.md) to learn about the two formats.          |
+| `--content`    | No¹ | —         | Content. Format specified according to `--style`. Supports `@文件路径` to read from a file.                                                                                                |
+| `--notes`      | No¹ | —         | Notes (only supported when `--level=objective`). Format specified according to `--style`. Supports `@文件路径` to read from a file.                                                                           |
+| `--score`      | No¹ | —         | Score value, between 0-1, at most one decimal place (e.g., 0.5, 1.0).                                                                                                            |
+| `--deadline`   | No¹ | —         | Deadline, millisecond-level timestamp (e.g., 1735776000000).                                                                                                      |
+| `--user-id-type` | No  | `open_id` | User ID type: `open_id` \| `union_id` \| `user_id`                                                                                        |
+| `--dry-run`    | No  | —         | Preview the API call without actually executing it.                                                                                                                     |
+| `--format`     | No  | `json`    | Output format.                                                                                                                                |
 
-> ¹ 至少需要提供 `--content`、`--notes`、`--score`、`--deadline` 中的一个字段。
+> ¹ At least one of `--content`, `--notes`, `--score`, `--deadline` must be provided.
 
-## 工作流程
+<a id="工作流程"></a>
+## Workflow
 
-1. 使用 `+cycle-list` 和 `+cycle-detail` 获取目标或关键结果的 ID。
-2. 确定要更新的字段：
-   - **content/notes**：构造内容
-     - **推荐**：使用 `simple` 风格（默认），构造 SemiPlainContent JSON：`{"text":"内容","mention":["ou_xxx"]}`
-     - 如需复杂格式：使用 `richtext` 风格，构造 ContentBlock JSON。请参考 [ContentBlock 格式](lark-okr-contentblock.md)。
-   - **score**：0-1 之间的数字，最多一位小数（如 0.3、0.7、1.0）
-   - **deadline**：毫秒级时间戳
-3. 执行 `lark-cli okr +patch --level objective --target-id "..." --content "..."`。
-4. 报告结果：更新的级别、目标 ID、以及哪些字段被更新。
+1. Use `+cycle-list` and `+cycle-detail` to obtain the Objective or Key Result ID.
+2. Determine the fields to update:
+   - **content/notes**: Construct the content
+     - **Recommended**: Use `simple` style (default), construct SemiPlainContent JSON: `{"text":"内容","mention":["ou_xxx"]}`
+     - For complex formats: Use `richtext` style, construct ContentBlock JSON. Please refer to [ContentBlock Format](lark-okr-contentblock.md).
+   - **score**: A number between 0-1, at most one decimal place (e.g., 0.3, 0.7, 1.0)
+   - **deadline**: Millisecond-level timestamp
+3. Execute `lark-cli okr +patch --level objective --target-id "..." --content "..."`.
+4. Report the result: the updated level, Objective ID, and which fields were updated.
 
-## 输出
+<a id="输出"></a>
+## Output
 
-返回 JSON：
+Returns JSON:
 
 ```json
 {
@@ -82,22 +86,25 @@ lark-cli okr +patch \
 }
 ```
 
-其中 `patched` 对象中的每个字段表示该字段是否被更新。
+Each field in the `patched` object indicates whether that field was updated.
 
-## 注意事项
+<a id="注意事项"></a>
+## Notes
 
-- **`--notes` 仅适用于目标**：关键结果（key-result）不支持 notes 字段，使用时会报错。
-- **score 格式**：必须在 0-1 之间，且最多一位小数（如 0.5 正确，0.51 错误）。
-- **严格验证**：输入格式严格根据 `--style` 值验证，不会自动检测。使用 ContentBlock JSON 时必须指定 `--style richtext`。
-- **simple 风格输入限制**：simple 风格的输入不支持 `docs` 和 `images` 字段，如需包含文档或图片请使用 `richtext` 风格。
+- **`--notes` only applies to Objectives**: Key Results (key-result) do not support the notes field; using it will cause an error.
+- **score format**: Must be between 0-1, with at most one decimal place (e.g., 0.5 is correct, 0.51 is incorrect).
+- **Strict validation**: The input format is strictly validated according to the `--style` value and is not auto-detected. When using ContentBlock JSON, you must specify `--style richtext`.
+- **simple style input limitations**: simple style input does not support the `docs` and `images` fields. If you need to include documents or images, use `richtext` style.
 
-## 关于 1001001 错误
+<a id="关于-1001001-错误"></a>
+## About the 1001001 Error
 
-有时，当你涉及修改目标或关键结果的分数时，即使输入的参数完全正确， +patch 也会返回 1001001 错误(invalid parameters)。
-这可能是因为在用户的租户设置中停用了目标/关键结果的分数功能，或禁用了目标分数的手动计算。此时可以先去掉 --score 参数再修改，并向用户确认是否启用了对应的功能。
+Sometimes, when you are modifying the score of an Objective or Key Result, +patch returns a 1001001 error (invalid parameters) even if the input parameters are completely correct.
+This may be because the score feature for Objectives/Key Results is disabled in the user's tenant settings, or manual calculation of Objective scores is disabled. In this case, you can first remove the --score parameter and try again, and confirm with the user whether the corresponding feature is enabled.
 
-## 参考
+<a id="参考"></a>
+## References
 
-- [lark-okr](../index.md) -- 所有 OKR 命令(shortcut 和 API 接口)
-- [ContentBlock 格式](lark-okr-contentblock.md) -- content/notes 使用的富文本格式
-- [lark-shared](../../shared/index.md) -- 认证和全局参数
+- [lark-okr](../index.md) -- All OKR commands (shortcuts and API interfaces)
+- [ContentBlock Format](lark-okr-contentblock.md) -- The rich text format used by content/notes
+- [lark-shared](../../shared/index.md) -- Authentication and global parameters

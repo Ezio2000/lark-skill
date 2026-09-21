@@ -1,39 +1,43 @@
-# Genre Contract: Technical Document / 技术文档 (`workplace.technical_doc`)
+<a id="genre-contract-technical-document--技术文档-workplacetechnical_doc"></a>
+# Genre Contract: Technical Document (`workplace.technical_doc`)
 
-## 体裁规则表（硬约束）
+<a id="体裁规则表硬约束"></a>
+## Genre Rules Table (Hard Constraints)
 
-| 规则项 | 规则 |
+| Rule Item | Rule |
 |-|-|
-| 写作风格 | 精确、可证伪、术语与版本稳定；规范词仅用于明确采用的互操作、安全或验收语义 |
-| 视觉约束 | 在有明确内容作用时用代码、表格、架构 / 状态 / 时序图等组件降低实现与诊断成本，但不得替代契约、证据或操作说明 |
-| 内容逻辑 | 必须且只能选 design_rfc、api_reference、incident_diagnostic 一种主模式；分别按“证据 → 取舍 / 设计 → 验收”“契约 → 错误 / 兼容”“影响 → 假设 / 检查 → 验证 / 升级”推进 |
-| 事实 / 边界 | 标对象、环境、版本、时间、范围和证据窗；事实、推断、决定、未知分开；示例 / 图不替代契约；任何改状态动作须有授权、影响、停止、还原和恢复验证，关键缺口按 reader impact 处理 |
-| 错误 | 按关键词路由、三模式混写、设计无取舍 / 验收、reference 漏权限 / 错误 / 生命周期 / 兼容、未知故障直接定根因、改状态无授权 / 停止 / 还原或图作唯一证据，任一出现即失败 |
+| Writing Style | Precise, falsifiable, stable terminology and versions; normative words are used only for explicitly adopted interoperability, security, or acceptance semantics |
+| Visual Constraints | Use components such as code, tables, architecture / state / sequence diagrams when they have a clear content role to reduce implementation and diagnostic costs, but they must not replace contracts, evidence, or operational instructions |
+| Content Logic | Must and can only choose one primary mode among design_rfc, api_reference, incident_diagnostic; advance respectively according to "evidence → trade-offs / design → acceptance", "contract → errors / compatibility", and "impact → hypotheses / checks → verification / escalation" |
+| Facts / Boundaries | Mark object, environment, version, time, scope, and evidence window; separate facts, inferences, decisions, and unknowns; examples / diagrams do not replace contracts; any state-changing action must have authorization, impact, stop, rollback, and recovery verification, and key gaps are handled according to reader impact |
+| Errors | Routing by keywords, mixing the three modes, design without trade-offs / acceptance, reference missing permissions / errors / lifecycle / compatibility, directly determining root cause for unknown failures, state changes without authorization / stop / rollback, or diagrams as the sole evidence — any occurrence is a failure |
 
-## 先选唯一主模式
+<a id="先选唯一主模式"></a>
+## First Choose the Single Primary Mode
 
-| 主模式 | 读者任务 | 排除 |
+| Primary Mode | Reader Task | Exclusions |
 |-|-|-|
-| `design_rfc` | 评审者能批准并实现未来技术状态，理解替代、后果和验收 | 产品可观察行为走 PRD；既定路径走 SOP |
-| `api_reference` | 调用者无需猜版本、权限、输入、行为、副作用、错误与生命周期 | 仍在讨论接口取舍时走 design_rfc |
-| `incident_diagnostic` | 响应者以安全、有区分度的动作缩小未知、止损、恢复或升级 | 单纯团队学习走 Retrospective；已知重复处置走 SOP |
+| `design_rfc` | Reviewers can approve and implement a future technical state, understanding alternatives, consequences, and acceptance | Product-observable behavior goes to PRD; established paths go to SOP |
+| `api_reference` | Callers do not need to guess version, permissions, input, behavior, side effects, errors, and lifecycle | When interface trade-offs are still under discussion, go to design_rfc |
+| `incident_diagnostic` | Responders use safe, differentiated actions to narrow unknowns, stop loss, recover, or escalate | Pure team learning goes to Retrospective; known repeated handling goes to SOP |
 
-## 共同证据边界
+<a id="共同证据边界"></a>
+## Common Evidence Boundaries
 
-标明对象、环境、版本、时间、范围 / 前置和证据位置 / 窗口；结论回链仓库、IDL / schema、日志、metrics、traces、变更记录或验证实验。缺口就近使用具体占位、收窄或 `blocked`；数据分级、访问、保留、重放、owner、时限和升级只在适用时形成门禁。
+Mark object, environment, version, time, scope / preconditions, and evidence location / window; conclusions link back to repositories, IDL / schema, logs, metrics, traces, change records, or verification experiments. For gaps, use specific placeholders, narrowing, or `blocked` nearby; data classification, access, retention, replay, owner, time limits, and escalation form gates only when applicable.
 
-代码与命令示例须实际验证并标环境 / 版本；架构、状态或时序图必须附文字等价，不能成为唯一证据或唯一操作说明。
+Code and command examples must be actually verified and marked with environment / version; architecture, state, or sequence diagrams must have textual equivalents and must not become the sole evidence or sole operational instructions.
 
 ## Design RFC
 
-按问题证据 → 目标 / 非目标 → 约束 / 不变量 → 真实备选与同口径取舍 → 接口 / 数据 / 状态设计 → 失败、安全、兼容与迁移 → 上线 / rollback → 可观测性、测试 / 验收 → 未决决定推进。每项关键决定写 why、被否方案及后果；不得隐藏低置信度或版本偏差。
+Advance according to problem evidence → goals / non-goals → constraints / invariants → real alternatives and trade-offs under the same criteria → interface / data / state design → failures, security, compatibility, and migration → launch / rollback → observability, testing / acceptance → unresolved decisions. For each key decision, write the why, rejected options, and consequences; do not hide low confidence or version deviations.
 
 ## API Reference
 
-写清版本 / 环境 / 权限 / 签名、输入约束、行为 / 副作用 / 幂等、输出、已知错误及可操作恢复、限流 / 分页 / 重试、兼容 / 弃用。事件、异步、CLI、SDK、流式按需补 channel / message、交付 / 顺序、生命周期 / 耗尽、I/O、取消与背压；未知语义明确 unspecified，不从示例推断承诺。
+Clearly write version / environment / permissions / signatures, input constraints, behavior / side effects / idempotency, output, known errors and actionable recovery, rate limiting / pagination / retries, compatibility / deprecation. For events, async, CLI, SDK, and streaming, supplement as needed with channel / message, delivery / ordering, lifecycle / exhaustion, I/O, cancellation, and backpressure; explicitly mark unknown semantics as unspecified, and do not infer commitments from examples.
 
 ## Incident Diagnostic
 
-按影响与 expected / actual → 当前状态与证据链 → 可证伪假设 → 信息增益高且副作用低的检查 → 止损 / 恢复验证 → 升级与后续 RCA 推进。每项检查写预期观察及其支持 / 排除的假设。
+Advance according to impact and expected / actual → current state and evidence chain → falsifiable hypotheses → checks with high information gain and low side effects → stop loss / recovery verification → escalation and follow-up RCA. For each check, write the expected observation and the hypotheses it supports / rules out.
 
-修改状态前必须确认授权、目标范围、潜在副作用、停止条件、还原路径和恢复判据；分开止损、根因与永久修复。缺证据、授权、owner、还原或升级路径时只给安全只读检查并 `blocked`；涉及安全 / 法务时先保全证据和升级。
+Before changing state, you must confirm authorization, target scope, potential side effects, stop conditions, rollback path, and recovery criteria; separate stop loss, root cause, and permanent fix. When evidence, authorization, owner, rollback, or escalation path is missing, provide only safe read-only checks and `blocked`; when security / legal matters are involved, first preserve evidence and escalate.

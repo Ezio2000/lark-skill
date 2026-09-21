@@ -1,28 +1,33 @@
-# whiteboard +export（导出画板）
+<a id="whiteboard-export导出画板"></a>
+# whiteboard +export (Export Whiteboard)
 
 
-导出画板内容，支持导出为预览图片、SVG 矢量图、提取 PlantUML/Mermaid 代码，或获取飞书 OpenAPI 原生画板节点格式。
+Export whiteboard content. Supports exporting as a preview image, SVG vector graphic, extracting PlantUML/Mermaid code, or retrieving the Feishu OpenAPI native whiteboard node format.
 
-## 参数
+<a id="参数"></a>
+## Parameters
 
-| 参数                   | 必填 | 说明                                                                     |
+| Parameter                   | Required | Description                                                                     |
 |----------------------|----|------------------------------------------------------------------------|
-| `--whiteboard-token` | 是  | 画板 token，需要拥有画板的读权限                                                    |
-| `--output-type`      | 是  | 输出格式：`preview`（预览图片）、`svg`（SVG 矢量图）、`source`（PlantUML/Mermaid 代码）、`raw`（OpenAPI 原生画板节点格式） |
-| `--output`           | 否  | 输出路径。当 `--output-type preview` 时必填；当 `--output-type svg/source/raw` 时可选，不填则直接输出到终端 |
-| `--overwrite`        | 否  | 覆盖已存在的文件，默认为 false                                                     |
+| `--whiteboard-token` | Yes  | Whiteboard token. Requires read permission for the whiteboard                                                    |
+| `--output-type`      | Yes  | Output format: `preview` (preview image), `svg` (SVG vector graphic), `source` (PlantUML/Mermaid code), `raw` (OpenAPI native whiteboard node format) |
+| `--output`           | No  | Output path. Required when `--output-type preview`; optional when `--output-type svg/source/raw`, if not provided, output directly to the terminal |
+| `--overwrite`        | No  | Overwrite existing files. Defaults to false                                                     |
 
-## 输出格式
+<a id="输出格式"></a>
+## Output Formats
 
-- `preview`：预览图片。保存时会根据接口实际返回的 `Content-Type` 决定扩展名，例如 `image/jpeg` 会保存为 `.jpg`。
-- `svg`：导出画板为标准 SVG 矢量图。可用于 SVG 编辑后回写画板（见 [`routes/svg-edit.md`](../routes/svg-edit.md)）。注意：导出为纯视觉快照，思维导图层级、表格结构、连接器绑定等语义信息会丢失。
-- `source`：PlantUML/Mermaid 代码。仅限画板内有且仅有一个 PlantUML/Mermaid 图时，才可导出代码，否则会在返回值中告知不存在/有多个节点。
-- `raw`：飞书 OpenAPI 原生画板节点格式。这一 json 格式不适合直接编辑复杂布局或内容，建议仅限于需要修改简单的文本内容/颜色等细节时使用。需要进行更复杂的设计/修改时，建议参考 [§ 编辑 Workflow](lark-whiteboard-workflow.md#编辑-workflow)。
-  - **需编辑后回写时，导出务必加 `--output <file>` 写入文件**：文件内容可直接作为 `+update` 的输入；直接输出到终端的结果会多一层 `{ ok, identity, data }` 包装，`+update` 无法解析。
+- `preview`: Preview image. When saving, the extension is determined by the actual `Content-Type` returned by the API. For example, `image/jpeg` will be saved as `.jpg`.
+- `svg`: Export the whiteboard as a standard SVG vector graphic. Can be used to write back to the whiteboard after SVG editing (see [`routes/svg-edit.md`](../routes/svg-edit.md)). Note: The export is a purely visual snapshot; semantic information such as mind map hierarchy, table structure, and connector bindings will be lost.
+- `source`: PlantUML/Mermaid code. Code can only be exported when there is exactly one PlantUML/Mermaid diagram in the whiteboard; otherwise the return value will indicate that no node exists or there are multiple nodes.
+- `raw`: Feishu OpenAPI native whiteboard node format. This JSON format is not suitable for directly editing complex layouts or content. It is recommended to use it only when you need to modify simple details such as text content or colors. For more complex design/modification needs, refer to [§ Editing Workflow](lark-whiteboard-workflow.md#编辑-workflow).
+  - **When editing and writing back is needed, be sure to add `--output <file>` when exporting to write to a file**: The file content can be used directly as input for `+update`; results output directly to the terminal will have an extra layer of `{ ok, identity, data }` wrapping, which `+update` cannot parse.
 
-## 示例
+<a id="示例"></a>
+## Examples
 
-### 示例 1：导出画板为预览图片
+<a id="示例-1导出画板为预览图片"></a>
+### Example 1: Export whiteboard as a preview image
 
 ```bash
 lark-cli whiteboard +export \
@@ -31,7 +36,8 @@ lark-cli whiteboard +export \
   --output ./preview
 ```
 
-### 示例 2：提取画板中的代码并直接输出
+<a id="示例-2提取画板中的代码并直接输出"></a>
+### Example 2: Extract code from the whiteboard and output directly
 
 ```bash
 lark-cli whiteboard +export \
@@ -39,7 +45,8 @@ lark-cli whiteboard +export \
   --output-type source
 ```
 
-### 示例 3：导出画板为 SVG 矢量图
+<a id="示例-3导出画板为-svg-矢量图"></a>
+### Example 3: Export whiteboard as an SVG vector graphic
 
 ```bash
 lark-cli whiteboard +export \
@@ -49,7 +56,8 @@ lark-cli whiteboard +export \
   --as user
 ```
 
-### 示例 4：导出画板原始节点结构到文件
+<a id="示例-4导出画板原始节点结构到文件"></a>
+### Example 4: Export the whiteboard's raw node structure to a file
 
 ```bash
 lark-cli whiteboard +export \

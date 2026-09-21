@@ -22,6 +22,6 @@ jobs:
           version: "0.12.7"
           python-version: ${{ matrix.python }}
       - run: uv sync --locked --group dev --extra dataframe
-      - run: uv run --locked --extra dataframe python scripts/check_skill.py
+      - run: uv run --locked --extra dataframe python scripts/check_skill.py --english
       - run: uv run --locked --extra dataframe python -m unittest discover -s tests -p "test_*.py"
       - run: uv run --locked python -m unittest discover -s references/slides/scripts -p "*_test.py"

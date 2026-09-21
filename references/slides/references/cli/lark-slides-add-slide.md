@@ -1,59 +1,63 @@
-# slides +add-slide（向已有演示文稿追加/插入单页）
+<a id="slides-add-slide向已有演示文稿追加插入单页"></a>
+# slides +add-slide (append/insert a single page into an existing presentation)
 
-向已有演示文稿添加**一页**。这是两步创建流程的第二步：先 `+create` 建空壳，再逐页 `+add-slide`；也用于给已有 PPT 追加新页。
+Add **one page** to an existing presentation. This is the second step of the two-step creation flow: first `+create` to create an empty shell, then `+add-slide` page by page; it is also used to append new pages to an existing PPT.
 
-`--presentation` 接受 token / `/slides/` URL / `/wiki/` URL（wiki 自动解析），`--slide` 直接收 XML（支持 `@file` 和 stdin，复杂 XML 走文件可绕开 shell 转义），`<img src="@./local.png">` 占位符自动上传并替换成 `file_token`。
+`--presentation` accepts a token / `/slides/` URL / `/wiki/` URL (wiki is resolved automatically), `--slide` takes XML directly (supports `@file` and stdin; complex XML can go through a file to bypass shell escaping), and `<img src="@./local.png">` placeholders are automatically uploaded and replaced with `file_token`.
 
-**CRITICAL — 提交前必须先跑版式 lint**：把待提交的 `<slide>` XML 存成本地文件，运行 [`scripts/xml_lint.py`](../../scripts/xml_lint.py)，`summary.error_count` 必须为 0。
+**CRITICAL — you must run the layout lint before submitting**: save the `<slide>` XML to be submitted as a local file, run [`scripts/xml_lint.py`](../../scripts/xml_lint.py), and `summary.error_count` must be 0.
 
-## 命令
+<a id="命令"></a>
+## Command
 
 ```bash
-# 追加到末尾（XML 直接作为参数）
+# Append to the end (XML passed directly as an argument)
 lark-cli slides +add-slide --as user \
   --presentation "$PRES_ID" \
   --slide '<slide xmlns="https://www.larkoffice.com/sml/2.0"><data></data></slide>'
 
-# XML 从文件读（推荐：避免 shell 转义和长参数截断）
+# Read XML from a file (recommended: avoids shell escaping and long-argument truncation)
 lark-cli slides +add-slide --as user \
   --presentation "$PRES_ID" \
   --slide @page3.xml
 
-# XML 从 stdin 读
+# Read XML from stdin
 cat page3.xml | lark-cli slides +add-slide --as user --presentation "$PRES_ID" --slide -
 
-# 插到某页之前
+# Insert before a certain page
 lark-cli slides +add-slide --as user \
   --presentation "$PRES_ID" \
   --slide @cover.xml \
   --before-slide-id "$SID"
 
-# wiki 链接（CLI 自动通过 node_by_token 接口解析，并校验 obj_type=slides）
+# wiki link (the CLI automatically resolves it through the node_by_token interface and verifies obj_type=slides)
 lark-cli slides +add-slide --as user \
   --presentation "https://xxx.feishu.cn/wiki/wikcnXXXXXX" \
   --slide @page3.xml
 
-# 预览请求，不实际写入
+# Preview the request without actually writing
 lark-cli slides +add-slide --presentation "$PRES_ID" --slide @page3.xml --dry-run
 ```
 
-## 参数
+<a id="参数"></a>
+## Parameters
 
-| 参数 | 必需 | 说明 |
+| Parameter | Required | Description |
 |------|------|------|
-| `--presentation` | 是 | `xml_presentation_id`、`/slides/` URL 或 `/wiki/` URL |
-| `--slide` | 是 | 一个完整的 `<slide>...</slide>` 文档；支持字面量、`@file`、stdin `-` |
-| `--before-slide-id` | 否 | 插到该 `slide_id` 之前；**不传就是追加到末尾** |
-| `--revision-id` | 否 | 演示文稿版本号，默认 `-1`（最新）；传具体版本号做乐观锁 |
-| `--dry-run` | 否 | 打印将要发起的请求（含图片上传步骤），不写入 |
+| `--presentation` | Yes | `xml_presentation_id`, `/slides/` URL, or `/wiki/` URL |
+| `--slide` | Yes | One complete `<slide>...</slide>` document; supports a literal, `@file`, or stdin `-` |
+| `--before-slide-id` | No | Insert before that `slide_id`; **if not passed, it is appended to the end** |
+| `--revision-id` | No | Presentation version number, defaults to `-1` (latest); pass a specific version number for optimistic locking |
+| `--dry-run` | No | Print the request that will be made (including the image upload step) without writing |
 
-`@file` 路径**必须在 CWD 内**（如 `@./plan/page3.xml`）；绝对路径和 `../` 会被拒绝并报 `unsafe file path`。
+The `@file` path **must be within the CWD** (such as `@./plan/page3.xml`); absolute paths and `../` are rejected and report `unsafe file path`.
 
-## 本地图片：`@路径` 占位符
+<a id="本地图片路径-占位符"></a>
+## Local images: `@路径` placeholders
 
-XML 里写 `<img src="@./chart.png" .../>`，CLI 会：先把每个不重复的本地文件上传到这份演示文稿（`parent_type=slide_file`），再把 `src` 替换成返回的 `file_token`，最后才提交页面。
+Write `<img src="@./chart.png" .../>` in the XML, and the CLI will: first upload each unique local file to this presentation (`parent_type=slide_file`), then replace `src` with the returned `file_token`, and only then submit the page.
 
-占位符路径按**执行命令时的 CWD** 解析，跟 `--slide @file` 所在目录无关；`@./assets/x.png` 找的是 `$PWD/assets/x.png`。
+Placeholder paths are resolved according to the **CWD at the time the command is executed**, regardless of the directory where `--slide @file` is located; `@./assets/x.png` looks for `$PWD/assets/x.png`.
 
 ```bash
 lark-cli slides +add-slide --as user \
@@ -61,10 +65,11 @@ lark-cli slides +add-slide --as user \
   --slide '<slide xmlns="https://www.larkoffice.com/sml/2.0"><data><img src="@./chart.png" topLeftX="100" topLeftY="100" width="320" height="180"/></data></slide>'
 ```
 
-- 文件不存在、不是普通文件、超过 20 MB，都在**调用任何接口之前**报错，不会留下半成品。
-- 去重只在**单次调用内**生效：多页共用同一张图时，逐页循环会把它每页重传一次。这种图先用 [`+media-upload`](lark-slides-media-upload.md) 传一次，把 `file_token` 写进各页的 `src`。
+- If the file does not exist, is not a regular file, or exceeds 20 MB, an error is reported **before calling any interface**, leaving no partial result.
+- Deduplication only takes effect **within a single call**: when multiple pages share the same image, looping page by page will re-upload it once per page. For such images, first use [`+media-upload`](lark-slides-media-upload.md) to upload it once, and write `file_token` into each page's `src`.
 
-## 成功输出
+<a id="成功输出"></a>
+## Success output
 
 ```json
 {
@@ -77,16 +82,17 @@ lark-cli slides +add-slide --as user \
 }
 ```
 
-| 字段 | 说明 |
+| Field | Description |
 |------|------|
-| `slide_id` | 新创建页面的唯一标识 |
-| `issues` | 字符串，**只在服务端丢弃过内容时才出现**：页面创建成功，但括号里列出的标签/属性没写进去。出现就必须 `+screenshot` 复核，别当纯警告忽略；干净提交时这个字段不返回 |
+| `slide_id` | Unique identifier of the newly created page |
+| `issues` | String, **only appears when the server has discarded content**: the page was created successfully, but the tags/attributes listed in the parentheses were not written in. If it appears, you must `+screenshot` and review it; do not ignore it as a mere warning; this field is not returned on a clean submission |
 
-## 常见错误
+<a id="常见错误"></a>
+## Common errors
 
-| 现象 | 原因 | 解决 |
+| Symptom | Cause | Solution |
 |------|------|------|
-| `--slide is not a single complete <slide> document` | 传了 `<presentation>` 整份 XML，或多个 `<slide>` 拼在一起 | 一次只传一页，根元素必须是 `<slide>` |
-| `--slide cannot be empty` | `@file` 指向空文件，或 stdin 没内容 | 检查文件内容 |
-| 3350001 | XML 结构/转义有问题；**或 `--before-slide-id` 不是有效 `slide_id`** | 优先改用 `--slide @file` 绕开 shell 转义；插页失败先 `+xml-get` 回读确认 `slide_id`；再按 [workflow/error-handling.md](../workflow/error-handling.md) 排查 |
-| 1061004 / 403 | 当前身份对这份 PPT 没有编辑权限 | 检查是否拥有 `slides:presentation:update` 或 `slides:presentation:write_only` scope；wiki 链接另需 `wiki:node:read`，`@` 占位符另需 `docs:document.media:upload`；`--as bot` 还要求该 bot 对目标 PPT 有编辑权限 |
+| `--slide is not a single complete <slide> document` | Passed the entire XML of `<presentation>`, or concatenated multiple `<slide>` together | Pass only one page at a time; the root element must be `<slide>` |
+| `--slide cannot be empty` | `@file` points to an empty file, or stdin has no content | Check the file content |
+| 3350001 | The XML structure/escaping has a problem; **or `--before-slide-id` is not a valid `slide_id`** | Prefer switching to `--slide @file` to bypass shell escaping; if page insertion fails, first `+xml-get` to read back and confirm `slide_id`; then troubleshoot according to [workflow/error-handling.md](../workflow/error-handling.md) |
+| 1061004 / 403 | The current identity does not have edit permission for this PPT | Check whether you have the `slides:presentation:update` or `slides:presentation:write_only` scope; wiki links additionally require `wiki:node:read`, `@` placeholders additionally require `docs:document.media:upload`; `--as bot` also requires that the bot has edit permission for the target PPT |

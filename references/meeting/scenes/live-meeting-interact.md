@@ -1,101 +1,109 @@
-# 读取会中事件与会中互动
+<a id="读取会中事件与会中互动"></a>
+# Read in-meeting events and in-meeting interactions
 
-围绕一场正在进行的会议执行只读查询或用户明确授权的会中写操作。真实入会/离会使用应用机器人入会场景；已结束会议和会后产物使用会议查询场景。
+Perform read-only queries or in-meeting write operations explicitly authorized by the user for an ongoing meeting. Use the app bot join scenario for real join/leave; use the meeting query scenario for ended meetings and post-meeting artifacts.
 
-如果任务包含“应用机器人入会后继续拉取事件或互动”，只读取并执行 [应用机器人参会与会中互动](live-meeting-attend.md) 的完整流程，不要在两个场景之间来回切换。
+If the task includes "after the app bot joins, continue to fetch events or interactions," only read and execute the complete flow of [App bot participation and in-meeting interactions](live-meeting-attend.md); do not switch back and forth between the two scenarios.
 
-## 发现进行中的会议
+<a id="发现进行中的会议"></a>
+## Discover ongoing meetings
 
-没有 `meeting_id` 时，按用户需要的视角查询：
+When there is no `meeting_id`, query by the perspective the user needs:
 
 ```bash
-# 当前登录用户正在参加的会议
+# Meetings the currently logged-in user is attending
 lark-cli vc +meeting-list-active --as user --format json
 
-# 目标用户正在参加、且应用机器人也在会中的会议
+# Meetings the target user is attending and where the app bot is also in the meeting
 lark-cli vc +meeting-list-active --as bot --user-id <open_id> --format json
 ```
 
-- `--user-id` 必须是目标用户的 `ou_` open_id。
-- 应用身份返回空不代表目标用户没有在开会，只代表没有找到目标用户与应用机器人同时在会中的会议。
-- 返回多个会议时，展示标题、会议号和 `meeting_id` 让用户选择，不按“最近”擅选。
-- 用户只给 9 位会议号时，在活跃会议结果中按 `meeting_no` 匹配；匹配失败时不要自动入会。
-- `meeting_id` 从哪种身份取得，后续读取事件、发送消息和操作倒计时就沿用哪种身份。
+- `--user-id` must be the target user's `ou_` open_id.
+- An empty result for the app identity does not mean the target user is not in a meeting; it only means no meeting was found where the target user and the app bot are both in the meeting.
+- When multiple meetings are returned, show the title, meeting number, and `meeting_id` for the user to choose; do not arbitrarily pick the "most recent" one.
+- When the user provides only a 9-digit meeting number, match it by `meeting_no` in the active meeting results; if matching fails, do not automatically join the meeting.
+- Whichever identity `meeting_id` is obtained from, use that same identity for subsequent event reads, message sending, and countdown operations.
 
-身份可见范围和会议号匹配见 [`lark-vc-meeting-list-active`](../references/lark-vc-meeting-list-active.md)。
+For identity visibility scope and meeting number matching, see [`lark-vc-meeting-list-active`](../references/lark-vc-meeting-list-active.md).
 
-## 读取最新会中事件
+<a id="读取最新会中事件"></a>
+## Read the latest in-meeting events
 
 ```bash
 lark-cli vc +meeting-events --as <same_identity> --meeting-id <meeting_id> --page-all --format pretty
 ```
 
-- 默认使用 `--page-all` 获取当前完整事件流，并保留返回的 `page_token` 供下次增量查询。
-- 回答“现在、刚刚、最新”或当前会议总结前，重新查询事件；只有用户明确要求基于历史快照时才复用旧结果。
-- 默认用 pretty 理解时间线；需要精确结构化字段、文档上下文或转发到 IM 时使用 JSON。
-- 不要用会中事件代替已结束会议的参会人快照或会后复盘。
+- By default, use `--page-all` to get the current complete event stream, and keep the returned `page_token` for the next incremental query.
+- Before answering "now, just now, latest" or summarizing the current meeting, re-query the events; reuse old results only when the user explicitly asks for a historical snapshot.
+- By default, use pretty to understand the timeline; use JSON when precise structured fields, document context, or forwarding to IM is needed.
+- Do not use in-meeting events as a substitute for participant snapshots of ended meetings or post-meeting reviews.
 
-事件类型、分页、五分钟窗口和错误码见 [`lark-vc-meeting-events`](../references/lark-vc-meeting-events.md)。
+For event types, pagination, the five-minute window, and error codes, see [`lark-vc-meeting-events`](../references/lark-vc-meeting-events.md).
 
-## 读取共享内容和文档上下文
+<a id="读取共享内容和文档上下文"></a>
+## Read shared content and document context
 
-按事件中的 `share_id`、`share_doc`、`comment_id`、`element_token` 和 `block_id` 精确关联：
+Precisely associate by `share_id`, `share_doc`, `comment_id`, `element_token`, and `block_id` in the event:
 
-- 读取评论时只查询当前 `comment_id`，不要扫描整篇文档评论。
-- 多个共享文档按用户问题选择相关文档；不要用“最近一次共享”替代当前 item 的 `share_id`。
-- 只有用户明确要求预览且事件提供受支持的 `element_type` 与 token 时才下载，并显式选择输出路径。
-- 关联或读取失败时标记 partial，保留原始标识和 raw payload；不要自动下载或猜测文档类型兜底。
+- When reading comments, query only the current `comment_id`; do not scan comments across the entire document.
+- For multiple shared documents, select the relevant document based on the user's question; do not use "the most recent share" as a substitute for the current item's `share_id`.
+- Download only when the user explicitly requests a preview and the event provides a supported `element_type` and token, and explicitly choose the output path.
+- If association or reading fails, mark it partial and preserve the original identifier and raw payload; do not automatically download or guess the document type as a fallback.
 
-精确事件 schema 和后续命令见 [`lark-vc-meeting-events`](../references/lark-vc-meeting-events.md) 的文档上下文部分。
+For the precise event schema and subsequent commands, see the document context section of [`lark-vc-meeting-events`](../references/lark-vc-meeting-events.md).
 
-## 读取当前会议画面
+<a id="读取当前会议画面"></a>
+## Read the current meeting view
 
-仅当用户的问题必须读取当前会议合成画面中的视觉信息，且结构化内容不足以回答时读取画面。适用任务包括识别投屏中实际显示的网页地址、界面状态或报错，理解图表、幻灯片等依赖版式或图像的信息，以及查看摄像头画面。
+Read the view only when the user's question must read visual information from the current meeting composite view and the structured content is insufficient to answer. Applicable tasks include identifying the web address, interface state, or error actually displayed on screen share, understanding information that depends on layout or images such as charts and slides, and viewing the camera feed.
 
-事件、字幕、聊天或可直接读取的共享文档已经足够回答时，不要截图；会议内容查询、总结或共享文档定位也不以截图兜底，不要仅因为会议正在进行就读取画面。
+When events, captions, chat, or directly readable shared documents are already sufficient to answer, do not take a screenshot; meeting content queries, summaries, or shared document location should also not fall back to screenshots, and do not read the view merely because the meeting is ongoing.
 
-需要读取时执行：
+When reading is needed, execute:
 
 ```bash
 lark-cli vc +meeting-screenshot --as <same_identity> --meeting-id <meeting_id>
 ```
 
-身份、会议 ID、输出文件和失败处理见 [`lark-vc-meeting-screenshot`](../references/lark-vc-meeting-screenshot.md)。
+For identity, meeting ID, output file, and failure handling, see [`lark-vc-meeting-screenshot`](../references/lark-vc-meeting-screenshot.md).
 
-## 发送会中文本或表情
+<a id="发送会中文本或表情"></a>
+## Send in-meeting text or reactions
 
-只有用户明确要求发送并确认目标会议与内容时执行：
+Execute only when the user explicitly requests sending and confirms the target meeting and content:
 
 ```bash
 lark-cli vc +meeting-message-send --as <same_identity> --meeting-id <meeting_id> --msg-type text --text <message>
 ```
 
-- 发送沿用 `meeting_id` 的来源身份；不要为了发送自动入会或先查会议详情。
-- reaction 使用 Reference 中大小写敏感的完整 emoji key；不要编造 key。
-- 发送失败时停止并报告，不自动换身份或重复发送，避免重复可见副作用。
-- 用户要发送绑定群或 IM 消息时改用 `lark-im`，不要把会中消息命令当作群消息能力。
+- Sending uses the source identity of `meeting_id`; do not automatically join the meeting or first query meeting details in order to send.
+- For reactions, use the case-sensitive complete emoji key from the Reference; do not invent keys.
+- If sending fails, stop and report; do not automatically switch identities or resend, to avoid duplicate visible side effects.
+- When the user wants to send a bound group or IM message, use `lark-im` instead; do not treat in-meeting message commands as group message capabilities.
 
-文本、reaction 和权限规则见 [`lark-vc-meeting-message-send`](../references/lark-vc-meeting-message-send.md)。
+For text, reactions, and permission rules, see [`lark-vc-meeting-message-send`](../references/lark-vc-meeting-message-send.md).
 
-## 操作会中倒计时
+<a id="操作会中倒计时"></a>
+## Operate the in-meeting countdown
 
-只有用户明确要求设置、延长、提前结束或关闭倒计时时执行：
+Execute only when the user explicitly requests to set, extend, end early, or close the countdown:
 
 ```bash
 lark-cli vc +meeting-countdown --as <same_identity> --meeting-id <meeting_id> --action set --duration <minutes>
 ```
 
-- 这是会中可见的写操作；执行前确认目标会议和动作。
-- 操作沿用 `meeting_id` 的来源身份；不要为了倒计时自动入会或切换身份。
-- 用户只给 9 位会议号时，先用当前身份执行 `+meeting-list-active` 并按 `meeting_no` 匹配。
-- `set` 和 `prolong` 需要 `--duration`；提前结束或关闭时不要携带时长、提醒点或结束音频参数。
+- This is a write operation visible in the meeting; confirm the target meeting and action before executing.
+- The operation uses the source identity of `meeting_id`; do not automatically join the meeting or switch identities for the countdown.
+- When the user provides only a 9-digit meeting number, first execute `+meeting-list-active` with the current identity and match by `meeting_no`.
+- `set` and `prolong` require `--duration`; when ending early or closing, do not include duration, reminder points, or ending audio parameters.
 
-动作、提醒点和权限规则见 [`lark-vc-meeting-countdown`](../references/lark-vc-meeting-countdown.md)。
+For actions, reminder points, and permission rules, see [`lark-vc-meeting-countdown`](../references/lark-vc-meeting-countdown.md).
 
-## 处理未发现会议或权限错误
+<a id="处理未发现会议或权限错误"></a>
+## Handle no meeting found or permission errors
 
-- 用户身份未发现活跃会议时，可以查询当天最近结束的会议；仍无结果再询问时间、主题或会议号，不自行扩大时间范围。
-- 应用身份未发现活跃会议时，只解释当前身份的空结果，不自动查询历史会议或真实入会。
-- 用户身份调用活跃会议或事件查询时，普通 scope 缺失按 CLI hint 申请 `vc:meeting.meetingevent:read`；普通 scope 缺失不表示接口不支持用户身份，只有 CLI 明确说明不支持时才切到应用身份流程。
-- 应用身份缺少权限时不要执行 `auth login`。优先按 CLI 返回的 `missing_scopes`、`hint` 和 `console_url` 处理；手工判断时按能力配置 scope：应用身份活跃会议查询需要 `vc:meeting.bot.join:write`，会中发消息需要 `vc:meeting.message:write`，会中倒计时需要 `vc:meeting.interaction:write`。随后依次检查应用发布、租户安装和“权限可访问的数据范围”；数据范围应为“按条件筛选”，条件为“会议的归属者 包含 与应用的可用范围一致”。
-- scope、安装和数据范围都正确后仍失败时，保留 CLI 返回的错误码和 `log_id`，按服务端权限异常排查；不要反复登录或改用其他身份重试。
+- When no active meeting is found for the user identity, you may query the most recently ended meeting of the day; if there is still no result, ask for the time, topic, or meeting number, and do not expand the time range on your own.
+- When no active meeting is found for the app identity, only explain the empty result for the current identity; do not automatically query historical meetings or perform a real join.
+- When the user identity calls active meeting or event queries, for a missing ordinary scope, apply for `vc:meeting.meetingevent:read` according to the CLI hint; a missing ordinary scope does not mean the API does not support the user identity, and only switch to the app identity flow when the CLI explicitly states it is unsupported.
+- When the app identity lacks permissions, do not execute `auth login`. Prefer handling according to the `missing_scopes`, `hint`, and `console_url` returned by the CLI; when judging manually, configure scopes by capability: app identity active meeting query requires `vc:meeting.bot.join:write`, in-meeting message sending requires `vc:meeting.message:write`, and in-meeting countdown requires `vc:meeting.interaction:write`. Then check in order the app release, tenant installation, and "data scope accessible by permission"; the data scope should be "filter by condition," with the condition "meeting owner contains matches the app's available scope."
+- If it still fails after the scope, installation, and data scope are all correct, preserve the error code and `log_id` returned by the CLI, and troubleshoot as a server-side permission anomaly; do not repeatedly log in or retry with another identity.

@@ -1,34 +1,37 @@
 # `vc +meeting-screenshot`
 
-获取视频会议截图，并保存为 JPEG。
+Get a video meeting screenshot and save it as JPEG.
 
-## 常用用法
+<a id="常用用法"></a>
+## Common Usage
 
-使用当前用户身份截图，文件写入默认目录：
+Take a screenshot using the current user identity, with the file written to the default directory:
 
 ```bash
 lark-cli vc +meeting-screenshot --as user --meeting-id <long_meeting_id>
 ```
 
-使用机器人身份截图，并指定输出路径：
+Take a screenshot using the bot identity and specify the output path:
 
 ```bash
 lark-cli vc +meeting-screenshot --as bot --meeting-id <long_meeting_id> --output ./meeting-screenshots/current.jpg
 ```
 
-## 参数
+<a id="参数"></a>
+## Parameters
 
-| Flag | 含义与用法 |
+| Flag | Meaning and Usage |
 | --- | --- |
-| `--as <identity>` | 选择 `user` 或 `bot` 身份。使用发现 `meeting_id` 时的同一身份：`user` 要求当前用户在会中；`bot` 要求机器人已入会并具备会中读取权限。 |
-| `--meeting-id <meeting_id>` | 必填。长数字会议 ID，不接受 9 位会议号；只有会议号时，先用同一身份调用 `vc +meeting-list-active` 获取。 |
-| `--output <relative-path>` | 可选。指定 JPEG 文件名或包含子目录的相对路径；相对于执行命令时的当前工作目录。 |
-| `--overwrite` | 可选。目标文件已存在时允许替换；不传时命令会失败并保留原文件。 |
+| `--as <identity>` | Choose the `user` or `bot` identity. Use the same identity as when discovering `meeting_id`: `user` requires the current user to be in the meeting; `bot` requires the bot to have joined the meeting and have in-meeting read permission. |
+| `--meeting-id <meeting_id>` | Required. Long numeric meeting ID; a 9-digit meeting number is not accepted; if you only have the meeting number, first call `vc +meeting-list-active` with the same identity to obtain it. |
+| `--output <relative-path>` | Optional. Specify the JPEG file name or a relative path containing subdirectories; relative to the current working directory when the command is executed. |
+| `--overwrite` | Optional. Allow overwriting when the target file already exists; if not passed, the command fails and keeps the original file. |
 
-## 文件路径与结果
+<a id="文件路径与结果"></a>
+## File Path and Result
 
-- 未指定 `--output` 时，默认写入当前工作目录下的 `meeting-screenshots/<meeting_id>-<UTC timestamp>.jpg`。
-- `--output` 可以只写文件名，也可以包含多级子目录；父目录会自动创建。
-- 不接受绝对路径，也不接受解析后超出当前工作目录的 `..` 或符号链接路径。
-- 成功结果包含绝对文件路径、字节数、JPEG content type、SHA-256 和服务端 `log_id`。
-- 服务端决定截图内容并校验会议是否满足条件；调用方不能指定要截取的区域或共享内容。失败不会替换已有文件。
+- When `--output` is not specified, the default is to write to `meeting-screenshots/<meeting_id>-<UTC timestamp>.jpg` under the current working directory.
+- `--output` can be just a file name, or it can contain multiple levels of subdirectories; parent directories are created automatically.
+- Absolute paths are not accepted, nor are `..` or symbolic link paths that resolve outside the current working directory.
+- A successful result includes the absolute file path, byte count, JPEG content type, SHA-256, and the server-side `log_id`.
+- The server determines the screenshot content and verifies whether the meeting meets the conditions; the caller cannot specify the area to capture or the shared content. A failure does not overwrite an existing file.

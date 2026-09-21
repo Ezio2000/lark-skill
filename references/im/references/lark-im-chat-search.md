@@ -65,7 +65,7 @@ lark-cli im +chat-search --query "project" --dry-run
 
 With `--page-all`, `--page-token` sets the starting cursor. If `meta.pagination.complete=false`, resume from `meta.pagination.next_token` or raise `--page-limit`.
 
-> **CAUTION:** `--sort` is **always descending** — the search API only ranks the chosen field high-to-low (e.g. `member_count` = most members first). There is no ascending option. If the user asks for "fewest first / ascending / 从少到多", tell them the search API does not support ascending order; any low-to-high view requires re-sorting the fetched page client-side and is not an upstream sort. Do **not** invent values like `member_count_asc` or pass `asc` (they are rejected).
+> **CAUTION:** `--sort` is **always descending** — the search API only ranks the chosen field high-to-low (e.g. `member_count` = most members first). There is no ascending option. If the user asks for "fewest first / ascending / from fewest to most", tell them the search API does not support ascending order; any low-to-high view requires re-sorting the fetched page client-side and is not an upstream sort. Do **not** invent values like `member_count_asc` or pass `asc` (they are rejected).
 
 ## Output Fields
 

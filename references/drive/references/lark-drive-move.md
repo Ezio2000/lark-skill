@@ -2,120 +2,129 @@
 # drive +move
 
 
-将文件或文件夹移动到用户云空间（云盘/云存储）的其他位置。
+Move a file or folder to another location in the user's cloud space (Drive/cloud storage).
 
-## 与 Wiki 移动 shortcut 的区别
+<a id="与-wiki-移动-shortcut-的区别"></a>
+## Difference from Wiki move shortcuts
 
-- `drive +move` 只处理 **Drive 文件夹树内部** 的位置调整，目标位置用 `--folder-token` 表示
-- `wiki +move` 处理的是 **Wiki 知识空间 / 页面层级**：要么移动已有 Wiki 节点，要么把 Drive 文档迁入 Wiki
-- `wiki +move-to-drive` 把 **已有 Wiki 节点移出知识库**，放到 Drive 文件夹或“我的空间”根目录
-- 如果用户说“移动到某个文件夹”“移动到我的空间根目录”，还要判断源对象：源对象已在 Drive 时使用 `drive +move`；源对象是 Wiki 节点时使用 `wiki +move-to-drive`
-- 如果用户说“移动到某个知识库 / 页面下”“迁入 Wiki / 知识空间”，应使用 `wiki +move`
-- 如果用户说“移动到我的文档库 / 我的知识库 / 个人知识库 / my_library”，不要使用 `drive +move`；先按 Wiki 目标处理
-- `我的文档库` 不是 Drive root folder，也不是 `--folder-token` 省略后的默认目的地
-- `drive +move` 不支持 Wiki 文档；Wiki 节点到 Drive 应使用 `wiki +move-to-drive`，目标是 Wiki 时使用 `wiki +move`
+- `drive +move` only handles position adjustments **within the Drive folder tree**, and the target location is represented by `--folder-token`
+- `wiki +move` handles the **Wiki knowledge space / page hierarchy**: either moving an existing Wiki node, or migrating a Drive document into Wiki
+- `wiki +move-to-drive` moves an **existing Wiki node out of the knowledge base**, placing it into a Drive folder or the "My Space" root directory
+- If the user says "move to a certain folder" or "move to my space root directory", you also need to determine the source object: when the source object is already in Drive, use `drive +move`; when the source object is a Wiki node, use `wiki +move-to-drive`
+- If the user says "move under a certain knowledge base / page" or "migrate into Wiki / knowledge space", use `wiki +move`
+- If the user says "move to my document library / my knowledge base / personal knowledge base / my_library", do not use `drive +move`; handle it as a Wiki target first
+- `我的文档库` is not the Drive root folder, nor is it the default destination when `--folder-token` is omitted
+- `drive +move` does not support Wiki documents; for Wiki nodes to Drive, use `wiki +move-to-drive`, and when the target is Wiki, use `wiki +move`
 
-## 不要误用到 `我的文档库`
+<a id="不要误用到-我的文档库"></a>
+## Do not mistakenly use `我的文档库`
 
-下面几种说法都**不应该**触发 `drive +move`：
+The following phrasings should **not** trigger `drive +move`:
 
 - `移动到我的文档库`
 - `放到我的知识库`
 - `迁入个人知识库`
 - `move to My Document Library`
 
-这些目标都应该先走 Wiki 解析流程：
+These targets should all go through the Wiki resolution flow first:
 
 ```bash
 lark-cli wiki spaces get --params '{"space_id":"my_library"}'
 ```
 
-拿到真实 `space_id` 后，再改用 `wiki +move`。不要因为 `drive +move` 可以省略 `--folder-token` 就把它当作“我的文档库”的近似目标。
+After obtaining the real `space_id`, switch to `wiki +move`. Do not treat `drive +move` as an approximate target for "my document library" just because it can omit `--folder-token`.
 
-## 命令
+<a id="命令"></a>
+## Command
 
 ```bash
-# 移动文件到指定文件夹
+# Move a file to the specified folder
 lark-cli drive +move \
   --file-token <FILE_TOKEN> \
   --type file \
   --folder-token <TARGET_FOLDER_TOKEN>
 
-# 移动文档到指定文件夹
+# Move a document to the specified folder
 lark-cli drive +move \
   --file-token <DOCX_TOKEN> \
   --type docx \
   --folder-token <TARGET_FOLDER_TOKEN>
 
-# 移动文件夹（异步操作，会自动有限轮询任务状态）
+# Move a folder (asynchronous operation, automatically polls the task status a limited number of times)
 lark-cli drive +move \
   --file-token <FOLDER_TOKEN> \
   --type folder \
   --folder-token <TARGET_FOLDER_TOKEN>
 
-# 移动到根文件夹（不指定 --folder-token）
+# Move to the root folder (do not specify --folder-token)
 lark-cli drive +move \
   --file-token <FILE_TOKEN> \
   --type file
 ```
 
-## 参数
+<a id="参数"></a>
+## Parameters
 
-| 参数 | 必填 | 说明 |
+| Parameter | Required | Description |
 |------|------|------|
-| `--file-token` | 是 | 需要移动的文件或文件夹 token |
-| `--type` | 是 | 文件类型，可选值：`file` (普通文件)、`docx` (新版文档)、`bitable` (多维表格)、`doc` (旧版文档)、`sheet` (电子表格)、`mindnote` (思维笔记)、`folder` (文件夹)、`slides` (幻灯片) |
-| `--folder-token` | 否 | 目标文件夹 token，不指定则移动到根文件夹 |
+| `--file-token` | Yes | Token of the file or folder to move |
+| `--type` | Yes | File type, possible values: `file` (regular file), `docx` (new version document), `bitable` (Base), `doc` (legacy document), `sheet` (Sheets), `mindnote` (mind note), `folder` (folder), `slides` (Slides) |
+| `--folder-token` | No | Target folder token; if not specified, move to the root folder |
 
-## 文件类型说明
+<a id="文件类型说明"></a>
+## File type descriptions
 
-| 类型 | 说明 |
+| Type | Description |
 |------|------|
-| `file` | 普通文件 |
-| `docx` | 新版云文档 |
-| `doc` | 旧版云文档 |
-| `sheet` | 电子表格 |
-| `bitable` | 多维表格 |
-| `mindnote` | 思维笔记 |
-| `slides` | 幻灯片 |
-| `folder` | 文件夹（移动文件夹是异步操作） |
+| `file` | Regular file |
+| `docx` | New version cloud document |
+| `doc` | Legacy cloud document |
+| `sheet` | Sheets |
+| `bitable` | Base |
+| `mindnote` | Mind note |
+| `slides` | Slides |
+| `folder` | Folder (moving a folder is an asynchronous operation) |
 
-## 行为说明
+<a id="行为说明"></a>
+## Behavior description
 
-- **普通文件移动**：同步操作，立即完成
-- **文件夹移动**：异步操作，接口返回 `task_id`，shortcut 会先做有限轮询；如果在轮询窗口内完成，则直接返回成功结果
-- **轮询超时不是失败**：文件夹移动内置最多轮询 30 次、每次间隔 2 秒；如果轮询结束任务仍未完成，会返回 `task_id`、`status`、`ready=false`、`timed_out=true` 和 `next_command`
-- **继续查询**：当看到 `next_command` 时，改用 `lark-cli drive +task_result --scenario task_check --task-id <TASK_ID>` 继续查询
-- **目标文件夹**：如果不指定 `--folder-token`，文件将被移动到用户的根文件夹（"我的空间"）
-- **不要混淆产品概念**：这里的“根文件夹 / 我的空间”仅属于 Drive 文件夹树，不等于 Wiki 的“我的文档库”
-- **权限要求**：需要被移动文件的可管理权限、被移动文件所在位置的编辑权限、目标位置的编辑权限
+- **Regular file move**: synchronous operation, completes immediately
+- **Folder move**: asynchronous operation; the API returns `task_id`, and the shortcut first performs limited polling; if it completes within the polling window, it directly returns a success result
+- **Polling timeout is not a failure**: folder move polls at most 30 times with a 2-second interval each time; if the task is still not complete when polling ends, it returns `task_id`, `status`, `ready=false`, `timed_out=true`, and `next_command`
+- **Continue querying**: when you see `next_command`, switch to `lark-cli drive +task_result --scenario task_check --task-id <TASK_ID>` to continue querying
+- **Target folder**: if `--folder-token` is not specified, the file will be moved to the user's root folder ("My Space")
+- **Do not confuse product concepts**: the "root folder / My Space" here belongs only to the Drive folder tree and is not equal to Wiki's "My Document Library"
+- **Permission requirements**: manage permission on the file being moved, edit permission on the location of the file being moved, and edit permission on the target location
 
-## 推荐续跑方式
+<a id="推荐续跑方式"></a>
+## Recommended way to continue running
 
 ```bash
-# 第一步：先直接移动文件夹
+# Step 1: First move the folder directly
 lark-cli drive +move \
   --file-token <FOLDER_TOKEN> \
   --type folder \
   --folder-token <TARGET_FOLDER_TOKEN>
 
-# 如果返回 ready=false / timed_out=true，再继续查
+# If it returns ready=false / timed_out=true, continue querying
 lark-cli drive +task_result \
   --scenario task_check \
   --task-id <TASK_ID>
 ```
 
-## 限制
+<a id="限制"></a>
+## Limitations
 
-- 被移动的文件不支持 wiki 文档
-- 该接口不支持并发调用
-- 调用频率上限为 5 QPS 且 10000 次/天
+- The file being moved does not support wiki documents
+- This API does not support concurrent calls
+- The call frequency limit is 5 QPS and 10000 times/day
 
 > [!CAUTION]
-> 这是**写入操作** —— 执行前必须确认用户意图。
+> This is a **write operation** -- you must confirm the user's intent before executing.
 
-## 参考
+<a id="参考"></a>
+## References
 
-- [lark-drive](../index.md) -- 云空间（云盘/云存储）全部命令
-- [wiki +move-to-drive](../../wiki/references/lark-wiki-move-to-drive.md) -- 将 Wiki 节点移出知识库并放入 Drive
-- [lark-shared](../../shared/index.md) -- 认证和全局参数
+- [lark-drive](../index.md) -- all commands for cloud space (Drive/cloud storage)
+- [wiki +move-to-drive](../../wiki/references/lark-wiki-move-to-drive.md) -- move a Wiki node out of the knowledge base and into Drive
+- [lark-shared](../../shared/index.md) -- authentication and global parameters
