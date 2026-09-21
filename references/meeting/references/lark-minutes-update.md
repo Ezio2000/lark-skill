@@ -1,38 +1,44 @@
 # minutes +update
 
 
-修改飞书妙记的标题（topic）。
+Modify the title (topic) of a Feishu Minutes.
 
-本模块 对应 shortcut：`lark-cli minutes +update`。
+This module corresponds to shortcut: `lark-cli minutes +update`.
 
-## 典型触发表达
+<a id="典型触发表达"></a>
+## Typical trigger expressions
 
-- "把这个妙记的标题改成 xxx"
-- "重命名这条妙记"
-- "修改妙记标题"
+- "Change the title of this Minutes to xxx"
+- "Rename this Minutes"
+- "Modify the Minutes title"
 
-## 命令示例
+<a id="命令示例"></a>
+## Command example
 
 ```bash
 lark-cli minutes +update --minute-token xxx --topic "周会纪要 2026-05-18"
 ```
 
-## 参数
+<a id="参数"></a>
+## Parameters
 
-| 参数 | 必填 | 说明 |
+| Parameter | Required | Description |
 |------|------|------|
-| `--minute-token <token>` | 是 | 妙记的唯一标识，可从妙记 URL 末尾路径提取 |
-| `--topic <string>` | 是 | 新的妙记标题 |
+| `--minute-token <token>` | Yes | The unique identifier of the Minutes, which can be extracted from the trailing path of the Minutes URL |
+| `--topic <string>` | Yes | The new Minutes title |
 
-## 认证与权限
-- 所需 scope：`minutes:minutes:update`。
+<a id="认证与权限"></a>
+## Authentication and permissions
+- Required scope: `minutes:minutes:update`.
 
-## 输出结果
+<a id="输出结果"></a>
+## Output result
 
-| 字段 | 说明 |
+| Field | Description |
 |------|------|
-| `minute_token` | 被修改的妙记 Token，与输入的 `--minute-token` 一致，可继续用于查询妙记信息、下载媒体或获取纪要产物 |
-| `topic` | 修改后的妙记标题，与输入的 `--topic` 一致 |
+| `minute_token` | The modified Minutes Token, which is consistent with the input `--minute-token` and can continue to be used to query Minutes information, download media, or obtain Minutes artifacts |
+| `topic` | The modified Minutes title, which is consistent with the input `--topic` |
 
-## 相关场景
-- [生成和修改妙记](../scenes/create-and-edit-minutes.md)
+<a id="相关场景"></a>
+## Related scenarios
+- [Generate and modify Minutes](../scenes/create-and-edit-minutes.md)

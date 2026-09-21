@@ -1,41 +1,45 @@
 # okr +comment-solve / +comment-reopen
 
 
-解决/重新打开一条评论。实体级评论按单条评论处理；划词评论则是操作整个评论串。只支持 user 身份。
+Solve/reopen a comment. Entity-level comments are handled as a single comment; selection comments operate on the entire comment thread. Only the user identity is supported.
 
-## 推荐命令
+<a id="推荐命令"></a>
+## Recommended commands
 
 ```bash
-# 解决实体级评论或整个划词评论串。
+# Solve an entity-level comment or an entire selection comment thread.
 lark-cli okr +comment-solve --comment-id 7000000000000000004
 
-# 重新打开已解决的实体级评论或划词评论串。
+# Reopen a solved entity-level comment or selection comment thread.
 lark-cli okr +comment-reopen --comment-id 7000000000000000004
 
-# 预览解决评论的状态变更请求，不实际执行。
+# Preview the status change request for solving a comment without actually executing it.
 lark-cli okr +comment-solve --comment-id 7000000000000000004 --dry-run
 ```
 
-## 参数
+<a id="参数"></a>
+## Parameters
 
-| 参数           | 必填 | 默认值  | 说明                                                                                  |
+| Parameter      | Required | Default | Description                                                                                  |
 |----------------|------|---------|---------------------------------------------------------------------------------------|
-| --comment-id   | 是   | —       | 评论 ID，int64 正整数。可从 +comment-list、+comment-detail 或 +comment-get 获取。     |
-| --user-id-type | 否   | open_id | open_id、union_id、user_id 或 user_key。                                              |
-| --style        | 否   | simple  | affected_comments 的正文风格：simple（SemiPlainContent）或 richtext（ContentBlock）。 |
-| --dry-run      | 否   | —       | 预览 API 调用而不实际执行。                                                           |
-| --format       | 否   | json    | 输出格式。                                                                            |
+| --comment-id   | Yes   | —       | Comment ID, int64 positive integer. Can be obtained from +comment-list, +comment-detail, or +comment-get.     |
+| --user-id-type | No   | open_id | open_id, union_id, user_id, or user_key.                                              |
+| --style        | No   | simple  | Body style of affected_comments: simple (SemiPlainContent) or richtext (ContentBlock). |
+| --dry-run      | No   | —       | Preview the API call without actually executing it.                                                           |
+| --format       | No   | json    | Output format.                                                                            |
 
-## 工作流程
+<a id="工作流程"></a>
+## Workflow
 
-1. 使用 [+comment-list](lark-okr-comment-list.md)、[+comment-detail](lark-okr-comment-detail.md) 或 [+comment-get](lark-okr-comment-get.md) 获取并确认 comment-id。
-2. 检查评论是否属于划词串：如果返回有 selection.id，solve/reopen 会影响同一 selection.id 下的全部评论。
-3. 根据用户动作选择 +comment-solve 或 +comment-reopen；先用 --dry-run 检查目标接口。
-4. 执行后检查 affected_comments，确认实体级评论或整条评论串的状态变化范围。
+1. Use [+comment-list](lark-okr-comment-list.md), [+comment-detail](lark-okr-comment-detail.md), or [+comment-get](lark-okr-comment-get.md) to obtain and confirm the comment-id.
+2. Check whether the comment belongs to a selection thread: if the response has selection.id, solve/reopen will affect all comments under the same selection.id.
+3. Choose +comment-solve or +comment-reopen based on the user action; first use --dry-run to check the target interface.
+4. After execution, check affected_comments to confirm the scope of status changes for the entity-level comment or the entire comment thread.
 
-## 输出
+<a id="输出"></a>
+## Output
 
-返回 JSON：
+Returns JSON:
 
 ```json
 {
@@ -63,20 +67,22 @@ lark-cli okr +comment-solve --comment-id 7000000000000000004 --dry-run
 }
 ```
 
-- +comment-solve 成功后 affected_comments 的 status 通常为 solved；+comment-reopen 成功后通常为 open。
-- simple 风格返回 SemiPlainContent；richtext 风格返回 ContentBlock。
+- After a successful +comment-solve, the status of affected_comments is usually solved; after a successful +comment-reopen, it is usually open.
+- The simple style returns SemiPlainContent; the richtext style returns ContentBlock.
 
-## 注意事项
+<a id="注意事项"></a>
+## Notes
 
-- 划词评论按评论串解决/重开，但 [+comment-delete](lark-okr-comment-delete.md) 仍然只删除单条评论。
-- 解决不是删除，之后可以用 +comment-reopen 恢复；删除后不可恢复。
-- 该操作是写操作，执行前应确认 comment-id 和目标动作。
+- Selection comments are solved/reopened as a comment thread, but [+comment-delete](lark-okr-comment-delete.md) still deletes only a single comment.
+- Solving is not deleting; it can later be restored with +comment-reopen; once deleted, it cannot be restored.
+- This operation is a write operation; before executing, confirm the comment-id and the target action.
 
-## 参考
+<a id="参考"></a>
+## References
 
-- [lark-okr](../index.md) — OKR 命令、路由和通用约定
-- [OKR 实体定义](lark-okr-entities.md) — Comment、评论串和状态规则
-- [ContentBlock 格式](lark-okr-contentblock.md) — affected_comments 正文格式
-- [okr +comment-get](lark-okr-comment-get.md) — 获取状态和 selection.id
-- [okr +comment-delete](lark-okr-comment-delete.md) — 永久删除单条评论
-- [lark-shared](../../shared/index.md) — 认证、身份、权限和安全规则
+- [lark-okr](../index.md) — OKR commands, routing, and general conventions
+- [OKR entity definitions](lark-okr-entities.md) — Comment, comment thread, and status rules
+- [ContentBlock format](lark-okr-contentblock.md) — affected_comments body format
+- [okr +comment-get](lark-okr-comment-get.md) — Get status and selection.id
+- [okr +comment-delete](lark-okr-comment-delete.md) — Permanently delete a single comment
+- [lark-shared](../../shared/index.md) — Authentication, identity, permissions, and security rules

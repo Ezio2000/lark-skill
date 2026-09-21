@@ -1,36 +1,42 @@
-# Genre Contract: Media / 资讯媒体 (`router.media`)
+<a id="genre-contract-media--资讯媒体-routermedia"></a>
+# Genre Contract: Media / News Media (`router.media`)
 
-## 体裁规则表（硬约束）
+<a id="体裁规则表硬约束"></a>
+## Genre Rules Table (Hard Constraints)
 
-| 规则项 | 规则 |
+| Rule Item | Rule |
 |-|-|
-| 写作风格 | 准确、中立、紧凑，信息密度服从读者快速理解，不用戏剧化措辞替代事实强度 |
-| 内容逻辑 | 先确定快讯 / 报道、解释、人物特写或访谈的读者任务；关键信息优先，随后给证据、必要背景、相关方视角和仍未知事项，段落按重要性、因果或时间关系推进 |
-| 事实 / 边界 | 区分已核事实、来源说法、推断和 unknown；准确优先于抢发，关键主张可追溯，负面涉及方获得合理回应机会；引语须忠实可核，图片和原始材料须有使用权限、来源、语境说明及文字等价信息，更正、披露和关键缺口须直接可见；核心事实、来源真实性、发布权限缺失，或严重负面指控尚未提供回应机会时保持草稿并 blocked |
-| 错误 | 把组织自有通稿伪装成独立报道、标题超出证据、单一匿名来源承载重大指控、引语失真、事实与评论混写、遗漏重大反方或不确定性、图片无权利 / 来源 / 文字等价信息，任一出现即失败 |
+| Writing Style | Accurate, neutral, and compact; information density serves the reader's rapid understanding; do not substitute dramatic wording for factual strength |
+| Content Logic | First determine the reader task of a news brief / report, explainer, profile, or interview; key information first, then evidence, necessary background, perspectives of relevant parties, and what remains unknown; paragraphs advance by importance, causality, or temporal relationship |
+| Facts / Boundaries | Distinguish verified facts, source claims, inferences, and unknown; accuracy takes priority over being first to publish; key claims are traceable; negatively implicated parties get a reasonable opportunity to respond; quotations must be faithful and verifiable; images and source materials must have usage rights, provenance, contextual explanation, and textual equivalent information; corrections, disclosures, and key gaps must be directly visible; when core facts, source authenticity, or publication rights are missing, or when serious negative allegations have not yet been given an opportunity for response, keep it as a draft and blocked |
+| Errors | Passing off an organization's own press release as independent reporting, headlines exceeding the evidence, a single anonymous source carrying major allegations, distorted quotations, mixing fact and commentary, omitting major opposing views or uncertainty, images without rights / provenance / textual equivalent information — any one of these constitutes failure |
 
-## 适用与消歧
+<a id="适用与消歧"></a>
+## Applicability and Disambiguation
 
-本合同用于以独立采集、核实和公共理解为职责的新闻内容。请求出现“新闻稿、媒体稿、报道”只作召回信号：编辑方能独立核实、选择角度并承担报道判断时走 Media；由组织拥有、批准并面向媒体或公众发布的新闻稿、品牌声明和公关口径走 Marketing。
+This contract is for news content whose duty is independent gathering, verification, and public understanding. The appearance of "press release, media release, report" in a request serves only as a recall signal: when the editorial side can independently verify, choose the angle, and bear reporting judgment, use Media; press releases, brand statements, and PR messaging owned, approved, and released by an organization to the media or the public use Marketing.
 
-以立场说服为主走 Opinion；以购买决策和亲身体验为主走 Consumer；内部事实简报不因写得像新闻而改变读者任务。渠道名、标题风格或“像媒体一样写”均不能单独触发；明确要求最终交付小红书笔记或微信公众号文章时走 `route_platform`，再选择对应 leaf，资讯核实边界作为该 leaf contract 的硬约束。
+When the primary purpose is persuasion from a stance, use Opinion; when the primary purpose is purchasing decisions and firsthand experience, use Consumer; internal factual briefings do not change their reader task just because they are written like news. Channel names, headline styles, or "write like the media" cannot trigger this on their own; when the final deliverable is explicitly required to be a Xiaohongshu note or a WeChat Official Account article, use `route_platform`, then select the corresponding leaf, with the news verification boundary serving as a hard constraint of that leaf contract.
 
-## 子类型
+<a id="子类型"></a>
+## Subtypes
 
-| 子类型 | 读者任务与推进 |
+| Subtype | Reader Task and Progression |
 |-|-|
-| 快讯 / 硬新闻 | 尽快知道发生了什么及其可信程度；核心事实 → 来源与范围 → 必要背景 → 下一确认点 |
-| 解释报道 | 理解为什么发生、如何运作及争议在哪里；问题 → 机制 / 时间线 → 多方证据 → 已知边界 |
-| 人物 / 特写 | 通过可核场景和经历理解人物或议题；场景 → 关键变化 → 证据与他者视角 → 公共意义 |
-| 访谈 / 问答 | 准确获取受访者观点及上下文；交代身份与场景，忠实编辑问答，不补造连接语或立场 |
+| News Brief / Hard News | Know as quickly as possible what happened and how credible it is; core facts → sources and scope → necessary background → next confirmation point |
+| Explainer Report | Understand why it happened, how it works, and where the controversy lies; question → mechanism / timeline → multi-party evidence → known boundaries |
+| Profile / Feature | Understand a person or issue through verifiable scenes and experiences; scene → key change → evidence and others' perspectives → public significance |
+| Interview / Q&A | Accurately obtain the interviewee's views and context; establish identity and setting, faithfully edit the Q&A, do not fabricate connecting remarks or stances |
 
-## 证据与真实性
+<a id="证据与真实性"></a>
+## Evidence and Authenticity
 
-- 为可能引发争议的事实保留可追溯材料，记录来源身份、接近事实的方式、核实状态和使用限制；匿名只在有公共价值且无法安全具名时采用，并说明读者判断所需的来源范围。
-- 引语逐字可核；压缩、翻译和转述不得改变含义。无法确认的数字、时间、身份或因果就近标明 unknown，不用“据悉”“有消息称”遮蔽来源质量。
-- 开盒、网暴、羞辱、未成年人或其他可能放大伤害的事件只保留理解事实、责任和传播机制所需的最少信息；不为证明热点而复刻身份线索、攻击性内容或未核传言。
-- 更正要说明改了什么；新证据改变核心判断时更新标题和结论。发布前无法核实的核心主张不得靠占位符放行。
+- Keep traceable materials for facts that may provoke controversy, recording source identity, how they are close to the facts, verification status, and usage restrictions; use anonymity only when there is public value and naming safely is impossible, and explain the source scope readers need for judgment.
+- Quotations must be verifiable word for word; compression, translation, and paraphrase must not change the meaning. Numbers, times, identities, or causal relationships that cannot be confirmed should be marked unknown nearby; do not use "it is learned" or "sources say" to obscure source quality.
+- For doxxing, cyberbullying, humiliation, minors, or other incidents that may amplify harm, retain only the minimum information needed to understand the facts, responsibility, and transmission mechanism; do not reproduce identity clues, offensive content, or unverified rumors just to prove a hot topic.
+- Corrections must state what was changed; when new evidence changes the core judgment, update the headline and conclusion. Core claims that cannot be verified before publication must not be released by relying on placeholders.
 
-## 结构与高质量写法
+<a id="结构与高质量写法"></a>
+## Structure and High-Quality Writing
 
-标题和导语只承诺正文已证明的内容。每段承担一个信息动作，并在首次出现时交代人物、机构、时间和口径；背景只保留改变理解的部分。多方说法按证据权重而非形式上的各打一板排列，不把可验证事实写成“双方观点”，也不把尚无结论写成确定因果。
+Headlines and leads promise only what the body has proven. Each paragraph carries one informational action, and on first appearance establishes the person, institution, time, and framing; background retains only the parts that change understanding. Multi-party statements are arranged by evidentiary weight rather than a formalistic tit-for-tat, neither writing verifiable facts as "both sides' views" nor writing an as-yet-unresolved matter as certain causation.

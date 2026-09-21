@@ -1,24 +1,28 @@
 # Genre Contract: Weekly / Status Report (`workplace.weekly_report`)
 
-## 体裁规则表（硬约束）
+<a id="体裁规则表硬约束"></a>
+## Genre Rules Table (Hard Constraints)
 
-| 规则项 | 规则 |
+| Rule Item | Rule |
 |-|-|
-| 写作风格 | 具体、短、面向判断，稳定使用最小字段与状态语义，不用“持续推进”代替产出 |
-| 内容逻辑 | 围绕报告对象和周期，按“总体状态 / 最大变化 → 对照基线的产出 → 偏差 / 风险 / 依赖 → 下一里程碑 → ask”推进，只写影响判断的变化 |
-| 事实 / 边界 | 状态须回链范围、时间、质量、成本、资源或阻塞证据；事实、当前状态和下期计划分开；无基线或数据不足时写 unknown，不猜完成率、原因、owner 或日期 |
-| 错误 | 活动流水账、无周期 / 基线、健康色无判据、风险被埋、猜测根因冒充事实、下一步无里程碑、ask 不可执行或自动汇总不可追，任一出现即失败 |
+| Writing Style | Concrete, short, oriented toward judgment; consistently use the minimal fields and status semantics; do not substitute "continuous progress" for output |
+| Content Logic | Center on the report object and period; proceed as "overall status / biggest change → output against baseline → deviation / risk / dependency → next milestone → ask"; write only changes that affect judgment |
+| Facts / Boundaries | Status must link back to scope, time, quality, cost, resource, or blocking evidence; keep facts, current status, and next-period plans separate; when there is no baseline or data is insufficient, write unknown; do not guess completion rate, cause, owner, or date |
+| Errors | Activity log, no period / baseline, health color without criteria, buried risks, guessed root cause passed off as fact, next step without milestone, ask not actionable, or automatic aggregation not traceable — any one of these means failure |
 
-## 适用与消歧
+<a id="适用与消歧"></a>
+## Applicability and Disambiguation
 
-用于按固定或约定周期判断当前相对目标 / 计划 / 承诺的位置。解释已结束周期为何如此并改变下一轮走 `retrospective.md`；完整指标洞察走数据报告；一次性高层知会走 `memo-brief.md`。“报告 / 进展”单词本身不触发本体裁。
+Use to judge the current position relative to goal / plan / commitment on a fixed or agreed period. Explain why a completed period turned out as it did and change the next round to `retrospective.md`; full metric insight goes to a data report; one-off high-level notification goes to `memo-brief.md`. The words "report / progress" alone do not trigger this genre.
 
-## 状态与证据
+<a id="状态与证据"></a>
+## Status and Evidence
 
-- 标明报告对象、周期 / 截至时间；进展使用已验收产出、里程碑或有口径指标，会议数、沟通和投入时长本身不等于进展。
-- On track / 红黄绿等状态须有预先定义或就近说明的判据。无基线时明确“无法判断是否按计划”，而不是默认绿色。
-- 风险、问题、依赖和阻塞按已知程度写影响、当前缓解、责任方与升级需求；冲突数据并列保留并标`[口径待核]`。
+- State the report object and period / as-of time; for progress use accepted output, milestones, or metrics with a defined caliber; meeting count, communication, and time invested do not by themselves equal progress.
+- On track / red-yellow-green and similar statuses must have predefined or locally stated criteria. When there is no baseline, explicitly state "cannot judge whether on plan" rather than defaulting to green.
+- For risks, issues, dependencies, and blockers, write impact, current mitigation, responsible party, and escalation need according to how much is known; keep conflicting data side by side and mark `[口径待核]`.
 
-## 结构与高质量写法
+<a id="结构与高质量写法"></a>
+## Structure and High-Quality Writing
 
-个人短更新可收缩，项目群 / 月报可按需增加趋势、成本或预算，但不复制无用栏目。优先写相对上期和相对承诺的 delta；稳定低风险项可链接原记录。ask 写明对象、事项和需要时间，关键数据延迟时说明最近可用时间点及其判断影响。
+Short individual updates may be condensed; project-group / monthly reports may add trends, cost, or budget as needed, but do not copy useless sections. Prefer writing the delta relative to the previous period and relative to commitments; stable low-risk items may link to the original record. For ask, state the target, the matter, and the time needed; when key data is delayed, state the most recent available time point and its impact on judgment.

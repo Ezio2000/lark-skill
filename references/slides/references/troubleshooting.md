@@ -1,5 +1,6 @@
-# Troubleshooting（兼容入口）
+<a id="troubleshooting兼容入口"></a>
+# Troubleshooting (compatibility entry)
 
-本文档已迁移至 [`workflow/error-handling.md`](workflow/error-handling.md)。
+This document has been migrated to [`workflow/error-handling.md`](workflow/error-handling.md).
 
-此文件仅保留旧路径兼容性；后续引用请使用新路径。
+This file is retained only for old-path compatibility; use the new path for future references.

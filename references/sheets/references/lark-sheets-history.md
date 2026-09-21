@@ -1,93 +1,95 @@
 # Lark Sheet History
 
-## 概念回顾
+<a id="概念回顾"></a>
+## Concept Overview
 
-每张飞书电子表格保留一串历史版本（`minor_histories`）。每个版本由 `history_version_id` 标识，并附带创建时间（`create_time`）、动作（`action`）与块修订信息（`all_block_revision`）。历史是**工作簿级**的（针对整张电子表格，不针对单个子表）。
+Each Feishu spreadsheet retains a series of historical versions (`minor_histories`). Each version is identified by `history_version_id` and comes with a creation time (`create_time`), an action (`action`), and block revision information (`all_block_revision`). History is **workbook-level** (for the entire spreadsheet, not for individual sheets).
 
-回滚（revert）把电子表格的当前内容覆盖回某个历史版本——这是一个**高风险写入**操作，且为**异步**：发起后立即返回受理标识，真正的回滚在后台进行，需通过状态查询轮询最终结果（进行中 / 成功 / 失败）。
+Revert overwrites the spreadsheet's current content back to a historical version—this is a **high-risk write** operation and is **asynchronous**: it immediately returns an acceptance identifier upon initiation, and the actual revert happens in the background, requiring polling via status query for the final result (in progress / success / failure).
 
-`+history-list` 读取版本列表以挑选目标；`+history-revert` 发起回滚；`+history-revert-status` 轮询回滚结果。若只是想拿**当前文档版本号（revision）**当作 recover / undo / `+changeset-get` 的起点锚点，直接用 `+revision-get` 更轻量。
+`+history-list` reads the version list to select a target; `+history-revert` initiates the revert; `+history-revert-status` polls the revert result. If you just want to get the **current document version number (revision)** as a starting anchor for recover / undo / `+changeset-get`, using `+revision-get` directly is more lightweight.
 
-## 使用场景
+<a id="使用场景"></a>
+## Use Cases
 
-读取历史版本、发起回滚、查询回滚状态。本 reference 覆盖 3 个 shortcut：
+Read historical versions, initiate a revert, query revert status. This reference covers 3 shortcuts:
 
-| 操作需求 | 使用工具 | 说明 |
+| Operation Need | Tool to Use | Description |
 |---------|---------|------|
-| 查看历史版本列表 | `+history-list` | 返回 `minor_histories`，每条含 `history_version_id` / `create_time` / `action` / `all_block_revision` 四个字段；支持向前分页（可选 `--end-version`） |
-| 回滚到指定历史版本 | `+history-revert` | 传入 `--history-version-id`；异步受理，返回可查询标识 |
-| 查询回滚状态 | `+history-revert-status` | 传入 `--transaction-id`（取自 `+history-revert` 的异步受理标识）；轮询某次回滚的进行中 / 成功 / 失败状态 |
+| View historical version list | `+history-list` | Returns `minor_histories`, each containing four fields: `history_version_id` / `create_time` / `action` / `all_block_revision`; supports forward pagination (optional `--end-version`) |
+| Revert to a specified historical version | `+history-revert` | Pass in `--history-version-id`; asynchronous acceptance, returns a queryable identifier |
+| Query revert status | `+history-revert-status` | Pass in `--transaction-id` (taken from the asynchronous acceptance identifier of `+history-revert`); poll the in progress / success / failure status of a revert |
 
-典型工作流：`+history-list` 拿到目标版本的 `history_version_id`（必要时翻页拉取更早历史）→ `+history-revert` 发起回滚并取回 `transaction_id` → `+history-revert-status --transaction-id <transaction_id>` 轮询直到成功或失败。
+Typical workflow: `+history-list` gets the `history_version_id` of the target version (paginate to fetch earlier history if necessary) → `+history-revert` initiates the revert and retrieves `transaction_id` → `+history-revert-status --transaction-id <transaction_id>` polls until success or failure.
 
-**注意事项（必须了解）**：
-- **回滚是高风险写入操作**：会用历史版本内容覆盖当前表格，执行前应明确告知用户影响。
-- **回滚是异步的**：`+history-revert` 返回的是 `transaction_id`（受理标识），不代表回滚已完成；必须用 `+history-revert-status --transaction-id <transaction_id>` 确认最终结果。
-- **`history_version_id` 与 `transaction_id` 不是同一个**：`history_version_id` 用于 `+history-revert`（取自 `+history-list`）；`transaction_id` 用于 `+history-revert-status`（取自 `+history-revert` 的输出）。
-- **历史是工作簿级**：定位只需 `--url` / `--spreadsheet-token`（XOR），不需要子表选择器。
-- **`+history-list` 倒序分页**：首次查省略 `--end-version`，返回最新一页；若响应里附带 `next_end_version` 与 `has_more=true`，把 `next_end_version` 作为下一次的 `--end-version` 即可继续向更早翻页；当响应**不包含**这两个字段时表示已到最早一页，不必再翻。
+**Notes (must understand)**:
+- **Revert is a high-risk write operation**: it will overwrite the current spreadsheet with historical version content; you should clearly inform the user of the impact before executing.
+- **Revert is asynchronous**: `+history-revert` returns `transaction_id` (acceptance identifier), which does not mean the revert is complete; you must use `+history-revert-status --transaction-id <transaction_id>` to confirm the final result.
+- **`history_version_id` and `transaction_id` are not the same**: `history_version_id` is used for `+history-revert` (taken from `+history-list`); `transaction_id` is used for `+history-revert-status` (taken from the output of `+history-revert`).
+- **History is workbook-level**: locating only requires `--url` / `--spreadsheet-token` (XOR), no sheet selector needed.
+- **`+history-list` reverse-order pagination**: omit `--end-version` on the first query, which returns the latest page; if the response includes `next_end_version` and `has_more=true`, pass `next_end_version` as the next `--end-version` to continue paging to earlier versions; when the response **does not include** these two fields, it means you have reached the earliest page and no further paging is needed.
 
 ## Shortcuts
 
-| Shortcut | Risk | 分组 |
+| Shortcut | Risk | Group |
 | --- | --- | --- |
-| `+history-list` | read | 历史版本 |
-| `+history-revert` | high-risk-write | 历史版本 |
-| `+history-revert-status` | read | 历史版本 |
+| `+history-list` | read | Historical Versions |
+| `+history-revert` | high-risk-write | Historical Versions |
+| `+history-revert-status` | read | Historical Versions |
 
 ## Flags
 
 ### `+history-list`
 
-_公共：URL/token（无 sheet 定位） · 系统：`--dry-run`_
+_Common: URL/token (no sheet locator) · System: `--dry-run`_
 
-| Flag | Type | 必填 | 说明 |
+| Flag | Type | Required | Description |
 | --- | --- | --- | --- |
-| `--end-version` | int | optional | 分页查询的最大版本（倒序）；首次查询省略，下一页传上一页返回的 next_end_version。 |
+| `--end-version` | int | optional | The maximum version for paginated queries (reverse order); omit on the first query, and pass the next_end_version returned by the previous page for the next page. |
 
 ### `+history-revert`
 
-_公共：URL/token（无 sheet 定位） · 系统：`--dry-run`_
+_Common: URL/token (no sheet locator) · System: `--dry-run`_
 
-| Flag | Type | 必填 | 说明 |
+| Flag | Type | Required | Description |
 | --- | --- | --- | --- |
-| `--history-version-id` | string | required | 要回滚到的历史版本（取自 +history-list） |
+| `--history-version-id` | string | required | The historical version to revert to (taken from +history-list) |
 
 ### `+history-revert-status`
 
-_公共：URL/token（无 sheet 定位） · 系统：`--dry-run`_
+_Common: URL/token (no sheet locator) · System: `--dry-run`_
 
-| Flag | Type | 必填 | 说明 |
+| Flag | Type | Required | Description |
 | --- | --- | --- | --- |
-| `--transaction-id` | string | required | 异步回滚的受理标识（取自 +history-revert） |
+| `--transaction-id` | string | required | The acceptance identifier of the asynchronous revert (taken from +history-revert) |
 
 ## Examples
 
-公共定位：所有 shortcut 顶部排列 `--url` / `--spreadsheet-token`（XOR，二选一）。`+history-revert` 用 `--history-version-id`（取自 `+history-list`）；`+history-revert-status` 用 `--transaction-id`（取自 `+history-revert` 的异步受理标识）。
+Common locator: all shortcuts have `--url` / `--spreadsheet-token` at the top (XOR, choose one). `+history-revert` uses `--history-version-id` (taken from `+history-list`); `+history-revert-status` uses `--transaction-id` (taken from the asynchronous acceptance identifier of `+history-revert`).
 
 ### `+history-list`
 
 ```bash
-# 列出某张电子表格的最新一页历史版本
+# List the latest page of historical versions for a spreadsheet
 lark-cli sheets +history-list --url "https://sample.feishu.cn/sheets/SHTxxxxxx"
 
-# 用原始 spreadsheet token 定位
+# Locate using the raw spreadsheet token
 lark-cli sheets +history-list --spreadsheet-token "SHTxxxxxx"
 
-# 翻到下一页：把上次响应里的 next_end_version 作为 --end-version 传入
+# Page to the next page: pass the next_end_version from the previous response as --end-version
 lark-cli sheets +history-list --url "https://sample.feishu.cn/sheets/SHTxxxxxx" --end-version 12345
 ```
 
 ### `+history-revert`
 
 ```bash
-# 回滚到指定历史版本（异步受理）
+# Revert to a specified historical version (asynchronous acceptance)
 lark-cli sheets +history-revert --url "https://sample.feishu.cn/sheets/SHTxxxxxx" --history-version-id "<id-from-history-list>"
 ```
 
 ### `+history-revert-status`
 
 ```bash
-# 查询某次回滚的当前状态（进行中 / 成功 / 失败）
+# Query the current status of a revert (in progress / success / failure)
 lark-cli sheets +history-revert-status --url "https://sample.feishu.cn/sheets/SHTxxxxxx" --transaction-id "<transaction-id-from-history-revert>"
 ```

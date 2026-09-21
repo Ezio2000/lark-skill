@@ -1,182 +1,185 @@
 # Lark Sheet Sheet Structure
 
-## 结构性操作影响面预检（插入 / 删除行列前必做）
+<a id="结构性操作影响面预检插入--删除行列前必做"></a>
+## Structural Operation Impact Pre-check (mandatory before inserting / deleting rows or columns)
 
-插入 / 删除行列、隐藏 / 取消隐藏、冻结、行列分组都会让原表的引用关系发生偏移。**操作前必须**先打印以下三类信息，并评估操作是否会让它们失效；否则禁止执行：
+Inserting / deleting rows or columns, hiding / unhiding, freezing, and row/column grouping all shift the reference relationships of the original sheet. **Before the operation, you must** first print the following three types of information and assess whether the operation will invalidate them; otherwise execution is prohibited:
 
-1. **当前合并单元格范围**（来自 `+sheet-info` 的 `merged_cells`）：插入行 / 列时，跨过插入位置的合并区域可能扩张或断裂；删除行 / 列时合并区域可能直接消失。
-2. **现有公式的引用范围**（用 `+cells-get` 抽样附近行 + 跨表引用 + 透视表 / 图表 / 条件格式 / 筛选器的数据源 range）：插入 / 删除会导致 `=SUM(B4:B13)` 这种相对引用偏移；如果操作发生在引用范围内部，可能产生 `#REF!`。
-3. **数据验证（下拉列表）规则的应用范围**：列表来源是某个区域时，区域被部分删除会让规则失效。
+1. **Current merged cell ranges** (from `+sheet-info`'s `merged_cells`): when inserting rows / columns, merged regions that span the insertion position may expand or break; when deleting rows / columns, merged regions may disappear entirely.
+2. **Reference ranges of existing formulas** (use `+cells-get` to sample nearby rows + cross-sheet references + data source ranges of pivot tables / charts / conditional formatting / filters): inserting / deleting will cause relative references like `=SUM(B4:B13)` to shift; if the operation occurs inside a reference range, it may produce `#REF!`.
+3. **Application ranges of data validation (dropdown list) rules**: when the list source is a region, partially deleting the region will invalidate the rule.
 
-不可逆的影响必须先在回复中告知用户，得到确认再执行。
+Irreversible impacts must first be communicated to the user in the reply, and execution may proceed only after confirmation.
 
-## 合并安全契约（按模块 / 分组展示）
+<a id="合并安全契约按模块--分组展示"></a>
+## Merge Safety Contract (displayed by module / group)
 
-合并前先读目标列的完整连续区域；只有同值且连续、且非左上角单元格没有值 / 公式 / 批注 / 数据验证或需保留的独立样式时，才可合并。空值、值变化、上级模块变化或上述有效内容立即断组。先读取既有 merges，禁止与现有合并区交叠或跨组扩张；执行前记录每组 `range + 左上角原文`，从下往上或一次批量提交。完成后用 `+sheet-info --include merges` 核范围，并用 `+cells-get` 确认左上角文本未丢、组外边界未合并。
+Before merging, first read the complete contiguous region of the target column; merging is allowed only when values are identical and contiguous, and cells other than the top-left cell have no value / formula / comment / data validation or independent styles that need to be preserved. Empty values, value changes, changes in the parent module, or the above valid content immediately break the group. First read existing merges; overlapping with existing merged regions or expanding across groups is prohibited; before execution, record each group's `range + 左上角原文`, and submit either from bottom to top or as a single batch. After completion, use `+sheet-info --include merges` to verify the range, and use `+cells-get` to confirm that the top-left text is not lost and that boundaries outside the group are not merged.
 
-## 使用场景
+<a id="使用场景"></a>
+## Use Cases
 
-读写。管理子表结构与布局。本 reference 覆盖 9 个 shortcut（按用途分两类）：
+Read and write. Manage sub-sheet structure and layout. This reference covers 9 shortcuts (divided into two categories by purpose):
 
-| 操作需求 | 使用工具 | 说明 |
+| Operation need | Tool to use | Description |
 |---------|---------|------|
-| 查看子表布局 | `+sheet-info` | 获取行高、列宽、隐藏行列、行列分组、合并单元格等信息 |
-| 变更子表结构 | `+dim-{insert|delete|hide|unhide|freeze|group|ungroup|move}` | 插入/删除/隐藏/取消隐藏/冻结/分组/移动行列 |
+| View sub-sheet layout | `+sheet-info` | Get information such as row heights, column widths, hidden rows/columns, row/column grouping, and merged cells |
+| Change sub-sheet structure | `+dim-{insert|delete|hide|unhide|freeze|group|ungroup|move}` | Insert/delete/hide/unhide/freeze/group/move rows and columns |
 
-注意：
+Notes:
 
-- 当表格存在合并单元格时，应结合返回的 `merged_cells` 判断表头、分组标题和区域语义
-- 不要把合并区域中非左上角的空白单元格理解为"无内容"；通常应将左上角单元格的内容视为整个合并区域的语义内容
-- 插入用 `+dim-insert`：`--position`（插入位置；行用 1-based 行号如 `3`，列用字母如 `C`，新行/列插在此位置**之前**）+ `--count`（插入数量，>0）。新行/列样式继承用 `--inherit-style`（`before` 继承前一行/列 / `after` 继承后一行/列）；它只决定继承哪一侧的样式，**插入位置始终在 `--position` 之前，不改变插入方向**。⚠️ 不传时默认继承**后一行/列**（同 `after`）；底层无法插入"无格式"行/列，要真正的纯空白行/列，插入后再用 `+cells-clear --scope formats` 清除新行/列的格式。
-- 例如"在第 20 行后新增 116 行"：`--position 21 --count 116`（"第 20 行后"即 1-based 行号 21）
+- When the sheet has merged cells, use the returned `merged_cells` to determine headers, group titles, and region semantics
+- Do not interpret blank cells other than the top-left cell in a merged region as "no content"; the content of the top-left cell should generally be treated as the semantic content of the entire merged region
+- For insertion use `+dim-insert`: `--position` (insertion position; for rows use a 1-based row number such as `3`, for columns use a letter such as `C`, and the new row/column is inserted **before** this position) + `--count` (insertion count, >0). For new row/column style inheritance use `--inherit-style` (`before` inherits from the previous row/column / `after` inherits from the next row/column); it only determines which side's style is inherited, and **the insertion position is always before `--position` and does not change the insertion direction**. ⚠️ When not passed, it defaults to inheriting from the **next row/column** (same as `after`); the underlying layer cannot insert "unformatted" rows/columns, so for truly blank rows/columns, after insertion use `+cells-clear --scope formats` to clear the formatting of the new rows/columns.
+- For example, "add 116 rows after row 20": `--position 21 --count 116` ("after row 20" means 1-based row number 21)
 
-**区间表达统一为 A1 风格**：所有涉及"一段连续行/列"的 shortcut 都用同一套 A1 闭区间字符串语法，**不存在 inclusive / exclusive / 0-based / 1-based 跨命令差异**：
+**Range expressions are unified as A1 style**: all shortcuts involving "a contiguous span of rows/columns" use the same A1 closed-interval string syntax, and **there is no inclusive / exclusive / 0-based / 1-based difference across commands**:
 
-| 命令 | 用什么 flag 表达区间 / 位置 | 例子 |
+| Command | Which flag expresses the range / position | Example |
 | --- | --- | --- |
-| `+dim-insert` | `--position` + `--count` | `--position 3 --count 5`（在第 3 行前插 5 行）/ `--position C --count 2`（在 C 列前插 2 列） |
-| `+dim-delete` / `+dim-hide` / `+dim-unhide` / `+dim-group` / `+dim-ungroup` / `+rows-resize` / `+cols-resize` | `--range` | `"3:7"`（第 3-7 行，闭区间）/ `"C:F"`（C-F 列，闭区间）/ `"5"` 或 `"C"`（单行/列） |
-| `+dim-move` | `--source-range`（源区间）+ `--target`（目标位置） | `--source-range "3:7" --target 12`（把第 3-7 行移到第 12 行前）/ `--source-range "C:F" --target H` |
+| `+dim-insert` | `--position` + `--count` | `--position 3 --count 5` (insert 5 rows before row 3) / `--position C --count 2` (insert 2 columns before column C) |
+| `+dim-delete` / `+dim-hide` / `+dim-unhide` / `+dim-group` / `+dim-ungroup` / `+rows-resize` / `+cols-resize` | `--range` | `"3:7"` (rows 3-7, closed interval) / `"C:F"` (columns C-F, closed interval) / `"5"` or `"C"` (single row/column) |
+| `+dim-move` | `--source-range` (source range) + `--target` (target position) | `--source-range "3:7" --target 12` (move rows 3-7 before row 12) / `--source-range "C:F" --target H` |
 
-行用 1-based 数字、列用字母——跟 Excel / 飞书 UI 看到的行号、列字母完全一致。
+Rows use 1-based numbers, columns use letters—exactly matching the row numbers and column letters seen in Excel / Feishu UI.
 
-**常见配置错误（必须注意）**：
-- **插入列直接用字母**：`+dim-insert` 的 `--position` 在列场景直接传字母（如 `C`），不要把列字母换算成 0-based 索引
-- **插入后引用偏移**：插入行/列后，原有数据的行号 / 列字母会发生偏移。如果插入后还需要对原有区域执行写入操作，必须重新计算偏移后的位置
-- **删除行列前先确认范围**：删除操作不可逆，执行前应确认 `--range` 精确无误。可先用 `+csv-get` 读取目标区域验证内容（`+csv-get` / `+cells-get` 见 `references/lark-sheets-read-data.md`）
-- **"在 D 列左侧新增一列"的正确写法**：`--position D --count 1`（新列插在 D 列之前）；要继承左侧列样式加 `--inherit-style before`。不要把 `--inherit-style after` 当成“插到 D 列右侧”，它不是插入方向参数。
-- **`+dim-move` 同维度约束**：`--source-range` 是行区间时 `--target` 必须是行号（数字），是列区间时 `--target` 必须是列字母——不可一行一列混用
-- **插入列后必须检查多行表头合并区域**：很多表格有 2-3 行的合并表头。插入列后，原有的合并区域不会自动扩展到新列。必须先用 `+sheet-info --include merges` 读取合并区域，插入后将跨越插入位置的合并区域重新设置（用 `+cells-{merge|unmerge}`），否则新列的表头会是空的、格式不连续
-- **公式写入范围跳过表头行**：写入公式时从数据行开始（不是第 1 行）。先确认表头占几行（可能 1-3 行），公式的起始行 = 表头行数 + 1
+**Common configuration errors (must pay attention)**:
+- **Insert columns directly with letters**: `+dim-insert`'s `--position` passes letters directly in column scenarios (such as `C`); do not convert column letters to 0-based indexes
+- **Reference shift after insertion**: after inserting rows/columns, the row numbers / column letters of existing data will shift. If write operations on the original region are still needed after insertion, the shifted positions must be recalculated
+- **Confirm the range before deleting rows/columns**: deletion operations are irreversible, so before execution confirm that `--range` is exactly correct. You may first use `+csv-get` to read the target region and verify the content (`+csv-get` / `+cells-get` see `references/lark-sheets-read-data.md`)
+- **Correct way to write "add one column to the left of column D"**: `--position D --count 1` (the new column is inserted before column D); to inherit the left column's style add `--inherit-style before`. Do not treat `--inherit-style after` as "insert to the right of column D"; it is not an insertion direction parameter.
+- **`+dim-move` same-dimension constraint**: when `--source-range` is a row range, `--target` must be a row number (number); when it is a column range, `--target` must be a column letter—one row and one column cannot be mixed
+- **After inserting columns, you must check multi-row header merged regions**: many sheets have 2-3 row merged headers. After inserting columns, the original merged regions will not automatically expand to the new columns. You must first use `+sheet-info --include merges` to read the merged regions, and after insertion re-set the merged regions that span the insertion position (using `+cells-{merge|unmerge}`); otherwise the new columns' headers will be empty and the formatting will be discontinuous
+- **Formula write ranges skip header rows**: when writing formulas, start from the data row (not row 1). First confirm how many rows the header occupies (possibly 1-3 rows); the formula's starting row = number of header rows + 1
 
 ## Shortcuts
 
-| Shortcut | Risk | 分组 |
+| Shortcut | Risk | Group |
 | --- | --- | --- |
-| `+sheet-info` | read | 工作表 |
-| `+dim-insert` | write | 工作表 |
-| `+dim-delete` | high-risk-write | 工作表 |
-| `+dim-hide` | write | 工作表 |
-| `+dim-unhide` | write | 工作表 |
-| `+dim-freeze` | write | 工作表 |
-| `+dim-group` | write | 工作表 |
-| `+dim-ungroup` | write | 工作表 |
-| `+dim-move` | write | 工作表 |
+| `+sheet-info` | read | Worksheet |
+| `+dim-insert` | write | Worksheet |
+| `+dim-delete` | high-risk-write | Worksheet |
+| `+dim-hide` | write | Worksheet |
+| `+dim-unhide` | write | Worksheet |
+| `+dim-freeze` | write | Worksheet |
+| `+dim-group` | write | Worksheet |
+| `+dim-ungroup` | write | Worksheet |
+| `+dim-move` | write | Worksheet |
 
 ## Flags
 
 ### `+sheet-info`
 
-_公共四件套 · 系统：`--dry-run`_
+_Common four-piece set · System: `--dry-run`_
 
-| Flag | Type | 必填 | 说明 |
+| Flag | Type | Required | Description |
 | --- | --- | --- | --- |
-| `--include` | string_slice | optional | 要返回的结构信息类别，逗号分隔多个（可选值：`merges` / `row_heights` / `col_widths` / `hidden_rows` / `hidden_cols` / `groups` / `frozen`） |
-| `--range` | string | optional | 限定只返回该 A1 范围的结构信息；省略时返回整表 |
+| `--include` | string_slice | optional | Categories of structure information to return, multiple separated by commas (possible values: `merges` / `row_heights` / `col_widths` / `hidden_rows` / `hidden_cols` / `groups` / `frozen`) |
+| `--range` | string | optional | Restrict the returned structure information to this A1 range only; when omitted, returns the entire sheet |
 
 ### `+dim-insert`
 
-_公共四件套 · 系统：`--dry-run`_
+_Common four-piece set · System: `--dry-run`_
 
-| Flag | Type | 必填 | 说明 |
+| Flag | Type | Required | Description |
 | --- | --- | --- | --- |
-| `--inherit-style` | string | optional | 新行/列样式继承 enum：`before`（继承前一行/列）/ `after`（继承后一行/列）；不传时默认继承后一行/列（同 `after`），底层无法插入无格式行/列。只决定继承哪侧样式、不改变插入方向（始终插在 `--position` 之前）；要纯空白行/列请插入后用 `+cells-clear --scope formats`（可选值：`before` / `after`） |
-| `--position` | string | required | 插入位置（在此行/列**之前**插入）：行用 1-based 行号如 `3`；列用字母如 `C` |
-| `--count` | int | required | 插入数量（>0） |
+| `--inherit-style` | string | optional | New row/column style inheritance enum: `before` (inherit from the previous row/column) / `after` (inherit from the next row/column); when not passed, defaults to inheriting from the next row/column (same as `after`), and the underlying layer cannot insert unformatted rows/columns. It only determines which side's style is inherited and does not change the insertion direction (always inserted before `--position`); for truly blank rows/columns, after insertion use `+cells-clear --scope formats` (possible values: `before` / `after`) |
+| `--position` | string | required | Insertion position (insert **before** this row/column): for rows use a 1-based row number such as `3`; for columns use a letter such as `C` |
+| `--count` | int | required | Insertion count (>0) |
 
 ### `+dim-delete`
 
-_公共四件套 · 系统：`--yes`、`--dry-run`_
+_Common four-piece set · System: `--yes`, `--dry-run`_
 
-| Flag | Type | 必填 | 说明 |
+| Flag | Type | Required | Description |
 | --- | --- | --- | --- |
-| `--range` | string | xor | 要删除的行/列闭区间；行用 1-based 数字如 `3:7` 或单行 `5`，列用字母如 `C:F` 或单列 `C`。与 `--ranges` 二选一 |
-| `--ranges` | string + File + Stdin（简单 JSON） | xor | 要删除的多个行/列区间 JSON 数组（最多 100 个，如 `["5:5","8:8","11:13"]` 或 `["C:C","F:G"]`），全行或全列不可混用，区间不可重叠；与 `--range` 二选一。CLI 按位置**从大到小逆序**合成一次批量删除（fail-fast，失败后先回读再补发）——正序删除会因前面的行/列被删导致后续索引前移错位，逆序由 CLI 代劳，无需自行排序 |
+| `--range` | string | xor | Closed interval of rows/columns to delete; for rows use 1-based numbers such as `3:7` or a single row `5`, for columns use letters such as `C:F` or a single column `C`. Choose one of this and `--ranges` |
+| `--ranges` | string + File + Stdin (simple JSON) | xor | JSON array of multiple row/column intervals to delete (at most 100, such as `["5:5","8:8","11:13"]` or `["C:C","F:G"]`); all rows or all columns cannot be mixed, and intervals cannot overlap; choose one of this and `--range`. The CLI combines them into a single batch deletion **in reverse order from largest to smallest** by position (fail-fast; after a failure, read back first and then resend)—deleting in forward order would cause subsequent indexes to shift out of place because earlier rows/columns were deleted; the CLI handles the reverse order for you, so there is no need to sort yourself |
 
 ### `+dim-hide`
 
-_公共四件套 · 系统：`--dry-run`_
+_Common four-piece set · System: `--dry-run`_
 
-| Flag | Type | 必填 | 说明 |
+| Flag | Type | Required | Description |
 | --- | --- | --- | --- |
-| `--range` | string | required | 要隐藏的行/列闭区间；行如 `3:7`，列如 `C:F` |
+| `--range` | string | required | Closed interval of rows/columns to hide; for rows such as `3:7`, for columns such as `C:F` |
 
 ### `+dim-unhide`
 
-_公共四件套 · 系统：`--dry-run`_
+_Common four-piece set · System: `--dry-run`_
 
-| Flag | Type | 必填 | 说明 |
+| Flag | Type | Required | Description |
 | --- | --- | --- | --- |
-| `--range` | string | required | 要取消隐藏的行/列闭区间；行如 `3:7`，列如 `C:F` |
+| `--range` | string | required | Closed interval of rows/columns to unhide; for rows such as `3:7`, for columns such as `C:F` |
 
 ### `+dim-freeze`
 
-_公共四件套 · 系统：`--dry-run`_
+_Common four-piece set · System: `--dry-run`_
 
-| Flag | Type | 必填 | 说明 |
+| Flag | Type | Required | Description |
 | --- | --- | --- | --- |
-| `--rows` | int | optional | 冻结前 N 行；与 --cols 一起描述完整冻结状态，省略的轴即为不冻结（0 表示不冻结行） |
-| `--cols` | int | optional | 冻结前 N 列；与 --rows 一起描述完整冻结状态，省略的轴即为不冻结（0 表示不冻结列） |
+| `--rows` | int | optional | Freeze the first N rows; together with --cols it describes the complete freeze state, and an omitted axis means not frozen (0 means do not freeze rows) |
+| `--cols` | int | optional | Freeze the first N columns; together with --rows it describes the complete freeze state, and an omitted axis means not frozen (0 means do not freeze columns) |
 
 ### `+dim-group`
 
-_公共四件套 · 系统：`--dry-run`_
+_Common four-piece set · System: `--dry-run`_
 
-| Flag | Type | 必填 | 说明 |
+| Flag | Type | Required | Description |
 | --- | --- | --- | --- |
-| `--depth` | int | optional | 嵌套分组的层级（创建到第几层），默认 1 |
-| `--group-state` | string | optional | 分组初始展开状态（可选值：`expand` / `fold`）（默认 `expand`） |
-| `--range` | string | required | 要创建分组的行/列闭区间；行如 `3:7`，列如 `C:F` |
+| `--depth` | int | optional | Level of nested grouping (how many levels to create), default 1 |
+| `--group-state` | string | optional | Initial expansion state of the group (possible values: `expand` / `fold`) (default `expand`) |
+| `--range` | string | required | Closed interval of rows/columns for which to create the group; for rows such as `3:7`, for columns such as `C:F` |
 
 ### `+dim-ungroup`
 
-_公共四件套 · 系统：`--dry-run`_
+_Common four-piece set · System: `--dry-run`_
 
-| Flag | Type | 必填 | 说明 |
+| Flag | Type | Required | Description |
 | --- | --- | --- | --- |
-| `--depth` | int | optional | 要取消的分组层级，默认 1（1=最外层，数字越大越内层） |
-| `--range` | string | required | 要取消分组的行/列闭区间；行如 `3:7`，列如 `C:F` |
+| `--depth` | int | optional | Group level to ungroup, default 1 (1=outermost, larger numbers are more inner) |
+| `--range` | string | required | Closed interval of rows/columns to ungroup; for rows such as `3:7`, for columns such as `C:F` |
 
 ### `+dim-move`
 
-_公共四件套 · 系统：`--dry-run`_
+_Common four-piece set · System: `--dry-run`_
 
-| Flag | Type | 必填 | 说明 |
+| Flag | Type | Required | Description |
 | --- | --- | --- | --- |
-| `--source-range` | string | required | 要移动的源行/列闭区间；行如 `3:7`，列如 `C:F` |
-| `--target` | string | required | 目标位置（移到此行/列**之前**）：行用 1-based 行号如 `12`，列用字母如 `H`。必须与 `--source-range` 同维度（行/列） |
+| `--source-range` | string | required | Closed interval of source rows/columns to move; for rows such as `3:7`, for columns such as `C:F` |
+| `--target` | string | required | Target position (move to **before** this row/column): for rows use a 1-based row number such as `12`, for columns use a letter such as `H`. Must be the same dimension (row/column) as `--source-range` |
 
 ## Examples
 
-公共四件套：所有 shortcut 顶部排列 `--url` / `--spreadsheet-token` / `--sheet-id` / `--sheet-name`（XOR）。
+Common four-piece set: all shortcuts have `--url` / `--spreadsheet-token` / `--sheet-id` / `--sheet-name` (XOR) arranged at the top.
 
 ### `+sheet-info`
 
-输出契约：返回子表的行高 / 列宽 / 隐藏 / 合并 / 分组等布局元信息。
+Output contract: returns layout metadata such as the sub-sheet's row heights / column widths / hidden / merged / grouped information.
 
 ### `+dim-insert`
 
 ```bash
-# 在第 10 行前插 3 行，继承上方样式
+# Insert 3 rows before row 10, inheriting the style from above
 lark-cli sheets +dim-insert --url "https://example.feishu.cn/sheets/shtXXX" \
   --sheet-id "$SID" --position 10 --count 3 --inherit-style before
 
-# 在 C 列前插 2 列
+# Insert 2 columns before column C
 lark-cli sheets +dim-insert --url "..." --sheet-id "$SID" --position C --count 2
 ```
 
 ### `+dim-delete`
 
 ```bash
-# 删除第 5-7 行
+# Delete rows 5-7
 lark-cli sheets +dim-delete --url "..." --sheet-id "$SID" --range "5:7" --yes
 
-# 删除 D-F 列
+# Delete columns D-F
 lark-cli sheets +dim-delete --url "..." --sheet-id "$SID" --range "D:F" --yes
 
-# 删除多个散布区间（如按查重结果删行）：--ranges 一次批量交付（fail-fast，失败后先回读再补发；CLI 逆序保索引）。
-# CLI 自动按位置从大到小逆序执行——正序会因前面的行被删导致后续索引前移错位；
-# 无需自行排序，也不要为此拼 +batch-update 的子操作数组
+# Delete multiple scattered intervals (such as deleting rows based on deduplication results): --ranges delivers them all in one batch (fail-fast; after a failure, read back first and then resend; the CLI preserves indexes via reverse order).
+# The CLI automatically executes in reverse order from largest to smallest by position—forward order would cause subsequent indexes to shift out of place because earlier rows were deleted;
+# no need to sort yourself, and do not assemble a +batch-update sub-operation array for this
 lark-cli sheets +dim-delete --url "..." --sheet-id "$SID" --ranges '["5:5","8:8","11:13"]' --yes
 ```
 
@@ -191,37 +194,39 @@ lark-cli sheets +dim-hide   --url "..." --sheet-id "$SID" --range "C:F"
 ### `+dim-move`
 
 ```bash
-# 把第 3-7 行移到第 12 行前
+# Move rows 3-7 before row 12
 lark-cli sheets +dim-move --url "..." --sheet-id "$SID" --source-range "3:7" --target 12
 
-# 把 C-F 列移到 H 列前
+# Move columns C-F before column H
 lark-cli sheets +dim-move --url "..." --sheet-id "$SID" --source-range "C:F" --target H
 ```
 
 ### `+rows-resize` / `+cols-resize`
 
-> ⚠️ 这两条 shortcut 来自 `references/lark-sheets-range-operations.md` 的 `+rows-resize / +cols-resize` tool（分组在"工作表"是为了发现性）。详细参数和示例在 `references/lark-sheets-range-operations.md`。
+> ⚠️ These two shortcuts come from `references/lark-sheets-range-operations.md`'s `+rows-resize / +cols-resize` tool (grouped under "Worksheet" for discoverability). Detailed parameters and examples are in `references/lark-sheets-range-operations.md`.
 >
-> 常规写法：行高走 `--range` + `--height <px>`、列宽走 `--range` + `--width <px>`，无需再传 `--type`（等价于 `--type pixel`）；多行 / 多列不同尺寸用 map 形态 `--heights` / `--widths`（如 `--widths '{"A":100,"C:E":120}'`）一次调用完成，不要拆多次调用或走 `+batch-update`。`--type standard` / `--type auto` 用于非像素模式，不能与像素 flag 同给。`+cols-resize.--type` 不接受 `auto`（列宽不支持自动适应）。⚠️ 单位是像素（不是 Excel 字符单位 / 磅）。
+> Conventional usage: row heights use `--range` + `--height <px>`, column widths use `--range` + `--width <px>`, and there is no need to pass `--type` again (equivalent to `--type pixel`); for multiple rows / multiple columns with different sizes, use the map form `--heights` / `--widths` (such as `--widths '{"A":100,"C:E":120}'`) to complete it in one call, rather than splitting into multiple calls or using `+batch-update`. `--type standard` / `--type auto` are for non-pixel mode and cannot be given together with pixel flags. `+cols-resize.--type` does not accept `auto` (column width does not support auto-fit). ⚠️ The unit is pixels (not Excel character units / points).
 
 ### `+dim-freeze`
 
-冻结是**整份状态覆盖**、不是按轴叠加：`--rows` / `--cols` 一起描述完整的目标状态，没写的轴即为不冻结。所以要同时冻住行和列必须一次给全，拆成两次调用只会剩下最后一次的那个轴。
+Freezing is a **full-state overwrite**, not accumulation by axis: `--rows` / `--cols` together describe the complete target state, and any axis not written means not frozen. Therefore, to freeze both rows and columns at the same time, you must provide them all at once; splitting into two calls will leave only the axis from the last call.
 
 ```bash
-# 冻结前 1 行 + 前 2 列（一次给全）
+# Freeze the first 1 row + first 2 columns (provide all at once)
 lark-cli sheets +dim-freeze --url "..." --sheet-id "$SID" --rows 1 --cols 2
 
-# 解除行冻结但保住列：把要保留的轴一并写出
+# Unfreeze rows but keep columns: write out the axis to keep as well
 lark-cli sheets +dim-freeze --url "..." --sheet-id "$SID" --rows 0 --cols 2
 ```
 
-### `+dim-group` / `+dim-ungroup`（大纲）
+<a id="dim-group--dim-ungroup大纲"></a>
+### `+dim-group` / `+dim-ungroup` (outline)
 
-> 仅当用户明确说"行分组 / 列分组 / 大纲 / outline"时触发；按字段做数据分组用 `+pivot-create`。
+> Triggered only when the user explicitly says "row grouping / column grouping / outline / outline"; to group data by field use `+pivot-create`.
 
-### Validate / DryRun / Execute 约束
+<a id="validate--dryrun--execute-约束"></a>
+### Validate / DryRun / Execute Constraints
 
-- `Validate`：XOR 公共四件套；`--range` / `--source-range` 必须是合法 A1 闭区间（行用数字、列用字母，不可混用）；`+dim-insert` 的 `--count` > 0；`+dim-freeze` 至少给 `--rows` / `--cols` 之一；`+dim-move` 的 `--target` 必须与 `--source-range` 同维度（行 vs 列）；`+dim-delete` 强制 `--yes` 或 `--dry-run`，`--range` 与 `--ranges` 二选一、`--ranges` 各区间同维度且不可重叠（≤100 个）；`+rows-resize` / `+cols-resize` 的统一形态（`--range` + `--height`/`--width` 或 `--type`）与 map 形态（`--heights`/`--widths`）二选一、不可混用；详见 `references/lark-sheets-range-operations.md`。
-- `DryRun`：写操作输出"将要 PATCH 的目标范围 + 目标参数"。
-- `Execute`：写后必须调用 `+sheet-info --include row_heights,col_widths,hidden_rows,hidden_cols,groups,frozen,merges`，按本次结构动作核对受影响范围。
+- `Validate`: XOR common four-piece set; `--range` / `--source-range` must be valid A1 closed intervals (rows use numbers, columns use letters, and they cannot be mixed); `+dim-insert`'s `--count` > 0; `+dim-freeze` must provide at least one of `--rows` / `--cols`; `+dim-move`'s `--target` must be the same dimension as `--source-range` (row vs column); `+dim-delete` enforces `--yes` or `--dry-run`, choose one of `--range` and `--ranges`, and `--ranges` intervals must all be the same dimension and cannot overlap (≤100); `+rows-resize` / `+cols-resize`'s unified form (`--range` + `--height`/`--width` or `--type`) and map form (`--heights`/`--widths`) are choose-one and cannot be mixed; see `references/lark-sheets-range-operations.md` for details.
+- `DryRun`: write operations output "the target range to be PATCHed + target parameters".
+- `Execute`: after writing, you must call `+sheet-info --include row_heights,col_widths,hidden_rows,hidden_cols,groups,frozen,merges` to verify the affected range according to this structural action.

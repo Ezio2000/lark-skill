@@ -1,56 +1,61 @@
 # base +dashboard-block-get-data
 
-> **前置条件：** 先阅读 [lark-base-dashboard.md](lark-base-dashboard.md) 了解 dashboard 整体工作流。
+> **Prerequisite:** Read [lark-base-dashboard.md](lark-base-dashboard.md) first to understand the overall dashboard workflow.
 
-获取仪表盘图表组件（block）的**最终计算结果**，返回一份适合 AI 直接消费的图表协议 JSON。
+Get the **final computed result** of a dashboard chart block, returning a chart protocol JSON suitable for direct AI consumption.
 
-这个命令适合以下场景：
+This command is suitable for the following scenarios:
 
-1. 读取柱状图 / 条形图 / 折线图 / 饼图 / 环形图 / 面积图 / 组合图 / 散点图 / 漏斗图 / 雷达图 / 排行榜 / 词云 / 指标卡的**实际计算结果**；
-2. 把图表结果交给 AI 做后续总结、趋势解释、同比/环比说明、异常点提取；
-3. 在**不读取原始记录**的前提下，直接消费图表层已经聚合好的结果；
-4. 验证某个图表当前展示的数据是否符合预期。
+1. Reading the **actual computed results** of bar charts / horizontal bar charts / line charts / pie charts / donut charts / area charts / combo charts / scatter charts / funnel charts / radar charts / ranking lists / word clouds / metric cards;
+2. Handing chart results to AI for subsequent summarization, trend explanation, year-over-year/month-over-month descriptions, and anomaly extraction;
+3. Directly consuming results already aggregated at the chart layer **without reading raw records**;
+4. Verifying whether the data currently displayed by a chart matches expectations.
 
 > [!IMPORTANT]
-> - 本命令返回的是**图表结果协议**，不是 block 元数据；
-> - 如果你需要 `name`、`type`、`layout`、`data_config` 等配置，请先用 `+dashboard-block-get`；
-> - 文本组件（`text`）不涉及计算，不适用本命令；
+> - This command returns the **chart result protocol**, not block metadata;
+> - If you need configurations such as `name`, `type`, `layout`, `data_config`, use `+dashboard-block-get` first;
+> - Text components (`text`) do not involve computation and are not applicable to this command;
 
-## 一句话理解
+<a id="一句话理解"></a>
+## One-sentence understanding
 
-`+dashboard-block-get-data` = **拿图表“算出来的结果”**，而不是拿图表“怎么配置的”。
+`+dashboard-block-get-data` = **get the chart's "computed result"**, not the chart's "configuration".
 
 ---
 
-## 支持的图表类型
+<a id="支持的图表类型"></a>
+## Supported chart types
 
-当前支持以下图表类型的数据计算与返回：
+The following chart types currently support data computation and return:
 
-### 二维图表（11 种）
+<a id="二维图表11-种"></a>
+### Two-dimensional charts (11 types)
 
-- 柱状图
-- 条形图
-- 折线图
-- 饼图
-- 环形图
-- 面积图
-- 组合图
-- 散点图
-- 漏斗图
-- 雷达图
-- 排行榜
+- Bar chart
+- Horizontal bar chart
+- Line chart
+- Pie chart
+- Donut chart
+- Area chart
+- Combo chart
+- Scatter chart
+- Funnel chart
+- Radar chart
+- Ranking list
 
-### 特殊类型（2 种）
+<a id="特殊类型2-种"></a>
+### Special types (2 types)
 
-- 词云
-- 指标卡（statistics）
+- Word cloud
+- Metric card (statistics)
 
 > [!CAUTION]
-> 文本组件虽然也属于 dashboard block，但它不产生可计算数据，因此不会返回本协议。
+> Although text components also belong to dashboard blocks, they do not produce computable data, so this protocol will not be returned for them.
 
 ---
 
-## 推荐命令
+<a id="推荐命令"></a>
+## Recommended commands
 
 ```bash
 lark-cli base +dashboard-block-get-data \
@@ -58,22 +63,22 @@ lark-cli base +dashboard-block-get-data \
   --block-id chtxxxxxxxx
 ```
 
-如果你还不知道目标 block 的 ID，典型顺序是：
+If you do not yet know the target block's ID, the typical order is:
 
 ```bash
-# 先看仪表盘里有哪些组件
+# First see which components are in the dashboard
 lark-cli base +dashboard-block-list \
   --base-token bascn***************CtadY \
   --dashboard-id blkxxxxxxxx \
   --page-size 100
 
-# 再读取某个组件的最终计算结果
+# Then read the final computed result of a component
 lark-cli base +dashboard-block-get-data \
   --base-token bascn***************CtadY \
   --block-id chtxxxxxxxx
 ```
 
-如果用户要读取多个组件，先通过 `+dashboard-block-list --page-size 100` 取得真实 ID；若返回 `has_more=true`，继续把本页返回的 `page_token` 传给 `--page-token`，直到 `has_more=false`。收齐目标组件并跳过没有计算结果的文本组件后，再在**一个 shell 工具调用**内串行执行。每条命令会依次输出一个完整 JSON envelope；不要把每个 block 拆成独立模型轮次。
+If the user wants to read multiple components, first obtain the real IDs via `+dashboard-block-list --page-size 100`; if `has_more=true` is returned, continue passing the `page_token` returned by this page to `--page-token` until `has_more=false`. After collecting the target components and skipping text components that have no computed results, execute serially within **a single shell tool call**. Each command will output a complete JSON envelope in sequence; do not split each block into separate model turns.
 
 ```bash
 set -euo pipefail
@@ -86,9 +91,9 @@ for block_id in "${block_ids[@]}"; do
 done
 ```
 
-数组中的 ID 必须逐字来自 `+dashboard-block-list` 返回，不要把名称或未经验证的用户文本作为 shell 代码执行。循环仍然是串行 API 调用，只减少模型往返，不裁剪任何组件结果。
+The IDs in the array must come verbatim from what `+dashboard-block-list` returns; do not execute names or unverified user text as shell code. The loop is still serial API calls, only reducing model round trips, without trimming any component results.
 
-如果你需要先确认组件类型、名称或 `data_config`，请先执行：
+If you need to first confirm the component type, name, or `data_config`, execute first:
 
 ```bash
 lark-cli base +dashboard-block-get \
@@ -99,23 +104,25 @@ lark-cli base +dashboard-block-get \
 
 ---
 
-## 参数
+<a id="参数"></a>
+## Parameters
 
-| 参数 | 必填 | 说明 |
+| Parameter | Required | Description |
 |------|------|------|
-| `--base-token <token>` | 是 | Base Token，标识目标多维表格 |
-| `--block-id <id>` | 是 | 图表 Block ID，即目标组件的唯一标识 |
-| `--format <fmt>` | 否 | 输出格式，遵循 CLI 全局输出格式规则 |
-| `--dry-run` | 否 | 只预览 API 调用，不真正执行 |
+| `--base-token <token>` | Yes | Base Token, identifies the target Base |
+| `--block-id <id>` | Yes | Chart Block ID, i.e., the unique identifier of the target component |
+| `--format <fmt>` | No | Output format, follows the CLI global output format rules |
+| `--dry-run` | No | Only preview the API call, do not actually execute |
 
 > [!TIP]
-> 这个命令**不需要** `--dashboard-id`。只要 `base_token + block_id` 即可定位并读取图表结果。
+> This command **does not need** `--dashboard-id`. Only `base_token + block_id` is needed to locate and read the chart result.
 
 ---
 
-## 返回结构总览
+<a id="返回结构总览"></a>
+## Return structure overview
 
-CLI 成功输出使用标准 `{ok, identity, data}` 信封：
+Successful CLI output uses the standard `{ok, identity, data}` envelope:
 
 ```json
 {
@@ -129,21 +136,22 @@ CLI 成功输出使用标准 `{ok, identity, data}` 信封：
 }
 ```
 
-其中 `identity` 是本次调用实际使用的身份，`data` 是 CLI 图表协议本体。不同图表类型的 `data` 结构略有不同：
+Here `identity` is the identity actually used for this call, and `data` is the CLI chart protocol body. The `data` structure differs slightly across chart types:
 
-| 图表类型 | 一定有 | 可能有 |
+| Chart type | Always present | May be present |
 |----------|--------|--------|
-| 二维图表 | `dimensions` / `measures` / `main_data` | 无 |
-| 词云 | `dimensions` / `measures` / `main_data` | 无 |
-| 指标卡 | `dimensions` / `measures` / `main_data` | `comparison_data` / `trend_data` |
+| Two-dimensional charts | `dimensions` / `measures` / `main_data` | None |
+| Word cloud | `dimensions` / `measures` / `main_data` | None |
+| Metric card | `dimensions` / `measures` / `main_data` | `comparison_data` / `trend_data` |
 
 ---
 
-## 协议字段说明
+<a id="协议字段说明"></a>
+## Protocol field descriptions
 
 ### 1) `dimensions`
 
-维度定义数组，告诉你主结果里每个 `dim_*` key 代表什么字段。
+Dimension definition array, telling you what field each `dim_*` key in the main result represents.
 
 ```json
 [
@@ -154,16 +162,16 @@ CLI 成功输出使用标准 `{ok, identity, data}` 信封：
 ]
 ```
 
-字段含义：
+Field meanings:
 
-| 字段 | 说明 |
+| Field | Description |
 |------|------|
-| `field_name` | 维度字段显示名称 |
-| `alias` | 维度别名，在 `main_data` / `trend_data` 中作为 key 使用 |
+| `field_name` | Dimension field display name |
+| `alias` | Dimension alias, used as the key in `main_data` / `trend_data` |
 
 ### 2) `measures`
 
-指标定义数组，告诉你每个 `me_*` key 代表什么聚合指标。
+Measure definition array, telling you what aggregate measure each `me_*` key represents.
 
 ```json
 [
@@ -175,22 +183,22 @@ CLI 成功输出使用标准 `{ok, identity, data}` 信封：
 ]
 ```
 
-字段含义：
+Field meanings:
 
-| 字段 | 说明 |
+| Field | Description |
 |------|------|
-| `field_name` | 统计该指标时所使用的字段名称；当 `aggregation = count_all` 时固定为 `Count`，表示统计记录总数 |
-| `aggregation` | 聚合方式，常见值：`count_all` / `count` / `sum` / `avg` / `min` / `max` |
-| `alias` | 指标别名，在 `main_data` / `comparison_data` / `trend_data` 中作为 key 使用 |
+| `field_name` | The field name used when computing this measure; when `aggregation = count_all`, it is fixed to `Count`, indicating a count of total records |
+| `aggregation` | Aggregation method, common values: `count_all` / `count` / `sum` / `avg` / `min` / `max` |
+| `alias` | Measure alias, used as the key in `main_data` / `comparison_data` / `trend_data` |
 
-例如：
+For example:
 
-- 如果统计“销售额”的求和，则 `field_name = 销售额`、`aggregation = sum`
-- 如果统计记录总数，则 `field_name = Count`、`aggregation = count_all`
+- If computing the sum of "Sales", then `field_name = 销售额`, `aggregation = sum`
+- If computing the total record count, then `field_name = Count`, `aggregation = count_all`
 
 ### 3) `main_data`
 
-主结果集。每一行都是一个对象，key 不是字段名本身，而是 `dimensions` / `measures` 中声明过的 `alias`。
+Main result set. Each row is an object; the key is not the field name itself, but the `alias` declared in `dimensions` / `measures`.
 
 ```json
 [
@@ -203,34 +211,35 @@ CLI 成功输出使用标准 `{ok, identity, data}` 信封：
 
 ### 4) `comparison_data`
 
-仅指标卡可能返回。表示同/环比的两个值，顺序固定为：
+Only metric cards may return this. Represents the two values for year-over-year/month-over-month comparison, in a fixed order:
 
-1. 当前周期值
-2. 对比周期值
+1. Current period value
+2. Comparison period value
 
 > [!NOTE]
-> 原始协议里通常**不直接展示周期名称**，只提供对应的值。因此解释“同比”还是“环比”、以及比较窗口具体是什么，通常要结合组件配置或 UI 上下文理解。
+> The raw protocol usually **does not directly show the period name**, only the corresponding values. Therefore, interpreting whether it is "year-over-year" or "month-over-month", and what the comparison window specifically is, usually requires understanding it in combination with the component configuration or UI context.
 
 ### 5) `trend_data`
 
-仅指标卡可能返回。表示时间序列趋势，每一行通常包含一个时间维度和一个指标值。
+Only metric cards may return this. Represents a time series trend; each row usually contains one time dimension and one measure value.
 
 ---
 
-## alias 规则与读取方式
+<a id="alias-规则与读取方式"></a>
+## Alias rules and how to read them
 
-你不应该把 alias 当成人类可读字段名，而应把它视为**结果表里的列 ID**。
+You should not treat aliases as human-readable field names, but rather as **column IDs in the result table**.
 
-常见生成规则：
+Common generation rules:
 
-- 维度 alias：`dim_` + `base64(field_name)`
-- 指标 alias：`me_` + `base64(aggregation + "_" + field_name)`
+- Dimension alias: `dim_` + `base64(field_name)`
+- Measure alias: `me_` + `base64(aggregation + "_" + field_name)`
 
 > [!NOTE]
-> 为了便于阅读，本文档中的部分示例会使用**简化后的 alias**（例如 `dim_xxx`、`me_xxx` 或较短的示例值），不保证和真实返回值逐字符一致。
-> 在实际读取结果时，应始终以 `dimensions` / `measures` 中声明的 alias 为准，而不要假设所有示例都严格展开成完整编码值。
+> For readability, some examples in this document use **simplified aliases** (such as `dim_xxx`, `me_xxx`, or shorter example values), and are not guaranteed to match real return values character by character.
+> When actually reading results, always rely on the aliases declared in `dimensions` / `measures`, and do not assume that all examples strictly expand into fully encoded values.
 
-例如：
+For example:
 
 ```json
 {
@@ -249,45 +258,50 @@ CLI 成功输出使用标准 `{ok, identity, data}` 信封：
 }
 ```
 
-应解读为：
+This should be interpreted as:
 
-- `dim_5bKp` 对应字段“文本”，取值是 `A`
-- `me_xxx` 对应指标 `count_all(Count)`，取值是 `3`
+- `dim_5bKp` corresponds to the field "Text", with value `A`
+- `me_xxx` corresponds to the measure `count_all(Count)`, with value `3`
 
 > [!TIP]
-> 读取结果时，**先看 `dimensions` / `measures`，再解 `main_data`**。不要仅凭 alias 名字猜含义。
+> When reading results, **first look at `dimensions` / `measures`, then decode `main_data`**. Do not guess the meaning from the alias name alone.
 
 ---
 
-## 各图表类型的协议细节
+<a id="各图表类型的协议细节"></a>
+## Protocol details for each chart type
 
-### 一、二维图表
+<a id="一二维图表"></a>
+### I. Two-dimensional charts
 
-适用于：柱状图、条形图、折线图、饼图、环形图、面积图、组合图、散点图、漏斗图、雷达图、排行榜。
+Applicable to: bar charts, horizontal bar charts, line charts, pie charts, donut charts, area charts, combo charts, scatter charts, funnel charts, radar charts, ranking lists.
 
-排行榜复用同一 `dimensions` / `measures` / `main_data` 协议，不增加专属响应字段。结果的条数和顺序由 block 配置中的 `limit_size` 与 `group_by[0].sort` 决定；消费返回时保持 `main_data` 的服务端顺序，不要再次反转或自行重排。
+Ranking lists reuse the same `dimensions` / `measures` / `main_data` protocol and do not add dedicated response fields. The number and order of results are determined by `limit_size` and `group_by[0].sort` in the block configuration; when consuming the return, keep the server-side order of `main_data`, and do not reverse or rearrange it yourself.
 
-#### 结构特征
+<a id="结构特征"></a>
+#### Structural characteristics
 
-- `dimensions`：通常有 `1~2` 个维度
-  - 不分组聚合时：通常 1 个维度
-  - 开启分组聚合时：通常 2 个维度
-- `measures`：指标定义数组
-- `main_data`：按“维度组合”展开后的行数据
+- `dimensions`: usually has `1~2` dimensions
+  - Without grouped aggregation: usually 1 dimension
+  - With grouped aggregation enabled: usually 2 dimensions
+- `measures`: measure definition array
+- `main_data`: row data expanded by "dimension combination"
 
-#### 这类数据代表什么
+<a id="这类数据代表什么"></a>
+#### What this type of data represents
 
-二维图表返回的本质上是一张**聚合结果表**：
+What two-dimensional charts return is essentially an **aggregated result table**:
 
-- 每一行代表一个维度值，或一组维度组合；
-- 每一个 measure 值代表该维度下算出来的指标结果；
-- 如果图表开启了分组聚合，那么每一行表示“主维度 + 分组维度”的一个组合结果；
-- 如果图表是折线图、面积图这类带时间轴的图，通常可以把第一维理解为横轴、把 measure 理解为纵轴数值；
-- 如果图表是饼图、环形图这类占比图，通常可以把每一行理解为一个扇区对应的分类及其数值。
+- Each row represents one dimension value, or one set of dimension combinations;
+- Each measure value represents the computed measure result under that dimension;
+- If the chart has grouped aggregation enabled, then each row represents a combined result of "primary dimension + group dimension";
+- If the chart is a line chart, area chart, or similar chart with a time axis, the first dimension can usually be understood as the horizontal axis, and the measure as the vertical axis value;
+- If the chart is a pie chart, donut chart, or similar proportion chart, each row can usually be understood as the category and value corresponding to one sector.
 
-换句话说，AI 在读取这类结果时，可以把它当作“按某些维度聚合后的统计明细表”，适合进一步做排序、Top N、占比解释、分组对比和趋势总结。
+In other words, when AI reads this type of result, it can treat it as a "statistical detail table aggregated by certain dimensions", suitable for further sorting, Top N, proportion explanation, grouped comparison, and trend summarization.
 
-#### 示例 1：普通二维图表（无分组聚合）
+<a id="示例-1普通二维图表无分组聚合"></a>
+#### Example 1: Ordinary two-dimensional chart (no grouped aggregation)
 
 ```json
 {
@@ -321,15 +335,16 @@ CLI 成功输出使用标准 `{ok, identity, data}` 信封：
 }
 ```
 
-可解读为：
+This can be interpreted as:
 
-- 维度字段是“文本”
-- 指标是“按记录总数统计”
-- 当“文本”字段为 `A` 时，对应的 `Count` 指标值是 `3`
-- 当“文本”字段为 `B` 时，对应的 `Count` 指标值是 `2`
-- 当“文本”字段为 `C` 时，对应的 `Count` 指标值是 `2`
+- The dimension field is "Text"
+- The measure is "count of total records"
+- When the "Text" field is `A`, the corresponding `Count` measure value is `3`
+- When the "Text" field is `B`, the corresponding `Count` measure value is `2`
+- When the "Text" field is `C`, the corresponding `Count` measure value is `2`
 
-#### 示例 2：二维图表（开启分组聚合）
+<a id="示例-2二维图表开启分组聚合"></a>
+#### Example 2: Two-dimensional chart (grouped aggregation enabled)
 
 ```json
 {
@@ -375,39 +390,43 @@ CLI 成功输出使用标准 `{ok, identity, data}` 信封：
 }
 ```
 
-可解读为：
+This can be interpreted as:
 
-- 第一维是“文本”，第二维是“单选”，指标是“按记录总数统计”
-- 当“文本”字段为 `A`、且“单选”字段为 `a-1` 时，对应的指标值是 `2`
-- 当“文本”字段为 `A`、且“单选”字段为 `a-2` 时，对应的指标值是 `1`
-- 当“文本”字段为 `B`、且“单选”字段为 `b-1` 时，对应的指标值是 `1`
-- 当“文本”字段为 `C`、且“单选”字段为 `c-1` 时，对应的指标值是 `2`
-- 如果按“文本”字段汇总，那么“文本”字段为 `A` 时总指标值是 `3`；为 `B` 时总指标值是 `1`；为 `C` 时总指标值是 `2`
+- The first dimension is "Text", the second dimension is "Single Select", and the measure is "count of total records"
+- When the "Text" field is `A` and the "Single Select" field is `a-1`, the corresponding measure value is `2`
+- When the "Text" field is `A` and the "Single Select" field is `a-2`, the corresponding measure value is `1`
+- When the "Text" field is `B` and the "Single Select" field is `b-1`, the corresponding measure value is `1`
+- When the "Text" field is `C` and the "Single Select" field is `c-1`, the corresponding measure value is `2`
+- If aggregated by the "Text" field, then when the "Text" field is `A`, the total measure value is `3`; when it is `B`, the total measure value is `1`; when it is `C`, the total measure value is `2`
 
 ---
 
-### 二、词云
+<a id="二词云"></a>
+### II. Word cloud
 
-#### 结构特征
+<a id="结构特征-1"></a>
+#### Structural characteristics
 
-词云协议仍然沿用 `dimensions + measures + main_data` 的结构，但语义稍有不同：
+The word cloud protocol still follows the structure of `dimensions + measures + main_data`, but the semantics are slightly different:
 
-- `dimensions` 对应被分词的字段；
-- `main_data` 每一行代表一个词；
-- `measure` 的 value 表示按该词分组后计算出来的统计值。
+- `dimensions` corresponds to the field being tokenized;
+- Each row of `main_data` represents one word;
+- The value of `measure` represents the statistical value computed after grouping by that word.
 
-#### 这类数据代表什么
+<a id="这类数据代表什么-1"></a>
+#### What this type of data represents
 
-词云返回的不是“原文列表”，而是**按词分组后的聚合统计结果**：
+What the word cloud returns is not a "list of original text", but an **aggregated statistical result grouped by word**:
 
-- `dimensions` 定义的是被分词的来源字段；
-- `measure` 对应的是该词在当前图表统计范围内对应的统计值，具体含义取决于聚合方式和指标字段；
-- `main_data` 的每一行都可以理解成“某个词 + 该词对应的统计结果”，其中该维度的具体 value 就是拆分出来的词；
-- 返回结果通常已经结合图表当前过滤条件、时间范围、数据权限等上下文计算完成。
+- `dimensions` defines the source field being tokenized;
+- `measure` corresponds to the statistical value for that word within the current chart's statistical scope; the specific meaning depends on the aggregation method and measure field;
+- Each row of `main_data` can be understood as "a certain word + the statistical result corresponding to that word", where the specific value of that dimension is the split-out word;
+- The returned result is usually already computed in combination with the chart's current filter conditions, time range, data permissions, and other context.
 
-因此，AI 读取词云数据时，更适合做“关键词排序”“热点词解释”“按词聚合结果分析”“主题归纳”，而不是把它当成逐条文本记录去理解。
+Therefore, when AI reads word cloud data, it is more suitable for "keyword ranking", "hot word explanation", "analysis of results aggregated by word", and "topic summarization", rather than understanding it as individual text records.
 
-#### 示例
+<a id="示例"></a>
+#### Example
 
 ```json
 {
@@ -441,62 +460,66 @@ CLI 成功输出使用标准 `{ok, identity, data}` 信封：
 }
 ```
 
-可解读为：
+This can be interpreted as:
 
-- 被统计的分词字段是“文本”
-- 当前示例里的 measure 是 `count_all(Count)`，所以这里的统计值可以理解为“按词分组后的记录总数”
-- 当分词结果为 `A` 时，对应的统计值是 `3`
-- 当分词结果为 `B` 时，对应的统计值是 `2`
-- 当分词结果为 `C` 时，对应的统计值是 `2`
-- 按统计值排序，分词结果 `A` 对应的值最高
-- 分词结果 `B` 和 `C` 的统计值相同，说明它们处于同一梯队
+- The tokenized field being counted is "Text"
+- The measure in the current example is `count_all(Count)`, so the statistical value here can be understood as "the total record count after grouping by word"
+- When the tokenization result is `A`, the corresponding statistical value is `3`
+- When the tokenization result is `B`, the corresponding statistical value is `2`
+- When the tokenization result is `C`, the corresponding statistical value is `2`
+- Sorted by statistical value, the tokenization result `A` has the highest value
+- The tokenization results `B` and `C` have the same statistical value, indicating they are in the same tier
 
 ---
 
-### 三、指标卡（statistics）
+<a id="三指标卡statistics"></a>
+### III. Metric card (statistics)
 
-指标卡除了主值外，还可能包含同/环比与趋势结果，是本命令里结构最特殊的一类。
+In addition to the main value, a metric card may also contain year-over-year/month-over-month and trend results, making it the most structurally special type in this command.
 
-#### 结构特征
+<a id="结构特征-2"></a>
+#### Structural characteristics
 
-- `measures`：**有且仅有一个指标**
-- `main_data`：通常只有一行，表示总指标值
-- `comparison_data`：可选，表示当前周期值与对比周期值
-- `trend_data`：可选，表示趋势序列
-- `dimensions`：可能包含同/环比日期字段、趋势日期字段
+- `measures`: **has exactly one measure**
+- `main_data`: usually only one row, representing the total measure value
+- `comparison_data`: optional, represents the current period value and comparison period value
+- `trend_data`: optional, represents the trend series
+- `dimensions`: may contain year-over-year/month-over-month date fields and trend date fields
 
-#### 这类数据代表什么
+<a id="这类数据代表什么-2"></a>
+#### What this type of data represents
 
-指标卡返回的核心是一个**主指标摘要**，外加可选的比较信息和趋势信息：
+What a metric card returns is essentially a **main measure summary**, plus optional comparison information and trend information:
 
-- `main_data` 表示当前卡片最核心、最醒目的那个主值；它通常是某个表的记录总数，或某个字段的聚合值，本身**不带时间周期概念**；
-- `comparison_data` 表示用于同/环比展示的两个数值，通常是“当前周期值”和“对比周期值”；它们表示某个时间周期下的记录总数，或某个字段的聚合值；
-- `trend_data` 表示这个指标在一段时间内的变化轨迹，用来支持走势判断；
-- `dimensions` 在指标卡里通常不是拿来做主分组展示，而是给 `trend_data` 或同/环比相关日期字段提供语义说明。
+- `main_data` represents the most core and prominent main value of the current card; it is usually the total record count of a table, or the aggregate value of a field, and itself **does not carry a time period concept**;
+- `comparison_data` represents the two values used for year-over-year/month-over-month display, usually the "current period value" and the "comparison period value"; they represent the total record count under a certain time period, or the aggregate value of a field;
+- `trend_data` represents the change trajectory of this measure over a period of time, used to support trend judgment;
+- `dimensions` in a metric card is usually not used for primary grouping display, but rather provides semantic explanation for `trend_data` or year-over-year/month-over-month related date fields.
 
-例如：
+For example:
 
-- `main_data = 7` 可以理解为当前卡片展示的主数据，比如某张表当前总记录数是 `7`；
-- `comparison_data[0] = 6` 则表示某个比较周期下的当前值，比如“本月记录总数 = 6”；
-- 因此，`main_data` 与 `comparison_data[0]` **不一定相等**，因为两者表达的口径并不完全相同。
+- `main_data = 7` can be understood as the main data displayed by the current card, for example, the current total record count of a table is `7`;
+- `comparison_data[0] = 6` represents the current value under a certain comparison period, for example, "total records this month = 6";
+- Therefore, `main_data` and `comparison_data[0]` **are not necessarily equal**, because the two express slightly different scopes.
 
-因此，AI 在解读指标卡时，应该优先回答这几个问题：
+Therefore, when interpreting a metric card, AI should prioritize answering these questions:
 
-1. 当前主值是多少；
-2. 和对比周期相比是上升、下降还是持平；
-3. 趋势整体是增长、波动还是下滑；
-4. 是否存在明显的异常峰值或低谷。
+1. What is the current main value;
+2. Compared with the comparison period, is it rising, falling, or flat;
+3. Is the overall trend growing, fluctuating, or declining;
+4. Are there obvious abnormal peaks or troughs.
 
 > [!NOTE]
-> 当指标卡**同时指定同/环比和趋势**时，`dimensions` 中日期维度的顺序是固定的：
-> 1. 第一个元素是**趋势**对应的日期维度；
-> 2. 第二个元素是**同/环比**对应的日期维度。
+> When a metric card **specifies both year-over-year/month-over-month and trend**, the order of date dimensions in `dimensions` is fixed:
+> 1. The first element is the date dimension corresponding to the **trend**;
+> 2. The second element is the date dimension corresponding to **year-over-year/month-over-month**.
 >
-> 另外要注意：`comparison_data` 自身通常**不直接携带日期字段**，它只给出“当前周期值 / 对比周期值”。
-> `dimensions` 中的第一个日期维度会直接出现在 `trend_data` 中，作为趋势序列的时间列；
-> 第二个日期维度则主要用于补充“该卡片配置了哪类比较相关日期字段”的语义。
+> Also note: `comparison_data` itself usually **does not directly carry date fields**; it only gives the "current period value / comparison period value".
+> The first date dimension in `dimensions` will directly appear in `trend_data` as the time column of the trend series;
+> The second date dimension is mainly used to supplement the semantics of "which type of comparison-related date field this card is configured with".
 
-#### 示例
+<a id="示例-1"></a>
+#### Example
 
 ```json
 {
@@ -555,102 +578,108 @@ CLI 成功输出使用标准 `{ok, identity, data}` 信封：
 }
 ```
 
-可解读为：
+This can be interpreted as:
 
-- 当前主指标值 = `7`
-- 当前主指标值不带时间周期概念，可理解为当前卡片主数据
-- comparison_data[0] = 当前周期值 `6`，例如某个时间周期（如本月）下的统计值
-- comparison_data[1] = 对比周期值 `0`
-- `dimensions[0]` 对应趋势日期维度，因此实际出现在 `trend_data` 里
-- `dimensions[1]` 对应同/环比相关的日期维度，用来补充比较语义
-- trend_data 展示该指标随时间的变化序列
-- 从 comparison_data 看，当前周期相较对比周期是上升的，并且对比周期值为 0
-- 从 trend_data 看，这个指标并不是每天都有值，而是在若干离散日期出现
-- 趋势序列里的最高点出现在 `2026-04-24`，值为 `2`
-- 其余出现的日期大多为 `1`，说明整体上有波动，但暂时没有持续快速增长的趋势
+- Current main measure value = `7`
+- The current main measure value does not carry a time period concept and can be understood as the current card's main data
+- comparison_data[0] = current period value `6`, for example, the statistical value under a certain time period (such as this month)
+- comparison_data[1] = comparison period value `0`
+- `dimensions[0]` corresponds to the trend date dimension, so it actually appears in `trend_data`
+- `dimensions[1]` corresponds to the year-over-year/month-over-month related date dimension, used to supplement comparison semantics
+- trend_data shows the change series of this measure over time
+- From comparison_data, the current period is rising compared with the comparison period, and the comparison period value is 0
+- From trend_data, this measure does not have a value every day, but appears on several discrete dates
+- The highest point in the trend series appears on `2026-04-24`, with value `2`
+- Most of the other dates that appear are `1`, indicating overall fluctuation, but no sustained rapid growth trend for now
 
 > [!NOTE]
-> `comparison_data` 只告诉你“当前值 / 对比值”，**不额外标出日期区间文本**。如果用户需要完整说明“和上周比”还是“和上月比”，通常要结合组件配置或界面上下文进一步判断。
+> `comparison_data` only tells you the "current value / comparison value", and **does not additionally mark the date range text**. If the user needs a complete explanation of whether it is "compared with last week" or "compared with last month", it usually requires further judgment in combination with the component configuration or interface context.
 
 ---
 
-## 如何正确解读返回值
+<a id="如何正确解读返回值"></a>
+## How to correctly interpret return values
 
-建议按下面顺序阅读：
+It is recommended to read in the following order:
 
-1. **先看 `dimensions`**：确认每个 `dim_*` alias 对应哪个字段；
-2. **再看 `measures`**：确认每个 `me_*` alias 是什么聚合方式；
-3. **最后读 `main_data` / `comparison_data` / `trend_data`**：把 alias 还原成“字段名 + 指标名”再做解释。
+1. **First look at `dimensions`**: confirm which field each `dim_*` alias corresponds to;
+2. **Then look at `measures`**: confirm what aggregation method each `me_*` alias is;
+3. **Finally read `main_data` / `comparison_data` / `trend_data`**: restore aliases to "field name + measure name" before interpreting.
 
-### 推荐解释模板
+<a id="推荐解释模板"></a>
+### Recommended interpretation templates
 
-如果要把结果转成自然语言，建议不要只“复述数值”，而应尽量覆盖下面几个层次：
+If you want to convert results into natural language, it is recommended not to merely "restate the values", but to cover the following levels as much as possible:
 
-1. **先解释指标含义**：说明 measure 代表“记录总数”“某字段求和”“平均值”等；
-2. **再给出核心结果**：明确当前主值、主要分类、主要组合或主要词项；
-3. **做排序或 Top N 提炼**：指出最高、最低、前几名、同一梯队；
-4. **补充分组/对比关系**：如果有第二维或 comparison_data，就说明比较对象和差异；
-5. **分析趋势或异常点**：如果有时间序列，指出上升、下降、波动、峰值、低谷；
-6. **最后给一句结论**：总结最值得关注的信息。
+1. **First explain the measure meaning**: state whether the measure represents "total record count", "sum of a certain field", "average value", etc.;
+2. **Then give the core result**: clarify the current main value, main categories, main combinations, or main word items;
+3. **Do sorting or Top N extraction**: point out the highest, lowest, top few, and same tier;
+4. **Supplement grouping/comparison relationships**: if there is a second dimension or comparison_data, explain the comparison objects and differences;
+5. **Analyze trends or anomalies**: if there is a time series, point out rises, falls, fluctuations, peaks, and troughs;
+6. **Finally give a one-sentence conclusion**: summarize the most noteworthy information.
 
-可参考下面模板：
+You can refer to the following templates:
 
-- 二维图表：
-  - 基础模板：`按 <维度字段> 统计，当前指标 <指标含义>；其中 <维度值1>=<指标值1>，<维度值2>=<指标值2> ...`
-  - 增强模板：`按 <维度字段> 统计，当前指标表示 <指标含义>。从结果看，<Top1维度值> 的值最高，为 <Top1值>；<Top2维度值> 和 <Top3维度值> 紧随其后。若按 Top N 看，前 <N> 项合计贡献了 ...；若看低值项，<低值维度值> 最低，为 <低值>。整体上，<一句总结>`
+- Two-dimensional charts:
+  - Basic template: `按 <维度字段> 统计，当前指标 <指标含义>；其中 <维度值1>=<指标值1>，<维度值2>=<指标值2> ...`
+  - Enhanced template: `按 <维度字段> 统计，当前指标表示 <指标含义>。从结果看，<Top1维度值> 的值最高，为 <Top1值>；<Top2维度值> 和 <Top3维度值> 紧随其后。若按 Top N 看，前 <N> 项合计贡献了 ...；若看低值项，<低值维度值> 最低，为 <低值>。整体上，<一句总结>`
 
-- 分组聚合图表：
-  - 基础模板：`按 <维度1> 统计，并以 <维度2> 分组，得到 <组合1>=<值1>，<组合2>=<值2> ...`
-  - 增强模板：`当前指标表示 <指标含义>。按 <维度1> 拆分后，不同 <维度2> 组之间存在明显差异：例如 <组合1> = <值1>，<组合2> = <值2>。如果按 <维度1> 汇总，<Top1维度1值> 总值最高，为 <汇总值>；如果看组内对比，<某组> 在 <某维度1值> 下表现最强 / 最弱。整体说明 <一句总结>`
+- Grouped aggregation charts:
+  - Basic template: `按 <维度1> 统计，并以 <维度2> 分组，得到 <组合1>=<值1>，<组合2>=<值2> ...`
+  - Enhanced template: `当前指标表示 <指标含义>。按 <维度1> 拆分后，不同 <维度2> 组之间存在明显差异：例如 <组合1> = <值1>，<组合2> = <值2>。如果按 <维度1> 汇总，<Top1维度1值> 总值最高，为 <汇总值>；如果看组内对比，<某组> 在 <某维度1值> 下表现最强 / 最弱。整体说明 <一句总结>`
 
-- 词云：
-  - 基础模板：`按分词结果统计，当前指标表示 <指标含义>；其中 <词1>=<统计值1>，<词2>=<统计值2> ...`
-  - 增强模板：`当前词云反映的是“按词分组后的 <指标含义>”。从结果看，<Top1词> 的值最高，为 <值1>，说明它是当前最突出的关键词；<Top2词>、<Top3词> 处于第二梯队。如果按 Top N 看，主要关注词集中在 <主题A>、<主题B>；如果有多个词数值接近，可归为同一热点层级。整体上，这组词更适合用来总结 <主题/热点/关注点>`
+- Word cloud:
+  - Basic template: `按分词结果统计，当前指标表示 <指标含义>；其中 <词1>=<统计值1>，<词2>=<统计值2> ...`
+  - Enhanced template: `当前词云反映的是“按词分组后的 <指标含义>”。从结果看，<Top1词> 的值最高，为 <值1>，说明它是当前最突出的关键词；<Top2词>、<Top3词> 处于第二梯队。如果按 Top N 看，主要关注词集中在 <主题A>、<主题B>；如果有多个词数值接近，可归为同一热点层级。整体上，这组词更适合用来总结 <主题/热点/关注点>`
 
-- 指标卡：
-  - 基础模板：`当前主指标值为 <main_data>；当前周期值为 <comparison_data[0]>；对比周期值为 <comparison_data[1]>；趋势上 ...`
-  - 增强模板：`当前主指标表示 <指标含义>，主值为 <main_data>。若看周期比较，当前周期值为 <comparison_data[0]>，对比周期值为 <comparison_data[1]>，因此整体表现为 <上升/下降/持平>。若看趋势序列，最高点出现在 <日期>，值为 <峰值>；最低点出现在 <日期>，值为 <低值>；整体走势表现为 <持续增长/阶段波动/明显回落>。如果需要给出结论，可总结为：<一句总结>`
+- Metric card:
+  - Basic template: `当前主指标值为 <main_data>；当前周期值为 <comparison_data[0]>；对比周期值为 <comparison_data[1]>；趋势上 ...`
+  - Enhanced template: `当前主指标表示 <指标含义>，主值为 <main_data>。若看周期比较，当前周期值为 <comparison_data[0]>，对比周期值为 <comparison_data[1]>，因此整体表现为 <上升/下降/持平>。若看趋势序列，最高点出现在 <日期>，值为 <峰值>；最低点出现在 <日期>，值为 <低值>；整体走势表现为 <持续增长/阶段波动/明显回落>。如果需要给出结论，可总结为：<一句总结>`
 
 > [!TIP]
-> 当用户明确要求“帮我分析”“帮我总结”“帮我找异常 / Top N / 趋势”时，优先采用增强模板，而不是只逐条复述原始数值。
+> When the user explicitly requests "help me analyze", "help me summarize", or "help me find anomalies / Top N / trends", prioritize the enhanced template rather than merely restating the raw values one by one.
 
 ---
 
-## 常见工作流
+<a id="常见工作流"></a>
+## Common workflows
 
-### 场景 1：用户要“拿这个图表当前展示的数据”
+<a id="场景-1用户要拿这个图表当前展示的数据"></a>
+### Scenario 1: The user wants to "get the data currently displayed by this chart"
 
 ```bash
-# 如果已知 block_id，直接读结果
+# If block_id is already known, read the result directly
 lark-cli base +dashboard-block-get-data \
   --base-token xxx \
   --block-id chtxxxxxxxx
 ```
 
-### 场景 2：用户说“帮我分析这个图表”，但你还不知道它是什么组件
+<a id="场景-2用户说帮我分析这个图表但你还不知道它是什么组件"></a>
+### Scenario 2: The user says "help me analyze this chart", but you do not yet know what component it is
 
 ```bash
-# 先看组件配置，确认它是不是支持计算的图表类型
+# First look at the component configuration to confirm whether it is a chart type that supports computation
 lark-cli base +dashboard-block-get \
   --base-token xxx \
   --dashboard-id blk_xxx \
   --block-id chtxxxxxxxx
 
-# 再读最终计算结果
+# Then read the final computed result
 lark-cli base +dashboard-block-get-data \
   --base-token xxx \
   --block-id chtxxxxxxxx
 ```
 
-### 场景 3：用户要找“仪表盘里哪个图的结果异常”
+<a id="场景-3用户要找仪表盘里哪个图的结果异常"></a>
+### Scenario 3: The user wants to find "which chart in the dashboard has abnormal results"
 
 ```bash
-# 先列组件
+# First list the components
 lark-cli base +dashboard-block-list \
   --base-token xxx \
   --dashboard-id blk_xxx
 
-# 再针对可疑 block 逐个取结果
+# Then fetch results one by one for suspicious blocks
 lark-cli base +dashboard-block-get-data \
   --base-token xxx \
   --block-id chtxxxxxxxx
@@ -658,54 +687,62 @@ lark-cli base +dashboard-block-get-data \
 
 ---
 
-## 何时优先用这个命令
+<a id="何时优先用这个命令"></a>
+## When to prefer this command
 
-- 用户说“帮我拿这个图表算出来的数据 / 结果 / 指标”
-- 用户已经知道 `block_id`，目标是**读取结果**而不是看配置
-- 用户后续还要让 AI 对图表结果做解释、归纳、比较、总结
-- 你只关心图表层的聚合产出，不需要回到底表逐条读记录
+- The user says "get me the data / results / metrics computed by this chart"
+- The user already knows `block_id`, and the goal is to **read the results** rather than view the configuration
+- The user subsequently wants the AI to explain, summarize, compare, or conclude on the chart results
+- You only care about the aggregated output at the chart level and do not need to go back to the underlying table to read records one by one
 
-## 何时不要误用
+<a id="何时不要误用"></a>
+## When not to misuse it
 
-- 想看 block 的 `data_config`、名称、类型、布局 → 用 `+dashboard-block-get`
-- 想列出仪表盘里有哪些组件 → 用 `+dashboard-block-list`
-- 想修改或新建组件 → 用 `+dashboard-block-update` / `+dashboard-block-create`
-- 想看原始记录明细，而不是图表聚合结果 → 回到 `record-*`
-- 目标是文本组件 → 本命令不适用
+- Want to see the block's `data_config`, name, type, or layout → use `+dashboard-block-get`
+- Want to list which components are in the dashboard → use `+dashboard-block-list`
+- Want to modify or create a component → use `+dashboard-block-update` / `+dashboard-block-create`
+- Want to see raw record details rather than chart aggregation results → go back to `record-*`
+- The target is a text component → this command does not apply
 
 ---
 
-## 常见误区
+<a id="常见误区"></a>
+## Common misconceptions
 
-### 误区 1：把这个命令当成“获取 block 详情”
+<a id="误区-1把这个命令当成获取-block-详情"></a>
+### Misconception 1: Treating this command as "get block details"
 
-不是。这个命令不返回：
+It is not. This command does not return:
 
-- block 名称
-- block 类型
+- block name
+- block type
 - layout
 - `data_config`
-- 所属 dashboard 信息
+- the dashboard it belongs to
 
-这些都应该通过 `+dashboard-block-get` 获取。
+All of these should be obtained via `+dashboard-block-get`.
 
-### 误区 2：以为它返回的是原始记录
+<a id="误区-2以为它返回的是原始记录"></a>
+### Misconception 2: Assuming it returns raw records
 
-不是。它返回的是**图表聚合后的最终结果**。如果图表本身做了过滤、分组、聚合、时间窗口限制，返回值反映的是图表视角，不是原始表全量明细。
+It does not. It returns the **final aggregated result of the chart**. If the chart itself applies filters, grouping, aggregation, or time window limits, the returned value reflects the chart's perspective, not the full raw details of the underlying table.
 
-### 误区 3：直接把 alias 当真实字段名读
+<a id="误区-3直接把-alias-当真实字段名读"></a>
+### Misconception 3: Reading alias directly as a real field name
 
-不应该。alias 只是协议里的键，必须结合 `dimensions` / `measures` 还原语义。
+You should not. alias is merely a key in the protocol; you must combine it with `dimensions` / `measures` to restore the semantics.
 
-### 误区 4：看到指标卡的 `comparison_data` 就以为已经知道“同比/环比周期文本”
+<a id="误区-4看到指标卡的-comparison_data-就以为已经知道同比环比周期文本"></a>
+### Misconception 4: Seeing a metric card's `comparison_data` and assuming you already know the "year-over-year/month-over-month period text"
 
-不一定。它只给出比较值，不一定给出周期标签。若要精确解释比较窗口，通常还需要组件配置或 UI 上下文。
+Not necessarily. It only gives the comparison value, not necessarily the period label. To precisely explain the comparison window, component configuration or UI context is usually still needed.
 
 ---
 
-## dry-run 用途
+<a id="dry-run-用途"></a>
+## Purpose of dry-run
 
-可用来确认最终会调用的接口路径：
+Can be used to confirm the API path that will ultimately be called:
 
 ```bash
 lark-cli base +dashboard-block-get-data \
@@ -715,22 +752,23 @@ lark-cli base +dashboard-block-get-data \
   --format pretty
 ```
 
-你应能看到类似：
+You should see something like:
 
 ```text
 GET /open-apis/base/v3/bases/bascn_example_token/dashboards/blocks/chtxxxxxxxx/data
 ```
 
-适合在以下场景使用：
+Suitable for the following scenarios:
 
-- 校验 `base_token` / `block_id` 是否传对；
-- 调试 agent 生成的命令；
-- 编写自动化测试时确认请求结构。
+- Verify whether `base_token` / `block_id` are passed correctly;
+- Debug commands generated by the agent;
+- Confirm the request structure when writing automated tests.
 
 ---
 
-## 参考
+<a id="参考"></a>
+## References
 
-- [lark-base-dashboard.md](lark-base-dashboard.md) — dashboard 模块总指引
-- `+dashboard-block-get` — 获取 block 元数据
-- [Dashboard Block 配置](lark-base-dashboard-block-config.md) — data_config 结构和组件类型说明
+- [lark-base-dashboard.md](lark-base-dashboard.md) — dashboard module general guide
+- `+dashboard-block-get` — get block metadata
+- [Dashboard Block configuration](lark-base-dashboard-block-config.md) — data_config structure and component type descriptions

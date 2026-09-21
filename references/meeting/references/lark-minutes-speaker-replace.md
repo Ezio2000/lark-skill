@@ -1,30 +1,32 @@
 # minutes +speaker-replace
 
 
-替换妙记逐字稿中的说话人身份：把妙记逐字稿里"原说话人"对应的所有发言段，重新归属到"新说话人"。常用于解决妙记自动识别错说话人，或需要把外部/非飞书说话人改绑到正确飞书用户的场景。
+Replace the speaker identity in a Minutes verbatim transcript: reassign all speech segments corresponding to the "original speaker" in the Minutes verbatim transcript to the "new speaker". This is commonly used to resolve incorrect automatic speaker recognition in Minutes, or to rebind an external/non-Feishu speaker to the correct Feishu user.
 
-本模块 对应 shortcut：`lark-cli minutes +speaker-replace`。
+This module corresponds to shortcut: `lark-cli minutes +speaker-replace`.
 
-## 典型触发表达
+<a id="典型触发表达"></a>
+## Typical trigger expressions
 
-- "把这条妙记里 A 的发言改成 B"
-- "妙记说话人识别错了，帮我把张三的部分换成李四"
-- "把妙记里外部说话人 / 非飞书说话人的发言改成某个飞书用户"
-- "妙记说话人修改 / 替换 / 重新归属"
+- "Change A's speech in this Minutes to B"
+- "The Minutes speaker was recognized incorrectly, help me replace Zhang San's parts with Li Si"
+- "Change the speech of an external speaker / non-Feishu speaker in the Minutes to a certain Feishu user"
+- "Minutes speaker modification / replacement / reassignment"
 
-## 完整工作流
+<a id="完整工作流"></a>
+## Complete workflow
 
-识别到「修改妙记说话人」需求后，**必须**按以下顺序执行；**禁止**把展示名直接传给 `--from-speaker-id`。
+After identifying a "modify Minutes speaker" request, you **must** execute in the following order; it is **forbidden** to pass the display name directly to `--from-speaker-id`.
 
-1. **确认 `minute_token`**
-   - 从妙记 URL、搜索或 VC 链路取得 `minute_token`。
+1. **Confirm `minute_token`**
+   - Obtain `minute_token` from the Minutes URL, search, or VC link.
 
-2. **查说话人列表（必须先做）**
-   - 用 **`lark-cli api`** 直接调用内部 HTTP 接口：
+2. **Query the speaker list (must be done first)**
+   - Use **`lark-cli api`** to directly call the internal HTTP interface:
      ```bash
      lark-cli api GET "/open-apis/minutes/v1/minutes/<minute_token>/transcript/speakerlist" --as user
      ```
-   - 返回 `data.speakers[]`，每项含 `speaker_id`（不透明 id）与 `name`（逐字稿展示名）。示例：
+   - Returns `data.speakers[]`, each item contains `speaker_id` (opaque id) and `name` (verbatim transcript display name). Example:
      ```json
      {
        "data": {
@@ -36,16 +38,16 @@
      }
      ```
 
-3. **解析 `--from-speaker-id`**
-   - 根据用户描述的原说话人（展示名，如「说话人1」「张三」），在 `speakers[]` 里按 `name` **精确匹配**，取对应的 **`speaker_id`** 作为 `--from-speaker-id` 的值。
-   - **`--from-speaker-id` 只传 `speaker_id`，不传展示名。**
-   - 若同名有多条（`name` 相同、`speaker_id` 不同）：**不要擅自挑选**。可用 [`minutes +detail --transcript`](lark-minutes-detail.md) 对照各人发言内容，请用户确认后再用精确的 `speaker_id`。
-   - 若列表中无匹配展示名：告知用户并核对拼写，或请用户在妙记页面确认标签。
+3. **Parse `--from-speaker-id`**
+   - Based on the original speaker described by the user (display name, such as "Speaker 1" or "Zhang San"), perform an **exact match** by `name` in `speakers[]`, and take the corresponding **`speaker_id`** as the value of `--from-speaker-id`.
+   - **`--from-speaker-id` only passes `speaker_id`, not the display name.**
+   - If there are multiple entries with the same name (same `name`, different `speaker_id`): **do not choose arbitrarily**. You may use [`minutes +detail --transcript`](lark-minutes-detail.md) to compare each person's speech content, and after the user confirms, use the exact `speaker_id`.
+   - If there is no matching display name in the list: inform the user and verify the spelling, or ask the user to confirm the label on the Minutes page.
 
-4. **解析 `--to-user-id`**
-   - 新说话人必须是 `ou_` 开头的 open_id。用户只给姓名时，先用 [lark-contact](../../contact/index.md) 解析。
+4. **Parse `--to-user-id`**
+   - The new speaker must be an open_id starting with `ou_`. If the user only provides a name, first use [lark-contact](../../contact/index.md) to resolve it.
 
-5. **执行替换**
+5. **Execute the replacement**
    ```bash
    lark-cli minutes +speaker-replace \
      --minute-token obcnxxxxxxxxxxxxxxxxxxxx \
@@ -53,54 +55,63 @@
      --to-user-id ou_new_speaker_open_id
    ```
 
-## 命令示例
+<a id="命令示例"></a>
+## Command examples
 
 ```bash
-# 1. 先查列表（裸调 HTTP）
+# 1. First query the list (raw HTTP call)
 lark-cli api GET "/open-apis/minutes/v1/minutes/obcnxxxxxxxxxxxxxxxxxxxx/transcript/speakerlist" --as user
 
-# 2. 再替换（from-speaker-id 来自上一步的 speaker_id）
+# 2. Then replace (from-speaker-id comes from the speaker_id in the previous step)
 lark-cli minutes +speaker-replace \
   --minute-token obcnxxxxxxxxxxxxxxxxxxxx \
   --from-speaker-id ENCRYPTED_TOKEN_ABC \
   --to-user-id ou_new_speaker_open_id
 ```
 
-## 参数
+<a id="参数"></a>
+## Parameters
 
-| 参数 | 必填 | 说明 |
+| Parameter | Required | Description |
 |------|------|------|
-| `--minute-token <token>` | 是 | 妙记的唯一标识，可从妙记 URL 末尾路径提取 |
-| `--from-speaker-id <id>` | 是 | 被替换的原说话人 **`speaker_id`**（来自 speakerlist API 的 `data.speakers[].speaker_id`） |
-| `--to-user-id <ou_xxx>` | 是 | 新的说话人，**必须是 `ou_` 开头的 open_id**，不支持用户名 |
+| `--minute-token <token>` | Yes | The unique identifier of the Minutes, which can be extracted from the end path of the Minutes URL |
+| `--from-speaker-id <id>` | Yes | The original speaker being replaced **`speaker_id`** (from the `data.speakers[].speaker_id` of the speakerlist API) |
+| `--to-user-id <ou_xxx>` | Yes | The new speaker, **must be an open_id starting with `ou_`**, usernames are not supported |
 
-## 核心约束
+<a id="核心约束"></a>
+## Core constraints
 
-### 1. 必须先查 speakerlist，再替换
+<a id="1-必须先查-speakerlist再替换"></a>
+### 1. Must query speakerlist first, then replace
 
-Agent 必须先 `lark-cli api GET .../speakerlist`，再 `+speaker-replace`；`--from-speaker-id` 只接受 `speaker_id`。
+The Agent must first `lark-cli api GET .../speakerlist`, then `+speaker-replace`; `--from-speaker-id` only accepts `speaker_id`.
 
-`+speaker-replace` **不会**自己请求 speakerlist：`--from-speaker-id` 的值会原样发给替换接口。整条链路只在 Agent 一开始查一次 speakerlist，务必传入上一步拿到的 `speaker_id`（不要传展示名，否则替换接口会返回 speaker-not-found）。
+`+speaker-replace` will **not** request speakerlist on its own: the value of `--from-speaker-id` will be sent as-is to the replacement interface. The entire chain only queries speakerlist once at the beginning by the Agent, so be sure to pass in the `speaker_id` obtained in the previous step (do not pass the display name, otherwise the replacement interface will return speaker-not-found).
 
-### 2. 新说话人必须是 open_id
+<a id="2-新说话人必须是-open_id"></a>
+### 2. The new speaker must be an open_id
 
-`--to-user-id` 仅支持 `ou_` 开头的 open_id，**不支持直接传姓名**；如果用户只给了姓名，请先用 [lark-contact](../../contact/index.md) 把姓名解析成 `open_id`。
+`--to-user-id` only supports open_id starting with `ou_`, and **does not support passing a name directly**; if the user only provides a name, first use [lark-contact](../../contact/index.md) to resolve the name into `open_id`.
 
-### 3. 历史参数
+<a id="3-历史参数"></a>
+### 3. Historical parameter
 
-存在一个隐藏的历史参数 `--from-user-id`（飞书说话人的 open_id），仅为向后兼容保留；新流程请一律使用 `--from-speaker-id` + `speaker_id`。
+There is a hidden historical parameter `--from-user-id` (the open_id of the Feishu speaker), retained only for backward compatibility; new workflows should always use `--from-speaker-id` + `speaker_id`.
 
-## 认证与权限
+<a id="认证与权限"></a>
+## Authentication and permissions
 
-- 所需 scope：`minutes:minutes:readonly`（内部解析说话人）、`minutes:minutes:update`（执行替换）。
+- Required scopes: `minutes:minutes:readonly` (internal speaker resolution), `minutes:minutes:update` (execute replacement).
 
-## 输出结果
+<a id="输出结果"></a>
+## Output result
 
-| 字段 | 说明 |
+| Field | Description |
 |------|------|
-| `minute_token` | 被修改的妙记 Token，与输入的 `--minute-token` 一致 |
-| `from_speaker_id` | 实际用于替换的不透明说话人标识 |
-| `to_user_id` | 替换后的新说话人 open_id，与输入的 `--to-user-id` 一致 |
+| `minute_token` | The modified Minutes Token, consistent with the input `--minute-token` |
+| `from_speaker_id` | The opaque speaker identifier actually used for replacement |
+| `to_user_id` | The new speaker open_id after replacement, consistent with the input `--to-user-id` |
 
-## 相关场景
-- [生成和修改妙记](../scenes/create-and-edit-minutes.md)
+<a id="相关场景"></a>
+## Related scenarios
+- [Generate and modify Minutes](../scenes/create-and-edit-minutes.md)

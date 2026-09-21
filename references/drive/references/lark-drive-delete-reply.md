@@ -1,36 +1,40 @@
 # drive +delete-reply
 
 
-删除某条回复。**高风险写操作**：真实执行需要按 [`../../shared/index.md`](../../shared/index.md) 的高风险审批协议向用户确认后追加 `--yes`；删除不可恢复。
+Delete a reply. **High-risk write operation**: actual execution requires confirming with the user according to the high-risk approval protocol in [`../../shared/index.md`](../../shared/index.md), then appending `--yes`; deletion is irreversible.
 
-## 命令
+<a id="命令"></a>
+## Command
 
 ```bash
-# 先预览（--dry-run 不需要 --yes）
+# Preview first (--dry-run does not require --yes)
 lark-cli drive +delete-reply --url "https://example.larksuite.com/docx/<DOCX_TOKEN>" --comment-id '<id>' --reply-id '<id>' --dry-run
 
-# 确认后真实删除（把 --dry-run 换成 --yes）
+# After confirmation, actually delete (replace --dry-run with --yes)
 lark-cli drive +delete-reply --url "https://example.larksuite.com/docx/<DOCX_TOKEN>" --comment-id '<id>' --reply-id '<id>' --yes
 ```
 
-## 参数
+<a id="参数"></a>
+## Parameters
 
-| 参数 | 必填 | 说明 |
+| Parameter | Required | Description |
 |---|---|---|
-| `--url` | 与 `--token` 二选一 | 推荐入口。支持 doc/docx/sheet/file/slides/base/bitable/apps/wiki URL；apps 妙搭 URL 使用 `/page/<token>`；wiki URL 会自动解析到真实文档。 |
-| `--token` | 与 `--url` 二选一 | 裸 token 或 URL。裸 token 必须搭配 `--type`；wiki token 使用 `--type wiki`。 |
-| `--type` | 裸 token 时必填 | 传 token 对应类型：`doc`、`docx`、`sheet`、`file`、`slides`、`bitable`、`base`、`apps`、`wiki`。wiki token 使用 `wiki`；传 `base` 时，CLI 会按 `bitable` 类型处理。 |
-| `--comment-id` | 是 | 回复所属的评论 ID；来自 `drive +list-comments` |
-| `--reply-id` | 是 | 要删除的回复 ID；来自 `drive +list-replies` 的 `items[].reply_id`，或 `drive +list-comments` 的 `items[].reply_list.replies[].reply_id` |
-| `--yes` | 真实执行时是 | 高风险确认；`--dry-run` 预览不需要 |
+| `--url` | Choose one of this or `--token` | Recommended entry point. Supports doc/docx/sheet/file/slides/base/bitable/apps/wiki URLs; for apps Miaoda URLs use `/page/<token>`; wiki URLs are automatically resolved to the real document. |
+| `--token` | Choose one of this or `--url` | Bare token or URL. A bare token must be paired with `--type`; for wiki tokens use `--type wiki`. |
+| `--type` | Required when using a bare token | Pass the type corresponding to the token: `doc`, `docx`, `sheet`, `file`, `slides`, `bitable`, `base`, `apps`, `wiki`. For wiki tokens use `wiki`; when `base` is passed, the CLI processes it as type `bitable`. |
+| `--comment-id` | Yes | The comment ID to which the reply belongs; from `drive +list-comments` |
+| `--reply-id` | Yes | The reply ID to delete; from `items[].reply_id` of `drive +list-replies`, or `items[].reply_list.replies[].reply_id` of `drive +list-comments` |
+| `--yes` | Yes for actual execution | High-risk confirmation; not required for `--dry-run` preview |
 
-## 行为说明
+<a id="行为说明"></a>
+## Behavior
 
-- 删除永久生效，回复没有回收站或撤销。
-- 删除按 reply 逐条生效：删除某条回复（包括第一条/根回复）不影响其它回复；把该评论卡片下的所有回复都删完后，评论卡片在前端页面才不再显示。
-- **删除整条评论没有专门的命令，需要用本命令删光该卡片下的所有回复**（先用 `drive +list-replies` 拉全回复 id）。删除前先和用户确认删的是某条回复还是整条评论。
+- Deletion takes effect permanently; replies have no recycle bin or undo.
+- Deletion takes effect reply by reply: deleting a reply (including the first/root reply) does not affect other replies; only after all replies under that comment card are deleted does the comment card stop displaying on the frontend page.
+- **There is no dedicated command for deleting an entire comment; you need to use this command to delete all replies under that card** (first use `drive +list-replies` to pull all reply IDs). Before deleting, confirm with the user whether you are deleting a single reply or the entire comment.
 
-## 输出
+<a id="输出"></a>
+## Output
 
 ```json
 {
@@ -42,6 +46,7 @@ lark-cli drive +delete-reply --url "https://example.larksuite.com/docx/<DOCX_TOK
 }
 ```
 
-## 参考
+<a id="参考"></a>
+## References
 
-- [lark-drive-list-replies](lark-drive-list-replies.md) -- 获取回复与 reply_id
+- [lark-drive-list-replies](lark-drive-list-replies.md) -- get replies and reply_id

@@ -1,99 +1,105 @@
-# 日程与视频会议的关系
+<a id="日程与视频会议的关系"></a>
+# Relationship Between Calendar Events and Video Meetings
 
-用户口中的「会议」不区分「日程」和「视频会议」，实际是两类不同实体。本文定义两者关系，并给出「当前 / 未来 / 过去」三种查询意图的执行流程。
+When users say "meeting", they do not distinguish between "calendar events" and "video meetings"; in reality, these are two different types of entities. This document defines the relationship between the two and provides execution flows for the three query intents: "current / future / past".
 
-## 核心概念
+<a id="核心概念"></a>
+## Core Concepts
 
-- **日程（Calendar Event）**：对用户一段时间的预占，到点后可能开视频会议、也可能只是线下会议 / 私人时间块。
-- **视频会议（VC Meeting）**：实际发生过的一次通话，`meeting_id` 只有真正发起后才存在。
+- **Calendar Event**: A reservation of a period of time for the user; when the time arrives, it may involve a video meeting, or it may simply be an offline meeting / personal time block.
+- **VC Meeting**: An actual call that took place; `meeting_id` only exists after it is actually initiated.
 
-| 场景 | `event_id` | `meeting_id` | 备注 |
+| Scenario | `event_id` | `meeting_id` | Notes |
 |------|:---:|:---:|------|
-| 日程发起了视频会议 | ✓ | ✓ | 一个日程可发起多次通话，产出多个 `meeting_id` |
-| 日程未开视频会议 | ✓ | ✗ | 线下会议 / 私人时间块 |
-| 即时视频会议 | ✗ | ✓ | 无日程绑定 |
+| Calendar event initiated a video meeting | ✓ | ✓ | One calendar event can initiate multiple calls, producing multiple `meeting_id` |
+| Calendar event did not start a video meeting | ✓ | ✗ | Offline meeting / personal time block |
+| Instant video meeting | ✗ | ✓ | No calendar event binding |
 
-**关键不变量**：视频会议只发生在**当下和过去**，不存在「未来的视频会议」。
+**Key invariant**: Video meetings only occur in the **present and past**; there is no such thing as a "future video meeting".
 
-## 意图 1：查询当前正在开的会议
+<a id="意图-1查询当前正在开的会议"></a>
+## Intent 1: Query Meetings Currently in Progress
 
-**目标覆盖**：当下时间点用户可能关心的所有活动——正在开的视频会议 + 当前时间的日程（无论有没有开视频）。
+**Target coverage**: All activities the user may care about at the current point in time—video meetings currently in progress + calendar events at the current time (regardless of whether a video meeting was started).
 
-**执行步骤**：
+**Execution steps**:
 
 ```bash
-# 1. 当前时间的日程
+# 1. Calendar events at the current time
 lark-cli calendar +agenda --start <now> --end <now>
 
-# 2. 用户已加入的视频会议
+# 2. Video meetings the user has joined
 lark-cli vc +meeting-list-active --as user
 
-# 3. 步骤 1 每个日程回查关联 meeting_id
-#    输出是 event_id → meeting_id 映射；后续所有交叉都按 meeting_id 匹配
-#    （vc +meeting-list-active / vc +detail 结果的 id 字段即 meeting_id，无 event_id）
+# 3. For each calendar event in step 1, look up the associated meeting_id
+#    The output is an event_id → meeting_id mapping; all subsequent cross-referencing is matched by meeting_id
+#    (The id field in the results of vc +meeting-list-active / vc +detail is the meeting_id, with no event_id)
 lark-cli calendar +meeting --event-ids <event_id1>,<event_id2>
 
-# 4. 判定视频会议是否仍在进行
-#    仅对「步骤 3 非空 meeting_id 且不在步骤 2 里」的调用
-#    end_time 为空或 <= start_time → 仍在进行；否则已结束
+# 4. Determine whether the video meeting is still in progress
+#    Only for calls where "the meeting_id from step 3 is non-empty and not in step 2"
+#    end_time is empty or <= start_time → still in progress; otherwise it has ended
 lark-cli vc +detail --meeting-ids <meeting_id1>,<meeting_id2>
 ```
 
-**结果分组呈现**：按下列**四组顺序**归类，每组独立成节，空组可省略。
+**Grouped result presentation**: Categorize in the following **four-group order**, with each group as its own section; empty groups may be omitted.
 
-1. **当前用户正在参与的会议**（`meeting_id` 命中步骤 2）
-   - **即时会议**（无关联 `event_id`）：仅展示视频会议信息。
-   - **日程会议**（能与步骤 3 的 `event_id` 关联）：展示日程信息 + 视频会议信息。
-2. **当前正在视频会议的日程（用户未加入）**：日程有 `meeting_id`、步骤 4 判定仍在进行、但不在步骤 2 里。展示日程信息 + 视频会议信息。
-3. **当前正在进行中的日程（视频会议已结束）**：日程仍在时间窗内、有 `meeting_id`，但步骤 4 判定已结束。展示日程信息 + 视频会议信息（标注「已结束」）。
-4. **当前正在进行中的日程（未开启视频会议）**：日程仍在时间窗内，步骤 3 回查无 `meeting_id`。仅展示日程信息。
+1. **Meetings the current user is participating in** (`meeting_id` matched in step 2)
+   - **Instant meetings** (no associated `event_id`): Display only video meeting information.
+   - **Calendar meetings** (can be associated with a `event_id` from step 3): Display calendar event information + video meeting information.
+2. **Calendar events currently in a video meeting (user not joined)**: The calendar event has a `meeting_id`, step 4 determines it is still in progress, but it is not in step 2. Display calendar event information + video meeting information.
+3. **Calendar events currently in progress (video meeting has ended)**: The calendar event is still within its time window and has a `meeting_id`, but step 4 determines it has ended. Display calendar event information + video meeting information (marked "ended").
+4. **Calendar events currently in progress (no video meeting started)**: The calendar event is still within its time window, and step 3's lookup found no `meeting_id`. Display only calendar event information.
 
-## 意图 2：查询未来的会议
+<a id="意图-2查询未来的会议"></a>
+## Intent 2: Query Future Meetings
 
-**只有日程视角**：视频会议只发生在当下和过去，用户说的「未来的会议」等价于「未来的日程」。
+**Only the calendar event perspective**: Video meetings only occur in the present and past; what the user calls "future meetings" is equivalent to "future calendar events".
 
 ```bash
-# 二选一：无关键词 → +agenda；有关键词 → +search-event
+# Choose one of two: no keywords → +agenda; with keywords → +search-event
 lark-cli calendar +agenda --start <future_start> --end <future_end>
 lark-cli calendar +search-event --query <keyword> --start <future_start> --end <future_end>
 
-# 禁用：vc +search 对未来返回空，容易被误判「没有会议」
-# lark-cli vc +search --start <future> --end <future>   ← 不要这样做
+# Disabled: vc +search returns empty for the future, easily misjudged as "no meetings"
+# lark-cli vc +search --start <future> --end <future>   ← Do not do this
 ```
 
-若用户明确要求「未来的视频会议」，仍返回日程列表并**主动说明**：视频会议是否真正开要等到时间到达才能确定。
+If the user explicitly asks for "future video meetings", still return the calendar event list and **proactively explain**: whether the video meeting actually takes place can only be determined once the time arrives.
 
-## 意图 3：查询过去的会议
+<a id="意图-3查询过去的会议"></a>
+## Intent 3: Query Past Meetings
 
-**目标覆盖**：过去时间段内发生过的视频会议（含即时会议）+ 过去时间段的日程（含未开视频会议的）。
+**Target coverage**: Video meetings that occurred in the past time period (including instant meetings) + calendar events in the past time period (including those without video meetings).
 
-**执行步骤**：
+**Execution steps**:
 
 ```bash
-# 1. 过去的视频会议（含即时会议——仅查日程会漏掉）
+# 1. Past video meetings (including instant meetings—querying only calendar events would miss them)
 lark-cli vc +search --start <past_start> --end <past_end>
 
-# 2. 过去的日程
+# 2. Past calendar events
 lark-cli calendar +agenda --start <past_start> --end <past_end>
 
-# 3. 步骤 2 每个日程回查 meeting_id，构建 meeting_id → event_id 映射
-#    遍历步骤 1 每条结果，用其 id 字段（即 meeting_id）查此映射：
-#    命中 → 日程视频会议；未命中 → 无日程的即时会议
+# 3. For each calendar event in step 2, look up meeting_id to build a meeting_id → event_id mapping
+#    Iterate over each result in step 1, using its id field (i.e., meeting_id) to look up this mapping:
+#    Match → calendar event video meeting; no match → instant meeting without a calendar event
 lark-cli calendar +meeting --event-ids <event_id1>,<event_id2>
 ```
 
-**结果分组**：按三组顺序呈现。
+**Result grouping**: Present in the following three-group order.
 
-1. **无日程的即时视频会议**：步骤 1 里找不到关联 `event_id`。仅展示视频会议信息。
-2. **日程视频会议**：日程 + 关联 `meeting_id`。同时展示日程信息和视频会议信息。
-3. **未开视频会议的日程**：日程存在但步骤 3 回查无 `meeting_id`。仅展示日程信息。
+1. **Instant video meetings without a calendar event**: No associated `event_id` found in step 1. Display only video meeting information.
+2. **Calendar event video meetings**: Calendar event + associated `meeting_id`. Display both calendar event information and video meeting information.
+3. **Calendar events without a video meeting**: The calendar event exists but step 3's lookup found no `meeting_id`. Display only calendar event information.
 
-## 常见判断路径
+<a id="常见判断路径"></a>
+## Common Decision Paths
 
-| 用户输入 | 动作 |
+| User input | Action |
 |----------|------|
-| 只给了「会议标题」 | 不确定是日程标题还是即时会议标题，**同时**查 `calendar +search-event --query <标题>` 与 [`lark-meeting`](../../meeting/index.md) 的 `vc +search --query <标题>`，交叉后按上述意图分流 |
-| 直接给了 `meeting_id` | 直接进入 [`lark-meeting`](../../meeting/index.md)，跳过日程 |
-| 相对锚点（「今天下午 3 点那个会」） | 先 `+agenda` 定位日程，再按意图 1 或 3 判断 |
-| 过去锚点（「昨天开的会」） | **禁止只查 `+agenda`**——必须同时查 `vc +search`，否则漏掉即时会议 |
-| 未来锚点（「明天下午的会」） | 只查日程，不查 `vc +search`（未来永远返回空） |
+| Only a "meeting title" is given | It is uncertain whether it is a calendar event title or an instant meeting title; query **both** the `calendar +search-event --query <标题>` and the `vc +search --query <标题>` of [`lark-meeting`](../../meeting/index.md), then cross-reference and route according to the intents above |
+| A `meeting_id` is given directly | Go directly to [`lark-meeting`](../../meeting/index.md), skipping calendar events |
+| Relative anchor ("that meeting at 3 PM today") | First use `+agenda` to locate the calendar event, then determine by intent 1 or 3 |
+| Past anchor ("the meeting held yesterday") | **Do not query only `+agenda`**—you must also query `vc +search`, otherwise instant meetings will be missed |
+| Future anchor ("tomorrow afternoon's meeting") | Query only calendar events, do not query `vc +search` (the future always returns empty) |

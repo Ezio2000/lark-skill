@@ -1,4 +1,5 @@
-# Base Advanced Permission 与 Role
+<a id="base-advanced-permission-与-role"></a>
+# Base Advanced Permission and Role
 
 This is the module entry point for Base advanced permissions and roles. Use it to choose commands and understand safety boundaries. For the permission JSON itself, use [Role Permission Schema](lark-base-role-config.md).
 

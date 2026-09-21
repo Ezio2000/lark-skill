@@ -1,45 +1,48 @@
 # mail +thread
 
 
-读取指定会话中的所有邮件，按发送时间升序排列。每条邮件结构与 `+message` 相同。
+Read all emails in the specified thread, sorted in ascending order by send time. Each email has the same structure as `+message`.
 
-在实现上，每个 `messages[]` 项与 `mail +message` 的构建方式一致：安全元数据字段直接透传，正文/附件辅助字段由 shortcut 派生。每条邮件使用统一的 `attachments[]` 列表，涵盖普通附件和内嵌图片。
+In terms of implementation, each `messages[]` item is constructed in the same way as `mail +message`: security metadata fields are passed through directly, while body/attachment auxiliary fields are derived by the shortcut. Each email uses a unified `attachments[]` list, covering both regular attachments and inline images.
 
-本模块 对应 shortcut `lark-cli mail +thread`，内部调用：
-- `GET /open-apis/mail/v1/user_mailboxes/{mailbox}/threads/{thread_id}` — 获取会话中所有邮件的完整内容
+This module corresponds to shortcut `lark-cli mail +thread`, and internally calls:
+- `GET /open-apis/mail/v1/user_mailboxes/{mailbox}/threads/{thread_id}` — retrieves the full content of all emails in the thread
 
-## 命令
+<a id="命令"></a>
+## Command
 
 ```bash
-# 读取完整会话
+# Read the full thread
 lark-cli mail +thread --thread-id <thread-id>
 
-# 仅纯文本正文（更小的负载，适合 AI 处理）
+# Plain text body only (smaller payload, suitable for AI processing)
 lark-cli mail +thread --thread-id <thread-id> --html=false
 
-# 指定邮箱
+# Specify mailbox
 lark-cli mail +thread --mailbox user@example.com --thread-id <thread-id>
 
-# JSON 输出
+# JSON output
 lark-cli mail +thread --thread-id <thread-id> --format json
 
 # Dry Run
 lark-cli mail +thread --thread-id <thread-id> --dry-run
 ```
 
-## 参数
+<a id="参数"></a>
+## Parameters
 
-| 参数 | 必填 | 默认值 | 说明 |
+| Parameter | Required | Default | Description |
 |------|------|--------|------|
-| `--thread-id <id>` | 是 | — | 会话 ID（`thread_id`） |
-| `--mailbox <email>` | 否 | 当前用户 | 邮箱地址（`user_mailbox_id`） |
-| `--html` | 否 | true | 是否返回 HTML 正文（`false` 仅返回纯文本，减少带宽） |
-| `--format <mode>` | 否 | json | 输出格式：`json`（默认）/ `pretty` / `table` / `ndjson` / `csv` |
-| `--dry-run` | 否 | — | 仅打印请求，不执行 |
+| `--thread-id <id>` | Yes | — | Thread ID (`thread_id`) |
+| `--mailbox <email>` | No | Current user | Email address (`user_mailbox_id`) |
+| `--html` | No | true | Whether to return the HTML body (`false` returns plain text only, reducing bandwidth) |
+| `--format <mode>` | No | json | Output format: `json` (default) / `pretty` / `table` / `ndjson` / `csv` |
+| `--dry-run` | No | — | Print the request only, do not execute |
 
-## 返回值
+<a id="返回值"></a>
+## Return Value
 
-成功时返回 `{"ok": true, "data": ...}` 结构，`data` 字段包含：
+On success, returns a `{"ok": true, "data": ...}` structure, where the `data` field contains:
 
 ```json
 {
@@ -52,59 +55,64 @@ lark-cli mail +thread --thread-id <thread-id> --dry-run
 }
 ```
 
-顶层字段：
+Top-level fields:
 
-| 字段 | 说明 |
+| Field | Description |
 |------|------|
-| `thread_id` | `--thread-id` 请求的会话 ID |
-| `message_count` | 成功获取的邮件数量 |
-| `messages` | 按 `internal_date` 升序排列的邮件列表（最早的在前） |
+| `thread_id` | The thread ID requested by `--thread-id` |
+| `message_count` | Number of emails successfully retrieved |
+| `messages` | List of emails sorted in ascending order by `internal_date` (earliest first) |
 
-每个 `messages[]` 项使用与 [`mail +message`](./lark-mail-message.md#返回值) 相同的结构。完整字段列表参见 [`+message` 字段说明](./lark-mail-message.md#字段说明) 和 [`+message` security_level](./lark-mail-message.md#security_level)。
+Each `messages[]` item uses the same structure as [`mail +message`](./lark-mail-message.md#返回值). For the complete field list, see [`+message` field descriptions](./lark-mail-message.md#字段说明) and [`+message` security_level](./lark-mail-message.md#security_level).
 
-> 注意：使用 `--format json` 获取结构化输出。所有 JSON 输出统一包裹在 `{"ok": true, "data": ...}` 结构中。
+> Note: Use `--format json` to get structured output. All JSON output is uniformly wrapped in a `{"ok": true, "data": ...}` structure.
 
-## 注意事项
+<a id="注意事项"></a>
+## Notes
 
-- **JSON 输出可直接使用**，可直接读取，无需额外编码转换。
-- JSON 输出中 `messages[].body_html` 里的 `<` / `>` 可能显示为 `\u003c` / `\u003e`（JSON 安全转义，内容不变，`jq -r` 可还原）。
-- `mail +thread` 不再在读取会话时获取附件/图片下载 URL。如后续步骤需要 URL，请针对特定的 `message_id` 和 `attachment_ids` 调用原生附件 URL API。
-- 与 `+message` 一样，普通附件和内嵌图片都出现在 `messages[].attachments[]` 中，使用同一个 `user_mailbox.message.attachments download_url` API。
-- 查看某条邮件的原始 HTML：
+- **JSON output can be used directly**; it can be read directly without additional encoding conversion.
+- In JSON output, `<` / `>` within `messages[].body_html` may appear as `\u003c` / `\u003e` (JSON-safe escaping; content is unchanged and `jq -r` can restore it).
+- `mail +thread` no longer retrieves attachment/image download URLs when reading a thread. If subsequent steps require URLs, call the native attachment URL API for the specific `message_id` and `attachment_ids`.
+- As with `+message`, both regular attachments and inline images appear in `messages[].attachments[]`, using the same `user_mailbox.message.attachments download_url` API.
+- To view the raw HTML of an email:
 
 ```bash
 lark-cli mail +thread --thread-id <thread_id> --format json | jq -r '.data.messages[0].body_html'
 ```
 
-## 典型场景
+<a id="典型场景"></a>
+## Typical Scenarios
 
-### 查看会话时间线 → 生成摘要
+<a id="查看会话时间线--生成摘要"></a>
+### View thread timeline → generate summary
 
 ```bash
-# 1. 从某封邮件获取 thread_id
+# 1. Get thread_id from an email
 lark-cli mail +message --message-id <id> --html=false --format json | jq '.data.thread_id'
 
-# 2. 读取完整会话（仅纯文本）
+# 2. Read the full thread (plain text only)
 lark-cli mail +thread --thread-id <thread_id> --html=false --format json
 
-# 3. 让 LLM 分析 messages[].body_plain_text 并生成会话摘要
+# 3. Have the LLM analyze messages[].body_plain_text and generate a thread summary
 ```
 
-### 回复会话中最新一封邮件
+<a id="回复会话中最新一封邮件"></a>
+### Reply to the latest email in the thread
 
 ```bash
-# 获取最新一封邮件的 message_id
+# Get the message_id of the latest email
 lark-cli mail +thread --thread-id <thread_id> --html=false --format json | \
   jq '.data.messages[-1].message_id'
 
-# 回复
+# Reply
 lark-cli mail +reply --message-id <last_message_id> --body "..."
 ```
 
-## 相关命令
+<a id="相关命令"></a>
+## Related Commands
 
-- `lark-cli mail +message` — 读取单封邮件
-- `lark-cli mail +reply` — 回复邮件
-- `lark-cli mail +forward` — 转发邮件
-- `lark-cli mail user_mailbox.message.attachments download_url` — 按需获取邮件附件/图片下载 URL
-- `lark-cli mail user_mailbox.messages list` — 列出收件箱邮件（获取 `thread_id`）
+- `lark-cli mail +message` — read a single email
+- `lark-cli mail +reply` — reply to an email
+- `lark-cli mail +forward` — forward an email
+- `lark-cli mail user_mailbox.message.attachments download_url` — retrieve email attachment/image download URLs on demand
+- `lark-cli mail user_mailbox.messages list` — list inbox emails (to get `thread_id`)

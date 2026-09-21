@@ -1,52 +1,55 @@
-# 收信规则 Shortcut
+<a id="收信规则-shortcut"></a>
+# Incoming Mail Rules Shortcut
 
-管理自动处理收到邮件的规则。优先使用 `mail +rule-*` shortcut，通过稳定英文 alias 编写条件和动作；只有需要当前 shortcut 尚未建模的服务端字段时，才回退到 `mail user_mailbox.rules` 原子 raw 命令。规则写操作需使用真实 `rule_id`，不要猜测 ID。创建、更新、删除规则需要按 index.md 的高风险写规则获得用户确认并传 `--yes`；启停和排序是普通写操作，免 `--yes`。
+Manage rules for automatically processing received mail. Prefer the `mail +rule-*` shortcut, writing conditions and actions via stable English aliases; fall back to the `mail user_mailbox.rules` atomic raw command only when server-side fields not yet modeled by the current shortcut are needed. Rule write operations must use real `rule_id`; do not guess IDs. Creating, updating, and deleting rules require user confirmation per the high-risk write rules in index.md and passing `--yes`; enabling/disabling and reordering are ordinary write operations and are exempt from `--yes`.
 
-## 常用 shortcut
+<a id="常用-shortcut"></a>
+## Common shortcuts
 
 ```bash
-# 列出规则，输出 semantic_spec、description、unknowns
+# List rules, outputting semantic_spec, description, unknowns
 lark-cli mail +rule-list --as user --user-mailbox-id me --format json
 
-# 查看单条规则
+# View a single rule
 lark-cli mail +rule-get --as user --user-mailbox-id me --rule-id "<rule_id>"
 
-# dry-run 创建：主题包含 Alpha 时标为已读，不产生服务端副作用
+# dry-run create: mark as read when the subject contains Alpha, producing no server-side side effects
 lark-cli mail +rule-create --as user --dry-run \
   --name "Alpha通知已读" \
   --condition "subject:contains:Alpha" \
   --action "mark_read"
 
-# 创建同一规则
+# Create the same rule
 lark-cli mail +rule-create --as user \
   --name "Alpha通知已读" \
   --condition "subject:contains:Alpha" \
   --action "mark_read" \
   --yes
 
-# 更新规则：未传字段会先读当前规则并保留；传 --condition/--action 会替换对应完整集合
+# Update rule: fields not passed are first read from the current rule and preserved; passing --condition/--action replaces the corresponding complete set
 lark-cli mail +rule-update --as user \
   --rule-id "<rule_id>" \
   --name "Alpha通知归档" \
   --action "archive" \
   --yes
 
-# 启停规则
+# Enable/disable rule
 lark-cli mail +rule-disable --as user --rule-id "<rule_id>"
 lark-cli mail +rule-enable --as user --rule-id "<rule_id>"
 
-# 删除规则：真实删除必须显式 --yes；不确定时先 --dry-run
+# Delete rule: a real deletion must explicitly pass --yes; when unsure, use --dry-run first
 lark-cli mail +rule-delete --as user --rule-id "<rule_id>" --dry-run
 lark-cli mail +rule-delete --as user --rule-id "<rule_id>" --yes
 
-# 调整顺序：完整顺序或单条移动二选一
+# Adjust order: choose either a complete order or a single move
 lark-cli mail +rule-reorder --as user --rule-ids "<rule_id_1>,<rule_id_2>,<rule_id_3>"
 lark-cli mail +rule-reorder --as user --move-rule-id "<rule_id_3>" --before-rule-id "<rule_id_1>"
 ```
 
-## Alias 速查
+<a id="alias-速查"></a>
+## Alias quick reference
 
-条件 grammar:
+Condition grammar:
 
 ```text
 --condition field:op:value
@@ -54,11 +57,11 @@ lark-cli mail +rule-reorder --as user --move-rule-id "<rule_id_3>" --before-rule
 --condition field
 ```
 
-常用字段：`from`/`sender`、`to`/`recipient`、`cc`、`to_or_cc`、`subject`/`title`、`body`、`attachment_name`、`attachment_type`、`any_address`、`all_mail`/`all`、`external`、`spam`、`not_spam`、`has_attachment`。
+Common fields: `from`/`sender`, `to`/`recipient`, `cc`, `to_or_cc`, `subject`/`title`, `body`, `attachment_name`, `attachment_type`, `any_address`, `all_mail`/`all`, `external`, `spam`, `not_spam`, `has_attachment`.
 
-常用操作符：`contains`/`include`、`not_contains`/`exclude`、`starts_with`/`prefix`、`ends_with`/`suffix`、`equals`/`eq`/`is`、`not_equals`/`ne`、`contains_self`/`self`、`empty`/`is_empty`。
+Common operators: `contains`/`include`, `not_contains`/`exclude`, `starts_with`/`prefix`, `ends_with`/`suffix`, `equals`/`eq`/`is`, `not_equals`/`ne`, `contains_self`/`self`, `empty`/`is_empty`.
 
-动作 grammar:
+Action grammar:
 
 ```text
 --action kind
@@ -66,9 +69,9 @@ lark-cli mail +rule-reorder --as user --move-rule-id "<rule_id_3>" --before-rule
 --action kind:json={"key":"value"}
 ```
 
-常用动作：`archive`、`delete_mail`/`trash`、`mark_read`/`read`、`move_spam`/`spam`、`not_spam`/`never_spam`、`star`/`flag`、`mute_notification`/`mute`、`move_folder:folder_id=<id>`。
+Common actions: `archive`, `delete_mail`/`trash`, `mark_read`/`read`, `move_spam`/`spam`, `not_spam`/`never_spam`, `star`/`flag`, `mute_notification`/`mute`, `move_folder:folder_id=<id>`.
 
-`--conditions` / `--actions` 支持 JSON 或 `@file`。JSON 示例：
+`--conditions` / `--actions` support JSON or `@file`. JSON example:
 
 ```json
 [
@@ -77,26 +80,28 @@ lark-cli mail +rule-reorder --as user --move-rule-id "<rule_id_3>" --before-rule
 ]
 ```
 
-## Unknown raw 策略
+<a id="unknown-raw-策略"></a>
+## Unknown raw strategy
 
-- 读路径宽容：`+rule-list` / `+rule-get` 遇到未知枚举或扩展字段仍输出规则，`unknowns[]` 会说明无法识别的 raw 片段，`raw` 会保留原始规则。
-- 更新规则：`+rule-update` 是“传什么改什么”。只改名称、启停、match 或 stop-after-match 时保留未触碰的 raw；传入新的 `--condition(s)` 时替换 condition items，未传 `--match` 就保留当前 match_type；传入新的 `--action(s)` 时替换 action items。
-- 输入校验：用户输入 alias/语义字符串时必须能映射到当前 shortcut 支持的枚举，否则报错；用户直接输入当前 shortcut 不认识的枚举数字，也报错。
-- raw fallback：需要写入当前 shortcut 尚未建模的服务端字段时，读取 `raw` 后使用原子 `user_mailbox.rules` 命令。
+- Read path is lenient: `+rule-list` / `+rule-get` still output rules when encountering unknown enums or extension fields, `unknowns[]` explains unrecognizable raw fragments, and `raw` preserves the original rule.
+- Update rule: `+rule-update` is "change whatever is passed". When only changing the name, enable/disable, match, or stop-after-match, untouched raw is preserved; passing a new `--condition(s)` replaces condition items, and if `--match` is not passed the current match_type is preserved; passing a new `--action(s)` replaces action items.
+- Input validation: when the user inputs an alias/semantic string, it must map to an enum supported by the current shortcut, otherwise an error is raised; if the user directly inputs an enum number unknown to the current shortcut, an error is also raised.
+- raw fallback: when server-side fields not yet modeled by the current shortcut need to be written, read `raw` and then use the atomic `user_mailbox.rules` command.
 
-## 原子 raw fallback：主题包含文本 → 标记为已读
+<a id="原子-raw-fallback主题包含文本--标记为已读"></a>
+## Atomic raw fallback: subject contains text → mark as read
 
 ```bash
-# 1. 创建规则：主题包含指定文本时标记为已读
+# 1. Create rule: mark as read when the subject contains the specified text
 lark-cli mail user_mailbox.rules create --as user \
   --params '{"user_mailbox_id":"me"}' \
   --data '{"name":"<rule_name>","is_enable":true,"ignore_the_rest_of_rules":false,"condition":{"match_type":1,"items":[{"type":6,"operator":1,"input":"<subject_text>"}]},"action":{"items":[{"type":3}]}}'
 
-# 2. 验证规则
+# 2. Verify rule
 lark-cli mail user_mailbox.rules list --as user \
   --params '{"user_mailbox_id":"me"}'
 
-# 3. 删除规则
+# 3. Delete rule
 lark-cli mail user_mailbox.rules delete --as user \
   --params '{"user_mailbox_id":"me","rule_id":"<rule_id>"}' \
   --yes
@@ -104,9 +109,10 @@ lark-cli mail user_mailbox.rules delete --as user \
 
 Quick codes above: condition `type=6` = subject, `operator=1` = contains, action `type=3` = mark as read.
 
-## 原生 API
+<a id="原生-api"></a>
+## Native API
 
-收信规则走 `user_mailbox.rules` 资源。参数不确定时先运行：
+Incoming mail rules use the `user_mailbox.rules` resource. When parameters are uncertain, run first:
 
 ```bash
 lark-cli mail user_mailbox.rules -h

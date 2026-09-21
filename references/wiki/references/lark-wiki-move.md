@@ -1,51 +1,54 @@
 # wiki +move
 
 
-在飞书知识库中移动已有 Wiki 节点，或将 Drive 文档迁入 Wiki。这个 shortcut 统一封装了两类流程：
+Move an existing Wiki node within Feishu Wiki, or migrate a Drive document into Wiki. This shortcut unifies two types of flows:
 
-- `node` 模式：移动已有 Wiki 节点，可同空间移动，也可跨空间移动
-- `docs_to_wiki` 模式：把 Drive 文档迁入目标知识空间；必要时可提交移动申请，并在异步任务场景下自动有限轮询
+- `node` mode: move an existing Wiki node, either within the same space or across spaces
+- `docs_to_wiki` mode: migrate a Drive document into a target knowledge space; when necessary, a move request can be submitted, and in asynchronous task scenarios it automatically polls a limited number of times
 
-当 `docs_to_wiki` 返回 `task_id` 时，shortcut 会先轮询一小段时间；如果轮询窗口内仍未完成，会返回 `next_command`，让调用方继续执行 `lark-cli drive +task_result --scenario wiki_move --task-id <TASK_ID>`。
+When `docs_to_wiki` returns `task_id`, the shortcut first polls for a short period; if it is still not complete within the polling window, it returns `next_command`, letting the caller continue by executing `lark-cli drive +task_result --scenario wiki_move --task-id <TASK_ID>`.
 
-## 与 `wiki +move-to-drive` / `drive +move` 的区别
+<a id="与-wiki-move-to-drive--drive-move-的区别"></a>
+## Differences from `wiki +move-to-drive` / `drive +move`
 
-- `wiki +move` 的目标是 **知识空间或 Wiki 父节点**，使用 `--target-space-id` / `--target-parent-token`
-- `wiki +move-to-drive` 把 **已有 Wiki 节点移出知识库，放入 Drive 文件夹或“我的空间”根目录**，使用 `--folder-token`
-- `drive +move` 的目标是 **Drive 文件夹**，使用 `--folder-token`
-- 如果源对象已经是 Wiki 节点：目标仍是 Wiki 时使用 `wiki +move`；目标是 Drive 文件夹或根目录时使用 `wiki +move-to-drive`
-- 如果源对象还是 Drive 文档，但用户要“迁入知识库”“挂到某个 Wiki 页面下”，也应使用 `wiki +move`
-- 如果用户只是想整理云空间（云盘/云存储）文件夹，把文件/文件夹挪到另一个 Drive 文件夹，应使用 `drive +move`
+- The target of `wiki +move` is a **knowledge space or Wiki parent node**, using `--target-space-id` / `--target-parent-token`
+- `wiki +move-to-drive` moves an **existing Wiki node out of the knowledge base and into a Drive folder or the root directory of "My Space"**, using `--folder-token`
+- The target of `drive +move` is a **Drive folder**, using `--folder-token`
+- If the source object is already a Wiki node: use `wiki +move` when the target is still Wiki; use `wiki +move-to-drive` when the target is a Drive folder or root directory
+- If the source object is still a Drive document, but the user wants to "migrate it into the knowledge base" or "attach it under a certain Wiki page", `wiki +move` should also be used
+- If the user merely wants to organize cloud space (cloud drive/cloud storage) folders by moving files/folders to another Drive folder, `drive +move` should be used
 
-## 口语目标识别
+<a id="口语目标识别"></a>
+## Colloquial target recognition
 
-- 当用户说“移动到某个知识库”“挂到某个页面下”“迁入 Wiki”时，按 **Wiki 目标** 处理，优先使用 `wiki +move`
-- 当用户说“移动到某个文件夹”“移动到云空间（云盘/云存储）根目录”时，按 **Drive 文件夹目标** 处理；源对象是 Wiki 节点时使用 `wiki +move-to-drive`，源对象已在 Drive 时使用 `drive +move`
-- 当用户说“移动到我的文档库”“移动到我的知识库”“放到个人知识库”时，应先按 **Wiki 个人知识库目标** 理解，而不是直接退化成 `drive +move`
-- 遇到“我的文档库”这类表述时，可以把它理解成：先用 `my_library` 去查询用户个人知识库，再拿到真实 `space_id`
-- 推荐做法是先执行 `lark-cli wiki spaces get --params '{"space_id":"my_library"}'`，取回真实知识库 `space_id`，再把这个 `space_id` 用到 `wiki +move`
-- 当前 `wiki +move` 文档的主示例仍以显式 `--target-space-id` / `--target-parent-token` 为主；如果调用方只有自然语言目标，不要因为目标暂时不明确就改走 `drive +move`
+- When the user says "move to a certain knowledge base", "attach under a certain page", or "migrate into Wiki", treat it as a **Wiki target** and prefer `wiki +move`
+- When the user says "move to a certain folder" or "move to the root directory of cloud space (cloud drive/cloud storage)", treat it as a **Drive folder target**; use `wiki +move-to-drive` when the source object is a Wiki node, and use `drive +move` when the source object is already in Drive
+- When the user says "move to my document library", "move to my knowledge base", or "put it in my personal knowledge base", it should first be understood as a **Wiki personal knowledge base target**, rather than directly degrading to `drive +move`
+- When encountering expressions like "my document library", it can be understood as: first use `my_library` to query the user's personal knowledge base, then obtain the real `space_id`
+- The recommended approach is to first execute `lark-cli wiki spaces get --params '{"space_id":"my_library"}'`, retrieve the real knowledge base `space_id`, and then use this `space_id` in `wiki +move`
+- The main examples in the current `wiki +move` documentation still primarily use explicit `--target-space-id` / `--target-parent-token`; if the caller only has a natural language target, do not switch to `drive +move` just because the target is temporarily unclear
 
-## 命令
+<a id="命令"></a>
+## Command
 
 ```bash
-# 将已有 wiki 节点移动到另一个父节点下
+# Move an existing wiki node under another parent node
 lark-cli wiki +move \
   --node-token <NODE_TOKEN> \
   --target-parent-token <TARGET_PARENT_TOKEN>
 
-# 将已有 wiki 节点移动到另一个知识空间根目录
+# Move an existing wiki node to the root directory of another knowledge space
 lark-cli wiki +move \
   --node-token <NODE_TOKEN> \
   --target-space-id <TARGET_SPACE_ID>
 
-# 将 Drive 文档迁入某个知识空间根目录
+# Migrate a Drive document to the root directory of a certain knowledge space
 lark-cli wiki +move \
   --obj-type docx \
   --obj-token <DOC_TOKEN> \
   --target-space-id <TARGET_SPACE_ID>
 
-# 将 Drive 文档迁入某个父节点下；如果当前没有直接移动权限，则提交申请
+# Migrate a Drive document under a certain parent node; if there is currently no direct move permission, submit a request
 lark-cli wiki +move \
   --obj-type sheet \
   --obj-token <SHEET_TOKEN> \
@@ -53,7 +56,7 @@ lark-cli wiki +move \
   --target-parent-token <TARGET_PARENT_TOKEN> \
   --apply
 
-# 预览底层调用链
+# Preview the underlying call chain
 lark-cli wiki +move \
   --obj-type docx \
   --obj-token <DOC_TOKEN> \
@@ -61,59 +64,67 @@ lark-cli wiki +move \
   --dry-run
 ```
 
-## 参数
+<a id="参数"></a>
+## Parameters
 
-| 参数 | 必填 | 说明 |
+| Parameter | Required | Description |
 |------|------|------|
-| `--node-token` | 条件必填 | 要移动的 Wiki 节点 token 或文档 obj_token。传入后命令进入 `node` 模式 |
-| `--source-space-id` | 否 | 源知识空间 ID，仅 `node` 模式可用；不传时会根据 `--node-token` 自动解析 |
-| `--target-space-id` | 条件必填 | 目标知识空间 ID。`docs_to_wiki` 模式必填；`node` 模式下如果不传，则必须传 `--target-parent-token` |
-| `--target-parent-token` | 否 | 目标父节点 token。`docs_to_wiki` 不传时表示迁入目标知识空间根目录 |
-| `--obj-type` | 条件必填 | Drive 文档类型，仅 `docs_to_wiki` 模式可用。可选值：`doc`、`sheet`、`bitable`、`mindnote`、`docx`、`file`、`slides` |
-| `--obj-token` | 条件必填 | Drive 文档 token，仅 `docs_to_wiki` 模式可用 |
-| `--apply` | 否 | 仅 `docs_to_wiki` 模式可用；当当前调用方不能直接移动文档时，提交一个 move request |
+| `--node-token` | Conditionally required | The token of the Wiki node to move or the document obj_token. Once passed, the command enters `node` mode |
+| `--source-space-id` | No | Source knowledge space ID, only available in `node` mode; if not passed, it is automatically resolved based on `--node-token` |
+| `--target-space-id` | Conditionally required | Target knowledge space ID. Required in `docs_to_wiki` mode; in `node` mode, if not passed, `--target-parent-token` must be passed |
+| `--target-parent-token` | No | Target parent node token. When `docs_to_wiki` is not passed, it means migrating to the root directory of the target knowledge space |
+| `--obj-type` | Conditionally required | Drive document type, only available in `docs_to_wiki` mode. Possible values: `doc`, `sheet`, `bitable`, `mindnote`, `docx`, `file`, `slides` |
+| `--obj-token` | Conditionally required | Drive document token, only available in `docs_to_wiki` mode |
+| `--apply` | No | Only available in `docs_to_wiki` mode; when the current caller cannot directly move the document, submit a move request |
 
-## 模式选择与校验规则
+<a id="模式选择与校验规则"></a>
+## Mode selection and validation rules
 
-- **`node` 模式**：只要传了 `--node-token`，就会按“移动已有 Wiki 节点”执行
-- **`docs_to_wiki` 模式**：未传 `--node-token` 时，按“把 Drive 文档迁入 Wiki”执行
-- `node` 模式下，`--node-token` 不能与 `--obj-type`、`--obj-token`、`--apply` 同时使用
-- `node` 模式下，`--target-parent-token` 和 `--target-space-id` 不能同时为空
-- `docs_to_wiki` 模式下，必须同时提供 `--obj-type`、`--obj-token`、`--target-space-id`
-- `docs_to_wiki` 模式下，`--source-space-id` 非法，只能用于 `node` 模式
+- **`node` mode**: as long as `--node-token` is passed, it executes as "move an existing Wiki node"
+- **`docs_to_wiki` mode**: when `--node-token` is not passed, it executes as "migrate a Drive document into Wiki"
+- In `node` mode, `--node-token` cannot be used together with `--obj-type`, `--obj-token`, or `--apply`
+- In `node` mode, `--target-parent-token` and `--target-space-id` cannot both be empty
+- In `docs_to_wiki` mode, `--obj-type`, `--obj-token`, and `--target-space-id` must all be provided
+- In `docs_to_wiki` mode, `--source-space-id` is invalid and can only be used in `node` mode
 
-## 空间解析与一致性校验
+<a id="空间解析与一致性校验"></a>
+## Space resolution and consistency validation
 
-### `node` 模式
+<a id="node-模式"></a>
+### `node` mode
 
-- **源空间解析**：先调用 `GET /open-apis/wiki/v2/spaces/node_by_token` 解析源节点；未传 `--source-space-id` 时使用查询结果，传入时校验两者一致。
-- **目标父节点解析**：如果传了 `--target-parent-token`，shortcut 会先解析该父节点所属的 `space_id`
-- **节点类型**：源节点和目标父节点接受 Wiki `node_token` 或文档 `obj_token`，实际移动使用查询返回的 `node_token`。
-- **一致性校验**：如果同时传了 `--target-space-id` 和 `--target-parent-token`，shortcut 会校验两者是否属于同一个知识空间；不一致时直接返回验证错误
-- **移动到空间根目录**：如果只传 `--target-space-id`，则表示移动到该知识空间根目录
+- **Source space resolution**: first call `GET /open-apis/wiki/v2/spaces/node_by_token` to resolve the source node; when `--source-space-id` is not passed, use the query result; when passed, validate that the two are consistent.
+- **Target parent node resolution**: if `--target-parent-token` is passed, the shortcut first resolves the `space_id` to which that parent node belongs
+- **Node type**: the source node and target parent node accept Wiki `node_token` or document `obj_token`; the actual move uses the `node_token` returned by the query.
+- **Consistency validation**: if both `--target-space-id` and `--target-parent-token` are passed, the shortcut validates whether they belong to the same knowledge space; if inconsistent, it directly returns a validation error
+- **Move to space root directory**: if only `--target-space-id` is passed, it means moving to the root directory of that knowledge space
 
-### `docs_to_wiki` 模式
+<a id="docs_to_wiki-模式"></a>
+### `docs_to_wiki` mode
 
-- `--target-space-id` 始终必填
-- `--target-parent-token` 可选；不传时表示移动到目标知识空间根目录
-- 请求体会自动映射成 `obj_type`、`obj_token`、`parent_wiki_token`、`apply`
+- `--target-space-id` is always required
+- `--target-parent-token` is optional; when not passed, it means moving to the root directory of the target knowledge space
+- The request body is automatically mapped to `obj_type`, `obj_token`, `parent_wiki_token`, `apply`
 
-## 行为说明
+<a id="行为说明"></a>
+## Behavior description
 
-- **`node` 模式是同步操作**：请求成功后直接返回移动后的节点信息
-- **`docs_to_wiki` 可能是同步，也可能是异步**：
-  - 如果接口直接返回 `wiki_token`，shortcut 会立刻返回 `ready=true`
-  - 如果接口返回 `applied=true`，shortcut 会返回 `ready=false`、`failed=false`、`applied=true` 和 `status_msg="move request submitted for approval"`
-  - 如果接口返回 `task_id`，shortcut 会先进入有限轮询
-- **有限轮询窗口**：固定最多轮询 `30` 次，每次间隔 `2` 秒
-- **轮询超时不是失败**：如果轮询窗口结束任务仍在处理中，会返回 `task_id`、`status`、`status_msg`、`ready=false`、`timed_out=true` 和 `next_command`
-- **继续查询**：看到 `next_command` 后，改用 `lark-cli drive +task_result --scenario wiki_move --task-id <TASK_ID>` 继续查
-- **任务失败直接报错**：如果轮询期间任务进入失败态，shortcut 会直接返回错误，不会再输出 `ready=false` 结果
-- **轮询请求全部失败时也直接报错**：如果任务已创建，但后续每一次状态查询都失败，shortcut 会返回带 hint 的错误，并给出继续查询命令
+- **`node` mode is a synchronous operation**: after the request succeeds, it directly returns the moved node information
+- **`docs_to_wiki` may be synchronous or asynchronous**:
+  - If the API directly returns `wiki_token`, the shortcut immediately returns `ready=true`
+  - If the API returns `applied=true`, the shortcut returns `ready=false`, `failed=false`, `applied=true`, and `status_msg="move request submitted for approval"`
+  - If the API returns `task_id`, the shortcut first enters limited polling
+- **Limited polling window**: fixed at a maximum of `30` polls, with an interval of `2` seconds each time
+- **Polling timeout is not failure**: if the task is still being processed when the polling window ends, it returns `task_id`, `status`, `status_msg`, `ready=false`, `timed_out=true`, and `next_command`
+- **Continue querying**: after seeing `next_command`, switch to `lark-cli drive +task_result --scenario wiki_move --task-id <TASK_ID>` to continue querying
+- **Task failure reports an error directly**: if the task enters a failed state during polling, the shortcut directly returns an error and no longer outputs `ready=false` results
+- **When all polling requests fail, it also reports an error directly**: if the task has been created but every subsequent status query fails, the shortcut returns an error with a hint and provides a command to continue querying
 
-## 返回结果
+<a id="返回结果"></a>
+## Return results
 
-### `node` 模式典型返回
+<a id="node-模式典型返回"></a>
+### Typical return in `node` mode
 
 ```json
 {
@@ -132,7 +143,8 @@ lark-cli wiki +move \
 }
 ```
 
-### `docs_to_wiki` 异步超时返回
+<a id="docs_to_wiki-异步超时返回"></a>
+### Asynchronous timeout return in `docs_to_wiki` mode
 
 ```json
 {
@@ -151,35 +163,38 @@ lark-cli wiki +move \
 }
 ```
 
-**输出字段说明：**
+**Output field descriptions:**
 
-- `mode`：当前执行模式，值为 `node` 或 `docs_to_wiki`
-- `ready`：任务是否已经完成并可直接继续使用结果
-- `failed`：任务是否已失败
-- `task_id`：异步任务 ID，仅异步场景返回
-- `status` / `status_msg`：异步任务的主状态码和可读状态
-- `wiki_token`：docs-to-wiki 成功后返回的 Wiki 节点 token；同时也会镜像到 `node_token`
-- `space_id`、`node_token`、`obj_token`、`obj_type`、`parent_node_token`、`title` 等：成功拿到节点信息时返回，方便下游继续调用
+- `mode`: the current execution mode, with a value of `node` or `docs_to_wiki`
+- `ready`: whether the task has already completed and the result can be used directly
+- `failed`: whether the task has failed
+- `task_id`: asynchronous task ID, returned only in asynchronous scenarios
+- `status` / `status_msg`: the primary status code and readable status of the asynchronous task
+- `wiki_token`: the Wiki node token returned after docs-to-wiki succeeds; it is also mirrored to `node_token`
+- `space_id`, `node_token`, `obj_token`, `obj_type`, `parent_node_token`, `title`, etc.: returned when node information is successfully obtained, making it convenient for downstream calls to continue
 
-## dry-run 编排
+<a id="dry-run-编排"></a>
+## dry-run orchestration
 
-- `node` 模式下，dry-run 会根据是否需要解析源节点 / 目标父节点，展示 1 到 3 步的调用链
-- `docs_to_wiki` 模式下，dry-run 会展示两步：
+- In `node` mode, dry-run displays a call chain of 1 to 3 steps depending on whether the source node / target parent node needs to be resolved
+- In `docs_to_wiki` mode, dry-run displays two steps:
   1. `POST /open-apis/wiki/v2/spaces/{target_space_id}/nodes/move_docs_to_wiki`
   2. `GET /open-apis/wiki/v2/tasks/{task_id}?task_type=move`
 
-## 权限说明
+<a id="权限说明"></a>
+## Permission description
 
-CLI 会在执行前做本地 scope 预检查；当前 shortcut 声明的权限为 `wiki:node:move`、`wiki:node:read`、`wiki:space:read`（分别覆盖 move 写操作、节点解析读操作、以及异步任务轮询读操作）。如果本地 token 已记录 scopes 且缺失任一权限，命令会直接提示重新执行 `lark-cli auth login --scope ...`。
+Before execution, the CLI performs a local scope pre-check; the permissions declared by the current shortcut are `wiki:node:move`, `wiki:node:read`, and `wiki:space:read` (covering the move write operation, node resolution read operation, and asynchronous task polling read operation respectively). If the local token has recorded scopes and any permission is missing, the command directly prompts to re-execute `lark-cli auth login --scope ...`.
 
-当异步任务超时后，后续 `lark-cli drive +task_result --scenario wiki_move --task-id <TASK_ID>` 只需要 `wiki:space:read` 权限。
+After an asynchronous task times out, subsequent `lark-cli drive +task_result --scenario wiki_move --task-id <TASK_ID>` only requires the `wiki:space:read` permission.
 
 > [!CAUTION]
-> `wiki +move` 是**写入操作**。执行前必须确认用户意图，以及目标节点 / 目标知识空间是否明确。
+> `wiki +move` is a **write operation**. Before execution, the user's intent must be confirmed, as well as whether the target node / target knowledge space is clear.
 
-## 参考
+<a id="参考"></a>
+## References
 
-- [lark-wiki](../index.md) -- 知识库全部命令
-- [lark-shared](../../shared/index.md) -- 认证和全局参数
-- [wiki +move-to-drive](lark-wiki-move-to-drive.md) -- 将 Wiki 节点移出知识库并放入 Drive
-- [drive +task_result](../../drive/references/lark-drive-task-result.md) -- docs-to-wiki 异步任务的续跑查询命令
+- [lark-wiki](../index.md) -- all knowledge base commands
+- [lark-shared](../../shared/index.md) -- authentication and global parameters
+- [wiki +move-to-drive](lark-wiki-move-to-drive.md) -- move a Wiki node out of the knowledge base and into Drive
+- [drive +task_result](../../drive/references/lark-drive-task-result.md) -- the continuation query command for docs-to-wiki asynchronous tasks

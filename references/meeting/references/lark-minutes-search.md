@@ -1,143 +1,155 @@
 # minutes +search
 
 
-搜索妙记列表，支持关键词、所有者、参与者以及时间范围等多条件过滤。支持 user 身份和 bot / 应用身份；所有者与参与者都支持传入多个 open\_id，user 身份下也支持传入 `me` 表示当前用户。只读操作，不修改任何妙记数据。
+Search the Minutes list, supporting multi-condition filtering by keyword, owner, participant, and time range. Supports user identity and bot / app identity; both owner and participant support passing multiple open\_id values, and under user identity you can also pass `me` to indicate the current user. Read-only operation; does not modify any Minutes data.
 
-本模块 对应 shortcut：`lark-cli minutes +search`（调用 `POST /open-apis/minutes/v1/minutes/search`）。
+This module corresponds to shortcut: `lark-cli minutes +search` (calls `POST /open-apis/minutes/v1/minutes/search`).
 
-## 典型触发表达
+<a id="典型触发表达"></a>
+## Typical Trigger Phrases
 
-以下说法通常应优先使用 `minutes +search`：
+The following expressions should usually prioritize `minutes +search`:
 
-- 我的妙记
-- 我拥有的妙记
-- 我参与的妙记
-- 最近的妙记
-- 某个关键词的妙记
-- 某段时间内的妙记
+- My Minutes
+- Minutes I own
+- Minutes I participated in
+- Recent Minutes
+- Minutes with a certain keyword
+- Minutes within a certain time period
 
-## 命令
+<a id="命令"></a>
+## Command
 
 ```bash
-# 关键词搜索
+# Keyword search
 lark-cli minutes +search --query "预算复盘"
 
-# 查询某一天内的妙记（单日查询时，建议将 start 和 end 都填写为同一天）
+# Query Minutes within a single day (for a single-day query, it is recommended to set both start and end to the same day)
 lark-cli minutes +search --start 2026-03-10 --end 2026-03-10
 
-# 按时间范围搜索
+# Search by time range
 lark-cli minutes +search --start "2026-03-10T00:00+08:00" --end "2026-03-17T00:00+08:00"
 lark-cli minutes +search --start 2026-03-10 --end 2026-03-17
 
-# 关键词 + 时间范围
+# Keyword + time range
 lark-cli minutes +search --query "预算复盘" --start "2026-03-10T00:00+08:00" --end "2026-03-17T00:00+08:00"
 lark-cli minutes +search --query "预算复盘" --start "2026-03-10T00:00+08:00"
 lark-cli minutes +search --query "预算复盘" --end "2026-03-17T00:00+08:00"
 
-# 按参与者过滤（open_id，逗号分隔）
+# Filter by participant (open_id, comma-separated)
 lark-cli minutes +search --participant-ids "ou_x,ou_y"
 
-# 按所有者过滤（open_id，逗号分隔）
+# Filter by owner (open_id, comma-separated)
 lark-cli minutes +search --owner-ids "ou_owner,ou_owner_2"
 
-# 严格只查我作为参与者的妙记（不含我拥有）
+# Strictly query only Minutes where I am a participant (excluding ones I own)
 lark-cli minutes +search --participant-ids "me"
 
-# 查询我拥有的妙记
+# Query Minutes I own
 lark-cli minutes +search --owner-ids "me"
 
-# 广义查询我参与的妙记（自然语言默认：我拥有 ∪ 我参与）
+# Broad query for Minutes I participated in (natural language default: I own ∪ I participated in)
 lark-cli minutes +search --owner-ids "me" --start 2026-03-10 --end 2026-03-10
 lark-cli minutes +search --participant-ids "me" --start 2026-03-10 --end 2026-03-10
-# 然后按 token 去重合并两次结果
+# Then deduplicate and merge the two results by token
 
-# 多条件组合查询
+# Multi-condition combined query
 lark-cli minutes +search --owner-ids "ou_owner" --participant-ids "ou_x" --start "2026-03-10T00:00+08:00"
 
-# 分页查询
+# Paginated query
 lark-cli minutes +search --query "预算复盘" --page-size 20
 lark-cli minutes +search --query "预算复盘" --page-size 20 --page-token '<PAGE_TOKEN>'
 
-# 输出为结构化 JSON
+# Output as structured JSON
 lark-cli minutes +search --query "预算复盘" --format json
 ```
 
-## 参数
+<a id="参数"></a>
+## Parameters
 
-| 参数                        | 必填 | 说明                                   |
+| Parameter                        | Required | Description                                   |
 | ------------------------- | -- | ------------------------------------ |
-| `--query <text>`          | 否  | 搜索关键词                                |
-| `--owner-ids <ids>`       | 否  | 所有者 open\_id 列表，逗号分隔；多值为 OR 语义；支持传 `me` 表示当前用户 |
-| `--participant-ids <ids>` | 否  | 参与者 open\_id 列表，逗号分隔；多值为 OR 语义；支持传 `me` 表示当前用户 |
-| `--start <time>`          | 否  | 开始时间（ISO 8601 或仅日期）                  |
-| `--end <time>`            | 否  | 结束时间（ISO 8601 或仅日期）                  |
-| `--page-size <n>`         | 否  | 每页数量，默认 `15`，最大 `30`                 |
-| `--page-token <token>`    | 否  | 下一页分页 token                          |
-| `--dry-run`               | 否  | 预览 API 调用，不执行                        |
+| `--query <text>`          | No  | Search keyword                                |
+| `--owner-ids <ids>`       | No  | Owner open\_id list, comma-separated; multiple values use OR semantics; supports passing `me` to indicate the current user |
+| `--participant-ids <ids>` | No  | Participant open\_id list, comma-separated; multiple values use OR semantics; supports passing `me` to indicate the current user |
+| `--start <time>`          | No  | Start time (ISO 8601 or date only)                  |
+| `--end <time>`            | No  | End time (ISO 8601 or date only)                  |
+| `--page-size <n>`         | No  | Number per page, default `15`, maximum `30`                 |
+| `--page-token <token>`    | No  | Next page token                          |
+| `--dry-run`               | No  | Preview the API call without executing                        |
 
-## 核心约束
+<a id="核心约束"></a>
+## Core Constraints
 
-### 1. 至少提供一个过滤条件
+<a id="1-至少提供一个过滤条件"></a>
+### 1. Provide at least one filter condition
 
-所有参数均可选，但必须至少提供一个过滤条件：`--query`、`--owner-ids`、`--participant-ids`、`--start` 或 `--end`。
+All parameters are optional, but at least one filter condition must be provided: `--query`, `--owner-ids`, `--participant-ids`, `--start`, or `--end`.
 
-### 2. 支持 user 和 bot 身份
+<a id="2-支持-user-和-bot-身份"></a>
+### 2. Supports user and bot identities
 
-该接口支持 `--as user` 和 `--as bot`。user 身份需要完成 `lark-cli auth login` 并具备 `minutes:minutes.search:read` 权限；bot 身份使用应用的 tenant access token，需要确认当前应用已开通 `minutes:minutes.search:read` scope，且运行环境能获取有效的 TAT。
+This interface supports `--as user` and `--as bot`. User identity requires completing `lark-cli auth login` and having `minutes:minutes.search:read` permission; bot identity uses the app's tenant access token, and you need to confirm that the current app has the `minutes:minutes.search:read` scope enabled and that the runtime environment can obtain a valid TAT.
 
-### 3. `me` 表示当前用户
+<a id="3-me-表示当前用户"></a>
+### 3. `me` indicates the current user
 
-在 `--owner-ids` 和 `--participant-ids` 中可使用 `me`，表示当前登录用户。该值会在本地解析为当前用户的 `open_id`，无需手动先查询自己的用户 ID。`me` 只适合 user 身份；bot 身份没有“当前用户”，请直接传 `ou_` open_id。
-若当前环境尚未完成用户登录，或 CLI 无法解析出当前用户的 `open_id`，则应先执行 `lark-cli auth login`，再重新执行搜索。该恢复方式只适用于 user 身份和 `me` 解析；bot 身份应检查 tenant access token 与应用 scope，不应通过 `auth login` 修复。
+In `--owner-ids` and `--participant-ids`, you can use `me` to indicate the currently logged-in user. This value is resolved locally to the current user's `open_id`, so there is no need to manually query your own user ID first. `me` is only suitable for user identity; bot identity has no "current user", so pass the `ou_` open_id directly.
+If the current environment has not yet completed user login, or the CLI cannot resolve the current user's `open_id`, you should first run `lark-cli auth login`, then run the search again. This recovery method only applies to user identity and `me` resolution; for bot identity, check the tenant access token and app scope, and do not fix it via `auth login`.
 
-### 4. 自然语言中的“参与的妙记”默认按并集理解
+<a id="4-自然语言中的参与的妙记默认按并集理解"></a>
+### 4. "Minutes I participated in" in natural language is understood as a union by default
 
-当用户说"我参与的妙记""我参加过的妙记""参与过的妙记"时，默认理解为"我涉及的全部妙记"：
+When the user says "Minutes I participated in", "Minutes I have attended", or "Minutes I've been involved in", the default understanding is "all Minutes I am involved in":
 
-- 我拥有的妙记：`--owner-ids me`
-- 我作为参与者的妙记：`--participant-ids me`
+- Minutes I own: `--owner-ids me`
+- Minutes where I am a participant: `--participant-ids me`
 
-不要只跑一次 `--participant-ids me` 就直接下结论，也不要把 `--owner-ids me` 和 `--participant-ids me` 同时塞进一次查询里赌接口语义。应分别查询后，按 `token` 做并集去重。
+Do not just run `--participant-ids me` once and draw a conclusion, and do not stuff both `--owner-ids me` and `--participant-ids me` into a single query and gamble on the interface semantics. You should query separately, then perform a union and deduplicate by `token`.
 
-只有在用户明确说"仅我参与但不是我拥有""别人拥有但我参与""只看参与者身份"时，才只使用 `--participant-ids`。
+Only when the user explicitly says "only ones I participated in but do not own", "owned by others but I participated", or "only look at participant identity" should you use only `--participant-ids`.
 
-### 5. 支持分页
+<a id="5-支持分页"></a>
+### 5. Supports pagination
 
-当返回 `has_more=true` 时，使用响应中的 `page_token` 配合 `--page-token` 获取下一页结果。
+When `has_more=true` is returned, use the `page_token` from the response together with `--page-token` to get the next page of results.
 
-### 6. 日期型 `--end` 包含当天整天
+<a id="6-日期型---end-包含当天整天"></a>
+### 6. Date-type `--end` includes the entire day
 
-当 `--end` 传入的是仅日期格式（如 `2026-03-10`）时，CLI 会将它解释为当天 `23:59:59`，而不是当天 `00:00:00`。
-CLI 会先按输入的本地日历日语义解析，再标准化为 RFC3339 时间戳发给 API；在 dry-run 或排查请求体时，看到的 `Z` 结尾时间表示同一个绝对时间点的 UTC 表示，不改变“按当天整天查询”的语义。
+When `--end` is passed in date-only format (such as `2026-03-10`), the CLI interprets it as `23:59:59` of that day, not `00:00:00` of that day.
+The CLI first parses according to the local calendar-day semantics of the input, then normalizes it to an RFC3339 timestamp to send to the API; in dry-run or when troubleshooting the request body, the `Z` ending time you see represents the UTC representation of the same absolute point in time, and does not change the semantics of "query by the entire day".
 
-这意味着：
+This means:
 
-- `--start 2026-03-10 --end 2026-03-10` 表示只查 `2026-03-10` 当天
-- `--start 2026-03-10 --end 2026-03-11` 表示查询 `2026-03-10` 和 `2026-03-11` 两天
+- `--start 2026-03-10 --end 2026-03-10` means querying only `2026-03-10` that day
+- `--start 2026-03-10 --end 2026-03-11` means querying both days `2026-03-10` and `2026-03-11`
 
-如果用户说“昨天的妙记”“今天的妙记”“某一天内的妙记”，应把 `--start` 和 `--end` 都设置为同一天，而不是把 `--end` 设成下一天。
+If the user says "yesterday's Minutes", "today's Minutes", or "Minutes within a certain day", you should set both `--start` and `--end` to the same day, rather than setting `--end` to the next day.
 
-## 时间格式
+<a id="时间格式"></a>
+## Time Format
 
-`--start` 和 `--end` 支持以下时间格式：
+`--start` and `--end` support the following time formats:
 
-| 格式             | 示例                          | 说明                                 |
+| Format             | Example                          | Description                                 |
 | -------------- | --------------------------- | ---------------------------------- |
-| ISO 8601（带时区）  | `2026-03-10T14:00:00+08:00` | 推荐                                 |
-| ISO 8601（不带时区） | `2026-03-10T14:00:00`       | 按本地时区解析                            |
-| 仅日期            | `2026-03-10`                | 按天粒度解析；若用于 `--end`，表示当天 `23:59:59` |
+| ISO 8601 (with timezone)  | `2026-03-10T14:00:00+08:00` | Recommended                                 |
+| ISO 8601 (without timezone) | `2026-03-10T14:00:00`       | Parsed in local timezone                            |
+| Date only            | `2026-03-10`                | Parsed at day granularity; if used for `--end`, means `23:59:59` of that day |
 
-## 输出结果
+<a id="输出结果"></a>
+## Output Results
 
-- 默认输出包含 `items`、`has_more` 和 `page_token`。
+- The default output includes `items`, `has_more`, and `page_token`.
 
 ## Pagination (`has_more` / `page_token`)
 
-- 当结果中返回 `has_more=true` 时，说明还有更多页可继续获取。
-- 继续翻页时，使用响应中的 `page_token` 搭配 `--page-token` 发起下一次查询。
-- 不要假设调大 `--page-size` 就能拿全结果；分页遍历时应以 `has_more` 和 `page_token` 为准。
-- 用户未明确要求全量时，逐页累计已读取的 `items` 数：累计不到 50 条之前可自动继续翻页；超过 50 条且仍有更多结果时，先向用户确认是否继续获取全部结果。
-- 用户明确说“全部 / 所有 / 统计 / 排序”时，该全量意图优先于 50 条确认门槛；直接按 `has_more` 翻完所有分页，按结果中的 `token` 去重后再返回、排序或统计。
+- When `has_more=true` is returned in the results, it means there are more pages available to fetch.
+- To continue paging, use the `page_token` from the response together with `--page-token` to initiate the next query.
+- Do not assume that increasing `--page-size` will get all results; when iterating through pages, rely on `has_more` and `page_token`.
+- When the user has not explicitly requested the full set, accumulate the number of `items` read page by page: before the cumulative count reaches 50, you may automatically continue paging; once it exceeds 50 and there are still more results, first confirm with the user whether to continue fetching all results.
+- When the user explicitly says "all / every / statistics / sorting", that full-set intent takes priority over the 50-item confirmation threshold; directly page through all pages according to `has_more`, deduplicate by `token` in the results, and then return, sort, or compute statistics.
 
 ```bash
 # First page
@@ -147,25 +159,28 @@ lark-cli minutes +search --query "预算复盘" --page-size 20
 lark-cli minutes +search --query "预算复盘" --page-size 20 --page-token '<PAGE_TOKEN>'
 ```
 
-## 常见错误与排查
+<a id="常见错误与排查"></a>
+## Common Errors and Troubleshooting
 
-| 错误现象                   | 根本原因                                                  | 解决方案                                         |
+| Error Symptom                   | Root Cause                                                  | Solution                                         |
 | ---------------------- | ----------------------------------------------------- | -------------------------------------------- |
-| 命令直接报错，要求提供过滤条件        | 没有传入 `--query`、时间范围或任何过滤 ID                           | 至少补充一个过滤条件后重试                                |
-| 时间参数校验失败               | `--start` 或 `--end` 格式不合法                             | 改用 ISO 8601 或 `YYYY-MM-DD`                   |
-| `owner-ids` 校验失败       | 传入的不是 open\_id，且也不是 `me`；或传了 `me` 但当前用户 open\_id 不可解析 | 改为 `ou_` 开头的用户 ID，或先完成 `auth login` 后再传 `me` |
-| `participant-ids` 校验失败 | 传入的不是 open\_id，且也不是 `me`；或传了 `me` 但当前用户 open\_id 不可解析 | 改为 `ou_` 开头的用户 ID，或先完成 `auth login` 后再传 `me` |
-| 权限不足                   | 未授权 `minutes:minutes.search:read`                     | user 身份使用 `auth login` 完成用户授权；bot 身份检查 tenant access token 和应用 scope |
+| Command errors out directly, requiring a filter condition        | No `--query`, time range, or any filter ID was passed                           | Add at least one filter condition and retry                                |
+| Time parameter validation fails               | `--start` or `--end` format is invalid                             | Switch to ISO 8601 or `YYYY-MM-DD`                   |
+| `owner-ids` validation fails       | The value passed is not an open\_id, and is not `me` either; or `me` was passed but the current user's open\_id cannot be resolved | Change to a user ID starting with `ou_`, or complete `auth login` first and then pass `me` |
+| `participant-ids` validation fails | The value passed is not an open\_id, and is not `me` either; or `me` was passed but the current user's open\_id cannot be resolved | Change to a user ID starting with `ou_`, or complete `auth login` first and then pass `me` |
+| Insufficient permissions                   | `minutes:minutes.search:read` not authorized                     | For user identity, use `auth login` to complete user authorization; for bot identity, check the tenant access token and app scope |
 
-## 提示
+<a id="提示"></a>
+## Tips
 
-- 当用户说“我的妙记”时，优先理解为 `--owner-ids me`。
-- 当用户说“我参与的妙记”“我参加过的妙记”时，默认理解为 `--owner-ids me` 与 `--participant-ids me` 两次查询后的并集。
-- 当用户明确说“仅我参与但不是我拥有”时，才优先理解为 `--participant-ids me`。
-- 当用户同时提到“会议 / 会 / 开会 / 某场会”和“妙记”时，优先先定位会议；如果要的是妙记信息，走 `vc +recording` 获取 `minute_token` → `minutes minutes get`，只有要妙记产物内容时才走 `minutes +detail --minute-tokens`。
-- 必须使用 `--format json` 输出，你更加擅长解析 JSON 数据。
-- 排查参数与请求结构时优先使用 `--dry-run`。
-- 搜索的时间范围最大为 1 个月，如果需要搜索更长时间范围的妙记，需要拆分为多次时间范围为一个月查询。
+- When the user says "my Minutes", prioritize understanding it as `--owner-ids me`.
+- When the user says "Minutes I participated in" or "Minutes I have attended", the default understanding is the union of the two queries `--owner-ids me` and `--participant-ids me`.
+- Only when the user explicitly says "only ones I participated in but do not own" should you prioritize understanding it as `--participant-ids me`.
+- When the user mentions both "meeting / meeting / hold a meeting / a certain meeting" and "Minutes", prioritize locating the meeting first; if what is wanted is Minutes information, go through `vc +recording` to get `minute_token` → `minutes minutes get`, and only go through `minutes +detail --minute-tokens` when the content of the Minutes artifact is wanted.
+- You must use `--format json` output; you are better at parsing JSON data.
+- When troubleshooting parameters and request structure, prioritize using `--dry-run`.
+- The maximum search time range is 1 month; if you need to search Minutes over a longer time range, you need to split it into multiple queries each with a time range of one month.
 
-## 相关场景
-- [查询妙记及其产物](../scenes/query-minutes-and-artifacts.md)
+<a id="相关场景"></a>
+## Related Scenarios
+- [Query Minutes and their artifacts](../scenes/query-minutes-and-artifacts.md)

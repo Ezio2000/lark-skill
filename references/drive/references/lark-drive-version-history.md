@@ -1,9 +1,10 @@
 # drive +version-history
 
 
-列出指定文件的历史版本快照。该 shortcut 同时支持 `--as user` 和 `--as bot`；自动化场景推荐使用 `--as bot`。
+List historical version snapshots of a specified file. This shortcut supports both `--as user` and `--as bot`; for automation scenarios, `--as bot` is recommended.
 
-## 命令
+<a id="命令"></a>
+## Command
 
 ```bash
 lark-cli drive +version-history \
@@ -26,22 +27,25 @@ lark-cli drive +version-history \
   --as bot
 ```
 
-## 参数
+<a id="参数"></a>
+## Parameters
 
-| 参数 | 必填 | 说明 |
+| Parameter | Required | Description |
 |------|------|------|
-| `--file-token` | 是 | 目标文件 token |
-| `--limit` | 否 | 返回条数上限，范围 `1-200`，默认 `20` |
-| `--cursor` | 否 | 分页游标；取上一页返回的 `next_cursor` 回填 |
+| `--file-token` | Yes | Target file token |
+| `--limit` | No | Maximum number of entries to return, range `1-200`, default `20` |
+| `--cursor` | No | Pagination cursor; fill in with the `next_cursor` returned by the previous page |
 
-## 关键行为
+<a id="关键行为"></a>
+## Key Behaviors
 
-- shortcut 内部固定传 `only_tag=true`
-- 返回 `has_more=true` 时，使用 `next_cursor` 继续翻页
-- `versions[].version` 是传给 `drive +version-get` / `+version-revert` / `+version-delete` 的长数字版本串；`tag` 只是展示序号，不能替代 `version`
-- `versions[].is_deleted` 为布尔值，表示该历史版本是否已被删除
+- The shortcut internally always passes `only_tag=true`
+- When `has_more=true` is returned, use `next_cursor` to continue paginating
+- `versions[].version` is the long numeric version string passed to `drive +version-get` / `+version-revert` / `+version-delete`; `tag` is only a display sequence number and cannot replace `version`
+- `versions[].is_deleted` is a boolean value indicating whether that historical version has been deleted
 
-## 返回值
+<a id="返回值"></a>
+## Return Value
 
 ```json
 {
@@ -66,7 +70,8 @@ lark-cli drive +version-history \
 }
 ```
 
-## 参考
+<a id="参考"></a>
+## References
 
-- [lark-drive](../index.md) -- 云空间（云盘/云存储）全部命令
-- [lark-shared](../../shared/index.md) -- 认证和全局参数
+- [lark-drive](../index.md) -- All commands for cloud space (cloud drive/cloud storage)
+- [lark-shared](../../shared/index.md) -- Authentication and global parameters

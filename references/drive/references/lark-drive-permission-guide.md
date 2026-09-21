@@ -1,46 +1,51 @@
-# Drive 权限与授权指南
+<a id="drive-权限与授权指南"></a>
+# Drive Permission and Authorization Guide
 
-> 前置条件：通用认证、scope 与 `--as` 规则见 [`../../shared/index.md`](../../shared/index.md)。
+> Prerequisites: general authentication, scopes, and `--as` rules are described in [`../../shared/index.md`](../../shared/index.md).
 
-## 何时读取
+<a id="何时读取"></a>
+## When to Read
 
-- 用户要修改文档公开权限，尤其是 `drive permission.public patch` 返回 `91009` / `91010` / `91011` / `91012`。
-- 用户要给文档、文件、文件夹、Wiki 或 slides 增加协作者权限，或把访问权限授予当前应用（bot）自身。
-- 用户遇到 `permission denied`，但错误表现更像租户对外分享、安全策略或密级拦截，而不是普通 scope 缺失。
+- The user wants to modify a document's public permissions, especially when `drive permission.public patch` returns `91009` / `91010` / `91011` / `91012`.
+- The user wants to add collaborator permissions to a document, file, folder, Wiki, or slides, or grant access to the current application (bot) itself.
+- The user encounters `permission denied`, but the error behavior looks more like tenant external sharing, security policy, or classification-level interception rather than a normal missing scope.
 
-如果用户只是想向文档 owner 申请访问权限，优先使用 [`lark-drive-apply-permission.md`](lark-drive-apply-permission.md)。
+If the user only wants to request access from the document owner, prefer using [`lark-drive-apply-permission.md`](lark-drive-apply-permission.md).
 
-## 公开权限修改前门槛
+<a id="公开权限修改前门槛"></a>
+## Prerequisites Before Modifying Public Permissions
 
-公开权限修改是高风险写操作。执行 `drive permission.public patch --yes` 前同时确认：
+Modifying public permissions is a high-risk write operation. Before executing `drive permission.public patch --yes`, confirm all of the following:
 
-| 条件 | 可执行信号 |
+| Condition | Executable Signal |
 |------|------------|
-| 具体目标 | 单个 URL/token，或用户确认过的资源列表 |
-| 公开范围 | 用户明确选择组织内/互联网、可读/可编辑等具体 `link_share_entity` 档位 |
-| 执行确认 | 用户在当前会话中已授权按该目标和范围执行 |
+| Specific target | A single URL/token, or a resource list the user has confirmed |
+| Public scope | The user has explicitly chosen a specific `link_share_entity` level such as organization/internet, readable/editable |
+| Execution confirmation | The user has authorized execution for that target and scope in the current session |
 
-“开放一下”“共享给大家”“让大家能看”只表达目标状态，不包含具体公开范围。先列出可选范围并停止等待用户选择；公开档位必须来自用户选择，CLI 的 `--yes` 只表示已获得用户对该档位的执行确认。
+"Open it up", "share it with everyone", and "let everyone see it" only express the desired end state and do not include a specific public scope. First list the available scopes and stop to wait for the user to choose; the public level must come from the user's choice, and the CLI's `--yes` only indicates that the user's execution confirmation for that level has been obtained.
 
-## 公开权限错误码
+<a id="公开权限错误码"></a>
+## Public Permission Error Codes
 
-调用 `lark-cli drive permission.public patch` 更新文档公开权限失败时，如果返回以下错误码，按表格给用户明确下一步。不要把这些错误简单归类为缺少 scope；它们通常表示租户、对外分享或文档密级策略拦截。
+When calling `lark-cli drive permission.public patch` to update a document's public permissions fails, if the following error codes are returned, give the user clear next steps according to the table. Do not simply classify these errors as missing scopes; they usually indicate interception by tenant, external sharing, or document classification-level policies.
 
-| 错误码 | 含义 | 给用户的引导 |
+| Error Code | Meaning | Guidance for the User |
 |--------|------|--------------|
-| `91009` | 对外分享被租户安全策略管控，当前用户无法开启 | 提示用户：对外分享能力被租户安全策略统一管控，无法通过 API 或当前用户直接开启；需要联系租户管理员调整组织级对外分享策略。 |
-| `91010` | 文档对外分享未打开 | 提示用户：当前文档尚未打开对外分享，请先在文档权限设置中打开对外分享，再重试 `permission.public.patch`。 |
-| `91011` | 对外分享被文档密级管控 | 提示用户：对外分享被密级策略拦截，需要打开目标文档，在文档内发起密级豁免或进行密级降级后再重试；回复中必须给出目标文档 URL。 |
-| `91012` | 权限设置被文档密级管控 | 提示用户：该权限设置被密级策略拦截，需要打开目标文档，在文档内发起密级豁免或进行密级降级后再重试；回复中必须给出目标文档 URL。 |
+| `91009` | External sharing is controlled by the tenant security policy, and the current user cannot enable it | Tell the user: the external sharing capability is uniformly controlled by the tenant security policy and cannot be enabled directly through the API or by the current user; they need to contact the tenant administrator to adjust the organization-level external sharing policy. |
+| `91010` | External sharing for the document is not enabled | Tell the user: external sharing is not yet enabled for the current document; please first enable external sharing in the document permission settings, then retry `permission.public.patch`. |
+| `91011` | External sharing is controlled by the document classification level | Tell the user: external sharing is intercepted by the classification-level policy; they need to open the target document, initiate a classification-level exemption or perform a classification-level downgrade within the document, and then retry; the reply must include the target document URL. |
+| `91012` | Permission settings are controlled by the document classification level | Tell the user: this permission setting is intercepted by the classification-level policy; they need to open the target document, initiate a classification-level exemption or perform a classification-level downgrade within the document, and then retry; the reply must include the target document URL. |
 
-当用户最初提供的是文档 URL，遇到 `91011` 或 `91012` 时直接把该 URL 原样返回给用户作为操作入口；如果上下文只有 token，需要先尽量通过已有上下文、搜索结果或元数据恢复目标文档 URL，再给出可点击的文档 URL。
+When the user initially provided a document URL, upon encountering `91011` or `91012`, return that URL as-is to the user as the operation entry point; if the context only contains a token, first try to recover the target document URL through existing context, search results, or metadata as much as possible, then provide a clickable document URL.
 
-## 授权当前应用访问文档
+<a id="授权当前应用访问文档"></a>
+## Authorizing the Current Application to Access a Document
 
-需要将文档权限授予当前应用（bot）自身时：
+When the document permissions need to be granted to the current application (bot) itself:
 
-1. 先执行 `lark-cli api GET /open-apis/bot/v3/info --as bot --jq '.data.open_id'`，直接取得当前应用的 `open_id`。
-2. 再调用 `lark-cli drive permission.members create`，用 `member_type=openid`、`member_id=<bot_open_id>` 授权。
+1. First execute `lark-cli api GET /open-apis/bot/v3/info --as bot --jq '.data.open_id'` to directly obtain the current application's `open_id`.
+2. Then call `lark-cli drive permission.members create`, authorizing with `member_type=openid` and `member_id=<bot_open_id>`.
 
 ```bash
 lark-cli drive permission.members create \
@@ -48,6 +53,6 @@ lark-cli drive permission.members create \
   --data '{"member_type":"openid","member_id":"<bot_open_id>","perm":"view","type":"user"}'
 ```
 
-此方式仅适用于授权给当前应用。授权给其他用户时，直接使用对方的 open_id，无需调用 bot info 接口。
+This method is only applicable to authorizing the current application. When authorizing other users, directly use their open_id; there is no need to call the bot info API.
 
-`<resource_type>` 可选值：`doc`、`docx`、`sheet`、`bitable`、`file`、`folder`、`wiki`、`slides`。
+`<resource_type>` possible values: `doc`, `docx`, `sheet`, `bitable`, `file`, `folder`, `wiki`, `slides`.

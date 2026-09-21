@@ -1,20 +1,24 @@
-# 明确时间分支：room-find + freebusy + 冲突处理
+<a id="明确时间分支room-find--freebusy--冲突处理"></a>
+# Explicit-time branch: room-find + freebusy + conflict handling
 
-> 本文档处理**时间已明确**的场景。"明确时间"来源：用户直接表达（如"明天下午3点"）、编辑流中已定位日程的原始 start/end、或经用户确认的 suggestion 时间块。
+> This document handles scenarios where the **time is already explicit**. Sources of "explicit time": direct user expression (e.g., "tomorrow at 3 PM"), the original start/end of an already-located event in the edit flow, or a suggestion time block confirmed by the user.
 
-## 前置条件
+<a id="前置条件"></a>
+## Prerequisites
 
-进入此分支前，调度器（[schedule-meeting.md](./lark-calendar-schedule-meeting.md)）已完成：
-- 任务类型判定（新建 / 编辑）
-- 编辑流：目标 event_id 已定位
-- 新建流：默认值已补全
-- 时间已判定为**明确**
+Before entering this branch, the scheduler ([schedule-meeting.md](./lark-calendar-schedule-meeting.md)) has completed:
+- Task type determination (create / edit)
+- Edit flow: the target event_id has been located
+- Create flow: defaults have been filled in
+- The time has been determined to be **explicit**
 
-## 流程
+<a id="流程"></a>
+## Flow
 
-### 1. 查询会议室（如需）
+<a id="1-查询会议室如需"></a>
+### 1. Query meeting rooms (if needed)
 
-若用户需要会议室，先调用 `+room-find`。详见 [`lark-calendar-room-find.md`](./lark-calendar-room-find.md)。
+If the user needs a meeting room, first call `+room-find`. See [`lark-calendar-room-find.md`](./lark-calendar-room-find.md).
 
 ```bash
 lark-cli calendar +room-find \
@@ -26,41 +30,44 @@ lark-cli calendar +room-find \
   --room-name "<room_name>"
 ```
 
-时间块确定规则：
-- **编辑流且不改时间，只新增会议室**：`--slot` 必须来自已定位日程的当前 `start/end`
-- **编辑流且既改时间又加会议室**：`--slot` 必须来自候选新时间，而不是旧时间
+Time block determination rules:
+- **Edit flow without changing the time, only adding a meeting room**: `--slot` must come from the current `start/end` of the already-located event
+- **Edit flow changing both the time and adding a meeting room**: `--slot` must come from the candidate new time, not the old time
 
-详见 [`lark-calendar-room-find.md`](./lark-calendar-room-find.md)。
+See [`lark-calendar-room-find.md`](./lark-calendar-room-find.md).
 
-### 2. 查询忙闲
+<a id="2-查询忙闲"></a>
+### 2. Query free/busy
 
 ```bash
-# 单人 / 多人查忙：--user-id 可重复或逗号分隔；服务端已合并相邻/重叠忙碌区间
+# Single-person / multi-person free/busy query: --user-id can be repeated or comma-separated; the server has already merged adjacent/overlapping busy intervals
 lark-cli calendar +freebusy --start "<start>" --end "<end>" --user-id "ou_a,ou_b"
 
-# 直接求共同空闲（推荐用于「找几个人一起有空」）
+# Directly find common free time (recommended for "find a time when several people are all free")
 lark-cli calendar +freebusy --start "<start>" --end "<end>" \
   --user-id "ou_a,ou_b,ou_c" --type common_free --min-duration 30m
 ```
 
-规则：
-- 参与人含 **bot**：无需为 bot 查询忙闲。bot 是虚拟身份，可并行多个会议、无忙闲语义，检查它没有意义。
-- 参与人过多（超过 5 人）：仅查询**当前用户**及少数核心人员忙闲即可
-- 参与人含**群组**：无需展开群组成员查询忙闲
-- 如果用户是从 `+suggestion` 确认了时间块后进入本分支的，**无需再调用 `+freebusy`**
-- 找多人共同空闲：直接用 `--type common_free [--min-duration <dur>]`，让 CLI 一次算出共同空闲；不要自己再合并求交
+Rules:
+- Participants include a **bot**: no need to query free/busy for the bot. A bot is a virtual identity that can attend multiple meetings in parallel and has no free/busy semantics; checking it is meaningless.
+- Too many participants (more than 5 people): only query the free/busy of the **current user** and a few core people
+- Participants include a **group**: no need to expand group members to query free/busy
+- If the user entered this branch after confirming a time block from `+suggestion`, **there is no need to call `+freebusy` again**
+- Finding common free time for multiple people: directly use `--type common_free [--min-duration <dur>]` and let the CLI compute the common free time in one pass; do not merge and intersect on your own
 
-### 3. 冲突处理
+<a id="3-冲突处理"></a>
+### 3. Conflict handling
 
-- **无冲突**：直接让用户选择会议室（如需），进入落地操作
-- **有冲突**：必须先说明冲突情况，询问用户：
-  - **继续当前时间** → 让用户选择会议室（如需），进入落地操作
-  - **换时间** → 转入 [模糊时间分支](./lark-calendar-schedule-fuzzy-time.md)
+- **No conflict**: directly let the user choose a meeting room (if needed), then proceed to the execution operation
+- **Conflict**: you must first explain the conflict situation and ask the user:
+  - **Continue with the current time** → let the user choose a meeting room (if needed), then proceed to the execution operation
+  - **Change the time** → switch to the [fuzzy-time branch](./lark-calendar-schedule-fuzzy-time.md)
 
-## 落地
+<a id="落地"></a>
+## Execution
 
-根据任务类型：
-- 新建 → [`+create`](./lark-calendar-create.md)
-- 编辑 → [`+update`](./lark-calendar-update.md)
+Depending on the task type:
+- Create → [`+create`](./lark-calendar-create.md)
+- Edit → [`+update`](./lark-calendar-update.md)
 
-落地规则详见 [schedule-meeting.md § 落地日程变更](./lark-calendar-schedule-meeting.md#落地日程变更)。
+For execution rules, see [schedule-meeting.md § Executing schedule changes](./lark-calendar-schedule-meeting.md#落地日程变更).

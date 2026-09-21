@@ -1,70 +1,76 @@
-# docs history（历史版本与回滚）
+<a id="docs-history历史版本与回滚"></a>
+# docs history (historical versions and rollback)
 
-用于查看 Docx 历史版本、按 `history_version_id` 回滚，以及查询回滚任务状态。
+Used to view Docx historical versions, roll back by `history_version_id`, and query rollback task status.
 
-`entries[].edit_time` 是 RFC3339 时间字符串（例如 `2026-06-22T12:24:45Z`）。按时间匹配时先将其解析为时间值，再比较先后关系或时间差。
+`entries[].edit_time` is an RFC3339 time string (for example `2026-06-22T12:24:45Z`). When matching by time, first parse it into a time value, then compare the ordering relationship or time difference.
 
-## 安全约束
+<a id="安全约束"></a>
+## Safety constraints
 
-- `overwrite` 会重建正文和 block ID，且无法保证保留评论等非正文对象。用户要求保留这些对象时，应先说明限制并确认。
-- `overwrite` 返回 warning 或 `partial_success` 时，先核验最新内容。核验失败或发生 revision conflict 时停止，不要再次覆盖。
-- 权限、网络或临时系统错误应保留原错误分类，不得解释为目标版本不存在。
+- `overwrite` rebuilds the body and block IDs, and cannot guarantee preservation of non-body objects such as comments. When the user asks to preserve these objects, first explain the limitation and confirm.
+- When `overwrite` returns a warning or `partial_success`, first verify the latest content. If verification fails or a revision conflict occurs, stop and do not overwrite again.
+- Permission, network, or temporary system errors should retain their original error classification and must not be interpreted as the target version not existing.
 
-## 按 revision_id 或时间点回滚
+<a id="按-revision_id-或时间点回滚"></a>
+## Roll back by revision_id or time point
 
-1. 使用 `+history-list` 定位目标记录。需要更多候选时，根据 `has_more` 和 `page_token` 翻页。
-   - 用户指定 `revision_id`：逐页筛选相同 `revision_id` 的记录。未命中时必须继续翻页至 `has_more=false` 才可进入 fallback；命中位于页尾时，继续读取下一页以收集相邻的同 `revision_id` 候选。多条记录时结合 `edit_time` 选择；无法区分时请用户确认。
-   - 用户指定时间：选择不晚于目标时间的最近一条记录；用户明确要求“最接近”时，选择时间差最小的记录。
-2. 找到目标记录后，使用该记录的 `history_version_id` 调用 `+history-revert`。不要将 `revision_id` 传给回滚接口。返回 `running` 时使用 `+history-revert-status` 查询；只有 `done` 表示成功，其他终态均停止并报告。
-3. 没有目标记录但用户指定了 `revision_id` 时，可读取目标版本并恢复正文：
-   - 使用 `docs +fetch --doc "<doc>" --revision-id <revision_id> --scope full --detail full --format json` 读取目标版本。确认文档一致、返回的 `revision_id` 与目标一致，且 `content` 不是 `<fragment>`。
-   - 使用 `docs +fetch --doc "<doc>" --scope full --detail full --format json` 读取当前完整文档，其 `content` 同样不得是 `<fragment>`。目标与当前响应的 `revision_id` 相同时直接结束，不执行 `overwrite`。否则移除目标 `content` 中旧的 block ID，将正文写入任务目录下的相对路径，然后仅执行一次 `docs +update --doc "<doc>" --command overwrite --revision-id <current_revision_id> --content @target.xml`，其中 `current_revision_id` 来自当前文档响应。目标响应包含非空 JSON object 形式的 `reference_map` 时，将其写入相对路径并追加 `--reference-map @target-reference-map.json`；否则省略该参数。`+update` 不支持 `--yes`。
-   - 使用 `docs +fetch --doc "<doc>" --scope full --detail full --format json` 读取最新完整文档并核验。忽略重新生成的 block ID，正文结构、文本、链接和引用资源应与目标版本一致。
-4. 目标版本明确不可读时停止并报告。
+1. Use `+history-list` to locate the target record. When more candidates are needed, paginate according to `has_more` and `page_token`.
+   - User specifies `revision_id`: filter page by page for records with the same `revision_id`. If there is no hit, you must continue paginating until `has_more=false` before entering fallback; if the hit is at the end of a page, continue reading the next page to collect adjacent candidates with the same `revision_id`. When there are multiple records, choose based on `edit_time`; if they cannot be distinguished, ask the user to confirm.
+   - User specifies a time: choose the most recent record not later than the target time; when the user explicitly requests "closest", choose the record with the smallest time difference.
+2. After finding the target record, use that record's `history_version_id` to call `+history-revert`. Do not pass `revision_id` to the rollback interface. When `running` is returned, use `+history-revert-status` to query; only `done` indicates success, and all other terminal states should stop and be reported.
+3. When there is no target record but the user specified `revision_id`, you may read the target version and restore the body:
+   - Use `docs +fetch --doc "<doc>" --revision-id <revision_id> --scope full --detail full --format json` to read the target version. Confirm the document is consistent, the returned `revision_id` matches the target, and `content` is not `<fragment>`.
+   - Use `docs +fetch --doc "<doc>" --scope full --detail full --format json` to read the current complete document; its `content` likewise must not be `<fragment>`. If the target and current response have the same `revision_id`, end directly without executing `overwrite`. Otherwise remove the old block IDs from the target `content`, write the body to a relative path under the task directory, then execute `docs +update --doc "<doc>" --command overwrite --revision-id <current_revision_id> --content @target.xml` only once, where `current_revision_id` comes from the current document response. When the target response contains a non-empty JSON object form of `reference_map`, write it to a relative path and append `--reference-map @target-reference-map.json`; otherwise omit that parameter. `+update` does not support `--yes`.
+   - Use `docs +fetch --doc "<doc>" --scope full --detail full --format json` to read the latest complete document and verify. Ignore the regenerated block IDs; the body structure, text, links, and referenced resources should match the target version.
+4. When the target version is clearly unreadable, stop and report.
 
-候选确认时使用类似格式：
+When confirming candidates, use a format similar to:
 
 ```text
-同一个 revision_id 命中多个历史版本，请确认要回滚哪一条：
+The same revision_id matches multiple historical versions; please confirm which one to roll back to:
 - history_version_id=11 revision_id=42 edit_time=2026-06-22T12:24:45Z name=...
 - history_version_id=12 revision_id=42 edit_time=2026-06-22T12:25:14Z name=...
 ```
 
-## 命令
+<a id="命令"></a>
+## Commands
 
 ```bash
-# 列出历史版本
+# List historical versions
 lark-cli docs +history-list --doc "<docx_url_or_token>" --page-size 20
 
-# 翻页
+# Paginate
 lark-cli docs +history-list --doc "<docx_url_or_token>" --page-size 20 --page-token "<page_token>"
 
-# 回滚到指定 history_version_id（默认等待 30000ms）
+# Roll back to the specified history_version_id (default wait 30000ms)
 lark-cli docs +history-revert --doc "<docx_url_or_token>" --history-version-id 42
 
-# 只发起任务，不等待
+# Only initiate the task, do not wait
 lark-cli docs +history-revert --doc "<docx_url_or_token>" --history-version-id 42 --wait-timeout-ms 0
 
-# 查询回滚任务状态
+# Query rollback task status
 lark-cli docs +history-revert-status --doc "<docx_url_or_token>" --task-id "<task_id>"
 ```
 
-## 参数
+<a id="参数"></a>
+## Parameters
 
-| 命令 | 参数 | 必填 | 说明 |
+| Command | Parameter | Required | Description |
 |-|-|-|-|
-| `+history-list` | `--doc` | 是 | Docx URL/token，或可解析为 Docx 的 wiki URL |
-| `+history-list` | `--page-size` | 否 | 返回条数，范围 `1-20`，默认 `20` |
-| `+history-list` | `--page-token` | 否 | 上一页返回的 `page_token` |
-| `+history-revert` | `--doc` | 是 | Docx URL/token，或可解析为 Docx 的 wiki URL |
-| `+history-revert` | `--history-version-id` | 是 | `+history-list` 返回的 `history_version_id`，必须大于 0 |
-| `+history-revert` | `--wait-timeout-ms` | 否 | 等待回滚完成的毫秒数，范围 `0-30000`，默认 `30000` |
-| `+history-revert-status` | `--doc` | 是 | 同一个文档 |
-| `+history-revert-status` | `--task-id` | 是 | `+history-revert` 返回的 `task_id` |
+| `+history-list` | `--doc` | Yes | Docx URL/token, or a wiki URL resolvable to Docx |
+| `+history-list` | `--page-size` | No | Number of records to return, range `1-20`, default `20` |
+| `+history-list` | `--page-token` | No | `page_token` returned from the previous page |
+| `+history-revert` | `--doc` | Yes | Docx URL/token, or a wiki URL resolvable to Docx |
+| `+history-revert` | `--history-version-id` | Yes | `history_version_id` returned by `+history-list`, must be greater than 0 |
+| `+history-revert` | `--wait-timeout-ms` | No | Number of milliseconds to wait for rollback completion, range `0-30000`, default `30000` |
+| `+history-revert-status` | `--doc` | Yes | The same document |
+| `+history-revert-status` | `--task-id` | Yes | `task_id` returned by `+history-revert` |
 
-## 返回值要点
+<a id="返回值要点"></a>
+## Key return values
 
-`+history-list` 返回：
+`+history-list` returns:
 
 ```json
 {
@@ -84,7 +90,7 @@ lark-cli docs +history-revert-status --doc "<docx_url_or_token>" --task-id "<tas
 }
 ```
 
-`+history-revert` 返回：
+`+history-revert` returns:
 
 ```json
 {
@@ -95,7 +101,7 @@ lark-cli docs +history-revert-status --doc "<docx_url_or_token>" --task-id "<tas
 }
 ```
 
-`+history-revert-status` 返回：
+`+history-revert-status` returns:
 
 ```json
 {
@@ -105,4 +111,4 @@ lark-cli docs +history-revert-status --doc "<docx_url_or_token>" --task-id "<tas
 }
 ```
 
-`status` 可能是 `running`、`done`、`partial_failed`、`failed`。当状态是 `partial_failed` 或 `failed` 时，优先检查 `failed_block_tokens`。
+`status` may be `running`, `done`, `partial_failed`, `failed`. When the status is `partial_failed` or `failed`, check `failed_block_tokens` first.

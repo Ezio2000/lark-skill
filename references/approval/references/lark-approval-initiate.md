@@ -1,98 +1,108 @@
-# 审批提单工作流
+<a id="审批提单工作流"></a>
+# Approval Instance Submission Workflow
 
-## 执行摘要
+<a id="执行摘要"></a>
+## Executive Summary
 
-- **原生审批提单如果用户未明确给出 `approval_code`，必须固定走 `approvals search` -> `approvals get` -> `instances create`** 不要跳过 `get` 直接拼请求。
-- **原生审批提单如果用户明确给出 `approval_code`，固定走 `approvals get` -> `instances create`** 不要跳过 `get` 直接拼请求。
-- **`is_external=true` 的定义是三方定义。** 这类定义不要调用 `instances create`，应优先使用 `create_link`。
-- **所有人员类参数默认使用 `open_id`。** 若用户给的是姓名、邮箱或其他身份，先用 [`../../contact/index.md`](../../contact/index.md) 解析。
-- **先读控件参数 reference 和值来源 reference，再读本文里的创建参数规则。** 提单前必须先阅读 [`lark-approval-instance-form-control-parameters.md`](./lark-approval-instance-form-control-parameters.md) 和 [`lark-approval-instance-value-sourcing.md`](./lark-approval-instance-value-sourcing.md)。
-- **`approvals.get.form` 不是创建 payload 的原样模板。** 它主要用于识别控件 `id`、`type`、选项值范围和明细子控件结构；真正的 `instances create --data.form` 中，控件 `value` 结构以 [`lark-approval-instance-form-control-parameters.md`](./lark-approval-instance-form-control-parameters.md) 为准。
-- **节点参数只从 `node_list` 和本文里的节点参数规则里取。** 节点 key 必须来自定义详情返回的节点标识；审批人/抄送人列表传用户 ID 时，不要混用姓名或其他身份标识。
-- **看到 `need_approver=true` 就说明该节点需要发起人补充审批人。** 如果 `approver_chosen_multi=false`，该节点只允许一个 `open_id`。
-- **创建实例前先确认。** `approval instances create` 是写操作，执行前，让用户确认最终定义、表单值和节点参数；真正执行时显式传 `--yes`。
+- **For native approval instance submission, if the user does not explicitly provide `approval_code`, you must follow the fixed path `approvals search` -> `approvals get` -> `instances create`** Do not skip `get` and directly construct the request.
+- **For native approval instance submission, if the user explicitly provides `approval_code`, follow the fixed path `approvals get` -> `instances create`** Do not skip `get` and directly construct the request.
+- **The definition of `is_external=true` is a third-party definition.** Do not call `instances create` for such definitions; prefer using `create_link`.
+- **All personnel-type parameters use `open_id` by default.** If the user provides a name, email, or other identity, first resolve it using [`../../contact/index.md`](../../contact/index.md).
+- **First read the control parameter reference and the value source reference, then read the creation parameter rules in this document.** Before submitting, you must first read [`lark-approval-instance-form-control-parameters.md`](./lark-approval-instance-form-control-parameters.md) and [`lark-approval-instance-value-sourcing.md`](./lark-approval-instance-value-sourcing.md).
+- **`approvals.get.form` is not a verbatim template for the creation payload.** It is mainly used to identify control `id`, `type`, option value ranges, and detail sub-control structures; in the actual `instances create --data.form`, the control `value` structure is governed by [`lark-approval-instance-form-control-parameters.md`](./lark-approval-instance-form-control-parameters.md).
+- **Node parameters are only taken from `node_list` and the node parameter rules in this document.** Node keys must come from the node identifiers returned by the definition detail; when passing user IDs in the approver/cc list, do not mix in names or other identity identifiers.
+- **Seeing `need_approver=true` indicates that the node requires the initiator to supplement approvers.** If `approver_chosen_multi=false`, the node allows only one `open_id`.
+- **Confirm before creating the instance.** `approval instances create` is a write operation; before executing, have the user confirm the final definition, form values, and node parameters; when actually executing, explicitly pass `--yes`.
 
-## 适用场景
+<a id="适用场景"></a>
+## Applicable Scenarios
 
-- “帮我提交一个请假审批”
-- “帮我发起报销审批”
-- “我想提一个出差审批”
-- “先搜可发起的审批，再帮我提单”
+- "Help me submit a leave approval"
+- "Help me initiate a reimbursement approval"
+- "I want to submit a business trip approval"
+- "First search for submittable approvals, then help me submit the instance"
 
-## 严禁行为
+<a id="严禁行为"></a>
+## Strictly Prohibited Actions
 
-- **严禁在未先阅读本文中的创建参数规则、[`lark-approval-instance-form-control-parameters.md`](./lark-approval-instance-form-control-parameters.md) 和 [`lark-approval-instance-value-sourcing.md`](./lark-approval-instance-value-sourcing.md) 的情况下直接提单。**
-- **严禁跳过 `approvals.get`。** 未拿到 `form` 和 `node_list` 前，不得调用 `instances create`。
-- **严禁把姓名直接写进 `node_approver_list`、`node_cc_list` 或表单人员控件。** 必须先转成 `open_id`。
-- **严禁对三方定义调用 `instances create`。**
-- **严禁对 API 不支持的控件硬提单。** 如果目标定义包含创建实例 API 不支持的控件，应明确告诉用户该定义不能仅通过 API 完整发起。
-- **严禁把 `approvals.get.form` 当成可直接提交的原样模板。**
-- **严禁在未得到用户确认前直接执行真实提单。**
+- **Strictly prohibited to directly submit an instance without first reading the creation parameter rules in this document, [`lark-approval-instance-form-control-parameters.md`](./lark-approval-instance-form-control-parameters.md), and [`lark-approval-instance-value-sourcing.md`](./lark-approval-instance-value-sourcing.md).**
+- **Strictly prohibited to skip `approvals.get`.** Before obtaining `form` and `node_list`, do not call `instances create`.
+- **Strictly prohibited to write names directly into `node_approver_list`, `node_cc_list`, or form personnel controls.** They must first be converted to `open_id`.
+- **Strictly prohibited to call `instances create` for third-party definitions.**
+- **Strictly prohibited to force-submit instances for controls not supported by the API.** If the target definition contains controls not supported by the create instance API, you should clearly tell the user that the definition cannot be fully initiated through the API alone.
+- **Strictly prohibited to treat `approvals.get.form` as a verbatim template that can be submitted directly.**
+- **Strictly prohibited to directly execute a real instance submission without user confirmation.**
 
-## 工作流
+<a id="工作流"></a>
+## Workflow
 
-### 1. 搜索可发起审批定义
+<a id="1-搜索可发起审批定义"></a>
+### 1. Search for Submittable Approval Definitions
 
-先搜索定义：
+First search for definitions:
 
 ```bash
 lark-cli approval approvals search --data '{"keyword":"请假"}'
 ```
 
-处理规则：
+Handling rules:
 
-- 若结果为空，告诉用户当前关键词下没有可发起定义。
-- 若命中多个定义，必须把候选项列给用户选择，不要自行猜测。
-- 若目标定义 `is_external=true`，优先返回 `create_link`，说明这是三方定义，不能走原生 `instances create`。
-- 只有 `is_external=false` 的原生定义才继续下一步。
+- If the result is empty, tell the user that there are no submittable definitions under the current keyword.
+- If multiple definitions are matched, you must list the candidates for the user to choose; do not guess on your own.
+- If the target definition `is_external=true`, preferentially return `create_link`, explaining that this is a third-party definition and cannot go through native `instances create`.
+- Only native definitions with `is_external=false` proceed to the next step.
 
-### 2. 获取审批定义详情
+<a id="2-获取审批定义详情"></a>
+### 2. Get Approval Definition Details
 
-拿到 `approval_code` 后，读取定义详情：
+After obtaining `approval_code`, read the definition details:
 
 ```bash
 lark-cli approval approvals get \
   --params '{"approval_code":"7C468A54-8745-2245-9675-08B7C63E7A85"}'
 ```
 
-重点关注返回：
+Focus on the returned:
 
-- `approval_name`: 当前发起的是哪个审批定义。
-- `form`: 表单定义快照，用于识别控件 `id`、`type`、选项值范围以及明细子控件结构；不是创建实例时可直接原样提交的 payload 模板。
-- `node_list`: 流程节点信息，是后续 `node_approver_list` / `node_cc_list` 的唯一可靠来源。
+- `approval_name`: which approval definition is currently being initiated.
+- `form`: form definition snapshot, used to identify control `id`, `type`, option value ranges, and detail sub-control structures; it is not a payload template that can be submitted verbatim when creating an instance.
+- `node_list`: process node information, which is the only reliable source for subsequent `node_approver_list` / `node_cc_list`.
 
-### 3. 创建请求参数速查
+<a id="3-创建请求参数速查"></a>
+### 3. Create Request Parameters Quick Reference
 
-输入参数如下：
+Input parameters are as follows:
 
-| 参数 | 必填 | 说明 |
+| Parameter | Required | Description |
 |---|---|---|
-| `--data '{...}'` | 是 | 请求体，使用 JSON 传入 |
-| `approval_code` | 是 | 审批定义 Code；必须先通过 `approvals search` / `approvals get` 确认 |
-| `form` | 否 | 表单值，**JSON 数组字符串**，不是普通对象；API 层非必填，但审批定义存在必填控件或用户需要提交表单值时必须传 |
-| `node_approver_list` | 否 | 节点审批人列表；仅在定义要求补充审批人时传 |
-| `node_cc_list` | 否 | 节点抄送人列表；仅在用户明确需要补充节点抄送人时传 |
-| `uuid` | 否 | 幂等标识；重复重试同一请求时建议显式传入 |
-| `--as user` | 否 | 建议显式指定用户身份；审批发起通常应使用用户身份 |
-| `--yes` | 是 | 写操作确认；真实执行时必须显式传入 |
-| `--dry-run` | 否 | 预览 API 调用，不执行 |
+| `--data '{...}'` | Yes | Request body, passed in as JSON |
+| `approval_code` | Yes | Approval definition Code; must first be confirmed via `approvals search` / `approvals get` |
+| `form` | No | Form values, **JSON array string**, not a plain object; not required at the API layer, but must be passed when the approval definition has required controls or the user needs to submit form values |
+| `node_approver_list` | No | Node approver list; only pass when the definition requires supplementing approvers |
+| `node_cc_list` | No | Node cc list; only pass when the user explicitly needs to supplement node cc recipients |
+| `uuid` | No | Idempotency identifier; recommended to explicitly pass when retrying the same request |
+| `--as user` | No | Recommended to explicitly specify user identity; approval initiation should typically use user identity |
+| `--yes` | Yes | Write operation confirmation; must be explicitly passed when actually executing |
+| `--dry-run` | No | Preview API call, does not execute |
 
-### 4. 组装 `form`
+<a id="4-组装-form"></a>
+### 4. Assemble `form`
 
-`instances create --data.form` 是可选字段；传入时必须是一个 JSON 数组字符串。无表单或无需填写表单值的审批可省略 `form`，但只要审批定义包含需要提交的控件，就必须按控件结构组装后传入。组装原则：
+`instances create --data.form` is an optional field; when passed, it must be a JSON array string. Approvals with no form or no need to fill in form values may omit `form`, but as long as the approval definition contains controls that need to be submitted, they must be assembled according to the control structure and passed. Assembly principles:
 
-- 先用 `approvals.get.form` 识别有哪些控件、每个控件的 `id` / `type` / 可选值范围，再按本文中的创建参数规则与 [`lark-approval-instance-form-control-parameters.md`](./lark-approval-instance-form-control-parameters.md) 重新组装创建 payload。
-- 提交时必须至少保证每个控件的 `id`、`type` 与 `value` 符合当前接口要求；不要假设定义快照里出现的其他字段都能直接照搬。
-- 如果用户提供的是人员信息，优先转换成 `open_id` 后再写入对应控件。
-- 单选/多选控件提交的是选项 `value`，该值可从 `approvals.get.form` 的选项定义中取得。
-- `contact`、`department`、`fieldList`、`dateInterval`、`amount`、`telephone`、`document` 等控件的 `value` 结构各不相同，必须按 [`lark-approval-instance-form-control-parameters.md`](./lark-approval-instance-form-control-parameters.md) 单独组装，不要套用文本控件的写法。
-- 值本身从哪里拿，优先按 [`lark-approval-instance-value-sourcing.md`](./lark-approval-instance-value-sourcing.md) 处理；不要把“知道结构”误当成“已经拿到可提交值”。
-- 若 [`lark-approval-instance-form-control-parameters.md`](./lark-approval-instance-form-control-parameters.md) 标明某控件不支持通过创建实例 API 提交，则不要硬猜绕过；应明确告诉用户该定义当前无法仅通过 API 提单。
-- 若遇到当前 skill 未明确覆盖的复杂控件，不要硬猜；先依据 [`lark-approval-instance-form-control-parameters.md`](./lark-approval-instance-form-control-parameters.md) 判断支持性与传值结构，再向用户确认。
+- First use `approvals.get.form` to identify which controls exist, each control's `id` / `type` / optional value ranges, then reassemble the creation payload according to the creation parameter rules in this document and [`lark-approval-instance-form-control-parameters.md`](./lark-approval-instance-form-control-parameters.md).
+- When submitting, you must at least ensure that each control's `id`, `type`, and `value` conform to the current interface requirements; do not assume that other fields appearing in the definition snapshot can all be copied directly.
+- If the user provides personnel information, preferentially convert it to `open_id` before writing it into the corresponding control.
+- Single-select/multi-select controls submit the option `value`, which can be obtained from the option definitions in `approvals.get.form`.
+- The `value` structures of controls such as `contact`, `department`, `fieldList`, `dateInterval`, `amount`, `telephone`, `document` are all different and must be assembled separately according to [`lark-approval-instance-form-control-parameters.md`](./lark-approval-instance-form-control-parameters.md); do not apply the text control pattern.
+- For where the value itself comes from, preferentially handle according to [`lark-approval-instance-value-sourcing.md`](./lark-approval-instance-value-sourcing.md); do not mistake "knowing the structure" for "already having a submittable value".
+- If [`lark-approval-instance-form-control-parameters.md`](./lark-approval-instance-form-control-parameters.md) indicates that a control does not support submission through the create instance API, do not force-guess a workaround; you should clearly tell the user that the definition currently cannot be submitted through the API alone.
+- If you encounter a complex control not explicitly covered by the current skill, do not force-guess; first determine supportability and value-passing structure based on [`lark-approval-instance-form-control-parameters.md`](./lark-approval-instance-form-control-parameters.md), then confirm with the user.
 
-## API 不支持的控件
+<a id="api-不支持的控件"></a>
+## Controls Not Supported by the API
 
-根据 [`lark-approval-instance-form-control-parameters.md`](./lark-approval-instance-form-control-parameters.md)，创建审批实例 API 不支持的控件至少包括：
+According to [`lark-approval-instance-form-control-parameters.md`](./lark-approval-instance-form-control-parameters.md), controls not supported by the create approval instance API include at least:
 
 - `text`
 - `mutableGroup`
@@ -105,59 +115,63 @@ lark-cli approval approvals get \
 - `apaascorehrJobAdjustGroup`
 - `apaascorehrOffboardingGroup`
 
-如果目标审批定义包含上述控件，不要继续硬拼 `form`；应直接告诉用户该定义不能仅通过当前 API 完整提单。
+If the target approval definition contains the above controls, do not continue to force-assemble `form`; you should directly tell the user that the definition cannot be fully submitted through the current API alone.
 
-## 高频控件速查
+<a id="高频控件速查"></a>
+## High-Frequency Controls Quick Reference
 
-优先按 [`lark-approval-instance-form-control-parameters.md`](./lark-approval-instance-form-control-parameters.md) 组装，下面只保留最常用、最容易出错的格式：
+Preferentially assemble according to [`lark-approval-instance-form-control-parameters.md`](./lark-approval-instance-form-control-parameters.md); below only the most commonly used and most error-prone formats are retained:
 
-- `input` / `textarea`: `value` 是字符串
-- `date`: `value` 是 RFC3339 时间字符串
-- `dateInterval`: `value` 是对象，包含 `start` / `end` / `interval`
-- `radio` / `radioV2`: `value` 是单个选项值，取定义详情里的 `option.value`；关联外部选项时传 `options.id`
-- `checkbox` / `checkboxV2`: `value` 是选项值数组
-- `number`: `value` 是数字
-- `amount`: `value` 是数字，还要带 `currency`
-- `formula`: `value` 必须与定义中的公式结果匹配，否则会报错
-- `contact`: 只推荐写 `open_ids`，由人员信息先转换成 `open_id`
-- `connect`: `value` 是关联审批实例 `instance_code` 数组，当前默认要求用户直接提供 `instance_code`
-- `document`: `value` 是对象，至少含 `token` 和 `type=docx`
-- `attachmentV2` / `image` / `imageV2`: `value` 是 file code 数组，当前默认要求用户直接提供
-- `fieldList`: `value` 是二维数组，子项继续按各自控件类型组装
-- `department`: `value` 是对象数组，元素字段名为 `open_id`，其值填写部门的 `open_department_id`
-- `telephone`: `value` 是对象，包含 `countryCode` 和 `nationalNumber`
-- `address`: `value` 是对象数组，至少包含地理库 `id`，可选 `detailAddress`；当前默认要求用户直接提供该 `id`
+- `input` / `textarea`: `value` is a string
+- `date`: `value` is an RFC3339 time string
+- `dateInterval`: `value` is an object, containing `start` / `end` / `interval`
+- `radio` / `radioV2`: `value` is a single option value, taken from `option.value` in the definition details; when associating external options, pass `options.id`
+- `checkbox` / `checkboxV2`: `value` is an array of option values
+- `number`: `value` is a number
+- `amount`: `value` is a number, and must also carry `currency`
+- `formula`: `value` must match the formula result in the definition, otherwise an error will be reported
+- `contact`: only writing `open_ids` is recommended, with personnel information first converted to `open_id`
+- `connect`: `value` is an array of associated approval instance `instance_code`, and currently by default requires the user to directly provide `instance_code`
+- `document`: `value` is an object, containing at least `token` and `type=docx`
+- `attachmentV2` / `image` / `imageV2`: `value` is an array of file codes, and currently by default requires the user to directly provide them
+- `fieldList`: `value` is a two-dimensional array, and sub-items continue to be assembled according to their respective control types
+- `department`: `value` is an array of objects, with the element field name being `open_id`, whose value is filled with the department's `open_department_id`
+- `telephone`: `value` is an object, containing `countryCode` and `nationalNumber`
+- `address`: `value` is an array of objects, containing at least the geographic library `id`, and optionally `detailAddress`; currently by default requires the user to directly provide the `id`
 
-## 特殊控件组
+<a id="特殊控件组"></a>
+## Special Control Groups
 
-[`lark-approval-instance-form-control-parameters.md`](./lark-approval-instance-form-control-parameters.md) 还明确给出了若干特殊控件组的提单格式，至少包括：
+[`lark-approval-instance-form-control-parameters.md`](./lark-approval-instance-form-control-parameters.md) also explicitly provides the instance submission formats for several special control groups, including at least:
 
 - `leaveGroupV2`
 - `workGroup`
 - `outGroup`
 - `shiftGroup`
 
-这类控件组不是简单文本控件，通常内部还嵌套 `radioV2`、`date`、`fieldList`、`image`、`contact` 等子控件。遇到这些控件组时：
+Such control groups are not simple text controls; they usually also nest sub-controls such as `radioV2`, `date`, `fieldList`, `image`, `contact`. When encountering these control groups:
 
-- 先从 `approvals.get.form` 找到控件组及其子控件 ID
-- 再严格按 [`lark-approval-instance-form-control-parameters.md`](./lark-approval-instance-form-control-parameters.md) 的示例组装 `value`
-- 不要把控件组整体当成普通字符串或扁平对象提交
+- First find the control group and its sub-control IDs from `approvals.get.form`
+- Then strictly assemble `value` according to the examples in [`lark-approval-instance-form-control-parameters.md`](./lark-approval-instance-form-control-parameters.md)
+- Do not submit the control group as a whole as a plain string or flat object
 
-### 5. 组装节点参数
+<a id="5-组装节点参数"></a>
+### 5. Assemble Node Parameters
 
-从 `node_list` 推导节点参数：
+Derive node parameters from `node_list`:
 
-- 若某节点 `need_approver=true`，则必须在 `node_approver_list` 中补该节点的审批人。
-- `key` 优先取 `custom_node_id`；若不存在，再用 `node_id`。
-- `value` 是审批人 `open_id` 列表。
-- 若 `approver_chosen_multi=false`，该节点只允许一个审批人 `open_id`。
-- `node_cc_list` 仅在用户明确需要补充节点抄送人时才填写；其 `key/value` 规则与 `node_approver_list` 相同。
+- If a node `need_approver=true`, then the approvers for that node must be supplemented in `node_approver_list`.
+- `key` preferentially takes `custom_node_id`; if it does not exist, then use `node_id`.
+- `value` is the approver `open_id` list.
+- If `approver_chosen_multi=false`, the node allows only one approver `open_id`.
+- `node_cc_list` is filled in only when the user explicitly needs to supplement node cc recipients; its `key/value` rules are the same as `node_approver_list`.
 
-### 6. 创建审批实例
+<a id="6-创建审批实例"></a>
+### 6. Create Approval Instance
 
-创建命令使用 `approval instances create`，需要的 scopes: ["approval:instance:write"]
+The creation command uses `approval instances create`, required scopes: ["approval:instance:write"]
 
-确认最终表单值和节点参数后再执行：
+Execute after confirming the final form values and node parameters:
 
 ```bash
 lark-cli approval instances create \
@@ -175,47 +189,50 @@ lark-cli approval instances create \
   --yes
 ```
 
-执行规则：
+Execution rules:
 
-- 执行前先向用户确认：目标审批定义、核心表单值、节点审批人/抄送人。
-- 若需要幂等，可补 `uuid`。
-- 成功后回报 `instance_code` 与 `instance_link`。
+- Before executing, first confirm with the user: target approval definition, core form values, node approvers/cc recipients.
+- If idempotency is needed, `uuid` may be supplemented.
+- After success, report back `instance_code` and `instance_link`.
 
-## 组装时优先依据的资料
+<a id="组装时优先依据的资料"></a>
+## Materials to Prioritize When Assembling
 
-优先级固定如下：
+The priority is fixed as follows:
 
-1. 本文中的创建请求参数、节点参数和返回结果说明：决定 `instances create` 要传哪些字段、怎么执行、成功后回什么。
-2. [`lark-approval-instance-form-control-parameters.md`](./lark-approval-instance-form-control-parameters.md)：决定每种控件的 `value` 结构与支持范围。
-3. [`lark-approval-instance-value-sourcing.md`](./lark-approval-instance-value-sourcing.md)：决定每类值应该从哪里拿，以及当前哪些值必须由用户直接提供。
-4. `approvals.get.form`：提供当前审批定义里实际有哪些控件、控件 `id`、控件 `type`、选项值范围、明细子控件结构。
-5. `approvals.get.node_list`：提供节点 key 与是否需要补充审批人/抄送人的线索。
+1. The creation request parameters, node parameters, and return result descriptions in this document: determine which fields `instances create` should pass, how to execute, and what to return after success.
+2. [`lark-approval-instance-form-control-parameters.md`](./lark-approval-instance-form-control-parameters.md): determines the `value` structure and support scope of each control type.
+3. [`lark-approval-instance-value-sourcing.md`](./lark-approval-instance-value-sourcing.md): determines where each type of value should be obtained from, and which values currently must be directly provided by the user.
+4. `approvals.get.form`: provides which controls actually exist in the current approval definition, control `id`, control `type`, option value ranges, and detail sub-control structures.
+5. `approvals.get.node_list`: provides clues about node keys and whether approvers/cc recipients need to be supplemented.
 
-不要反过来把 `approvals.get.form` 当成第一优先级，更不要把它当成可直接提交的 JSON 模板。
+Do not reverse the order and treat `approvals.get.form` as the first priority, and even less as a JSON template that can be submitted directly.
 
-## 最小判断表
+<a id="最小判断表"></a>
+## Minimal Decision Table
 
-| 你手上有什么 | 下一步 |
+| What you have | Next step |
 |---|---|
-| 只有口语需求，比如“帮我提个请假审批” | 先 `approvals.search` |
-| 已经拿到 `approval_code` | 直接 `approvals.get` |
-| 已拿到 `form` / `node_list`，且用户已给出表单值和审批人 | 组装 `instances create` |
-| `is_external=true` | 返回 `create_link`，不要调 `instances create` |
+| Only a colloquial request, such as "help me submit a leave approval" | First `approvals.search` |
+| Already obtained `approval_code` | Directly `approvals.get` |
+| Already obtained `form` / `node_list`, and the user has provided form values and approvers | Assemble `instances create` |
+| `is_external=true` | Return `create_link`, do not call `instances create` |
 
-## 返回结果
+<a id="返回结果"></a>
+## Return Results
 
-完成创建后，至少向用户返回：
+After completing creation, at least return to the user:
 
 - `approval_name`
 - `instance_code`
 - `instance_link`
 
-建议整理为下面这种结构：
+It is recommended to organize it into the following structure:
 
 ```text
-审批已创建成功：
+Approval created successfully:
 
-- approval_name: 请假申请
+- approval_name: Leave Request
 - instance_code: 19EAC829-F1CB-527F-BE2A-1330422E60C0
 - instance_link: https://...
 ```

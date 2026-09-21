@@ -1,12 +1,14 @@
-# drive +member-add（添加协作者/授权成员权限）
+<a id="drive-member-add添加协作者授权成员权限"></a>
+# drive +member-add (add collaborators/grant member permissions)
 
-> 这是高风险写操作。真实执行会修改文档权限，需要显式加 `--yes`
+> This is a high-risk write operation. Real execution modifies document permissions and requires explicitly adding `--yes`
 
-## 命令
+<a id="命令"></a>
+## Command
 
 ```bash
 
-# 批量添加（同一 member-type 和 perm，最多 10 人）
+# Batch add (same member-type and perm, up to 10 people)
 lark-cli drive +member-add \
   --token "<bare_token_or_url>" \
   --type bitable \
@@ -16,24 +18,26 @@ lark-cli drive +member-add \
   --yes
 ```
 
-## 参数
+<a id="参数"></a>
+## Parameters
 
-| 参数 | 必填 | 说明                                                                                                                                                                                  |
+| Parameter | Required | Description                                                                                                                                                                                  |
 |------|----|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| `--token` | 是 | 裸 token 或完整 URL。路径支持 `/drive/folder/`、`/docx/`、`/doc/`、`/sheets/`、`/base/`、`/bitable/`、`/wiki/`、`/file/`、`/mindnotes/`、`/slides/`、`/minutes/`、`/page/`；URL 输入可从路径推断 `--type`，裸 token 不做前缀推断 |
-| `--type` | 必填 | 目标资源类型：`docx` / `doc` / `sheet` / `bitable` / `file` / `folder` / `wiki` / `mindnote` / `slides` / `minutes` / `apps`。传 URL 时可省略；裸 token 必须显式传；若同时传 URL 和 `--type`，显式 `--type` 覆盖 URL 推断 |
-| `--member-id` | 是 | 协作者 ID；逗号分隔可批量添加，最多 10 个                                                                                                                                                            |
-| `--member-type` | 是 | member-id 的类型；支持 `email` / `openid` / `unionid` / `openchat` / `opendepartmentid` / `groupid` / `appid` / `wikispaceid`。在实际使用里，给当前应用授权仍优先推荐 bot `open_id` + `openid`。                               |
-| `--member-kind` | 条件必填 | 仅当 `--member-type=wikispaceid` 时填写，映射到请求 body 的 `type` 字段。取值：`wiki_space_member` / `wiki_space_viewer` / `wiki_space_editor`。其他 member-type 禁止传此参数。 |
-| `--perm` | 否 | 授权角色：`view`（默认）/ `edit` / `full_access`                                                                                                                                             |
-| `--perm-type` | 否 | 只作用 wiki 节点权限范围：`container`（默认，当前页面+子页面）/ `single_page`（仅当前页面）                                                                                                                      |
-| `--need-notification` | 否 | 是否通知对方。仅 `--as user` 可用；未传时不会写入 query，`--need-notification=false` 表示显式不通知                                                                                                           |
-| `--dry-run` | 否 | 仅打印请求，不实际授权                                                                                                                                                                         |
-| `--yes` | 真实执行时是 | 确认高风险写操作                                                                                                                                                                            |
+| `--token` | Yes | Bare token or full URL. Path supports `/drive/folder/`, `/docx/`, `/doc/`, `/sheets/`, `/base/`, `/bitable/`, `/wiki/`, `/file/`, `/mindnotes/`, `/slides/`, `/minutes/`, `/page/`; URL input can infer `--type` from the path, bare tokens do not perform prefix inference |
+| `--type` | Required | Target resource type: `docx` / `doc` / `sheet` / `bitable` / `file` / `folder` / `wiki` / `mindnote` / `slides` / `minutes` / `apps`. Can be omitted when passing a URL; must be explicitly passed for bare tokens; if both a URL and `--type` are passed, the explicit `--type` overrides the URL inference |
+| `--member-id` | Yes | Collaborator ID; comma-separated for batch add, up to 10 |
+| `--member-type` | Yes | Type of member-id; supports `email` / `openid` / `unionid` / `openchat` / `opendepartmentid` / `groupid` / `appid` / `wikispaceid`. In actual use, granting permissions to the current application still preferentially recommends bot `open_id` + `openid`.                               |
+| `--member-kind` | Conditionally required | Fill in only when `--member-type=wikispaceid`, maps to the `type` field of the request body. Values: `wiki_space_member` / `wiki_space_viewer` / `wiki_space_editor`. Passing this parameter is prohibited for other member-types. |
+| `--perm` | No | Authorization role: `view` (default) / `edit` / `full_access`                                                                                                                                             |
+| `--perm-type` | No | Only applies to the wiki node permission scope: `container` (default, current page + subpages) / `single_page` (current page only)                                                                                                                      |
+| `--need-notification` | No | Whether to notify the other party. Only available for `--as user`; when not passed it is not written to the query, `--need-notification=false` means explicitly do not notify                                                                                                           |
+| `--dry-run` | No | Only print the request, do not actually grant permissions                                                                                                                                                                         |
+| `--yes` | Yes for real execution | Confirm the high-risk write operation                                                                                                                                                                            |
 
-## 输出
+<a id="输出"></a>
+## Output
 
-批量成功：
+Batch success:
 
 ```json
 {
@@ -54,13 +58,14 @@ lark-cli drive +member-add \
 }
 ```
 
-批量部分失败时，`partial` 为 `true`，同一份结果以 `ok:false` 部分失败信封写到 **stdout**（stderr 不再输出单独的错误信封），CLI 以非零退出码结束。检查 `data` 中的 `requested_count`、`succeeded_count`、`members`、`missing_member_ids` 和可选的 `mismatched_member_ids`。响应顺序不影响匹配结果。
+On batch partial failure, `partial` is `true`, and the same result is written to **stdout** as a `ok:false` partial-failure envelope (stderr no longer outputs a separate error envelope), and the CLI exits with a non-zero exit code. Check `requested_count`, `succeeded_count`, `members`, `missing_member_ids`, and the optional `mismatched_member_ids` in `data`. Response order does not affect matching results.
 
-## 行为说明
+<a id="行为说明"></a>
+## Behavior notes
 
-- **身份支持**：`--as user` 和 `--as bot` 均可使用。
-- **部门协作者**：`--member-type=opendepartmentid` 必须配合 `--as user`；bot 身份不支持添加部门协作者。
-- **通知**：`--need-notification` 仅 `--as user` 时有效；`--as bot` 时传此参数会被拒绝。
-- **批量约束**：批量请求共享同一 `--member-type`、`--perm` 和 `--perm-type`；混合用户/群组/部门的场景需拆分为多次调用。
-- **Wiki 空间 ID**：`--member-type=wikispaceid` 时必须同时传 `--member-kind`，否则 API 会缺少必填的 body `type` 字段。`wiki_space_member` 对应知识库成员角色；若知识库已将成员拆分为可阅读/可编辑成员组，改用 `wiki_space_viewer` 或 `wiki_space_editor`。
-- **ID 解析**：优先用 `open_id` + `--member-type openid`；仅在无法解析 `open_id` 时使用 `email`。群组优先用 `openchat`，部门用 `opendepartmentid`。
+- **Identity support**: Both `--as user` and `--as bot` can be used.
+- **Department collaborators**: `--member-type=opendepartmentid` must be used together with `--as user`; the bot identity does not support adding department collaborators.
+- **Notification**: `--need-notification` is only valid when `--as user`; when `--as bot`, passing this parameter will be rejected.
+- **Batch constraints**: Batch requests share the same `--member-type`, `--perm`, and `--perm-type`; scenarios mixing users/groups/departments need to be split into multiple calls.
+- **Wiki space ID**: When `--member-type=wikispaceid`, `--member-kind` must also be passed, otherwise the API will lack the required body `type` field. `wiki_space_member` corresponds to the knowledge base member role; if the knowledge base has split members into readable/editable member groups, use `wiki_space_viewer` or `wiki_space_editor` instead.
+- **ID resolution**: Prefer `open_id` + `--member-type openid`; use `email` only when `open_id` cannot be resolved. For groups, prefer `openchat`, and for departments use `opendepartmentid`.

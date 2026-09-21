@@ -1,80 +1,88 @@
-# Markdown 格式参考
+<a id="markdown-格式参考"></a>
+# Markdown Format Reference
 
-`docs +fetch` / `docs +create` / `docs +update` 使用 `--doc-format markdown` 时适用；fetch 的 `--doc-format im-markdown` 仅用于获取内容后在 `lark-im` 场景下使用，不作为 create/update 写入格式。
+Applies when `docs +fetch` / `docs +create` / `docs +update` use `--doc-format markdown`; the `--doc-format im-markdown` of fetch is only used to retrieve content and then use it in the `lark-im` scenario, and is not used as the write format for create/update.
 
-## 转义规则
+<a id="转义规则"></a>
+## Escaping Rules
 
-> **⚠️ 当文本中包含以下字符且不想触发 Markdown 语法时**，需用 `\` 前缀转义。转义分为**无条件转义**（行内任意位置生效）和**位置敏感转义**（仅特定位置才需要）两类。
+> **⚠️ When the text contains the following characters and you do not want to trigger Markdown syntax**, you need to escape them with the `\` prefix. Escaping is divided into two categories: **unconditional escaping** (takes effect anywhere within a line) and **position-sensitive escaping** (only needed in specific positions).
 
-### 无条件转义（行内生效，任何位置都要转义）
+<a id="无条件转义行内生效任何位置都要转义"></a>
+### Unconditional Escaping (takes effect within a line, must be escaped in any position)
 
-| 符号 | Markdown 语法用途 | 转义写法 | 示例 |
+| Symbol | Markdown syntax purpose | Escape form | Example |
 |------|-------------------|----------|------|
-| `\` | 转义符本身 | `\\` | `C:\\Users` → C:\Users |
-| `` ` `` | 行内代码 | `` \` `` | `` 用 \` 包裹 `` |
-| `*` | 斜体 / 加粗 | `\*` | `3 \* 5 = 15` → 3 \* 5 = 15 |
-| `_` | 斜体 / 加粗 | `\_` | `foo\_bar\_baz` → foo\_bar\_baz |
-| `[` `]` | 链接文本 | `\[` `\]` | `\[非链接\]` |
-| `$` | 数学公式定界 | `\$` | `价格 \$100` |
-| `~` | 删除线（GFM `~~text~~`） | `\~` | `a\~\~b\~\~c` → a~~b~~c |
-| `<` | XML 标签起始（`<b>`、`<img>` 等会被当作标签解析并生效） | `\<` | 字面量 `<b>` 须写为 `\<b>`；`a < b` 建议写为 `a \< b` |
+| `\` | The escape character itself | `\\` | `C:\\Users` → C:\Users |
+| `` ` `` | Inline code | `` \` `` | `` 用 \` 包裹 `` |
+| `*` | Italic / bold | `\*` | `3 \* 5 = 15` → 3 \* 5 = 15 |
+| `_` | Italic / bold | `\_` | `foo\_bar\_baz` → foo\_bar\_baz |
+| `[` `]` | Link text | `\[` `\]` | `\[非链接\]` |
+| `$` | Math formula delimiter | `\$` | `价格 \$100` |
+| `~` | Strikethrough (GFM `~~text~~`) | `\~` | `a\~\~b\~\~c` → a~~b~~c |
+| `<` | XML tag start (`<b>`, `<img>`, etc. will be parsed as tags and take effect) | `\<` | The literal `<b>` must be written as `\<b>`; `a < b` is recommended to be written as `a \< b` |
 
-### 位置敏感转义（仅在特定位置才需要转义）
+<a id="位置敏感转义仅在特定位置才需要转义"></a>
+### Position-Sensitive Escaping (only needs escaping in specific positions)
 
-| 符号 | Markdown 语法用途 | 转义条件 | 示例 |
+| Symbol | Markdown syntax purpose | Escape condition | Example |
 |------|-------------------|----------|------|
-| `#` | 标题 | **仅行首**（去除前导空白后）| 行首 `\# 这不是标题`；行内 `A # B` 无需转义 |
-| `+` | 无序列表 | **仅行首**（去除前导空白后）| 行首 `\+ item`；行内 `1 + 2` 无需转义 |
-| `-` | 无序列表 / 分隔线 | **仅行首**（去除前导空白后）| 行首 `\- item`；行内 `A - B` 无需转义 |
-| `>` | 引用块 | **仅行首**（去除前导空白后）| 行首 `\> 不是引用`；行内 `a > b` 无需转义 |
-| `\|` | 表格 cell 分隔 | **仅在 GFM 表格 cell 内** | cell 内 `A \| B`；行内普通文本 `a \| b` 无需转义 |
+| `#` | Heading | **Only at line start** (after removing leading whitespace) | At line start `\# 这不是标题`; inline `A # B` does not need escaping |
+| `+` | Unordered list | **Only at line start** (after removing leading whitespace) | At line start `\+ item`; inline `1 + 2` does not need escaping |
+| `-` | Unordered list / horizontal rule | **Only at line start** (after removing leading whitespace) | At line start `\- item`; inline `A - B` does not need escaping |
+| `>` | Blockquote | **Only at line start** (after removing leading whitespace) | At line start `\> 不是引用`; inline `a > b` does not need escaping |
+| `\|` | Table cell separator | **Only within a GFM table cell** | Within a cell `A \| B`; inline normal text `a \| b` does not need escaping |
 
-**不需要转义的场景：**
-- 在 `` ` `` 行内代码或 ` ``` ` 代码块内，所有符号均为字面量，无需转义
-- `$...$` 数学公式内部，符号为 LaTeX 语法，不受 Markdown 转义影响
+**Scenarios where escaping is not needed:**
+- Within `` ` `` inline code or ` ``` ` code blocks, all symbols are literals and do not need escaping
+- Inside `$...$` math formulas, symbols are LaTeX syntax and are not affected by Markdown escaping
 
-**导出已转义，不要反转义：**
-`docs +fetch --doc-format markdown` 导出的内容中，特殊字符**已经被转义过了**（例如 `\[`、`\|`、`\\` 等）。这些 `\` 是有意义的——去掉会导致后续写入时字符被 Markdown 语法吞掉。**不要反转义或去掉 `\`。**
+**Export is already escaped, do not unescape:**
+In content exported by `docs +fetch --doc-format markdown`, special characters **have already been escaped** (for example `\[`, `\|`, `\\`, etc.). These `\` are meaningful—removing them will cause the characters to be swallowed by Markdown syntax in subsequent writes. **Do not unescape or remove `\`.**
 
-**写入时必须转义：**
-使用 `docs +create` 或 `docs +update` 的 `--doc-format markdown` 写入内容时，字面文本中的特殊字符同样必须转义。`--pattern` 参数中也必须使用转义形式才能正确匹配。
+**Escaping is required when writing:**
+When writing content using `docs +create` or `docs +update`'s `--doc-format markdown`, special characters in literal text must likewise be escaped. In the `--pattern` parameter, the escaped form must also be used to match correctly.
 
-**导出 → 更新 工作流示例：**
+**Export → Update workflow example:**
 
-1. `docs +fetch` 导出得到 `C:\\Users\\test\[1\]`
-2. 用 `str_replace --pattern 'C:\\Users\\test\[1\]'` 匹配（直接使用导出的转义形式）
-3. `--content` 中的替换内容也要保持转义：`C:\\Users\\prod\[2\]`
+1. `docs +fetch` export yields `C:\\Users\\test\[1\]`
+2. Use `str_replace --pattern 'C:\\Users\\test\[1\]'` to match (directly use the exported escaped form)
+3. The replacement content in `--content` must also remain escaped: `C:\\Users\\prod\[2\]`
 
-自行构造 Markdown 内容写入时同理：如字面文本 `a]b` 应写为 `a\]b`，`C:\Users` 应写为 `C:\\Users`。
+When constructing Markdown content yourself for writing, the same applies: for example, the literal text `a]b` should be written as `a\]b`, and `C:\Users` should be written as `C:\\Users`.
 
-## Shell 传参
-- **首选文件传参**：`--content` 支持 `@./path/to/file.md`（读文件）和 `-`（读 stdin），彻底绕开 shell 转义；多行、含特殊字符、长文本强烈推荐。字面量以 `@` 开头时用 `@@` 转义（`--pattern` 不支持 `@file`）
-- **⚠️ `@file` 路径限制**：`@file` 只接受当前工作目录下的相对路径，传绝对路径（如 `@/tmp/xxx.md`）会报 `unsafe file path`。需要落盘时，将文件写在 cwd 下（如 `./_content.md`），用完自行清理。
-- **默认用单引号 `'...'`**：完全字面量，`$`、`` ` ``、`\`、`>`、`\<b>` 等全部原样保留
-- **双引号 `"..."`**：会展开 `$变量`、反引号和 `$(...)` 命令替换，`\` 仍参与转义，易踩坑
-- **`$'...'` ANSI-C 引号**：按 C 转义解析，`\n`=换行、`\\`=单个 `\`；**zsh 下未知转义（如 `\<`）的 `\` 会被吞**，要保留字面 `\` 必须写 `\\`。只在确实需要 `\n`/`\t` 时用
-- **多行内容**：用 `<<'EOF'` heredoc，EOF 必须带引号，否则仍展开 `$`
-- **`\n` 在 `'...'` 和 `"..."` 里都是字面量**，不是换行；要真换行用 `$'...\n...'` 或 heredoc
+<a id="shell-传参"></a>
+## Shell Argument Passing
+- **File argument passing preferred**: `--content` supports `@./path/to/file.md` (read file) and `-` (read stdin), completely bypassing shell escaping; strongly recommended for multi-line, special-character-containing, and long text. When a literal starts with `@`, use `@@` to escape (`--pattern` does not support `@file`)
+- **⚠️ `@file` path restriction**: `@file` only accepts relative paths under the current working directory; passing an absolute path (such as `@/tmp/xxx.md`) will report `unsafe file path`. When you need to write to disk, write the file under cwd (such as `./_content.md`), and clean it up yourself after use.
+- **Use single quotes `'...'` by default**: fully literal, `$`, `` ` ``, `\`, `>`, `\<b>`, etc. are all preserved as-is
+- **Double quotes `"..."`**: will expand `$变量`, backticks, and `$(...)` command substitution; `\` still participates in escaping, easy to trip up
+- **`$'...'` ANSI-C quoting**: parsed according to C escapes, `\n`=newline, `\\`=single `\`; **under zsh, the `\` of unknown escapes (such as `\<`) will be swallowed**, to preserve a literal `\` you must write `\\`. Only use when you actually need `\n`/`\t`
+- **Multi-line content**: use `<<'EOF'` heredoc; EOF must be quoted, otherwise `$` will still be expanded
+- **`\n` is a literal in both `'...'` and `"..."`**, not a newline; for a real newline use `$'...\n...'` or a heredoc
 
-## 图片语法
+<a id="图片语法"></a>
+## Image Syntax
 
-Markdown 格式支持通过 URL 插入网络图片，图片将自动从 HTTP 下载：
+Markdown format supports inserting online images via URL; images will be automatically downloaded over HTTP:
 ```markdown
 ![alt text](https://example.com/photo.png)
 ```
-- `alt text` 为图片描述（可选，可留空）
-- URL 支持 `http://` 和 `https://` 协议
-- 对应的 XML 格式为：`<img href="https://example.com/photo.png"/>`
+- `alt text` is the image description (optional, may be left empty)
+- URL supports the `http://` and `https://` protocols
+- The corresponding XML format is: `<img href="https://example.com/photo.png"/>`
 
-本地图片使用 `![alt](@./images/photo.png)`（路径含空格时写作 `![alt](<@./images/product shot.png>)`）；路径必须位于当前工作目录内，`alt` 会作为 caption。附件使用 `<source path="@./files/report.pdf"/>`
+For local images use `![alt](@./images/photo.png)` (when the path contains spaces, write it as `![alt](<@./images/product shot.png>)`); the path must be within the current working directory, and `alt` will be used as the caption. For attachments use `<source path="@./files/report.pdf"/>`
 
-目前不支持将 Base64 Data URI（如 `data:image/png;base64,...`）直接作为 Markdown 图片地址传入；如仅有 Base64 数据，请先解码为本地图片文件，再使用上述 `@./...` 路径上传。
+Currently, passing a Base64 Data URI (such as `data:image/png;base64,...`) directly as a Markdown image address is not supported; if you only have Base64 data, first decode it into a local image file, then upload using the above `@./...` path.
 
-## Markdown 不支持的 Block 类型
+<a id="markdown-不支持的-block-类型"></a>
+## Block Types Not Supported by Markdown
 
-非原生 Markdown 语法的内容（如下划线、高亮框(Callout)、勾选框、多维表格、画板、思维导图、电子表格、网格布局、引用(@文档/@人)、按钮、日期提醒、行内文件、文字颜色/背景色、同步块等）采用 XML 语法表示，详见 [`lark-doc-xml.md`](lark-doc-xml.md)。
-> **⚠️ XML 标签会被解析并生效**：即使在 `--doc-format markdown` 下，`<b>`、`<u>`、`<img>` 等 XML 标签也会被识别为对应的富文本节点，**不会**按字面量显示。如需字面量输出尖括号包裹的文本（例如示例中的 `<tag>`），必须转义左尖括号：`\<b>`、`\<img>`。
+Content that is not native Markdown syntax (such as underline, Callout, checkbox, Base, whiteboard, mind map, spreadsheet, grid layout, mentions (@document/@person), button, date reminder, inline file, text color/background color, synced block, etc.) is represented using XML syntax; see [`lark-doc-xml.md`](lark-doc-xml.md) for details.
+> **⚠️ XML tags will be parsed and take effect**: even under `--doc-format markdown`, XML tags such as `<b>`, `<u>`, `<img>` will be recognized as the corresponding rich text nodes and will **not** be displayed as literals. If you need to output text wrapped in angle brackets literally (for example `<tag>` in the example), you must escape the left angle bracket: `\<b>`, `\<img>`.
 
-## 参考
+<a id="参考"></a>
+## Reference
 
-- [`lark-doc-xml.md`](lark-doc-xml.md) — XML 语法规范
+- [`lark-doc-xml.md`](lark-doc-xml.md) — XML syntax specification

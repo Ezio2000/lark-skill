@@ -1,38 +1,44 @@
-# Genre Contract: Email / 邮件 (`platform.email`)
+<a id="genre-contract-email--邮件-platformemail"></a>
+# Genre Contract: Email (`platform.email`)
 
-## 核心定位（硬约束）
+<a id="核心定位硬约束"></a>
+## Core Positioning (Hard Constraints)
 
-- 交付物是可复制到邮件客户端的邮件成稿，不代表已发送，也不执行收件人查询、邮件发送、草稿箱或邮箱管理；实际邮件操作切到 `lark-mail`。
-- 视觉策略默认使用 `formal`；仅在用户要求且不违反组织规范或所选 content contract 时调整。全文禁止 emoji、高亮块和装饰性组件。
-- 默认只使用短段落、列表和普通链接等基础结构。只有已由用户说明、平台文档或可信配置确认目标平台完整支持飞书富文本时，才允许使用 `rich` 或 rich block；不得根据“邮件”“HTML 邮件”、飞书文档承载或平台名称自行推断支持。
-- 一封邮件只承担一个主要沟通任务；主题、首段、正文和行动请求围绕同一目的。不得编造发件人身份、收件人关系、事实、权限、承诺、截止时间、附件或已完成动作；缺失但必需的信息使用清楚的占位符。
-- 不使用封面或目录。即使已确认平台能力，表格、图片、`callout`、画板及其他 rich block 也只能在信息确有需要时使用，并确保复制、投递和接收后的语义完整。
+- The deliverable is an email draft that can be copied into an email client; it does not mean it has been sent, and it does not perform recipient lookup, email sending, drafts folder, or mailbox management; actual email operations switch to `lark-mail`.
+- The visual strategy defaults to `formal`; adjust only when the user requests it and it does not violate organizational norms or the selected content contract. Emoji, highlight blocks, and decorative components are prohibited throughout.
+- By default, only use basic structures such as short paragraphs, lists, and plain links. Only when it has been confirmed by the user, platform documentation, or trusted configuration that the target platform fully supports Feishu rich text may `rich` or rich blocks be used; do not infer support on your own based on "email," "HTML email," Feishu Docs hosting, or the platform name.
+- One email carries only one primary communication task; the subject, opening paragraph, body, and action request revolve around the same purpose. Do not fabricate sender identity, recipient relationships, facts, permissions, commitments, deadlines, attachments, or completed actions; use clear placeholders for missing but necessary information.
+- Do not use a cover page or table of contents. Even if platform capabilities have been confirmed, tables, images, `callout`, whiteboards, and other rich blocks may only be used when the information genuinely requires them, and ensure semantic integrity after copying, delivery, and receipt.
 
-## 适用与消歧
+<a id="适用与消歧"></a>
+## Applicability and Disambiguation
 
-用户明确要“写邮件、邮件成稿、邮件草稿、邮件措辞、email、e-mail”，或要求起草回复、跟进、通知、邀约、外联邮件时使用，内容保存在哪里不影响本合同生效。
+Use when the user explicitly asks to "write an email, email draft, email copy, email wording, email, e-mail," or requests drafting a reply, follow-up, notification, invitation, or outreach email; where the content is stored does not affect this contract taking effect.
 
-查看、搜索、发送、回复或管理邮箱中的真实邮件属于 `lark-mail` 操作；邮件系统说明、邮件数据分析、营销方案或把邮件作为信息来源时不触发本合同。若任务既要成稿又要实际发送，先按本合同形成并确认内容，再切到 `lark-mail` 执行发送。
+Viewing, searching, sending, replying to, or managing real emails in a mailbox belongs to `lark-mail` operations; email system descriptions, email data analysis, marketing plans, or using email as an information source do not trigger this contract. If a task requires both drafting and actual sending, first form and confirm the content according to this contract, then switch to `lark-mail` to execute the sending.
 
-## 邮件主任务
+<a id="邮件主任务"></a>
+## Email Primary Tasks
 
-| 主任务 | 内容脊柱 |
+| Primary Task | Content Spine |
 |-|-|
-| 请求 / 决策 | 目的或结论 → 必要背景 → 明确请求 / 选项 → 期望时间或下一步 |
-| 通知 / 同步 | 关键变化 → 影响范围 → 接收方需知 / 需做 → 时间点与联系入口 |
-| 回复 / 跟进 | 对应的前情 → 新信息或直接答复 → 未决事项 → 下一步 |
-| 邀约 / 外联 | 联系缘由 → 与收件人的相关性 → 具体提议 → 低成本回应方式 |
-| 致歉 / 问题沟通 | 承认影响 → 已确认事实 → 补救动作 → 后续安排与边界 |
+| Request / Decision | Purpose or conclusion → necessary background → clear request / options → expected time or next step |
+| Notification / Sync | Key change → scope of impact → what recipients need to know / do → time point and contact entry |
+| Reply / Follow-up | Corresponding prior context → new information or direct answer → pending items → next step |
+| Invitation / Outreach | Reason for contact → relevance to the recipient → specific proposal → low-cost way to respond |
+| Apology / Issue Communication | Acknowledge impact → confirmed facts → remedial actions → follow-up arrangements and boundaries |
 
-## 成稿要求
+<a id="成稿要求"></a>
+## Drafting Requirements
 
-- 成稿先给主题，再给正文；只有用户要求或材料明确时才列出收件人、抄送人等信封字段。主题准确表达对象、事项或所需行动，不使用标题党、空泛寒暄或无信息量的“重要通知”。
-- 称呼依据已知关系和语境选择；关系不明时使用稳妥中性的称呼或显式占位符，不擅自套用亲密、职级或性别称谓。
-- 首段尽快说明来意、结论或与既有线程的关系。背景只保留收件人理解、判断或行动所需的信息，不把完整报告、会议纪要或思考过程原样搬入邮件。
-- 行动请求写清需要谁在何时以何种方式完成什么；材料没有给出负责人或时间时，不自行补造。多个并列事项使用列表，优先让收件人能直接逐项回应。
-- 提及链接、附件或引用材料时说明其用途；未实际提供或上传的材料写成待补占位符，不声称“见附件”。回复和跟进邮件只补充新信息，不机械复述整个线程。
-- 结尾与邮件目的匹配：请求类明确回应方式，通知类说明无需动作或下一节点，外联类保留易于拒绝或调整的空间。署名仅使用已知身份；身份不明时使用占位符，不虚构姓名、团队或联系方式。
+- The draft gives the subject first, then the body; only list envelope fields such as recipients and CC when the user requests it or the materials make it clear. The subject accurately expresses the object, matter, or required action; do not use clickbait, empty pleasantries, or uninformative "important notice."
+- Choose the salutation based on known relationships and context; when the relationship is unclear, use a safe neutral salutation or an explicit placeholder, and do not arbitrarily apply intimate, rank-based, or gendered titles.
+- The opening paragraph states the purpose, conclusion, or relationship to the existing thread as soon as possible. Background retains only the information the recipient needs to understand, judge, or act; do not copy the full report, meeting minutes, or thought process verbatim into the email.
+- The action request clearly states who needs to complete what, when, and in what manner; when the materials do not provide an owner or time, do not invent them. Use lists for multiple parallel items, prioritizing so the recipient can respond to each item directly.
+- When mentioning links, attachments, or referenced materials, explain their purpose; materials not actually provided or uploaded should be written as placeholders to be filled in, and do not claim "see attachment." Reply and follow-up emails only add new information and do not mechanically restate the entire thread.
+- The ending matches the email's purpose: request-type emails specify the response method, notification-type emails state that no action is needed or give the next milestone, and outreach-type emails leave room to easily decline or adjust. The signature uses only known identity; when identity is unclear, use a placeholder and do not fabricate names, teams, or contact information.
 
-## 交付前检查
+<a id="交付前检查"></a>
+## Pre-Delivery Checklist
 
-确认收件人能从主题和首段判断“为什么收到、需要知道或做什么”，事实、责任人、时间和附件状态均有依据，正文没有无关铺垫或重复，语气符合关系与风险，全文无 emoji；若使用 rich block，已有目标平台支持飞书富文本的确认依据；复制到邮件客户端后仍清晰可读，且未把“成稿”误写成“已发送”。
+Confirm that the recipient can tell from the subject and opening paragraph "why they received it, what they need to know or do," that facts, responsible parties, times, and attachment status are all grounded, that the body has no irrelevant filler or repetition, that the tone matches the relationship and risk, and that there is no emoji throughout; if rich blocks are used, there is confirmation that the target platform supports Feishu rich text; after copying into an email client it remains clearly readable, and "draft" is not mistakenly written as "sent."

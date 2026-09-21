@@ -1,39 +1,44 @@
-# whiteboard +update（更新画板）
+<a id="whiteboard-update更新画板"></a>
+# whiteboard +update (Update Whiteboard)
 
 
-更新画板内容，支持四种输入格式：
+Update whiteboard content. Supports four input formats:
 
-- `raw`：飞书 OpenAPI 原生画板节点格式，不推荐直接编辑。
-- `plantuml`：PlantUML 代码
-- `mermaid`：Mermaid 代码
-- `svg`：SVG 文本
+- `raw`: Feishu OpenAPI native whiteboard node format; direct editing is not recommended.
+- `plantuml`: PlantUML code
+- `mermaid`: Mermaid code
+- `svg`: SVG text
 
-输入内容可以通过管道从 stdin 读取，或通过 `--source` 指定文件。
+Input content can be read from stdin via a pipe, or a file can be specified via `--source`.
 
-## 参数
+<a id="参数"></a>
+## Parameters
 
-| 参数                   | 必填 | 说明                                         |
+| Parameter                   | Required | Description                                         |
 |----------------------|----|--------------------------------------------|
-| `--whiteboard-token` | 是  | 画板 token，需要拥有画板的编辑权限                       |
-| `--idempotent-token` | 否  | 幂等 token，确保更新操作幂等；最少 10 个字符，建议使用时间戳 + 场景标识拼接（如 `1744800000-board-1`）。同一次逻辑更新只生成一次该 token，重试时须原样复用；切勿在每次重试时重新生成时间戳或幂等 key，否则会重复写入 |
-| `--overwrite`        | 否  | 写入模式：带上则覆盖更新（写入前删除画板所有现有内容再写入）；省略则为增量追加（保留原有内容，新内容叠加写入）。默认 false（增量追加）|
-| `--source`           | 是  | 输入画板内容，支持使用 `@path` 从文件读取，或 `-` 从 stdin 读取 |
-| `--input_format`     | 否  | 输入格式：`raw`、`plantuml`、`mermaid`、`svg`，默认为 `raw`  |
+| `--whiteboard-token` | Yes  | Whiteboard token; you need edit permission on the whiteboard                       |
+| `--idempotent-token` | No  | Idempotency token to ensure the update operation is idempotent; at least 10 characters; recommended to concatenate a timestamp + scenario identifier (e.g. `1744800000-board-1`). Generate this token only once per logical update, and reuse it as-is on retries; never regenerate the timestamp or idempotency key on each retry, otherwise duplicate writes will occur |
+| `--overwrite`        | No  | Write mode: if provided, overwrite update (delete all existing whiteboard content before writing, then write); if omitted, incremental append (keep existing content and write new content on top). Default false (incremental append)|
+| `--source`           | Yes  | Input whiteboard content; supports reading from a file using `@path`, or reading from stdin using `-` |
+| `--input_format`     | No  | Input format: `raw`, `plantuml`, `mermaid`, `svg`; default is `raw`  |
 
-### 以 raw (OpenAPI 原生画板节点格式) 创作
+<a id="以-raw-openapi-原生画板节点格式-创作"></a>
+### Creating with raw (OpenAPI native whiteboard node format)
 
-**不要以直接生成 json 语法的方式创作 raw 格式的飞书 OpenAPI 原生画板节点参数**
+**Do not create raw-format Feishu OpenAPI native whiteboard node parameters by directly generating JSON syntax**
 
-思维导图，时序图，类图，饼图，流程图等图表推荐使用 Mermaid/PlantUML 语法绘制。
+For diagrams such as mind maps, sequence diagrams, class diagrams, pie charts, and flowcharts, it is recommended to draw them using Mermaid/PlantUML syntax.
 
-而当需要绘制架构图，组织架构图，泳道图，对比图，鱼骨图，柱状图，折线图，树状图，漏斗图，金字塔图，循环/飞轮图，里程碑或其他较为复杂的图表时，推荐参考 [§ 渲染 & 写入画板](lark-whiteboard-workflow.md#渲染--写入画板) 使用 whiteboard-cli 工具创作。
+When you need to draw architecture diagrams, organization charts, swimlane diagrams, comparison charts, fishbone diagrams, bar charts, line charts, tree diagrams, funnel charts, pyramid charts, cycle/flywheel diagrams, milestones, or other relatively complex diagrams, it is recommended to refer to [§ Rendering & Writing to Whiteboard](lark-whiteboard-workflow.md#渲染--写入画板) and use the whiteboard-cli tool to create them.
 
-## 示例
+<a id="示例"></a>
+## Examples
 
-### 示例 1：使用 PlantUML 代码更新画板（从 stdin 读取）
+<a id="示例-1使用-plantuml-代码更新画板从-stdin-读取"></a>
+### Example 1: Update a whiteboard using PlantUML code (read from stdin)
 
 ```bash
-# 编写 PlantUML 代码
+# Write PlantUML code
 cat > diagram.puml << 'EOF'
 @startuml
 Alice -> Bob: Hello
@@ -41,17 +46,18 @@ Bob -> Alice: Hi
 @enduml
 EOF
 
-# 通过管道传递给命令
+# Pass to the command via a pipe
 cat diagram.puml | lark-cli whiteboard +update \
   --whiteboard-token <画板Token> \
   --input_format plantuml --source -\
   --overwrite --as user
 ```
 
-### 示例 2：使用 Mermaid 代码更新画板（从文件读取）
+<a id="示例-2使用-mermaid-代码更新画板从文件读取"></a>
+### Example 2: Update a whiteboard using Mermaid code (read from a file)
 
 ```bash
-# 编写 Mermaid 代码
+# Write Mermaid code
 cat > diagram.mmd << 'EOF'
 graph TD
     A[开始] --> B{判断}
@@ -60,7 +66,7 @@ graph TD
     C --> D
 EOF
 
-# 从文件读取并更新
+# Read from a file and update
 lark-cli whiteboard +update \
   --whiteboard-token <画板Token> \
   --input_format mermaid \
@@ -68,12 +74,13 @@ lark-cli whiteboard +update \
   --overwrite --as user
 ```
 
-### 示例 3：使用 whiteboard-cli 生成 OpenAPI 格式并写入画板
+<a id="示例-3使用-whiteboard-cli-生成-openapi-格式并写入画板"></a>
+### Example 3: Use whiteboard-cli to generate OpenAPI format and write it to the whiteboard
 
-whiteboard-cli 工具的具体用法请参考 [§ 渲染 & 写入画板](lark-whiteboard-workflow.md#渲染--写入画板)
+For specific usage of the whiteboard-cli tool, refer to [§ Rendering & Writing to Whiteboard](lark-whiteboard-workflow.md#渲染--写入画板)
 
 ```bash
-# 使用 whiteboard-cli 生成 OpenAPI 格式并通过管道传递
+# Use whiteboard-cli to generate OpenAPI format and pass it via a pipe
 npx -y @larksuite/whiteboard-cli@^0.2.13 -i <产物文件> --to openapi --format json \
   | lark-cli whiteboard +update \
     --whiteboard-token <画板Token> \
@@ -82,15 +89,16 @@ npx -y @larksuite/whiteboard-cli@^0.2.13 -i <产物文件> --to openapi --format
     --as user
 ```
 
-### 示例 4：先生成产物文件，再从文件读取更新
+<a id="示例-4先生成产物文件再从文件读取更新"></a>
+### Example 4: First generate an artifact file, then read from the file and update
 
-whiteboard-cli 工具的具体用法请参考 [§ 渲染 & 写入画板](lark-whiteboard-workflow.md#渲染--写入画板)
+For specific usage of the whiteboard-cli tool, refer to [§ Rendering & Writing to Whiteboard](lark-whiteboard-workflow.md#渲染--写入画板)
 
 ```bash
-# 生成 OpenAPI 格式到文件
+# Generate OpenAPI format to a file
 npx -y @larksuite/whiteboard-cli@^0.2.13 -i <DSL 文件> --to openapi --format json -o ./temp.json
 
-# 从文件读取并更新
+# Read from a file and update
 lark-cli whiteboard +update \
   --whiteboard-token <画板Token> \
   --idempotent-token <10+字符唯一串> \
@@ -99,12 +107,13 @@ lark-cli whiteboard +update \
   --overwrite --as user
 ```
 
-### 示例 5：使用 SVG 写入画板（从文件读取）
+<a id="示例-5使用-svg-写入画板从文件读取"></a>
+### Example 5: Write to a whiteboard using SVG (read from a file)
 
-适用于从零创建（直接写入 SVG）和编辑现有画板（编辑工作流详见 [`../routes/svg-edit.md`](../routes/svg-edit.md)）。
+Suitable for creating from scratch (writing SVG directly) and editing an existing whiteboard (for the editing workflow, see [`../routes/svg-edit.md`](../routes/svg-edit.md)).
 
 ```bash
-# 编写或导出 SVG 文件
+# Write or export an SVG file
 cat > diagram.svg << 'EOF'
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 100">
   <rect x="10" y="10" width="80" height="40" fill="#4A90E2"/>
@@ -112,7 +121,7 @@ cat > diagram.svg << 'EOF'
 </svg>
 EOF
 
-# 从文件读取并更新
+# Read from a file and update
 lark-cli whiteboard +update \
   --whiteboard-token <画板Token> \
   --input_format svg \

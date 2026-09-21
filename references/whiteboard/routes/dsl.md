@@ -1,113 +1,121 @@
-# DSL 路径
+<a id="dsl-路径"></a>
+# DSL Path
 
-> **这是画板，不是网页。** 画板是无限画布上自由放置元素，flex 布局是可选增强。
+> **This is a whiteboard, not a webpage.** A whiteboard is about freely placing elements on an infinite canvas; flex layout is an optional enhancement.
 
 ## Workflow
 
 ```
-Step 1: 路由 & 读取知识
-  - 读对应 scene 指南 — 了解结构特征和布局策略
-  - 确定布局策略（见下方快速判断）和构建方式
-  - 读 elements/ 核心模块 — 语法、布局、配色、排版、连线
+Step 1: Route & read knowledge
+  - Read the corresponding scene guide — understand structural characteristics and layout strategy
+  - Determine the layout strategy (see quick judgment below) and the construction method
+  - Read the core modules under elements/ — syntax, layout, color scheme, typography, connectors
 
-Step 2: 生成完整 DSL（含颜色）
-  - 按 content.md 规划信息量和分组
-  - 按 layout.md 选择布局模式和间距
-  - 推荐使用图标让图表更直观，运行 `npx -y @larksuite/whiteboard-cli@^0.2.13 --icons` 查看可用图标
-  - 按 style.md 上色（用户没指定时用默认经典色板）
-  - 按 schema.md 语法输出完整 JSON
-  - 连线参考 connectors.md，排版参考 typography.md
+Step 2: Generate the complete DSL (including colors)
+  - Plan the amount of information and grouping according to content.md
+  - Choose the layout mode and spacing according to layout.md
+  - It is recommended to use icons to make the diagram more intuitive; run `npx -y @larksuite/whiteboard-cli@^0.2.13 --icons` to view available icons
+  - Apply colors according to style.md (use the default classic palette when the user has not specified one)
+  - Output the complete JSON according to the syntax in schema.md
+  - For connectors refer to connectors.md; for typography refer to typography.md
 
-  注意：部分图形（鱼骨/飞轮/柱状/折线等）要按 scene 指南的脚本模板写 CommonJS 脚本生成 JSON：
-    1. 创建产物目录 ./diagrams/YYYY-MM-DDTHHMMSS/
-    2. 将脚本保存为 diagram.gen.cjs（必须 .cjs 后缀，脚本用 require() 写，.js 在 ESM 项目下会崩），执行 node diagram.gen.cjs 产出 diagram.json
-    3. 用产出的 diagram.json 进入 Step 3
+  Note: Some graphics (fishbone/flywheel/bar/line, etc.) require writing a CommonJS script to generate JSON according to the script template in the scene guide:
+    1. Create the artifact directory ./diagrams/YYYY-MM-DDTHHMMSS/
+    2. Save the script as diagram.gen.cjs (the .cjs suffix is required; write the script using require(), as .js will crash under an ESM project), and run node diagram.gen.cjs to produce diagram.json
+    3. Use the produced diagram.json to proceed to Step 3
 
-Step 3: 渲染 & 审查 → 交付
-  - 渲染前自查（见下方检查清单）
-  - 渲染 PNG（仅用于预览验证，不是最终产物）：npx -y @larksuite/whiteboard-cli@^0.2.13 -i diagram.json -o diagram.png
-  - 检查：信息完整？布局合理？配色协调？文字无截断？连线无交叉？
-  - 有问题 → 按症状表修复 → 重新渲染（最多 2 轮）
-  - 2 轮后仍有严重问题 → 考虑走 Mermaid 路径兜底
-  - 写入画板：用 whiteboard-cli 将 diagram.json 转换为 OpenAPI 格式并 pipe 给 +update：
+Step 3: Render & review → deliver
+  - Self-check before rendering (see checklist below)
+  - Render PNG (for preview verification only, not the final artifact): npx -y @larksuite/whiteboard-cli@^0.2.13 -i diagram.json -o diagram.png
+  - Check: Is the information complete? Is the layout reasonable? Is the color scheme harmonious? Is any text truncated? Do any connectors cross?
+  - If there are problems → fix according to the symptom table → re-render (at most 2 rounds)
+  - If serious problems remain after 2 rounds → consider falling back to the Mermaid path
+  - Write to the whiteboard: use whiteboard-cli to convert diagram.json to OpenAPI format and pipe it to +update:
       npx -y @larksuite/whiteboard-cli@^0.2.13 -i diagram.json --to openapi --format json \
         | lark-cli whiteboard +update --whiteboard-token <board_token> \
             --source - --input_format raw --idempotent-token <时间戳+标识> --as user
-      → 完整 dry-run / 确认流程见 [§ 写入画板](../references/lark-whiteboard-workflow.md#写入画板)
-  - 交付：向用户报告 board_token 写入成功
+      → For the complete dry-run / confirmation flow, see [§ Write to whiteboard](../references/lark-whiteboard-workflow.md#写入画板)
+  - Deliver: report to the user that the board_token was written successfully
 ```
 
-**布局策略快速判断**（详见 `elements/layout.md`）：
+**Quick judgment of layout strategy** (see `elements/layout.md` for details):
 
-先定**主布局**，再定子布局：**结构化信息**优先用 Flex，**关系链路**优先用 Dagre，**灵活定位**用绝对布局。
+First determine the **primary layout**, then the sub-layout: for **structured information** prefer Flex, for **relationship chains** prefer Dagre, and for **flexible positioning** use absolute layout.
 
-> **构建方式是强约束**：当 scene 指南要求"脚本生成"时，必须先写脚本（`.cjs`，CommonJS）并用 `node` 执行来产出 JSON 文件。
+> **The construction method is a hard constraint**: when the scene guide requires "script generation", you must first write a script (`.cjs`, CommonJS) and execute it with `node` to produce the JSON file.
 
-## 模块索引
+<a id="模块索引"></a>
+## Module Index
 
-### 核心参考（必读）
+<a id="核心参考必读"></a>
+### Core References (required reading)
 
-| 模块     | 文件                         | 说明                            |
-| -------- |----------------------------| ------------------------------- |
-| DSL 语法 | `elements/schema.md`       | 节点类型、属性、尺寸值          |
-| 内容规划 | `elements/content.md`    | 信息提取、密度决策、连线预判    |
-| 布局系统 | `elements/layout.md`     | 网格方法论、Flex 映射、间距规则 |
-| 排版规则 | `elements/typography.md` | 字号层级、对齐、行距            |
-| 连线系统 | `elements/connectors.md` | 拓扑规划、锚点选择              |
-| 配色系统 | `elements/style.md`      | 多色板、视觉层级                |
+| Module          | File                         | Description                            |
+| --------------- |----------------------------| ------------------------------- |
+| DSL Syntax      | `elements/schema.md`       | Node types, properties, size values          |
+| Content Planning| `elements/content.md`    | Information extraction, density decisions, connector pre-judgment    |
+| Layout System   | `elements/layout.md`     | Grid methodology, Flex mapping, spacing rules |
+| Typography Rules| `elements/typography.md` | Font size hierarchy, alignment, line spacing            |
+| Connector System| `elements/connectors.md` | Topology planning, anchor selection              |
+| Color System    | `elements/style.md`      | Multiple palettes, visual hierarchy                |
 
-### 场景指南（按类型选读一个）
+<a id="场景指南按类型选读一个"></a>
+### Scene Guides (choose one to read by type)
 
-| 图表类型    | 文件                     | 适用场景                               |
+| Diagram Type    | File                     | Applicable Scenarios                               |
 | ----------- | ------------------------ | -------------------------------------- |
-| 架构图      | `scenes/architecture.md` | 分层架构、微服务架构                   |
-| 组织架构图  | `scenes/organization.md` | 公司组织、树形层级                     |
-| 泳道图      | `scenes/swimlane.md`     | 跨角色流程、跨系统交互流程             |
-| 对比图      | `scenes/comparison.md`   | 方案对比、功能矩阵                     |
-| 鱼骨图      | `scenes/fishbone.md`     | 因果分析、根因分析                     |
-| 柱状图      | `scenes/bar-chart.md`    | 柱状图、条形图                         |
-| 折线图      | `scenes/line-chart.md`   | 折线图、趋势图                         |
-| 树状图      | `scenes/treemap.md`      | 矩形树图、层级占比                     |
-| 漏斗图      | `scenes/funnel.md`       | 转化漏斗、销售漏斗                     |
-| 金字塔图    | `scenes/pyramid.md`      | 层级结构、需求层次                     |
-| 循环/飞轮图 | `scenes/flywheel.md`     | 增长飞轮、闭环链路                     |
-| 里程碑      | `scenes/milestone.md`    | 时间线、版本演进                       |
-| 流程图      | `scenes/flowchart.md`    | 业务流、状态机、带条件判断的链路       |
+| Architecture Diagram      | `scenes/architecture.md` | Layered architecture, microservice architecture                   |
+| Organization Chart  | `scenes/organization.md` | Company organization, tree hierarchy                     |
+| Swimlane Diagram      | `scenes/swimlane.md`     | Cross-role processes, cross-system interaction processes             |
+| Comparison Diagram      | `scenes/comparison.md`   | Solution comparison, feature matrix                     |
+| Fishbone Diagram      | `scenes/fishbone.md`     | Causal analysis, root cause analysis                     |
+| Bar Chart      | `scenes/bar-chart.md`    | Bar chart, horizontal bar chart                         |
+| Line Chart      | `scenes/line-chart.md`   | Line chart, trend chart                         |
+| Treemap      | `scenes/treemap.md`      | Rectangular treemap, hierarchical proportion                     |
+| Funnel Chart      | `scenes/funnel.md`       | Conversion funnel, sales funnel                     |
+| Pyramid Chart    | `scenes/pyramid.md`      | Hierarchical structure, hierarchy of needs                     |
+| Cycle/Flywheel Diagram | `scenes/flywheel.md`     | Growth flywheel, closed-loop chain                     |
+| Milestone      | `scenes/milestone.md`    | Timeline, version evolution                       |
+| Flowchart      | `scenes/flowchart.md`    | Business flow, state machine, chains with conditional judgment       |
 
-### 插入 @用户提及 / 图片
+<a id="插入-用户提及--图片"></a>
+### Insert @user mentions / images
 
-| 当前内容包含 | 必读指南 |
+| Current content contains | Required reading |
 |---|---|
-| @用户提及 | [`../scenes/mention.md`](../scenes/mention.md) |
-| 图片 / 配图 | [`../scenes/photo-showcase.md`](../scenes/photo-showcase.md) |
+| @user mention | [`../scenes/mention.md`](../scenes/mention.md) |
+| Image / illustration | [`../scenes/photo-showcase.md`](../scenes/photo-showcase.md) |
 
-## 渲染前自查
+<a id="渲染前自查"></a>
+## Self-check before rendering
 
-- [ ] 不同分组用了不同颜色？同组节点样式完全一致？
-- [ ] 外层浅色背景、内层白色节点？
-- [ ] 所有节点有边框（borderWidth=2）？文字在背景上清晰可读？
-- [ ] 连线用灰色（#BBBFC4），不用彩色？
-- [ ] frame 都写了 layout 属性？gap 和 padding 都显式设置了？
-- [ ] 含文字节点 height 用 fit-content？connector 在顶层 nodes 数组？
+- [ ] Do different groups use different colors? Are nodes in the same group completely consistent in style?
+- [ ] Outer layer with light background, inner layer with white nodes?
+- [ ] Do all nodes have borders (borderWidth=2)? Is the text clearly readable on the background?
+- [ ] Do connectors use gray (#BBBFC4) rather than color?
+- [ ] Do all frames have the layout property written? Are gap and padding both explicitly set?
+- [ ] Do nodes containing text use fit-content for height? Are connectors in the top-level nodes array?
 
-## 症状→修复表
+<a id="症状修复表"></a>
+## Symptom → Fix Table
 
-| 看到的问题         | 改什么                              |
+| Problem observed         | What to change                              |
 | ------------------ | ----------------------------------- |
-| 文字被截断         | height 改为 fit-content             |
-| 文字溢出容器右侧   | 增大 width，或缩短文字              |
-| 节点重叠粘连       | 增大 gap                            |
-| 节点挤成一团       | 增大 padding 和 gap                 |
-| 连线穿过节点       | 调整 fromAnchor/toAnchor 或增大间距 |
-| 大面积空白         | 缩小外层 frame 宽度                 |
-| 文字和背景色太接近 | 调整 fillColor 或 textColor         |
-| 布局整体偏左/偏右  | 调整绝对定位的 x 坐标使内容居中     |
+| Text is truncated         | Change height to fit-content             |
+| Text overflows the right side of the container   | Increase width, or shorten the text              |
+| Nodes overlap and stick together       | Increase gap                            |
+| Nodes are crammed together       | Increase padding and gap                 |
+| Connectors pass through nodes       | Adjust fromAnchor/toAnchor or increase spacing |
+| Large blank areas         | Reduce the outer frame width                 |
+| Text and background color are too close | Adjust fillColor or textColor         |
+| The layout as a whole leans left/right  | Adjust the x coordinate of absolute positioning to center the content     |
 
-## 关键约束速查
+<a id="关键约束速查"></a>
+## Key Constraints Quick Reference
 
-1. **含文字节点的 height 必须用 `'fit-content'`** — 写死数值会截断文字
-2. **`fill-container` 仅在 flex 父容器中生效** — `layout: 'none'` 下宽度退化为 0
-3. **`layout: 'none'` 的容器必须有固定宽高** — 不要写成 `fit-content`
-4. **connector 必须放在顶层 nodes 数组** — 不能嵌套在 frame children 里
-5. **flex 容器内的 x/y 会被完全忽略** — 需要自由定位时用 `layout: 'none'`
-6. **Dagre 子容器默认为不透明节点** — 需穿透时声明 `layout: "dagre"` + `layoutOptions: { isCluster: true }`
+1. **The height of nodes containing text must use `'fit-content'`** — hardcoding a numeric value will truncate the text
+2. **`fill-container` only takes effect in a flex parent container** — under `layout: 'none'`, the width degenerates to 0
+3. **The container of `layout: 'none'` must have fixed width and height** — do not write it as `fit-content`
+4. **connector must be placed in the top-level nodes array** — it cannot be nested inside frame children
+5. **x/y inside a flex container are completely ignored** — use `layout: 'none'` when free positioning is needed
+6. **Dagre sub-containers are opaque nodes by default** — declare `layout: "dagre"` + `layoutOptions: { isCluster: true }` when pass-through is needed

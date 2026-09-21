@@ -1,36 +1,42 @@
-# 对比图 / 矩阵图
+<a id="对比图--矩阵图"></a>
+# Comparison Diagram / Matrix Diagram
 
-适用于：方案对比、功能矩阵、技术选型等多选项按多维度比较的场景。
+Applicable to: scenarios comparing multiple options across multiple dimensions, such as solution comparison, feature matrices, and technology selection.
 
-## Content 约束
+<a id="content-约束"></a>
+## Content Constraints
 
-- **每格内容要充实**：不要只写一个关键词，给出具体说明（如"MVCC 多版本并发控制，支持行级锁"而非仅"支持"）
-- 单格内容不同格子允许不同长度，但每格不超过 5 行
-- 长文本（超过 15 字）用 `textAlign: "left"`（不要居中）
-- 第一行是标题行（对象名称），第一列是维度标签列
-- 维度数量至少 4 个，充分展开对比维度
+- **Each cell's content must be substantial**: Do not write just a keyword; give specific explanations (e.g., "MVCC multi-version concurrency control, supports row-level locking" rather than just "supported")
+- Cell content may vary in length across different cells, but each cell must not exceed 5 lines
+- For long text (over 15 characters), use `textAlign: "left"` (do not center)
+- The first row is the header row (object names), and the first column is the dimension label column
+- At least 4 dimensions, fully expanding the comparison dimensions
 
-## Layout 选型
+<a id="layout-选型"></a>
+## Layout Selection
 
-| 模式 | 适用条件 | 特征 |
+| Mode | Applicable Conditions | Characteristics |
 |------|---------|------|
-| **严格 grid（默认）** | 所有对比场景 | 表头行 + 数据行，每行 horizontal frame，行内 rect 等分 |
-| **卡片式对比（替代）** | 维度较少（2-3 个） | 每个对象做一张独立卡片，卡片内纵向列出各维度。卡片横向等分：外层 `layout: "horizontal"`，每张卡片 `width: "fill-container"` |
+| **Strict grid (default)** | All comparison scenarios | Header row + data rows, each row a horizontal frame, rects within a row equally divided |
+| **Card-style comparison (alternative)** | Fewer dimensions (2-3) | Each object gets an independent card, with dimensions listed vertically within the card. Cards equally divided horizontally: outer `layout: "horizontal"`, each card `width: "fill-container"` |
 
-## Layout 规则
+<a id="layout-规则"></a>
+## Layout Rules
 
-- 最外层 frame：`layout: "vertical"`，固定 `width`（如 1000），`height: "fit-content"`
-- 每行：horizontal frame，`width: "fill-container"`，`alignItems: "stretch"`
-- 行内单元格全部 `width: "fill-container"` 等分列宽
-- 行间 `gap >= 12`（不要 8，太紧）
-- 行内列间 `gap: 8-12`
-- 标题行：深色底白字（由 style 控制具体颜色）
-- 每列同色边框保持视觉一致性
-- 单元格 `height: "fit-content"`，不要写固定 height
+- Outermost frame: `layout: "vertical"`, fixed `width` (e.g., 1000), `height: "fit-content"`
+- Each row: horizontal frame, `width: "fill-container"`, `alignItems: "stretch"`
+- All cells within a row use `width: "fill-container"` to equally divide the column width
+- Between rows `gap >= 12` (do not use 8, too tight)
+- Between columns within a row `gap: 8-12`
+- Header row: dark background with white text (specific colors controlled by style)
+- Borders of the same color per column to maintain visual consistency
+- Cells `height: "fit-content"`, do not write a fixed height
 
-## 骨架示例
+<a id="骨架示例"></a>
+## Skeleton Example
 
-### 3 列 4 行表格
+<a id="3-列-4-行表格"></a>
+### 3-column 4-row table
 
 ```json
 {
@@ -124,12 +130,13 @@
 }
 ```
 
-## 陷阱
+<a id="陷阱"></a>
+## Pitfalls
 
-- **行间距 8px 太紧**：行间 gap 至少 12，8 会让行与行视觉粘连。
-- **长文本居中对齐**：超过一行的文本应改为 `textAlign: "left"`，居中多行文本可读性差。
-- **列数太多导致每列太窄**：对比对象建议 ≤ 5 列（含维度列），超过时合并维度或拆分为多张表。
-- **列宽不等**：所有数据列必须用 `width: "fill-container"` 等分，不要给某列写固定宽度。
-- **行高不等**：每行 frame 必须 `alignItems: "stretch"`，否则同行单元格因文字行数不同高矮不齐。
-- **忘记维度标签列**：第一列放维度名称，标题行（维度列）用与数据列不同的视觉处理。
-- **单元格用固定 height**：单元格必须 `height: "fit-content"`，固定高度会导致文字截断。
+- **Row spacing of 8px is too tight**: The gap between rows should be at least 12; 8 will make rows visually stick together.
+- **Center-aligning long text**: Text longer than one line should be changed to `textAlign: "left"`; centered multi-line text has poor readability.
+- **Too many columns making each column too narrow**: It is recommended to have ≤ 5 columns for comparison objects (including the dimension column); when exceeded, merge dimensions or split into multiple tables.
+- **Unequal column widths**: All data columns must use `width: "fill-container"` to divide equally; do not write a fixed width for any column.
+- **Unequal row heights**: Each row frame must `alignItems: "stretch"`, otherwise cells in the same row will be uneven in height due to different numbers of text lines.
+- **Forgetting the dimension label column**: Put dimension names in the first column, and use a different visual treatment for the header row (dimension column) than for the data columns.
+- **Using a fixed height for cells**: Cells must `height: "fit-content"`; a fixed height will cause text truncation.

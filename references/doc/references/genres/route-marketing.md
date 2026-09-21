@@ -1,40 +1,46 @@
-# Genre Contract: Marketing / 营销与公关 (`router.marketing`)
+<a id="genre-contract-marketing--营销与公关-routermarketing"></a>
+# Genre Contract: Marketing / Marketing and PR (`router.marketing`)
 
-## 体裁规则表（硬约束）
+<a id="体裁规则表硬约束"></a>
+## Genre Rules Table (Hard Constraints)
 
-| 规则项 | 规则 |
+| Rule Item | Rule |
 |-|-|
-| 写作风格 | 清楚、有吸引力且可行动，表达强度不得超过承诺、证据和授权，紧迫感不得制造误导 |
-| 内容逻辑 | 先锁定受众、漏斗阶段和唯一主要读者结果；转化内容用“场景 / 问题 → 有边界的价值主张 → 证据 → 关键条件 / 异议 → 一个 CTA”推进，公关稿按已授权事实、相关方影响、组织回应和后续更新推进 |
-| 事实 / 边界 | 所有客观、比较、功效和稀缺性主张发布前有相称证据；价格、资格、期限和限制就近可见；广告身份与商业关系按目标法域 / 平台规则披露；评价、案例、引语、图片和活动素材须真实、可核且获授权，非文字证据须有文字等价信息；核心主张证据、适用法域、发布授权、关键交易条件或任务要求的行动入口缺失时 blocked |
-| 错误 | 无证据的“最佳 / 保证 / 第一”、隐藏限制或自动续费、伪造倒计时 / 库存 / 评价、把广告伪装成独立报道、未经授权承诺赔付或责任、转化内容多个 CTA 争抢、用复杂 block 掩盖价值缺口，任一出现即失败 |
+| Writing Style | Clear, engaging, and actionable; expression intensity must not exceed commitments, evidence, and authorization; urgency must not create misleading impressions |
+| Content Logic | First lock the audience, funnel stage, and single primary reader outcome; conversion content advances with "scenario / problem → bounded value proposition → evidence → key conditions / objections → one CTA"; PR releases advance by authorized facts, stakeholder impact, organizational response, and follow-up updates |
+| Facts / Boundaries | All objective, comparative, efficacy, and scarcity claims have proportionate evidence before publication; price, eligibility, deadlines, and restrictions are visible nearby; advertising identity and commercial relationships are disclosed per target jurisdiction / platform rules; reviews, cases, quotes, images, and campaign materials must be authentic, verifiable, and authorized, and non-text evidence must have text-equivalent information; blocked when core claim evidence, applicable jurisdiction, publication authorization, key transaction conditions, or the task-required action entry point is missing |
+| Errors | "Best / guaranteed / first" without evidence, hidden restrictions or auto-renewal, fabricated countdowns / inventory / reviews, disguising ads as independent reporting, unauthorized commitments to compensation or liability, multiple competing CTAs in conversion content, using complex blocks to mask value gaps — any one of these appearing means failure |
 
-## 适用与消歧
+<a id="适用与消歧"></a>
+## Applicability and Disambiguation
 
-用于组织拥有或授权、目标是认知、转化、留存或公共关系管理的内容。由新闻机构独立选题、核实和报道的内容走 Media；组织自有新闻稿、媒体通稿、品牌声明和回应口径走 Marketing，即使采用新闻结构也不变成独立报道。
+Used for content that the organization owns or authorizes, with the goal of awareness, conversion, retention, or public relations management. Content independently selected, verified, and reported by news organizations goes to Media; organization-owned press releases, media briefings, brand statements, and response messaging go to Marketing, and do not become independent reporting even if they adopt a news structure.
 
-个人真实体验用于帮助消费选择时走 Consumer；明确要求最终交付小红书笔记或微信公众号文章时走 `route_platform`，再选择对应 leaf，营销目标、商业关系和交易条件作为该 leaf contract 的硬约束，不再并读 Marketing。出现“新闻稿、软文、活动文案”只作召回信号，仍须确认发布主体、受众、行动和商业关系。
+Genuine personal experiences used to help consumption choices go to Consumer; when the final deliverable is explicitly required to be a Xiaohongshu note or WeChat Official Account article, go to `route_platform`, then select the corresponding leaf; marketing goals, commercial relationships, and transaction conditions serve as hard constraints of that leaf contract, and Marketing is no longer read in parallel. The appearance of "press release, advertorial, campaign copy" serves only as a recall signal; the publishing entity, audience, action, and commercial relationship must still be confirmed.
 
-内部营销策划、增长方案或活动执行计划不因“营销”进入本合同：比较打法走 Business Analysis，请求预算 / 资源 / 战役批准走 Proposal，已定打法的协同落地走 Execution Plan；只有最终面向受众的传播、招募或转化成稿走 Marketing。
+Internal marketing planning, growth plans, or campaign execution plans do not enter this contract merely because of "marketing": comparative approaches go to Business Analysis, requests for budget / resources / campaign approval go to Proposal, coordinated implementation of an already-decided approach goes to Execution Plan; only final audience-facing communication, recruitment, or conversion drafts go to Marketing.
 
-## 子类型
+<a id="子类型"></a>
+## Subtypes
 
-| 子类型 | 读者任务与推进 |
+| Subtype | Reader Task and Progression |
 |-|-|
-| 广告 / 短文案 | 迅速判断是否值得行动；受众场景 → 单一利益 → 可信理由 → 条件 → CTA |
-| 详情页 / 落地页 | 完成比较与转化；价值主张 → 关键能力 → 证据 → 方案 / 条款 → 异议 → CTA |
-| 活动 / 私域话术 | 判断是否参与并知道下一步；对象 → 收益 → 时间地点 / 门槛 → 风险限制 → 行动 |
-| 新闻稿 / 媒体通稿 | 获取组织已授权消息；可发布事实 → 为什么重要 → 引语 / 背景 → 联系与更新安排 |
-| 声明 / 危机回应 | 理解已知事实和组织行动；事件范围 → 已确认影响 → 当前措施 → 未知项 → 下次更新时间 |
+| Ads / Short Copy | Quickly judge whether action is worthwhile; audience scenario → single benefit → credible reason → conditions → CTA |
+| Detail Page / Landing Page | Complete comparison and conversion; value proposition → key capabilities → evidence → solution / terms → objections → CTA |
+| Campaign / Private Domain Scripts | Judge whether to participate and know the next step; target → benefits → time, place / threshold → risk restrictions → action |
+| Press Release / Media Briefing | Obtain organization-authorized news; publishable facts → why it matters → quotes / background → contact and update schedule |
+| Statement / Crisis Response | Understand known facts and organizational actions; incident scope → confirmed impact → current measures → unknowns → next update time |
 
-## 证据、授权与合规
+<a id="证据授权与合规"></a>
+## Evidence, Authorization, and Compliance
 
-- 建立“主张—证据”对应：定量效果说明口径、样本和时间，比较主张保证对象与标准可比；图片、引语、评价和案例保留来源、必要语境及授权记录。
-- 披露和限制应让普通受众在作决定前看见并理解，不能由链接、模糊缩写或弱提示代替。规则随法域、媒介、品类和时间变化，交付前核验当期法律、监管与平台要求。
-- 公关内容只写已获授权的事实和承诺；事故原因、责任、补偿、调查结论未核定时明确 unknown。关键批准或法律审阅未完成，不生成可直接外发版本。
+- Establish a "claim—evidence" correspondence: quantitative effect descriptions specify methodology, sample, and timing; comparative claims ensure the object and standard are comparable; images, quotes, reviews, and cases retain sources, necessary context, and authorization records.
+- Disclosures and restrictions should be visible and understandable to ordinary audiences before they make decisions, and must not be replaced by links, vague abbreviations, or weak hints. Rules change with jurisdiction, medium, category, and time; verify current legal, regulatory, and platform requirements before delivery.
+- PR content only states authorized facts and commitments; when incident causes, liability, compensation, or investigation conclusions are unverified, explicitly mark as unknown. If key approvals or legal review are incomplete, do not generate a version ready for external distribution.
 
-## 结构与高质量写法
+<a id="结构与高质量写法"></a>
+## Structure and High-Quality Writing
 
-价值主张具体到受众、场景和结果，证据紧跟对应主张。文案须锚定品牌独有资产、产品细节或品类语境；换成竞品名仍成立就返工。多版本应改变受众状态、主张、证据或场景并说明选择条件，不做同义改写。
+Value propositions are specific to audience, scenario, and outcome, with evidence closely following the corresponding claim. Copy must be anchored to brand-unique assets, product details, or category context; if it still holds after swapping in a competitor's name, rework it. Multiple versions should change audience state, claims, evidence, or scenarios and explain selection conditions, not be synonymous rewrites.
 
-删除不改变理解或行动的品牌空话，不把真实痛点升级为羞耻、身份不足或恐惧操控。有转化目标时，次级入口均服务同一主要行动；优惠资格和截止时间采用可比较字段，待补价格、库存或链接用语义化占位，并让受影响结论保持 blocked。
+Delete brand platitudes that do not change understanding or action; do not escalate genuine pain points into shame, identity inadequacy, or fear manipulation. When there is a conversion goal, secondary entry points all serve the same primary action; offer eligibility and deadlines use comparable fields; pending prices, inventory, or links use semantic placeholders, and keep affected conclusions blocked.

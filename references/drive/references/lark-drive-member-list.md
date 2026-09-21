@@ -1,16 +1,18 @@
-# drive +member-list（查询协作者/授权成员列表）
+<a id="drive-member-list查询协作者授权成员列表"></a>
+# drive +member-list (query collaborator/authorized member list)
 
-本模块 对应 shortcut：`lark-cli drive +member-list`。它读取 Drive 文档、文件、文件夹或 wiki 节点的协作者/授权成员列表。
+This module corresponds to shortcut: `lark-cli drive +member-list`. It reads the collaborator/authorized member list of a Drive document, file, folder, or wiki node.
 
-## 命令
+<a id="命令"></a>
+## Command
 
 ```bash
-#  URL 自动推断 type
+#  URL auto-infers type
 lark-cli drive +member-list \
   --token 'https://example.feishu.cn/drive/folder/<folder_token>' \
   --as user --format json
 
-# 查询附加字段
+# Query additional fields
 lark-cli drive +member-list \
   --token '<token>' \
   --type docx \
@@ -19,19 +21,21 @@ lark-cli drive +member-list \
 
 ```
 
-## 参数
+<a id="参数"></a>
+## Parameters
 
-| 参数 | 必填 | 说明 |
+| Parameter | Required | Description |
 |------|------|------|
-| `--token` | 是 | 裸 token 或完整 URL。URL 路径支持 `/folder/`、`/docx/`、`/doc/`、`/sheets/`、`/base/`、`/bitable/`、`/wiki/`、`/file/`、`/mindnotes/`、`/slides/`、`/minutes/`、`/page/`。 |
-| `--type` | 裸 token 必填 | 目标类型：`doc` / `sheet` / `file` / `wiki` / `bitable` / `docx` / `mindnote` / `minutes` / `slides` / `folder` / `apps`。URL 可自动推断；如果同时传 URL 和冲突的 `--type`，CLI 会拒绝。 |
-| `--fields` | 否 | 默认不传。可取 `name` / `type` / `avatar` / `external_label`，支持逗号分隔；也可传 `*` 请求当前支持的所有附加字段。该参数只声明期望返回的字段，不授予字段级权限。 |
-| `--perm-type` | 否 | 仅 `--type wiki` 有效；取值 `container` / `single_page`。 |
-| `--dry-run` | 否 | 只打印请求，不调用 API。 |
+| `--token` | Yes | Bare token or full URL. URL paths support `/folder/`, `/docx/`, `/doc/`, `/sheets/`, `/base/`, `/bitable/`, `/wiki/`, `/file/`, `/mindnotes/`, `/slides/`, `/minutes/`, `/page/`. |
+| `--type` | Required for bare token | Target type: `doc` / `sheet` / `file` / `wiki` / `bitable` / `docx` / `mindnote` / `minutes` / `slides` / `folder` / `apps`. URL can auto-infer; if both a URL and a conflicting `--type` are passed, the CLI will reject it. |
+| `--fields` | No | Not passed by default. Can be `name` / `type` / `avatar` / `external_label`, comma-separated; you can also pass `*` to request all currently supported additional fields. This parameter only declares the fields expected to be returned; it does not grant field-level permissions. |
+| `--perm-type` | No | Only valid for `--type wiki`; values `container` / `single_page`. |
+| `--dry-run` | No | Only prints the request, does not call the API. |
 
-## 输出
+<a id="输出"></a>
+## Output
 
-JSON 输出原样透传 API 的 `data` ：
+JSON output passes through the API's `data` as-is:
 
 ```json
 {
@@ -53,13 +57,14 @@ JSON 输出原样透传 API 的 `data` ：
 }
 ```
 
-`--format pretty` 会轻量展示成员 ID、成员类型、权限、wiki `perm_type` 和已返回的附加字段。机器读取优先使用 `--format json`。
+`--format pretty` lightly displays member ID, member type, permissions, wiki `perm_type`, and any returned additional fields. For machine reading, prefer `--format json`.
 
-## 行为说明
+<a id="行为说明"></a>
+## Behavior notes
 
-- **身份支持**：`--as user` 和 `--as bot` 均可用；缺 scope 或目标权限时按统一 permission 错误路径处理。
-- **接口 scope**：查询成员列表需要 `docs:permission.member:retrieve`。
-- **fields 默认**：不传 `--fields` 时按官方 API 默认，不请求姓名、头像、外部标签等附加字段；需要时显式指定。
-- **字段级权限**：`--fields` 只控制请求哪些附加字段，不保证服务端一定返回。请求用户的 `name` / `avatar` 时，应用还需开通 `contact:user.base:readonly`（“获取用户基本信息”；已具备官方兼容的历史通讯录权限也可满足要求）。
-- **缺字段语义**：字段级权限或数据可见性不足时，接口仍可能成功，但会省略相应敏感字段。响应中缺少已请求字段表示“服务端未返回”，不能解释为字段值为空，也不能据此认定成员信息完整。
-- **folder 支持**：CLI 支持 `--type folder` 并会按需求发送 `type=folder`；部分环境的后端如果尚未放开 folder 枚举，可能返回 `99992402 field validation failed`。
+- **Identity support**: Both `--as user` and `--as bot` are available; when scope or target permissions are missing, it is handled via the unified permission error path.
+- **API scope**: Querying the member list requires `docs:permission.member:retrieve`.
+- **fields default**: When `--fields` is not passed, the official API default applies, and additional fields such as name, avatar, and external tags are not requested; specify them explicitly when needed.
+- **Field-level permissions**: `--fields` only controls which additional fields are requested; it does not guarantee the server will return them. When requesting a user's `name` / `avatar`, the app also needs `contact:user.base:readonly` enabled ("Get user basic info"; existing official-compatible historical contacts permissions can also satisfy the requirement).
+- **Missing field semantics**: When field-level permissions or data visibility are insufficient, the API may still succeed but omit the corresponding sensitive fields. A requested field missing from the response means "the server did not return it"; it cannot be interpreted as the field value being empty, nor can it be used to conclude that member information is complete.
+- **folder support**: The CLI supports `--type folder` and will send `type=folder` as needed; in some environments, if the backend has not yet enabled folder enumeration, it may return `99992402 field validation failed`.

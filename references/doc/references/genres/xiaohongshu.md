@@ -1,38 +1,44 @@
-# Genre Contract: Xiaohongshu Note / 小红书笔记 (`platform.xiaohongshu`)
+<a id="genre-contract-xiaohongshu-note--小红书笔记-platformxiaohongshu"></a>
+# Genre Contract: Xiaohongshu Note (`platform.xiaohongshu`)
 
-## 核心定位（硬约束）
+<a id="核心定位硬约束"></a>
+## Core Positioning (Hard Constraints)
 
-- 交付物是飞书文档中的“小红书风格”内容稿，不代表实际发布，也不执行小红书平台审核、禁词、流量或商业规则。
-- 视觉策略默认使用 `rich`，偏爱图文并茂和清晰轻松的阅读体验，但装饰不能代替内容。
-- 写作风格鲜活、有节奏、有画面感，可使用符合语境的 emoji。
-- 一篇只解决一个主要问题；标题、封面、首屏和正文围绕同一获得感并真正兑现。不编造亲历、身份、数字、效果或用户反馈，材料不足时用第二人称、场景化讲解或中性叙述。
-- 飞书源稿禁止使用 `callout`；生成后通过 Draft Profile Check 的 `profile.blocks` 检查，其他 block 按真实信息关系选择。
+- The deliverable is a "Xiaohongshu-style" content draft in a Feishu document; it does not represent an actual post, nor does it execute Xiaohongshu platform review, prohibited-word, traffic, or commercial rules.
+- The visual strategy defaults to `rich`, favoring a rich mix of images and text and a clear, relaxed reading experience, but decoration cannot replace content.
+- The writing style is vivid, rhythmic, and image-rich, and may use emoji that fit the context.
+- One note solves only one main problem; the title, cover, first screen, and body revolve around the same sense of gain and truly deliver it. Do not fabricate personal experiences, identities, numbers, effects, or user feedback; when material is insufficient, use second person, scenario-based explanation, or neutral narration.
+- The Feishu source draft must not use `callout`; after generation, pass the `profile.blocks` check of the Draft Profile Check, and choose other blocks according to real information relationships.
 
-## 适用与消歧
+<a id="适用与消歧"></a>
+## Applicability and Disambiguation
 
-用户明确要“小红书笔记、小红书写法、小红书 style、红书感、XHS 风格”时使用，内容保存在哪里不影响本合同生效。
+Use this when the user explicitly asks for "Xiaohongshu note, Xiaohongshu writing method, Xiaohongshu style, red-book feel, XHS style"; where the content is stored does not affect whether this contract takes effect.
 
-仅把小红书作为研究对象、数据源或业务渠道时不触发：小红书运营方案走 Workplace，平台数据或竞品分析走 Report，规则说明走 Knowledge。若同时要小红书风格稿和正式体裁，分别生成，不混写。
+When Xiaohongshu is only used as a research object, data source, or business channel, this is not triggered: Xiaohongshu operation plans go to Workplace, platform data or competitor analysis goes to Report, and rule explanations go to Knowledge. If both a Xiaohongshu-style draft and a formal genre are requested, generate them separately and do not mix them.
 
-## 笔记主任务
+<a id="笔记主任务"></a>
+## Note Main Task
 
-| 主任务 | 内容脊柱 |
+| Main Task | Content Spine |
 |-|-|
-| 教程 / 攻略 / 知识 | 痛点场景 → 核心判断 → 分步做法 → 易错点 / 限制 → 马上可做的一步 |
-| 体验 / 测评 / 探店 | 使用场景 → 具体观察 → 亮点与槽点 → 适合谁 / 不适合谁 → 选择建议 |
-| 观点 / 热点 | 争议或反差 → 核心判断 → 理由与例子 → 另一面 / 边界 → 留给读者的问题 |
-| 个人经历 / 成长 | 真实困扰 → 转折瞬间 → 做过什么 → 可观察变化 → 可迁移认识 |
-| 推荐 / 种草 / 活动 | 目标人群与场景 → 核心价值 → 具体理由 / 体验 → 使用条件与取舍 |
+| Tutorial / Guide / Knowledge | Pain-point scenario → core judgment → step-by-step method → common mistakes / limitations → one step you can do right away |
+| Experience / Review / Store Visit | Usage scenario → specific observations → highlights and drawbacks → who it suits / who it does not suit → selection advice |
+| Opinion / Trending Topic | Controversy or contrast → core judgment → reasons and examples → the other side / boundaries → a question left for readers |
+| Personal Experience / Growth | Real struggle → turning point → what was done → observable change → transferable insight |
+| Recommendation / Seeding / Event | Target audience and scenario → core value → specific reasons / experience → usage conditions and trade-offs |
 
-## 成稿要求
+<a id="成稿要求"></a>
+## Final Draft Requirements
 
-- 先钉住具体读者、场景与获得感；内部比较搜索清晰型、痛点共鸣型、反差好奇型 3 个标题，成稿只输出正文能兑现的最强一个。
-- 首屏用 1—3 个短段落完成“具体场景 / 冲突 → 核心判断 → 内容预告”，不从宏大背景或自我介绍讲起。
-- 正文用短段落和有意义的小标题按信息增量推进；每节新增动作、观察、例子、判断或限制。“活人感”来自具体细节、选择和取舍，不靠强塞网感词。
-- emoji 可比正式体裁用得更积极，用于导航、语气和停顿，但不连续堆叠。围绕一个视觉中心设计封面，图片 / 截图 / 示意图就近服务对应内容；无可用图片时给出简短配图建议，正文仍须独立可读。
-- 核心主题词自然出现在标题或首屏，相关表达按需进入小标题和正文；话题标签少而相关，不为覆盖关键词而复读。
-- 结尾用一句记忆点收束；互动问题可选且至多一个，不要求固定收尾动作。
+- First pin down the specific reader, scenario, and sense of gain; internally compare 3 titles—search-clarity type, pain-point resonance type, and contrast-curiosity type—and output only the strongest one that the body can deliver.
+- The first screen uses 1–3 short paragraphs to complete "specific scenario / conflict → core judgment → content preview," and does not start from grand background or self-introduction.
+- The body advances through short paragraphs and meaningful subheadings according to information increments; each section adds an action, observation, example, judgment, or limitation. The "human feel" comes from specific details, choices, and trade-offs, not from forcibly inserting internet-savvy words.
+- Emoji can be used more actively than in formal genres, for navigation, tone, and pauses, but not stacked consecutively. Design the cover around one visual center, and place images / screenshots / diagrams near the corresponding content they serve; when no usable images are available, give brief image suggestions, and the body must still be independently readable.
+- Core topic words naturally appear in the title or first screen, and related expressions enter subheadings and body as needed; hashtags are few and relevant, and are not repeated just to cover keywords.
+- End with a memorable closing line; an interactive question is optional and at most one, with no fixed closing action required.
 
-## 交付前检查
+<a id="交付前检查"></a>
+## Pre-delivery Check
 
-确认读者能一眼判断“这和我有关”，标题承诺已兑现，每节都有实质信息，手机上容易扫读，emoji 与图片确实帮助理解。出现公文腔、长铺垫、文字墙、题文错配、空情绪或虚构事实时返工。
+Confirm that readers can tell at a glance "this is relevant to me," that the title promise has been delivered, that each section has substantive information, that it is easy to scan on a phone, and that emoji and images genuinely help understanding. Rework if there is officialese, long buildup, a wall of text, title-content mismatch, empty emotion, or fabricated facts.

@@ -1,88 +1,91 @@
 
 # approval tasks add_sign
 
-给一个审批任务加签（用户级写操作）。通常先通过 `tasks query` 拿到 `task_id` 和 `instance_code`，确认目标任务后，再提供被加签人的用户 ID、加签方式等参数执行加签。
+Add a signer to an approval task (user-level write operation). Typically, first obtain `tasks query` and `task_id` via `instance_code`, confirm the target task, then provide the user ID of the added signer, the add-sign method, and other parameters to perform the add-sign.
 
 > [!CAUTION]
-> 这是 **high-risk-write** 写操作。建议先用 `--dry-run` 预览；真正执行时，如果用户已明确要对该审批任务加签且目标任务、加签对象、加签方式都无误，再带 `--yes` 运行。用户已明确要求立即执行且列清本轮的加签、转交对象时，该确认覆盖这两个已明确的动作，不要逐条重复询问；不要在未获用户明确同意时静默追加 `--yes`。
+> This is a **high-risk-write** write operation. It is recommended to preview first with `--dry-run`; when actually executing, if the user has clearly requested to add a signer to this approval task and the target task, add-sign target, and add-sign method are all correct, then run with `--yes`. When the user has clearly requested immediate execution and has listed the add-sign and transfer targets for this round, that confirmation covers these two already-specified actions; do not repeatedly ask about each one; do not silently add `--yes` without the user's explicit consent.
 
-需要的 scopes: ["approval:task:write"]
+Required scopes: ["approval:task:write"]
 
-## 先选择加签类型
+<a id="先选择加签类型"></a>
+## First choose the add-sign type
 
-`add_sign_type` 会影响当前用户的审批任务是否继续可操作，不能只按示例顺序或任意选择：
+`add_sign_type` affects whether the current user's approval task remains actionable, so you cannot simply follow the example order or choose arbitrarily:
 
-| 用户意图 | `add_sign_type` | 处理方式 |
+| User intent | `add_sign_type` | Handling |
 |----------|-----------------|----------|
-| 明确说前加签 / “先让某人审核，我再审” | `1` | 前加签，并按用户要求选择 `approval_method` |
-| 明确说后加签 / “我处理完，再让某人审核” | `2` | 后加签，并按用户要求选择 `approval_method` |
-| “拉进来一起审” / “共同审核” / “一并确认” | `3` | 并加签；不传 `approval_method` |
-| 同一请求要求先加签、再转交当前用户这一环 | `3` | **必须并加签**；加签成功后再转交当前任务 |
+| Explicitly says pre-add-sign / "let someone review first, then I review" | `1` | Pre-add-sign, and choose `approval_method` as requested by the user |
+| Explicitly says post-add-sign / "after I handle it, let someone review" | `2` | Post-add-sign, and choose `approval_method` as requested by the user |
+| "Pull them in to review together" / "joint review" / "confirm together" | `3` | Parallel add-sign; do not pass `approval_method` |
+| The same request requires adding a signer first, then transferring the current user's step | `3` | **Must use parallel add-sign**; after the add-sign succeeds, then transfer the current task |
 
-前加签或后加签可能推动当前用户的 task 流转，使原 `task_id` 不再支持后续转交。因此，“先加签，再把我这一环转交给其他人”不能使用前加签或后加签；先以 `add_sign_type: 3` 并加签，确认 `tasks add_sign` 成功后，再使用同一组 `instance_code` + `task_id` 执行 `tasks transfer`。
+Pre-add-sign or post-add-sign may advance the current user's task, making the original `task_id` no longer support subsequent transfer. Therefore, "add a signer first, then transfer my step to someone else" cannot use pre-add-sign or post-add-sign; first use `add_sign_type: 3` for parallel add-sign, and after confirming `tasks add_sign` succeeds, use the same set of `instance_code` + `task_id` to execute `tasks transfer`.
 
-只有在上下文完全无法判断是哪种加签方式、且不同选择会改变审批流程时，才向用户二次询问。用户已经说“一起审”或已经要求“加签后转交当前环节”时，信息足够，不要再询问加签类型。
+Only ask the user a second time when the context makes it completely impossible to determine which add-sign method is intended and different choices would change the approval flow. When the user has already said "review together" or has already requested "add a signer then transfer the current step," the information is sufficient; do not ask again about the add-sign type.
 
-## 再选择 approval_method
+<a id="再选择-approval_method"></a>
+## Then choose approval_method
 
-只有前加签、后加签需要 `approval_method`；并加签不传。先遵循用户明确指定的审批方式；用户未指定时，按人数和语义选择：
+Only pre-add-sign and post-add-sign require `approval_method`; parallel add-sign does not pass it. First follow the approval method explicitly specified by the user; when the user has not specified one, choose based on the number of people and the semantics:
 
-| 加签人数与语义 | `approval_method` | 处理方式 |
+| Number of added signers and semantics | `approval_method` | Handling |
 |----------------|-------------------|----------|
-| 只有 1 名加签人 | `1` | 使用或签；单人时或签、会签的实际效果相同，不再询问 |
-| 多人，明确“任一人审批即可” / “一人通过即可” | `1` | 或签；任一加签人完成审批即可 |
-| 多人，明确“所有人都要审批” / “全部确认” | `2` | 会签；所有加签人都必须完成审批 |
-| 多人，明确“依次审批” / “先 A 后 B” | `3` | 依次审批；每个人按 `add_sign_user_ids` 的数组顺序逐一审批 |
-| 多人，无法从上下文推断 | 不预设 | 询问用户选择或签、会签或依次审批，并说明三者效果 |
+| Only 1 added signer | `1` | Use or-sign; with a single person, or-sign and all-sign have the same practical effect, so do not ask again |
+| Multiple people, explicitly "any one approval is enough" / "one approval suffices" | `1` | Or-sign; any one added signer completing the approval is enough |
+| Multiple people, explicitly "everyone must approve" / "all confirm" | `2` | All-sign; all added signers must complete the approval |
+| Multiple people, explicitly "sequential approval" / "A first, then B" | `3` | Sequential approval; each person approves one by one in the array order of `add_sign_user_ids` |
+| Multiple people, cannot be inferred from context | Do not preset | Ask the user to choose or-sign, all-sign, or sequential approval, and explain the effects of the three |
 
-依次审批必须保留用户给出的人员顺序。如果已经确定要依次审批，但上下文无法判断先后顺序，先询问人员顺序，再构造 `add_sign_user_ids`；不要自行排序。
+Sequential approval must preserve the personnel order given by the user. If sequential approval has been determined, but the context cannot determine the order, first ask for the personnel order, then construct `add_sign_user_ids`; do not sort on your own.
 
-## 命令
+<a id="命令"></a>
+## Command
 
 ```bash
-# 先预览并加签请求，不实际执行
+# Preview the add-sign request first, without actually executing it
 lark-cli approval tasks add_sign \
   --data '{"instance_code":"<INSTANCE_CODE>","task_id":"<TASK_ID>","add_sign_type":3,"add_sign_user_ids":["ou_xxx"],"comment":"请项目 owner 一起审核"}' \
   --params '{"user_id_type":"open_id"}' \
   --as user \
   --dry-run
 
-# 单人前加签：未指定方式时使用或签
+# Single-person pre-add-sign: use or-sign when no method is specified
 lark-cli approval tasks add_sign \
   --data '{"instance_code":"<INSTANCE_CODE>","task_id":"<TASK_ID>","add_sign_type":1,"add_sign_user_ids":["ou_xxx"],"approval_method":1,"comment":"请先补充审核"}' \
   --params '{"user_id_type":"open_id"}' \
   --as user \
   --yes
 
-# 多人后加签：所有人都需要审批，使用会签
+# Multi-person post-add-sign: everyone needs to approve, use all-sign
 lark-cli approval tasks add_sign \
   --data '{"instance_code":"<INSTANCE_CODE>","task_id":"<TASK_ID>","add_sign_type":2,"add_sign_user_ids":["ou_xxx","ou_yyy"],"approval_method":2,"comment":"当前审批完成后请两位都完成审核"}' \
   --params '{"user_id_type":"open_id"}' \
   --as user \
   --yes
 
-# 多人前加签：按数组中的人员顺序依次审批
+# Multi-person pre-add-sign: approve sequentially in the order of the people in the array
 lark-cli approval tasks add_sign \
   --data '{"instance_code":"<INSTANCE_CODE>","task_id":"<TASK_ID>","add_sign_type":1,"add_sign_user_ids":["ou_first","ou_second"],"approval_method":3,"comment":"请先由第一位审核，再由第二位审核"}' \
   --params '{"user_id_type":"open_id"}' \
   --as user \
   --yes
 
-# 同一请求要求先加签、再转交：必须并加签；两条命令按顺序执行
+# The same request requires adding a signer first, then transferring: must use parallel add-sign; execute the two commands in order
 lark-cli approval tasks add_sign \
   --data '{"instance_code":"<INSTANCE_CODE>","task_id":"<TASK_ID>","add_sign_type":3,"add_sign_user_ids":["ou_reviewer"],"comment":"请一起审核"}' \
   --params '{"user_id_type":"open_id"}' \
   --as user \
   --yes
 
-# 仅在上面的 add_sign 成功后，转交同一当前任务
+# Only after the above add_sign succeeds, transfer the same current task
 lark-cli approval tasks transfer \
   --data '{"instance_code":"<INSTANCE_CODE>","task_id":"<TASK_ID>","transfer_user_id":"ou_transferee","comment":"出差期间请代为处理"}' \
   --params '{"user_id_type":"open_id"}' \
   --as user \
   --yes
 
-# 通过文件传入请求体，适合较长 comment 或较多加签人
+# Pass the request body via a file, suitable for longer comments or more added signers
 lark-cli approval tasks add_sign \
   --data @./add-sign-body.json \
   --params '{"user_id_type":"open_id"}' \
@@ -90,79 +93,83 @@ lark-cli approval tasks add_sign \
   --yes
 ```
 
-## 参数
+<a id="参数"></a>
+## Parameters
 
-| 参数 | 必填 | 说明 |
+| Parameter | Required | Description |
 |------|------|------|
-| `--data '{...}'` | 是 | 请求体 JSON，使用 JSON 传入 |
-| `instance_code` | 是 | 审批实例 Code；通常先通过 `tasks query` 或 `instances initiated` / `instances get` 获取 |
-| `task_id` | 是 | 审批任务 ID；通常先通过 `tasks query` 获取 |
-| `add_sign_type` | 是 | 加签类型：`1` 前加签、`2` 后加签、`3` 并加签 |
-| `add_sign_user_ids` | 是 | 被加签人 ID 数组；需要和 `user_id_type` 保持一致 |
-| `approval_method` | 否 | 审批方式：`1` 或签、`2` 会签、`3` 依次审批；**仅在前加签、后加签时需要填写**。单人未指定时使用 `1`；多人无法从语义推断时先询问用户 |
-| `comment` | 否 | 审批意见或加签说明，例如 `前加签给财务复核`、`请项目 owner 一并确认` |
-| `--params '{"user_id_type":"..."}'` | 否 | 查询参数 JSON；用于声明 `add_sign_user_ids` 内用户 ID 的类型 |
-| `user_id_type` | 否 | 用户 ID 类型：`user_id`、`union_id`、`open_id`；未显式指定时要特别确认被加签人的 ID 类型 |
-| `--as user` | 否 | 建议显式指定用户身份；审批加签通常必须以用户身份执行 |
-| `--yes` | 否 | 确认执行高风险写操作；未带时可能返回 `confirmation_required` / exit 10 |
-| `--format` | 否 | 输出格式：`json`（默认）、`ndjson`、`table`、`csv` |
-| `--dry-run` | 否 | 预览 API 调用，不执行 |
+| `--data '{...}'` | Yes | Request body JSON, passed as JSON |
+| `instance_code` | Yes | Approval instance Code; typically obtained first via `tasks query` or `instances initiated` / `instances get` |
+| `task_id` | Yes | Approval task ID; typically obtained first via `tasks query` |
+| `add_sign_type` | Yes | Add-sign type: `1` pre-add-sign, `2` post-add-sign, `3` parallel add-sign |
+| `add_sign_user_ids` | Yes | Array of added signer IDs; must be consistent with `user_id_type` |
+| `approval_method` | No | Approval method: `1` or-sign, `2` all-sign, `3` sequential approval; **only required for pre-add-sign and post-add-sign**. Use `1` for a single person when unspecified; ask the user first when multiple people cannot be inferred from semantics |
+| `comment` | No | Approval comment or add-sign note, for example `前加签给财务复核`, `请项目 owner 一并确认` |
+| `--params '{"user_id_type":"..."}'` | No | Query parameter JSON; used to declare the type of user IDs in `add_sign_user_ids` |
+| `user_id_type` | No | User ID type: `user_id`, `union_id`, `open_id`; when not explicitly specified, pay special attention to confirming the ID type of the added signer |
+| `--as user` | No | It is recommended to explicitly specify the user identity; approval add-sign usually must be executed as a user |
+| `--yes` | No | Confirm execution of a high-risk write operation; if not provided, may return `confirmation_required` / exit 10 |
+| `--format` | No | Output format: `json` (default), `ndjson`, `table`, `csv` |
+| `--dry-run` | No | Preview the API call without executing |
 
-## 枚举说明
+<a id="枚举说明"></a>
+## Enum descriptions
 
 ### add_sign_type
 
-| 值 | 含义 | 对当前任务的影响 |
+| Value | Meaning | Impact on the current task |
 |----|------|------------------|
-| `1` | 前加签 | 在当前审批前插入审批人，可能推动当前用户的 task 流转 |
-| `2` | 后加签 | 在当前审批后追加审批人，可能推动当前用户的 task 流转 |
-| `3` | 并加签 | 增加并行审批人；需要随后转交当前环节时使用 |
+| `1` | Pre-add-sign | Insert an approver before the current approval, which may advance the current user's task |
+| `2` | Post-add-sign | Append an approver after the current approval, which may advance the current user's task |
+| `3` | Parallel add-sign | Add a parallel approver; use when the current step needs to be transferred afterward |
 
 ### approval_method
 
-仅适用于前加签、后加签；并加签不传。
+Only applies to pre-add-sign and post-add-sign; parallel add-sign does not pass it.
 
-| 值 | 含义 | 完成条件 |
+| Value | Meaning | Completion condition |
 |----|------|----------|
-| `1` | 或签 | 任一加签人完成审批即可 |
-| `2` | 会签 | 所有加签人都必须完成审批 |
-| `3` | 依次审批 | 所有加签人按 `add_sign_user_ids` 数组顺序逐一审批 |
+| `1` | Or-sign | Any one added signer completing the approval is enough |
+| `2` | All-sign | All added signers must complete the approval |
+| `3` | Sequential approval | All added signers approve one by one in the array order of `add_sign_user_ids` |
 
-## 典型前置步骤
+<a id="典型前置步骤"></a>
+## Typical prerequisite steps
 
-先查到待办任务：
+First look up the pending task:
 
 ```bash
 lark-cli approval tasks query --params '{"topic":"1"}' --as user
 ```
 
-常用到的字段：
+Commonly used fields:
 
-| 字段 | 说明 |
+| Field | Description |
 |------|------|
-| `tasks[].instance_code` | 审批实例 Code；执行 approve / reject / transfer / rollback / add_sign 等操作时通常都需要 |
-| `tasks[].task_id` | 审批任务 ID；与 `instance_code` 配对使用 |
-| `tasks[].support_api_operate` | 是否支持通过 API 处理该任务；加签前建议先检查 |
+| `tasks[].instance_code` | Approval instance Code; usually required when performing operations such as approve / reject / transfer / rollback / add_sign |
+| `tasks[].task_id` | Approval task ID; used in pair with `instance_code` |
+| `tasks[].support_api_operate` | Whether the task supports handling via API; it is recommended to check before add-sign |
 
-如果你手里只有姓名或邮箱，建议先通过联系人能力解析出正确的用户 ID，再执行加签。
+If you only have a name or email, it is recommended to first resolve the correct user ID via contact capabilities, then perform the add-sign.
 
-如需先确认表单、节点、审批流进度，可继续查看实例详情：
+If you need to first confirm the form, nodes, or approval flow progress, you can continue to view the instance details:
 
 ```bash
 lark-cli approval instances get --params '{"instance_code":"<INSTANCE_CODE>"}' --as user
 ```
 
-## 使用建议
+<a id="使用建议"></a>
+## Usage recommendations
 
-- **`instance_code` 和 `task_id` 要成对使用**：仅有实例 ID 或仅有任务 ID 都不足以准确执行加签操作。
-- **`add_sign_user_ids` 与 `user_id_type` 必须匹配**：例如传 open_id 就把 `user_id_type` 设为 `open_id`；不要混用。
-- **优先显式传 `user_id_type`**：这样 agent 更容易判断参数含义，也能减少 ID 类型不匹配带来的失败。
-- **`add_sign_type` 要和业务意图一致**：前加签是在当前审批前插入审批人，后加签是在当前审批后追加审批人，并加签则是增加并行审批人。
-- **加签后还要转交当前环节时必须并加签**：使用 `add_sign_type: 3`，等待加签成功后再用同一组任务参数转交；不要用前加签或后加签导致当前 task 提前流转。
-- **无法推断类型时才询问**：如果用户没有说明先后或并行关系，且后续动作也不能帮助判断，再请用户选择；不要对“一起审”或“加签后转交”重复提问。
-- **前加签 / 后加签要补 `approval_method`**：单人未指定时使用或签；多人优先按语义选择，无法推断时询问用户，不要静默默认。
-- **依次审批保留人员顺序**：按用户指定的先后顺序构造 `add_sign_user_ids`；顺序不明确时先询问，不要自行排序。
-- **优先从 `tasks query` 的待办列表拿任务参数**：尤其是 `topic=1` 的待办审批，最适合作为 add_sign 的输入来源。
-- **先检查是否支持 API 操作**：如果 `tasks[].support_api_operate` 为 `false`，说明该任务可能不支持通过 API 执行处理动作，加签前应谨慎验证。
-- **`comment` 建议写明加签原因**：例如 `增加财务复核`、`增加项目 owner 并行确认`，方便相关人员理解上下文。
-- **先 `--dry-run` 再执行**：尤其在多人加签、跨部门加签或加签对象来源不明确时，先预览更安全。
+- **`instance_code` and `task_id` must be used in pair**: having only the instance ID or only the task ID is not enough to accurately perform the add-sign operation.
+- **`add_sign_user_ids` and `user_id_type` must match**: for example, if passing open_id, set `user_id_type` to `open_id`; do not mix them.
+- **Prefer to explicitly pass `user_id_type`**: this makes it easier for the agent to determine the meaning of the parameters and also reduces failures caused by ID type mismatches.
+- **`add_sign_type` must be consistent with the business intent**: pre-add-sign inserts an approver before the current approval, post-add-sign appends an approver after the current approval, and parallel add-sign adds a parallel approver.
+- **When the current step must be transferred after add-sign, parallel add-sign must be used**: use `add_sign_type: 3`, wait for the add-sign to succeed, then transfer using the same set of task parameters; do not use pre-add-sign or post-add-sign, which would cause the current task to advance prematurely.
+- **Only ask when the type cannot be inferred**: if the user has not stated the sequential or parallel relationship, and subsequent actions cannot help determine it either, then ask the user to choose; do not repeatedly ask about "review together" or "add-sign then transfer."
+- **Pre-add-sign / post-add-sign must include `approval_method`**: use or-sign for a single person when unspecified; for multiple people, prefer choosing based on semantics, and ask the user when it cannot be inferred; do not silently default.
+- **Sequential approval preserves the personnel order**: construct `add_sign_user_ids` in the order specified by the user; if the order is unclear, ask first and do not sort on your own.
+- **Prefer to get task parameters from the pending list of `tasks query`**: especially pending approvals of `topic=1`, which are most suitable as the input source for add_sign.
+- **First check whether API operations are supported**: if `tasks[].support_api_operate` is `false`, it means the task may not support handling actions via API, and you should verify carefully before add-sign.
+- **For `comment`, it is recommended to state the reason for add-sign**: for example `增加财务复核`, `增加项目 owner 并行确认`, to help relevant personnel understand the context.
+- **`--dry-run` first, then execute**: especially for multi-person add-sign, cross-department add-sign, or when the source of the add-sign target is unclear, previewing first is safer.

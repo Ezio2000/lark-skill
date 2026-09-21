@@ -1,117 +1,124 @@
-# slides +replace-slide（块级替换 / 插入）
+<a id="slides-replace-slide块级替换--插入"></a>
+# slides +replace-slide (block-level replace / insert)
 
-对指定 slide 做块级替换或插入。编辑已有 PPT 的主路径——`slide_id` 不变、页序不动、只影响被指定的块。
+Perform block-level replacement or insertion on a specified slide. The main path for editing an existing PPT—`slide_id` stays unchanged, page order stays unchanged, only the specified block is affected.
 
-> **编写 `--parts` 时只使用标准 action 和字段**：`block_replace` 使用 `block_id` + `replacement`，`block_insert` 使用 `insertion`（可选 `insert_before_block_id`）。不要根据其他 API 或自然语言猜 action、字段名；具体结构以本文表格为准。
+> **When writing `--parts`, use only standard actions and fields**: `block_replace` uses `block_id` + `replacement`, `block_insert` uses `insertion` (optional `insert_before_block_id`). Do not guess actions or field names based on other APIs or natural language; the specific structures are defined by the tables in this document.
 
-此 shortcut 的四个关键能力：
+The four key capabilities of this shortcut:
 
-1. `--presentation` 接受 `xml_presentation_id` / `/slides/` URL / `/wiki/` URL（wiki 自动解析）；
-2. `block_replace` 的 `replacement` 根元素 `id` 会被 CLI 自动注入为 `block_id`；3350001 时优先确认 `block_id` 来自最新 `+xml-get --slide-id` 且存在于当前页；
-3. `<shape>` 元素缺少 `<content/>` 子元素时由 CLI 自动注入——SML 2.0 schema 要求每个 `<shape>` 必须有 `<content/>` 子元素，缺失同样触发 3350001；自闭合的 `<shape .../>` 也会被自动展开为 `<shape ...><content/></shape>`；
-4. 3350001 错误时提供上下文感知的 hint，帮助 AI agent 和用户快速定位原因。
+1. `--presentation` accepts `xml_presentation_id` / `/slides/` URL / `/wiki/` URL (wiki is automatically resolved);
+2. The `replacement` root element `id` of `block_replace` is automatically injected by the CLI as `block_id`; on 3350001, first confirm that `block_id` comes from the latest `+xml-get --slide-id` and exists on the current page;
+3. When a `<shape>` element lacks a `<content/>` child element, the CLI automatically injects it—the SML 2.0 schema requires every `<shape>` to have a `<content/>` child element, and a missing one likewise triggers 3350001; a self-closing `<shape .../>` is also automatically expanded to `<shape ...><content/></shape>`;
+4. On a 3350001 error, a context-aware hint is provided to help the AI agent and user quickly locate the cause.
 
-## 命令
+<a id="命令"></a>
+## Command
 
 ```bash
-# block_insert：在页末追加一个新元素
+# block_insert: append a new element at the end of the page
 lark-cli slides +replace-slide --as user \
   --presentation slidesXXXXXXXXXXXXXXXXXXXXXX \
   --slide-id pfG \
   --parts '[{"action":"block_insert","insertion":"<shape type=\"rect\" topLeftX=\"500\" topLeftY=\"100\" width=\"200\" height=\"100\"/>"}]'
 
-# block_replace：已知某块 id，整块替换（replacement 根 id 自动注入为 bUn）
+# block_replace: given a block id, replace the entire block (the replacement root id is automatically injected as bUn)
 lark-cli slides +replace-slide --as user \
   --presentation slidesXXXXXXXXXXXXXXXXXXXXXX \
   --slide-id pfG \
   --parts '[{"action":"block_replace","block_id":"bUn","replacement":"<shape type=\"text\" topLeftX=\"80\" topLeftY=\"80\" width=\"800\" height=\"120\"><content textType=\"title\"><p>新标题</p></content></shape>"}]'
 
-# 大 --parts 走文件或 stdin（auto-gen 命令不支持 @file，但 shortcut 支持）
+# For large --parts, use a file or stdin (auto-gen commands do not support @file, but the shortcut does)
 lark-cli slides +replace-slide --as user \
   --presentation $PRES_ID --slide-id $SID --parts @parts.json
 cat parts.json | lark-cli slides +replace-slide --as user \
   --presentation $PRES_ID --slide-id $SID --parts -
 
-# wiki URL 直接传（CLI 自动通过 node_by_token 拿真实 xml_presentation_id）
+# Pass the wiki URL directly (the CLI automatically obtains the real xml_presentation_id via node_by_token)
 lark-cli slides +replace-slide --as user \
   --presentation "https://xxx.feishu.cn/wiki/wikcnXXXXXX" --slide-id pfG \
   --parts '[{"action":"block_insert","insertion":"<shape type=\"rect\" width=\"100\" height=\"100\"/>"}]'
 
-# 预览（不实际调用）
+# Preview (does not actually call)
 lark-cli slides +replace-slide --as user \
   --presentation $PRES_ID --slide-id $SID --parts "$PARTS" --dry-run
 ```
 
-## 参数
+<a id="参数"></a>
+## Parameters
 
-| 参数 | 必填 | 说明 |
+| Parameter | Required | Description |
 |------|------|------|
-| `--presentation` | 是 | `xml_presentation_id`、`/slides/<token>` URL，或 `/wiki/<token>` URL |
-| `--slide-id` | 是 | 页面 ID（通过 `slides +xml-get` 获取） |
-| `--parts` | 是 | JSON 数组（`[{...}, ...]`），单次最多 200 条。支持 `@<file>` 和 `-`（stdin）读取 |
-| `--revision-id` | 否 | 基础版本号；默认 `-1` 表示基于最新版执行；传具体版本号时，服务端以该版本为 base 执行；**传不存在的版本号（超过当前 revision）返回 3350002** |
-| `--tid` | 否 | 并发事务 ID；多人协作长事务才用，单次单人调用留空 |
+| `--presentation` | Yes | `xml_presentation_id`, `/slides/<token>` URL, or `/wiki/<token>` URL |
+| `--slide-id` | Yes | Page ID (obtained via `slides +xml-get`) |
+| `--parts` | Yes | JSON array (`[{...}, ...]`), at most 200 entries per call. Supports `@<file>` and `-` (stdin) reading |
+| `--revision-id` | No | Base version number; the default `-1` means execute based on the latest version; when a specific version number is passed, the server executes with that version as the base; **passing a nonexistent version number (exceeding the current revision) returns 3350002** |
+| `--tid` | No | Concurrent transaction ID; only used for long transactions with multi-person collaboration, leave empty for a single-person single call |
 
-## parts 元素结构
+<a id="parts-元素结构"></a>
+## parts element structure
 
-> **限制**：最多 200 条；`block_replace` 和 `block_insert` 可以在同一批次混用。**其他 action（含 `str_replace`）CLI 会直接报错拒绝**。
+> **Limit**: at most 200 entries; `block_replace` and `block_insert` can be mixed in the same batch. **Other actions (including `str_replace`) are directly rejected with an error by the CLI**.
 
-每条 part 按 `action` 取不同字段：
+Each part takes different fields according to `action`:
 
 ### action = `block_replace`
 
-| 字段 | 必填 | 说明 |
+| Field | Required | Description |
 |------|------|------|
-| `action` | 是 | `"block_replace"` |
-| `block_id` | 是 | 目标块的 3 位 short element ID（从 `+xml-get --slide-id` 返回 XML 里读） |
-| `replacement` | 是 | 新 XML 片段；**根元素 `id` 会被 CLI 自动注入为 `block_id`**，用户不用自己加（如果已经加了且不一致会被覆盖为正确值） |
+| `action` | Yes | `"block_replace"` |
+| `block_id` | Yes | The 3-digit short element ID of the target block (read from the XML returned by `+xml-get --slide-id`) |
+| `replacement` | Yes | New XML fragment; **the root element `id` is automatically injected by the CLI as `block_id`**, the user does not need to add it themselves (if it has already been added and is inconsistent, it will be overwritten with the correct value) |
 
 ### action = `block_insert`
 
-| 字段 | 必填 | 说明 |
+| Field | Required | Description |
 |------|------|------|
-| `action` | 是 | `"block_insert"` |
-| `insertion` | 是 | 要插入的 XML 片段 |
-| `insert_before_block_id` | 否 | 插到这个块之前；省略（不提供此字段）则追加到页末 |
+| `action` | Yes | `"block_insert"` |
+| `insertion` | Yes | The XML fragment to insert |
+| `insert_before_block_id` | No | Insert before this block; if omitted (this field not provided), append to the end of the page |
 
-### 错误字段名（CLI 直接拒绝）
+<a id="错误字段名cli-直接拒绝"></a>
+### Invalid field names (directly rejected by the CLI)
 
-编写 part 时只使用上表中的标准字段。CLI 返回 unknown field 时会点名写错的字段，并按情况给出下一步：能对上正确字段时直接建议它（`did you mean \"replacement\"?`），字段属于另一个 action 时说明归属（`it belongs to block_insert`），都对不上时列出该 action 的合法字段集。无论哪种，**要改的是字段名，不是字段值**。
+When writing a part, use only the standard fields in the table above. When the CLI returns an unknown field, it names the incorrectly written field and gives the next step as appropriate: when it can be matched to the correct field, it directly suggests it (`did you mean \"replacement\"?`); when the field belongs to another action, it explains the ownership (`it belongs to block_insert`); when neither matches, it lists the legal field set for that action. In any case, **what needs to be changed is the field name, not the field value**.
 
 ```jsonc
-// ❌ 全部被拒
+// ❌ All rejected
 [{"action":"block_replace","block_id":"bUn","xml":"<shape.../>"}]           // unknown field "xml"; did you mean "replacement"?
-[{"action":"block_replace","block_id":"bUn","data":"<shape.../>"}]          // data 不是标准字段
-[{"action":"block_replace","block_id":"bUn","insertion":"<shape/>"}]        // insertion 属于 block_insert
-[{"action":"block_replace","block_id":"bUn","replacement":{"type":"..."}}]  // replacement 必须是字符串，报 .replacement must be a string
+[{"action":"block_replace","block_id":"bUn","data":"<shape.../>"}]          // data is not a standard field
+[{"action":"block_replace","block_id":"bUn","insertion":"<shape/>"}]        // insertion belongs to block_insert
+[{"action":"block_replace","block_id":"bUn","replacement":{"type":"..."}}]  // replacement must be a string, reports .replacement must be a string
 
-// ✅ 正确
+// ✅ Correct
 [{"action":"block_replace","block_id":"bUn","replacement":"<shape type=\"text\"><content><p>新内容</p></content></shape>"}]
 [{"action":"block_insert","insertion":"<shape type=\"rect\" width=\"100\" height=\"100\"/>"}]
 ```
 
-## 合法根元素速查
+<a id="合法根元素速查"></a>
+## Legal root elements quick reference
 
-`block_replace.replacement` 和 `block_insert.insertion` 必须以 SML 2.0 定义的合法元素为根。完整权威定义看 [`slides_xml_schema_definition.xml`](../xml/slides_xml_schema_definition.xml)；这里只列能作为**根**的类型 + 每种类型的最小可工作片段。
+`block_replace.replacement` and `block_insert.insertion` must have a legal element defined by SML 2.0 as the root. For the complete authoritative definition, see [`slides_xml_schema_definition.xml`](../xml/slides_xml_schema_definition.xml); here only the types that can serve as a **root** are listed + the minimal working fragment for each type.
 
-| 元素 | 用途 | 关键点 |
+| Element | Purpose | Key point |
 |---|---|---|
-| `<shape>` | 矩形/椭圆/三角/文本框等所有形状 | `type` 必填；`<content/>` 缺失时 CLI 会自动注入 |
-| `<line>` | 直线 | 需 `startX/startY/endX/endY` |
-| `<polyline>` | 折线 | `points` 读回时被服务端规整丢弃（几何已入库） |
-| `<img>` | 图片 | `src` 必须是 [`+media-upload`](lark-slides-media-upload.md) 返回的 `file_token`，不能是 URL |
-| `<icon>` | 图标 | `iconType` 取自 iconpark 资源；语义图标先用 `scripts/iconpark_tool.py search` 检索 |
-| `<table>` | 表格 | 整表替换会**重建内部 td id**，旧 td block_id 立即失效 |
-| `<td>` | 单元格局部替换 | 只能 `block_replace`，不能 `block_insert`；`block_id` 必须是最新 `+xml-get --slide-id` 拿到的 td id |
-| `<chart>` | 图表（line/bar/column/pie/area/radar/combo） | 必须嵌 `<chartPlotArea>` + `<chartData>` + `<dim1>/<dim2>/<chartField>` |
+| `<shape>` | All shapes such as rectangles/ellipses/triangles/text boxes | `type` is required; when `<content/>` is missing, the CLI automatically injects it |
+| `<line>` | Straight line | Requires `startX/startY/endX/endY` |
+| `<polyline>` | Polyline | `points` is normalized and discarded by the server when read back (the geometry is already stored) |
+| `<img>` | Image | `src` must be the `file_token` returned by [`+media-upload`](lark-slides-media-upload.md), not a URL |
+| `<icon>` | Icon | `iconType` is taken from iconpark resources; for semantic icons, first search using `scripts/iconpark_tool.py search` |
+| `<table>` | Table | Replacing the entire table **rebuilds the internal td ids**, and old td block_ids immediately become invalid |
+| `<td>` | Cell partial replacement | Can only `block_replace`, cannot `block_insert`; `block_id` must be the td id obtained from the latest `+xml-get --slide-id` |
+| `<chart>` | Chart (line/bar/column/pie/area/radar/combo) | Must embed `<chartPlotArea>` + `<chartData>` + `<dim1>/<dim2>/<chartField>` |
 
-**不可作为根元素**：
+**Cannot be used as a root element**:
 
-- `<video>` / `<audio>` —— SML 2.0 没有这两个原生元素；`<undefined type="video|audio">` 是**导出时**的占位符（服务端遇到不支持的类型时用它代替），**不能写入**。尝试 insert/replace 都会返回 3350001。
+- `<video>` / `<audio>` — SML 2.0 does not have these two native elements; `<undefined type="video|audio">` is a placeholder **at export time** (the server uses it to substitute when encountering an unsupported type), and **cannot be written**. Attempting insert/replace both return 3350001.
 
-### 最小 XML 片段（JSON 嵌入时记得把 `"` 转义成 `\"`）
+<a id="最小-xml-片段json-嵌入时记得把--转义成-"></a>
+### Minimal XML fragment (remember to escape `"` as `\"` when embedding in JSON)
 
-`<shape>`（文本框；`type` 还可选 `rect`/`ellipse`/`triangle`/`custom` 等）：
+`<shape>` (text box; `type` can also optionally have `rect`/`ellipse`/`triangle`/`custom`, etc.):
 ```xml
 <shape type="text" topLeftX="80" topLeftY="80" width="800" height="120">
   <content textType="title"><p>标题</p></content>
@@ -137,12 +144,12 @@ lark-cli slides +replace-slide --as user \
 </table>
 ```
 
-`<td>`（`block_replace` 单元格；`block_id` 必须是最新 `+xml-get --slide-id` 拿到的 td id）：
+`<td>` (`block_replace` cell; `block_id` must be the td id obtained from the latest `+xml-get --slide-id`):
 ```xml
 <td><content><p>新内容</p></content></td>
 ```
 
-`<chart>`（`type` 改成 `bar`/`column`/`pie`/`area`/`radar`/`combo` 切换图型）：
+`<chart>` (change `type` to `bar`/`column`/`pie`/`area`/`radar`/`combo` to switch the chart type):
 ```xml
 <chart topLeftX="30" topLeftY="300" width="300" height="200">
   <chartPlotArea><chartPlot type="line"/></chartPlotArea>
@@ -153,7 +160,8 @@ lark-cli slides +replace-slide --as user \
 </chart>
 ```
 
-## 返回值
+<a id="返回值"></a>
+## Return value
 
 ```json
 {
@@ -164,52 +172,56 @@ lark-cli slides +replace-slide --as user \
 }
 ```
 
-| 字段 | 说明 |
+| Field | Description |
 |------|------|
-| `xml_presentation_id` | 解析后的真实 token（wiki URL 解析后会变化） |
-| `slide_id` | 与入参一致 |
-| `parts_count` | 本次提交的 parts 条数 |
-| `revision_id` | 成功后的新版本号，下次做乐观锁时用 |
-| `failed_part_index` | 有部分失败时存在，指向第几条 part 失败 |
-| `failed_reason` | 失败原因文字描述 |
+| `xml_presentation_id` | The resolved real token (it changes after a wiki URL is resolved) |
+| `slide_id` | Consistent with the input parameter |
+| `parts_count` | The number of parts submitted this time |
+| `revision_id` | The new version number after success, used for the next optimistic lock |
+| `failed_part_index` | Present when there is a partial failure, points to which part failed |
+| `failed_reason` | Text description of the failure reason |
 
-整批作为原子事务：任一 part 失败则整批不生效，服务端通过 `failed_part_index` / `failed_reason` 告诉你是哪条；按此定位修正后重发。
+The entire batch is an atomic transaction: if any part fails, the entire batch does not take effect, and the server tells you which one it is via `failed_part_index` / `failed_reason`; locate and fix accordingly, then resend.
 
-## 使用流程
+<a id="使用流程"></a>
+## Usage flow
 
-### 给已有页加图（典型场景）
+<a id="给已有页加图典型场景"></a>
+### Add an image to an existing page (typical scenario)
 
 ```bash
 PRES_ID=xxx
 SID=yyy
 
-# 1) 上传图片
+# 1) Upload the image
 TOKEN=$(lark-cli slides +media-upload --as user \
   --file ./pic.png --presentation "$PRES_ID" --jq '.data.file_token')
 
-# 2) block_insert 到页末
+# 2) block_insert to the end of the page
 lark-cli slides +replace-slide --as user \
   --presentation "$PRES_ID" --slide-id "$SID" \
   --parts "$(jq -n --arg token "$TOKEN" \
     '[{action:"block_insert",insertion:("<img src=\""+$token+"\" topLeftX=\"500\" topLeftY=\"100\" width=\"200\" height=\"150\"/>")}]')"
 ```
 
-### 改标题（block_replace）
+<a id="改标题block_replace"></a>
+### Change the title (block_replace)
 
 ```bash
-# 先拿原页 XML，从里面找到标题块的 3 位 short id（如 bUn）
+# First get the original page XML, and find the 3-digit short id of the title block from it (e.g. bUn)
 lark-cli slides +xml-get --as user \
   --presentation "$PRES_ID" --slide-id "$SID" --raw
 
-# block_replace 换掉整个标题块（id 自动注入）
+# block_replace replaces the entire title block (id automatically injected)
 lark-cli slides +replace-slide --as user \
   --presentation "$PRES_ID" --slide-id "$SID" \
   --parts '[{"action":"block_replace","block_id":"bUn","replacement":"<shape type=\"text\" topLeftX=\"80\" topLeftY=\"80\" width=\"800\" height=\"120\"><content textType=\"title\"><p>新标题</p></content></shape>"}]'
 ```
 
-### 批量：一次换标题 + 追加装饰图
+<a id="批量一次换标题--追加装饰图"></a>
+### Batch: change the title + append a decorative image in one go
 
-`block_replace` 和 `block_insert` 可以在同一个 `--parts` 里混用，整批原子执行。
+`block_replace` and `block_insert` can be mixed in the same `--parts`, and the entire batch executes atomically.
 
 ```bash
 lark-cli slides +replace-slide --as user \
@@ -220,39 +232,42 @@ lark-cli slides +replace-slide --as user \
   ]'
 ```
 
-### 乐观锁
+<a id="乐观锁"></a>
+### Optimistic lock
 
 ```bash
-# 读时记录 revision_id
+# Record revision_id when reading
 REV=$(lark-cli slides +xml-get --as user \
   --presentation "$PRES_ID" --slide-id "$SID" \
   --jq '.data.revision_id')
 
-# 写时传 --revision-id；传不存在的版本号（超过当前 revision）返回 3350002
+# Pass --revision-id when writing; passing a nonexistent version number (exceeding the current revision) returns 3350002
 lark-cli slides +replace-slide --as user \
   --presentation "$PRES_ID" --slide-id "$SID" --revision-id "$REV" \
   --parts "$PARTS"
 ```
 
-## 常见错误
+<a id="常见错误"></a>
+## Common errors
 
-| 现象 | 原因 | 对策 |
+| Symptom | Cause | Countermeasure |
 |------|------|------|
-| 3350001 + hint "block_id not found" | `parts[i].block_id` 在当前页不存在 | 重新用 `+xml-get --slide-id` 拿最新 XML，按里面的 short ID 再填 |
-| 3350002 not found | `--revision-id` 传了不存在的版本号（超过当前 revision） | 用 `-1` 或用 `+xml-get --slide-id` 拿到的有效 `revision_id` |
-| `--parts invalid JSON` | JSON 本身不完整，或被 shell 引号/转义破坏 | 将数组写入 `parts.json` 后传 `--parts @parts.json`，或通过 stdin 传给 `--parts -` |
-| `--parts[i] action "str_replace" is not supported` | CLI 不暴露 `str_replace` | 把替换需求改写成 `block_replace` / `block_insert` |
-| `--parts[i] action "page_replace" / "slide_replace" means whole-page replacement` | 把整页更新意图传给了块级 shortcut | 改用 [`slides +update-slide`](lark-slides-update-slide.md) 整页原地写回 |
-| `--parts contains N items, exceeds maximum of 200` | 一次提交 parts 太多 | 拆多次调用 |
-| `--parts[i] unknown field "xml"; did you mean "replacement"?` | XML 塞进了未支持的字段名（如 `xml` / `new_xml` / `data`） | 使用标准字段：`block_replace` 用 `replacement`，`block_insert` 用 `insertion` |
-| `--parts[i] unknown field "insertion"; it belongs to block_insert` | 字段和 `action` 不配对 | 按 action 取字段：`block_replace` = `block_id` + `replacement`；`block_insert` = `insertion` (+ `insert_before_block_id`) |
-| `--parts[i] (block_replace) requires non-empty block_id` / `replacement` | 字段名对，但值缺失或是空串 | 按 parts 元素结构补齐值 |
-| `<img>` 不显示 / 显示破图 | `src` 写了外链 URL | 换成通过 [`+media-upload`](lark-slides-media-upload.md) 拿到的 `file_token` |
-| 3350001 | `replacement` 不是合法单根 XML 片段，或 `block_id` 不存在 | CLI 已自动注入 `id` 和 `<content/>`；如果仍报错，重新 `+xml-get --slide-id` 拿最新 XML 确认 `block_id` 存在；检查 XML 结构是否合法；坐标是否超出 960×540 |
-| 403 | 权限不足 | 需要 `slides:presentation:update` 或 `slides:presentation:write_only`；wiki URL 还需要 `wiki:node:read` |
+| 3350001 + hint "block_id not found" | `parts[i].block_id` does not exist on the current page | Use `+xml-get --slide-id` again to get the latest XML, and fill it in again according to the short ID in it |
+| 3350002 not found | `--revision-id` passed a nonexistent version number (exceeding the current revision) | Use `-1` or use the valid `revision_id` obtained via `+xml-get --slide-id` |
+| `--parts invalid JSON` | The JSON itself is incomplete, or was broken by shell quoting/escaping | Write the array to `parts.json` and then pass `--parts @parts.json`, or pass it to `--parts -` via stdin |
+| `--parts[i] action "str_replace" is not supported` | The CLI does not expose `str_replace` | Rewrite the replacement requirement as `block_replace` / `block_insert` |
+| `--parts[i] action "page_replace" / "slide_replace" means whole-page replacement` | A whole-page update intent was passed to the block-level shortcut | Use [`slides +update-slide`](lark-slides-update-slide.md) to write the entire page back in place |
+| `--parts contains N items, exceeds maximum of 200` | Too many parts submitted at once | Split into multiple calls |
+| `--parts[i] unknown field "xml"; did you mean "replacement"?` | XML was put into an unsupported field name (such as `xml` / `new_xml` / `data`) | Use standard fields: `block_replace` uses `replacement`, `block_insert` uses `insertion` |
+| `--parts[i] unknown field "insertion"; it belongs to block_insert` | The field and `action` do not match | Take fields according to the action: `block_replace` = `block_id` + `replacement`; `block_insert` = `insertion` (+ `insert_before_block_id`) |
+| `--parts[i] (block_replace) requires non-empty block_id` / `replacement` | The field name is correct, but the value is missing or an empty string | Fill in the value according to the parts element structure |
+| `<img>` does not display / displays a broken image | `src` wrote an external URL | Replace it with the `file_token` obtained via [`+media-upload`](lark-slides-media-upload.md) |
+| 3350001 | `replacement` is not a legal single-root XML fragment, or `block_id` does not exist | The CLI has automatically injected `id` and `<content/>`; if it still reports an error, use `+xml-get --slide-id` again to get the latest XML and confirm that `block_id` exists; check whether the XML structure is legal; whether the coordinates exceed 960×540 |
+| 403 | Insufficient permissions | Requires `slides:presentation:update` or `slides:presentation:write_only`; a wiki URL also requires `wiki:node:read` |
 
-## 相关命令
+<a id="相关命令"></a>
+## Related commands
 
-- [slides +xml-get](lark-slides-xml-presentations-get.md) — 读原页拿 `block_id` / `revision_id`
-- [+media-upload](lark-slides-media-upload.md) — 上传图片拿 `file_token`
-- [slides-editing.md](../workflow/slides-editing.md) — 读-改-写闭环 + 决策树
+- [slides +xml-get](lark-slides-xml-presentations-get.md) — read the original page to get `block_id` / `revision_id`
+- [+media-upload](lark-slides-media-upload.md) — upload an image to get `file_token`
+- [slides-editing.md](../workflow/slides-editing.md) — read-modify-write loop + decision tree

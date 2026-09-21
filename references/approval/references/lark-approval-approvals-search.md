@@ -1,103 +1,113 @@
 
 # approval approvals search
 
-搜索**当前用户可发起**的审批定义（launchable approvals）。只读操作，不会创建审批实例。
+Search for approval definitions that **the current user can initiate** (launchable approvals). This is a read-only operation and does not create approval instances.
 
-需要的 scopes: ["approval:approval:read"]
+Required scopes: ["approval:approval:read"]
 
-## 命令
+<a id="命令"></a>
+## Command
 
 ```bash
-# 按关键词搜索可发起审批定义
+# Search launchable approval definitions by keyword
 lark-cli approval approvals search --data '{"keyword":"请假"}' --as user
 
-# 使用 page_token 翻页
+# Paginate using page_token
 lark-cli approval approvals search --data '{"keyword":"请假", "page_token":"example_page_token"}' --as user
 
-# 表格格式输出，便于快速浏览候选定义
+# Output in table format for quick browsing of candidate definitions
 lark-cli approval approvals search --data '{"keyword":"出差"}' --format table --as user
 
-# 预览 API 调用，不执行
+# Preview the API call without executing it
 lark-cli approval approvals search --data '{"keyword":"请假"}' --as user --dry-run
 ```
 
-## 参数
+<a id="参数"></a>
+## Parameters
 
-| 参数 | 必填 | 说明 |
+| Parameter | Required | Description |
 |------|------|------|
-| `--data '{...}'` | 是 | 查询参数，使用 JSON 传入 |
-| `keyword` | 是 | 搜索关键词，例如 `请假`、`报销`、`出差`、`采购` |
-| `locale` | 否 | 返回语言，例如 `zh-CN`、`en-US`、`ja-JP` |
-| `page_size` | 否 | 分页大小 |
-| `page_token` | 否 | 翻页标记；首次请求不填，后续使用上一次返回的 `page_token` |
-| `--as user` | 否 | 建议显式指定用户身份；“可发起审批定义”是面向当前用户的查询 |
-| `--format` | 否 | 输出格式：`json`（默认）、`ndjson`、`table`、`csv` |
-| `--dry-run` | 否 | 预览 API 调用，不执行 |
+| `--data '{...}'` | Yes | Query parameters, passed in as JSON |
+| `keyword` | Yes | Search keyword, for example `请假`, `报销`, `出差`, `采购` |
+| `locale` | No | Return language, for example `zh-CN`, `en-US`, `ja-JP` |
+| `page_size` | No | Page size |
+| `page_token` | No | Pagination token; leave empty on the first request, then use the `page_token` returned by the previous request |
+| `--as user` | No | It is recommended to explicitly specify the user identity; "launchable approval definitions" is a query scoped to the current user |
+| `--format` | No | Output format: `json` (default), `ndjson`, `table`, `csv` |
+| `--dry-run` | No | Preview the API call without executing it |
 
-## 这个命令解决什么问题
+<a id="这个命令解决什么问题"></a>
+## What problem does this command solve
 
-当用户只有自然语言意图，还没有 `approval_code` 时，先用它把“可发起的审批定义候选项”找出来。
+When the user only has a natural-language intent and does not yet have an `approval_code`, use this first to find "candidate launchable approval definitions".
 
-典型场景：
+Typical scenarios:
 
-- “帮我找一下请假审批”
-- “有哪些可以发起的报销单？”
-- “先搜一下出差审批，再帮我提单”
+- "Help me find the leave approval"
+- "What reimbursement forms can be initiated?"
+- "First search for the business trip approval, then help me submit the request"
 
-## 输出重点字段
+<a id="输出重点字段"></a>
+## Key output fields
 
-返回结果里，优先关注以下字段：
+In the returned results, focus on the following fields first:
 
-| 字段 | 说明 |
+| Field | Description |
 |------|------|
-| `approval_code` | 审批定义 Code；后续 `approvals get` 和 `instances create` 都要用它 |
-| `approval_name` | 审批定义名称；给用户做候选选择时最关键 |
-| `is_external` | 是否为三方审批定义；`true` 表示不能走原生 `instances.create` |
-| `create_link` | 三方审批定义的发起链接；`is_external=true` 时优先返回给用户 |
+| `approval_code` | Approval definition Code; both `approvals get` and `instances create` will need it later |
+| `approval_name` | Approval definition name; most important when presenting candidates to the user for selection |
+| `is_external` | Whether it is a third-party approval definition; `true` means it cannot go through the native `instances.create` |
+| `create_link` | The initiation link for a third-party approval definition; when `is_external=true`, return it to the user first |
 
-## 使用规则
+<a id="使用规则"></a>
+## Usage rules
 
-- **这是发起审批工作流的第一步。** 标准顺序是：`approvals search` -> `approvals get` -> `instances create`。
-- **搜索结果为空时，不要猜。** 直接告诉用户当前关键词下没有可发起定义，并建议用户换关键词。
-- **命中多个结果时，不要替用户拍板。** 先把候选定义列出来，让用户选择目标审批定义。
-- **`is_external=true` 时不要调用 `approval instances create`。** 这类定义属于三方审批，优先返回 `create_link` 并说明需要通过链接发起。
-- **只有 `is_external=false` 的原生定义，才继续 `approvals get`。**
-- **如果用户已经明确给出 `approval_code`，不要再 search。** 直接执行 `approval approvals get`。
+- **This is the first step of the approval initiation workflow.** The standard order is: `approvals search` -> `approvals get` -> `instances create`.
+- **When the search result is empty, do not guess.** Directly tell the user that there is no launchable definition under the current keyword, and suggest that the user try a different keyword.
+- **When multiple results match, do not make the decision for the user.** First list the candidate definitions and let the user choose the target approval definition.
+- **When `is_external=true`, do not call `approval instances create`.** Such definitions are third-party approvals; return `create_link` first and explain that it needs to be initiated through the link.
+- **Only for native definitions with `is_external=false` should you continue to `approvals get`.**
+- **If the user has already explicitly provided `approval_code`, do not search again.** Directly execute `approval approvals get`.
 
-## 结果整理方式
+<a id="结果整理方式"></a>
+## How to organize the results
 
-**将结果整理为候选清单，优先展示“名称 + approval_code + 是否三方定义 + 下一步建议”。**
+**Organize the results into a candidate list, prioritizing "name + approval_code + whether it is a third-party definition + next-step suggestion".**
 
-建议输出成下面这种结构：
+It is recommended to output in the following structure:
 
 ```text
-找到 3 个可发起审批定义：
+Found 3 launchable approval definitions:
 
-1. 请假申请
+1. Leave Request
    - approval_code: 7C468A54-8745-2245-9675-08B7C63E7A85
    - is_external: false
-   - next: 可继续读取 definitions 详情（approvals get）
+   - next: You can continue to read the definitions details (approvals get)
 
-2. 差旅报销
+2. Travel Reimbursement
    - approval_code: 99887766-xxxx
    - is_external: true
-   - next: 返回 create_link，引导用户通过链接发起
+   - next: Return create_link and guide the user to initiate through the link
 ```
 
-## 常见后续操作
+<a id="常见后续操作"></a>
+## Common follow-up operations
 
-### 1）用户选中了某个定义，继续查看详情
+<a id="1用户选中了某个定义继续查看详情"></a>
+### 1) The user selected a definition; continue to view details
 
 ```bash
 lark-cli approval approvals get --params '{"approval_code":"<APPROVAL_CODE>"}' --as user
 ```
 
-### 2）确认是原生定义后，再准备发起审批实例
+<a id="2确认是原生定义后再准备发起审批实例"></a>
+### 2) After confirming it is a native definition, prepare to initiate an approval instance
 
 ```bash
 lark-cli approval instances create --data '{"approval_code":"<APPROVAL_CODE>","form":"[...]"}' --as user --yes
 ```
 
-### 3）确认是三方定义时，直接返回链接
+<a id="3确认是三方定义时直接返回链接"></a>
+### 3) When confirming it is a third-party definition, directly return the link
 
-当 `is_external=true` 时，优先向用户返回 `create_link`，说明该审批需在三方系统或跳转页面中发起，而不是通过原生 `instances.create`。
+When `is_external=true`, prioritize returning `create_link` to the user, explaining that this approval needs to be initiated in the third-party system or on a redirect page, rather than through the native `instances.create`.

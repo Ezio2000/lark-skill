@@ -6,7 +6,7 @@
 
 | EventKey | Purpose |
 |---|---|
-| `minutes.minute.generated_v1` | A minute (妙记) has been generated |
+| `minutes.minute.generated_v1` | A minute (Minutes) has been generated |
 
 This key uses a **Custom schema** (flat output at `.xxx`) and carries a **PreConsume hook** that auto-subscribes / unsubscribes via OAPI on first / last consumer.
 

@@ -1,5 +1,6 @@
-# PPT Template Rewrite Principles（兼容入口）
+<a id="ppt-template-rewrite-principles兼容入口"></a>
+# PPT Template Rewrite Principles (compatibility entry)
 
-本文档已迁移至 [`workflow/template-editing.md`](workflow/template-editing.md)。
+This document has been migrated to [`workflow/template-editing.md`](workflow/template-editing.md).
 
-此文件仅保留旧路径兼容性；后续引用请使用新路径。
+This file is retained only for old-path compatibility; use the new path for future references.

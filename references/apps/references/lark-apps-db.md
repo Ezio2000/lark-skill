@@ -1,140 +1,149 @@
-# apps db 域命令
+<a id="apps-db-域命令"></a>
+# apps db domain commands
 
-管理妙搭应用数据库：看表与结构、初始化与发布多环境、数据搬运、变更治理、时间点恢复、用量。逐条跑 SQL（SELECT/DML/DDL）走 [`+db-execute`](lark-apps-db-execute.md)（单独一篇）。运行时命令事实以 `lark-cli apps +<cmd> --help` 为准；认证、`--as user`、exit 码、`_notice` 等通用处理见 [`../../shared/index.md`](../../shared/index.md) 与本域 [`index.md`](../index.md)。
+Manage Miaoda application databases: view tables and schemas, initialize and publish multiple environments, move data, change governance, point-in-time recovery, usage. Running SQL statements one by one (SELECT/DML/DDL) goes through [`+db-execute`](lark-apps-db-execute.md) (a separate article). Runtime command facts are governed by `lark-cli apps +<cmd> --help`; for authentication, `--as user`, exit codes, `_notice`, and other general handling, see [`../../shared/index.md`](../../shared/index.md) and this domain's [`index.md`](../index.md).
 
-## 何时用
+<a id="何时用"></a>
+## When to use
 
-用户要看应用里有哪些表 / 某张表的结构、把单库应用拆成 dev/online 多环境、把数据导进导出表、查谁在什么时候改了表结构或表数据、开关行级审计、把开发环境的库结构发布到线上、把库恢复到过去某个时间点、或看数据库用量时。逐条执行 SQL 走 [`+db-execute`](lark-apps-db-execute.md)；文件存储（上传/下载文件）走 [`lark-apps-file.md`](lark-apps-file.md)。**建表 / 改表 / 写 SQL 的平台内容规范**（审计列、RLS、`user_profile`、禁用 SQL、PG 陷阱）见 [`lark-apps-db-execute.md`](lark-apps-db-execute.md) 的「平台 SQL 规范」。
+When the user wants to see which tables exist in an application / the schema of a table, split a single-database application into dev/online multiple environments, import data into or export data from tables, find out who changed table schemas or table data and when, turn row-level auditing on or off, publish the development environment's database schema to online, restore the database to a past point in time, or view database usage. To execute SQL statements one by one, go through [`+db-execute`](lark-apps-db-execute.md); for file storage (uploading/downloading files), go through [`lark-apps-file.md`](lark-apps-file.md). For **platform content specifications for creating tables / altering tables / writing SQL** (audit columns, RLS, `user_profile`, prohibited SQL, PG pitfalls), see the "Platform SQL Specifications" section of [`lark-apps-db-execute.md`](lark-apps-db-execute.md).
 
-## 命令一览
+<a id="命令一览"></a>
+## Command overview
 
-| 命令 | 做什么 | 关键参数 |
+| Command | What it does | Key parameters |
 |---|---|---|
-| `+db-table-list` | 列出某环境的数据表 | `--environment`、`--page-size`/`--page-token` |
-| `+db-table-get` | 看单张表的结构（字段/索引/约束/DDL） | `--table`、`--environment`、`--format` |
-| `+db-env-create` | 把单库应用初始化为 dev/online 多环境（高危） | `--environment`、`--sync-data`、`--yes` |
-| `+db-data-export` | 把一张表的数据导出到本地文件 | `--table`、`--output`、`--limit`、`--environment` |
-| `+db-data-import` | 把本地 csv/json 文件导进一张表（高危） | `--file`、`--table`、`--environment`、`--yes` |
-| `+db-sync-create` | 预览或创建 Base 到应用数据库的同步任务（高危） | `--config`、`--preview`、`--output`、`--environment`、`--yes` |
-| `+db-sync-list` | 列出 Base 同步任务 | `--mode`、`--status`、`--table`、`--page-size`/`--page-token`、`--environment` |
-| `+db-sync-get` | 查看同步任务配置、状态、统计和 warnings | `--task-id` |
-| `+db-sync-enable` | 启用 streaming 同步任务 | `--task-id` |
-| `+db-sync-disable` | 停用 streaming 同步任务 | `--task-id` |
-| `+db-sync-update` | 修改 streaming 同步任务映射配置（高危） | `--task-id`、`--config`、`--yes` |
-| `+db-sync-delete` | 删除 streaming 同步任务，保留目标数据（高危） | `--task-id`、`--yes` |
-| `+db-changelog-list` | 查表结构变更（DDL）历史 | `--table`、`--change-id`、`--since`/`--until`、`--environment` |
-| `+db-audit-status` | 看哪些表开了行级审计、保留期 | `--table`、`--environment` |
-| `+db-audit-enable` | 给某表开启行级变更审计 | `--table`、`--retention`、`--environment` |
-| `+db-audit-disable` | 关闭某表的行级审计 | `--table`、`--environment` |
-| `+db-audit-list` | 列出表的行级变更事件（增删改追溯） | `--table`（可重复）、`--since`/`--until`、`--environment` |
-| `+db-env-diff` | 预览开发环境待发布到线上的结构变更 | `--app-id` |
-| `+db-env-migrate` | 把开发环境的结构变更发布到线上（高危） | `--app-id`、`--yes` |
-| `+db-recovery-diff` | 预览把库恢复到某时间点会带来的变更 | `--target` |
-| `+db-recovery-apply` | 把库恢复到某个时间点、覆盖当前数据（高危） | `--target`、`--yes` |
-| `+db-quota-get` | 查数据库存储用量 | `--environment` |
+| `+db-table-list` | List the data tables in an environment | `--environment`, `--page-size`/`--page-token` |
+| `+db-table-get` | View a single table's schema (fields/indexes/constraints/DDL) | `--table`, `--environment`, `--format` |
+| `+db-env-create` | Initialize a single-database application into dev/online multiple environments (high-risk) | `--environment`, `--sync-data`, `--yes` |
+| `+db-data-export` | Export a table's data to a local file | `--table`, `--output`, `--limit`, `--environment` |
+| `+db-data-import` | Import a local csv/json file into a table (high-risk) | `--file`, `--table`, `--environment`, `--yes` |
+| `+db-sync-create` | Preview or create a sync task from Base to the application database (high-risk) | `--config`, `--preview`, `--output`, `--environment`, `--yes` |
+| `+db-sync-list` | List Base sync tasks | `--mode`, `--status`, `--table`, `--page-size`/`--page-token`, `--environment` |
+| `+db-sync-get` | View a sync task's configuration, status, statistics, and warnings | `--task-id` |
+| `+db-sync-enable` | Enable a streaming sync task | `--task-id` |
+| `+db-sync-disable` | Disable a streaming sync task | `--task-id` |
+| `+db-sync-update` | Modify a streaming sync task's mapping configuration (high-risk) | `--task-id`, `--config`, `--yes` |
+| `+db-sync-delete` | Delete a streaming sync task, retaining the target data (high-risk) | `--task-id`, `--yes` |
+| `+db-changelog-list` | View table schema change (DDL) history | `--table`, `--change-id`, `--since`/`--until`, `--environment` |
+| `+db-audit-status` | See which tables have row-level auditing enabled and the retention period | `--table`, `--environment` |
+| `+db-audit-enable` | Enable row-level change auditing for a table | `--table`, `--retention`, `--environment` |
+| `+db-audit-disable` | Disable row-level auditing for a table | `--table`, `--environment` |
+| `+db-audit-list` | List a table's row-level change events (insert/delete/update traceability) | `--table` (repeatable), `--since`/`--until`, `--environment` |
+| `+db-env-diff` | Preview the schema changes in the development environment pending publication to online | `--app-id` |
+| `+db-env-migrate` | Publish the development environment's schema changes to online (high-risk) | `--app-id`, `--yes` |
+| `+db-recovery-diff` | Preview the changes that restoring the database to a point in time would bring | `--target` |
+| `+db-recovery-apply` | Restore the database to a point in time, overwriting current data (high-risk) | `--target`, `--yes` |
+| `+db-quota-get` | View database storage usage | `--environment` |
 
-## 约定（先读）
+<a id="约定先读"></a>
+## Conventions (read first)
 
-- **环境 `--environment dev|online`（可省略）**：看表、看结构、数据导入导出、变更追溯、审计、配额都按环境区分。省略 `--environment` 时 CLI 不带该参数、由服务端按应用形态自动选分支——多环境应用走 `dev`、未开多环境的走 `online`；要固定环境就显式传。唯一会报错的组合：对未开多环境的应用显式传 `--environment dev`（无 `dev` 分支）。写操作建议先在 `dev` 验（仅多环境应用有 `dev`）。旧名 `--env` 已**移除**：传入会报 validation 错（提示改用 `--environment`），一律用 `--environment`。`+db-env-diff`/`+db-env-migrate` 是「dev→online 发布」语义，**没有** `--environment`。
-- **本地文件 / `--output` 用工作目录内相对路径**：导入 `--file ./orders.csv`、导出 `--output ./out.csv`；绝对路径、或经 `..`/符号链接越出工作目录的 `--output` 会被拒（validation / exit 2）。路径在别处先 `cd` 过去或改成相对路径。
-- **高危操作必须带 `--yes`**：`+db-env-create`、`+db-data-import`、`+db-env-migrate`、`+db-recovery-apply`、`+db-sync-create`、`+db-sync-update`、`+db-sync-delete` 缺省会被确认关卡拦下；动手前先用对应的预览命令或 `--dry-run` 看清影响。`+db-sync-create --preview` 只解析/校验配置、不落库，免确认、不需 `--yes`；真正建任务（不带 `--preview`）才需要 `--yes`。
-- **Base 同步不是整库任务**：`+db-sync-create` 一次只处理一张 Base 表到一张目标表。用户说“整库”“客户、订单、回款三张表都同步”时，先明确告诉用户会拆成三套独立配置、三次 preview、用户确认后三次 create；不要暗示一个同步任务能覆盖整个 Base。
-- **batch 任务不能重新启用**：用户说“批量任务重新启用”“operation-not-allowed”时，先给结论：batch/import 是一次性任务，不能 enable。不要先陷入授权排障而漏掉这个结论；授权缺失时也要说明授权完成后应 `+db-sync-get` 查状态/结果，持续同步要新建 streaming。
-- **时间参数按口语自然传**（`--since`/`--until`/`--target`），格式见末尾。
+- **Environment `--environment dev|online` (optional)**: viewing tables, viewing schemas, data import/export, change traceability, auditing, and quotas are all distinguished by environment. When `--environment` is omitted, the CLI does not include that parameter and the server automatically selects the branch based on the application's form—multi-environment applications go to `dev`, and those without multiple environments enabled go to `online`; to pin the environment, pass it explicitly. The only combination that errors: explicitly passing `--environment dev` for an application that does not have multiple environments enabled (there is no `dev` branch). For write operations, it is recommended to verify in `dev` first (only multi-environment applications have `dev`). The old name `--env` has been **removed**: passing it reports a validation error (prompting you to use `--environment` instead); always use `--environment`. `+db-env-diff`/`+db-env-migrate` have the semantics of "dev→online publication"; there is **no** `--environment`.
+- **Local files / `--output` use relative paths within the working directory**: import `--file ./orders.csv`, export `--output ./out.csv`; absolute paths, or `--output` that escape the working directory via `..`/symbolic links, are rejected (validation / exit 2). If the path is elsewhere, first `cd` over to it or change it to a relative path.
+- **High-risk operations must include `--yes`**: `+db-env-create`, `+db-data-import`, `+db-env-migrate`, `+db-recovery-apply`, `+db-sync-create`, `+db-sync-update`, `+db-sync-delete` are blocked by the confirmation gate by default; before acting, use the corresponding preview command or `--dry-run` to see the impact clearly. `+db-sync-create --preview` only parses/validates the configuration and does not write to the database, so it requires no confirmation and no `--yes`; actually creating a task (without `--preview`) requires `--yes`.
+- **Base sync is not a whole-database task**: `+db-sync-create` processes only one Base table to one target table at a time. When the user says "the whole database" or "sync all three tables: customers, orders, and payments," first clearly tell the user that it will be split into three independent configurations, three previews, and, after user confirmation, three creates; do not imply that one sync task can cover the entire Base.
+- **batch tasks cannot be re-enabled**: When the user says "re-enable the batch task" or "operation-not-allowed," give the conclusion first: batch/import are one-time tasks and cannot be enabled. Do not first get bogged down in authorization troubleshooting and miss this conclusion; when authorization is missing, also explain that after authorization is completed you should use `+db-sync-get` to check status/results, and that continuous syncing requires creating a new streaming task.
+- **Time parameters are passed naturally in colloquial form** (`--since`/`--until`/`--target`); for formats, see the end.
 
-## 各命令
+<a id="各命令"></a>
+## Commands
 
-### 表与结构
+<a id="表与结构"></a>
+### Tables and schemas
 
-**`+db-table-list`**：列出某环境的数据表。分页 `--page-size`（默认 20）/ `--page-token`（上一页 cursor）。每项给表名、描述、估算行数、大小、列数；要完整列定义 / 索引 / 约束用 `+db-table-get`。只知道业务对象名时，先用它定位可能的表名。
+**`+db-table-list`**: List the data tables in an environment. Pagination `--page-size` (default 20) / `--page-token` (previous page cursor). Each item gives the table name, description, estimated row count, size, and column count; for complete column definitions / indexes / constraints, use `+db-table-get`. When you only know the business object name, use this first to locate possible table names.
 
 ```bash
 lark-cli apps +db-table-list --app-id app_xxx
 lark-cli apps +db-table-list --app-id app_xxx --environment dev --page-size 50
 ```
 
-**`+db-table-get`**：看单张表的结构。默认 JSON 给结构化的字段 / 索引 / 约束 / 估算行数 / 大小；`--format pretty` 直接输出建表 DDL 文本（给用户看建表语句或做迁移参照时用）。
+**`+db-table-get`**: View a single table's schema. By default, JSON gives structured fields / indexes / constraints / estimated row count / size; `--format pretty` directly outputs the table creation DDL text (use this when showing the user the table creation statement or using it as a migration reference).
 
 ```bash
 lark-cli apps +db-table-get --app-id app_xxx --table orders
 lark-cli apps +db-table-get --app-id app_xxx --table orders --environment dev --format pretty
 ```
 
-### 多环境数据库（初始化 + 发布）
+<a id="多环境数据库初始化--发布"></a>
+### Multi-environment database (initialization + publication)
 
-**`+db-env-create`（高危）**：把存量单库应用初始化为 dev/online 两套库，不可逆，必须带 `--yes`。`--environment` 目前只支持 `dev`（默认 `dev`）；`--sync-data` 把现有 online 数据复制到新环境（不传则不复制）。注意：`+create --app-type full_stack` 新建的应用通常已自带多环境，重复初始化会返回冲突错误（应用已是多环境）——按 `error.hint` 转述状态即可，别重复初始化。
+**`+db-env-create` (high-risk)**: Initialize an existing single-database application into two databases, dev/online. This is irreversible and must include `--yes`. `--environment` currently only supports `dev` (default `dev`); `--sync-data` copies the existing online data to the new environment (if not passed, no copy is made). Note: applications newly created by `+create --app-type full_stack` usually already come with multiple environments, and repeated initialization returns a conflict error (the application is already multi-environment)—just relay the status according to `error.hint`; do not initialize again.
 
 ```bash
 lark-cli apps +db-env-create --app-id app_xxx --environment dev --dry-run
 lark-cli apps +db-env-create --app-id app_xxx --environment dev --sync-data --yes
 ```
 
-**`+db-env-diff`**：预览开发环境里待发布到线上的表结构变更，不落地。发布前先看这个。无待发布变更时明确返回「无变更」。
+**`+db-env-diff`**: Preview the table schema changes in the development environment pending publication to online, without applying them. Look at this before publishing. When there are no pending changes, it explicitly returns "no changes."
 
-**`+db-env-migrate`（高危）**：把开发环境的结构变更正式发布到线上，不可逆，必须带 `--yes`，返回实际发布的变更条数。发布是异步的，命令会等到完成再返回结果。
+**`+db-env-migrate` (high-risk)**: Formally publish the development environment's schema changes to online. This is irreversible and must include `--yes`, and it returns the number of changes actually published. Publication is asynchronous, and the command waits until completion before returning the result.
 
-> 预览与发布同一端点，故 `+db-env-diff` 也需 `spark:app:write` scope（不是纯只读权限）。
+> Preview and publication use the same endpoint, so `+db-env-diff` also requires the `spark:app:write` scope (it is not a purely read-only permission).
 
 ```bash
 lark-cli apps +db-env-diff --app-id app_xxx
 lark-cli apps +db-env-migrate --app-id app_xxx --yes
 ```
 
-### 数据导入导出
+<a id="数据导入导出"></a>
+### Data import and export
 
-**`+db-data-export`**：把一张表导出到本地文件。导出格式**只由 `--output` 的扩展名决定**——`.csv` / `.json` / `.sql`，缺省按 `<表名>.csv` 落在当前目录。注意：全局 `--format json|pretty` 只控制**命令自身输出**（成功摘要 / 错误信封）的渲染，**不影响导出文件的格式**；`--output` 后缀必须是 `.csv/.json/.sql` 之一，否则报 validation 错误（exit 2），且不支持导出到 stdout。两道体量约束：
+**`+db-data-export`**: Export a table to a local file. The export format is **determined solely by the extension of `--output`**—`.csv` / `.json` / `.sql`; by default it is placed in the current directory according to `<表名>.csv`. Note: the global `--format json|pretty` only controls the rendering of **the command's own output** (success summary / error envelope) and **does not affect the format of the exported file**; the `--output` suffix must be one of `.csv/.json/.sql`, otherwise a validation error is reported (exit 2), and exporting to stdout is not supported. There are two size constraints:
 
-- `--limit`（1..5000，默认 5000）是**行数上限守卫**：表的行数超过它会被整体拒掉（不是「只导前 N 行」）；
-- 导出产物 >1 MB 也会被拒。
+- `--limit` (1..5000, default 5000) is a **row count upper-bound guard**: if the table's row count exceeds it, the whole export is rejected (it is not "export only the first N rows");
+- If the exported artifact is >1 MB, it is also rejected.
 
-超大表别硬导：先用 `+db-execute` 加 `WHERE` / `LIMIT` 缩小范围、分批导。
+Do not force-export very large tables: first use `+db-execute` with `WHERE` / `LIMIT` to narrow the scope and export in batches.
 
 ```bash
 lark-cli apps +db-data-export --app-id app_xxx --table orders --output ./orders.csv
 lark-cli apps +db-data-export --app-id app_xxx --table orders --output ./orders.json --environment dev
 ```
 
-**`+db-data-import`（高危）**：把本地 csv/json 文件的数据导进表。文件需是 `.csv`/`.json`、≤1 MB，必须带 `--yes`。目标表缺省取文件名去掉**最后一个**扩展名（如 `orders.csv`→`orders`，`orders.2026.csv`→`orders.2026`）；文件名带点号时建议显式传 `--table` 以免落到意外的表名。
+**`+db-data-import` (high-risk)**: Import the data from a local csv/json file into a table. The file must be `.csv`/`.json` and ≤1 MB, and `--yes` must be included. The target table by default takes the file name with the **last** extension removed (e.g., `orders.csv`→`orders`, `orders.2026.csv`→`orders.2026`); when the file name contains dots, it is recommended to explicitly pass `--table` to avoid landing on an unexpected table name.
 
 ```bash
 lark-cli apps +db-data-import --app-id app_xxx --table orders --file ./orders.csv --environment dev --yes
 ```
 
-**导入/导出限额**：体积 ≤ **1 MB**、行数 ≤ **5000**，导入导出都一样，超限会被拒。超限就分批——导入拆成 ≤1 MB / ≤5000 行的多个文件，导出用 `WHERE` / `LIMIT` 缩小范围。
+**Import/export limits**: size ≤ **1 MB**, row count ≤ **5000**; import and export are the same, and exceeding the limit is rejected. If over the limit, batch it—split imports into multiple files of ≤1 MB / ≤5000 rows, and for exports use `WHERE` / `LIMIT` to narrow the scope.
 
-### Base 数据同步
+<a id="base-数据同步"></a>
+### Base data sync
 
-Base 数据同步走 `+db-sync-*`，和本地文件导入不同：`+db-data-import` 只处理本地 `.csv/.json` 文件；Base 链接、Base 表、字段映射、持续同步任务都走 `+db-sync-create` / `+db-sync-update`。
+Base data sync goes through `+db-sync-*`, which differs from local file import: `+db-data-import` only handles local `.csv/.json` files; Base links, Base tables, field mappings, and continuous sync tasks all go through `+db-sync-create` / `+db-sync-update`.
 
-**任务类型**：
-- `mode=batch`：一次性任务。`schema_only=true` 只建目标表；`schema_only=false` 建表或写入已有表并导入当前 Base 数据。完成后不能 enable/disable/update/delete。
-- `mode=streaming`：持续同步任务。首次同步后持续处理 Base 变化，可 enable/disable/update/delete。
+**Task types**:
+- `mode=batch`: one-time task. `schema_only=true` only creates the target table; `schema_only=false` creates the table or writes to an existing table and imports the current Base data. After completion, it cannot be enabled/disabled/updated/deleted.
+- `mode=streaming`: continuous sync task. After the initial sync, it continuously handles Base changes and can be enabled/disabled/updated/deleted.
 
-**环境（重要）**：`+db-sync-*` 命令省略 `--environment` 时默认落 **online**（不同于 `+db-table-*`/`+db-audit-*` 等「多环境自动选 dev、单环境选 online」的规则——db-sync 家族不走自动选分支）。**多环境应用建表**（`target.table.action=create`）**必须显式 `--environment dev`**：不填或填 `online` 会被 online 分支的 DDL 禁令拒（`k_dl_4000001：forbid ddl/dcl operation in online env`），因为 online 分支产品上不允许直接建表，建表要落到 dev 分支。共享库 / 单环境应用只有 online、在 online 建表正常成功（不会报 `k_dl_4000001`），省略 `--environment` 或填 `online` 均可。
+**Environment (important)**: When `+db-sync-*` commands omit `--environment`, they default to **online** (unlike the rule for `+db-table-*`/`+db-audit-*` and others, which "automatically select dev for multi-environment and online for single-environment"—the db-sync family does not use the automatic branch selection). **Creating tables in a multi-environment application** (`target.table.action=create`) **must explicitly pass `--environment dev`**: leaving it blank or passing `online` is rejected by the online branch's DDL prohibition (`k_dl_4000001：forbid ddl/dcl operation in online env`), because the online branch does not allow direct table creation as a product rule, and table creation must land on the dev branch. Shared databases / single-environment applications only have online, and creating tables on online succeeds normally (it does not report `k_dl_4000001`); omitting `--environment` or passing `online` both work.
 
-**配置格式**：只通过 `--config` 传完整 JSON，支持内联 JSON、`@file`、`-` stdin。配置 key 使用复数：`field_maps`、`option_mappings`、`syncable_source_fields`。不要写单数 `field_map` / `option_mapping`，CLI 会直接报 validation 错。正式 create 时 `field_maps` **可省略或传空数组**：服务端会使用与 preview 相同的逻辑自动匹配字段并直接创建任务；若显式传了映射，则至少要有一项未写成 `"enabled": false`，写了却全部关闭会被 CLI 拒绝。`+db-sync-update` 仍要求至少一个启用的 `field_maps`，因为 update 的语义是修改既有映射。`target.table.action` 只能是 `create` 或 `use_existing`：建表时 `pg_field` 需要完整字段定义；写已有表时通常只需目标列名。`source.base_url`（源 Base 表完整 URL）在 `+db-sync-create` 必填、由服务端强制；`+db-sync-update` 可选——省略时服务端复用原任务的源 URL，仅在换源 / 替换成另一张 Base 表时才需要传新的 `base_url`。`source.table.name` 是要同步的 Base 表名。`base_url` 形如 `https://.../base/<token>?table=<tableId>`：`token` 定位 Base，`table=` 参数（tableId）定位表。填了 `source.table.name` 就以 name 为准——服务端用 `token + name` 反查 tableId（覆盖 url 里的 `table=` 参数）；不填才用 url 的 `table=` 参数定位。所以用户自然语言里说「同步 xxx 表」「把 xxx 表同步过去」时，一定要把「xxx」填进 `source.table.name`，不要只给 `base_url`——尤其当 `base_url` 不带 `table=` 参数（指向不带具体表的 Base）时，漏了 name 服务端无从定位表。
+**Configuration format**: Pass the complete JSON only through `--config`, supporting inline JSON, `@file`, and `-` stdin. Configuration keys use the plural form: `field_maps`, `option_mappings`, `syncable_source_fields`. Do not write the singular `field_map` / `option_mapping`; the CLI will directly report a validation error. For a formal create, `field_maps` **may be omitted or passed as an empty array**: the server will use the same logic as preview to automatically match fields and directly create the task; if a mapping is explicitly passed, at least one item must not be written as `"enabled": false`; if written but all disabled, the CLI rejects it. `+db-sync-update` still requires at least one enabled `field_maps`, because the semantics of update is to modify existing mappings. `target.table.action` can only be `create` or `use_existing`: when creating a table, `pg_field` requires complete field definitions; when writing to an existing table, usually only the target column names are needed. `source.base_url` (the full URL of the source Base table) is required in `+db-sync-create` and enforced by the server; `+db-sync-update` is optional—when omitted, the server reuses the original task's source URL, and a new `base_url` is needed only when changing the source / replacing it with another Base table. `source.table.name` is the name of the Base table to sync. `base_url` has the form `https://.../base/<token>?table=<tableId>`: `token` locates the Base, and the `table=` parameter (tableId) locates the table. If `source.table.name` is provided, name takes precedence—the server uses `token + name` to look up the tableId in reverse (overriding the `table=` parameter in the url); only when it is not provided does it use the url's `table=` parameter to locate the table. Therefore, when the user says in natural language "sync the xxx table" or "sync the xxx table over," be sure to put "xxx" into `source.table.name`, and do not provide only `base_url`—especially when `base_url` does not carry the `table=` parameter (pointing to a Base without a specific table), if name is omitted the server has no way to locate the table.
 
-**不知道要同步哪张表**：若 `base_url` 只有域名+token、不带 `?table=` 参数，又不确定表名，别硬猜。先用 `lark-cli base +table-list --base-token <token>` 列出该 Base 的所有表（`<token>` 就是 `base_url` 里 `/base/` 后面那段），把表名给用户选定，再填进 `source.table.name`（或改用带 `?table=<table_id>` 的完整 URL）。`+db-sync-create` 会在本地就拦下「`base_url` 无 `?table=` 且 `source.table.name` 空」的配置（提交前即报 validation 错，不送到服务端）。
+**Not knowing which table to sync**: If `base_url` has only the domain plus token and does not carry the `?table=` parameter, and the table name is uncertain, do not guess. First use `lark-cli base +table-list --base-token <token>` to list all tables in that Base (`<token>` is the segment after `/base/` in `base_url`), have the user select the table name, then fill it into `source.table.name` (or switch to the full URL with `?table=<table_id>`). `+db-sync-create` will block locally the configuration where "`base_url` has no `?table=` and `source.table.name` is empty" (reporting a validation error before submission, without sending it to the server).
 
-**单数 key 恢复**：如果用户说配置里 `field_map` 是单数、`option_mapping` 是单数、或字段映射可能不生效，不要把原配置直接提交。先找到用户这份同步配置，做这三步：
+**Singular key recovery**: If the user says that in the configuration `field_map` is singular, `option_mapping` is singular, or the field mapping may not take effect, do not submit the original configuration directly. First find the user's sync configuration and do these three steps:
 
-1. 只把已知 key 改成复数：`field_map` -> `field_maps`，`option_mapping` -> `option_mappings`；不要发明 `fieldMappings` / `mapping` 之类字段名。
-2. 检查 `field_maps` 是数组，且至少有一项 `enabled` 缺省或为 `true`。如果全是 `"enabled": false`，先让用户确认要启用哪几项，再继续。
-3. 修好后先重新 preview，或复用最近一次 preview `--output` 产出的 `data.config`，再继续 create / update。
+1. Change only the known keys to plural: `field_map` -> `field_maps`, `option_mapping` -> `option_mappings`; do not invent field names such as `fieldMappings` / `mapping`.
+2. Check that `field_maps` is an array and that at least one item has `enabled` omitted or set to `true`. If all are `"enabled": false`, first have the user confirm which items to enable, then continue.
+3. After fixing it, preview again first, or reuse the `data.config` produced by the most recent preview `--output`, then continue with create / update.
 
 ```bash
 lark-cli apps +db-sync-create --app-id app_xxx --environment dev --config @sync.json --preview --output ./resolved-sync.json
 lark-cli apps +db-sync-create --app-id app_xxx --environment dev --config @resolved-sync.json --yes
 ```
 
-如果本地找不到配置文件，不要只停在“请提供文件”。先说明恢复来源：让用户贴失败时传入的 JSON，或查找最近 preview 的 `--output` 文件；如果是已有任务的修改，先用 `+db-sync-get` 取回当前任务配置，再基于它修正后 update：
+If the configuration file cannot be found locally, do not stop at "please provide the file." First explain the recovery sources: have the user paste the JSON that was passed when it failed, or look for the `--output` file from the most recent preview; if it is a modification of an existing task, first use `+db-sync-get` to retrieve the current task configuration, then correct it based on that and update:
 
 ```bash
 lark-cli apps +db-sync-get --app-id app_xxx --task-id streaming_123 -q '.data | {mode, source, target, field_maps}' > sync.json
 lark-cli apps +db-sync-update --app-id app_xxx --task-id streaming_123 --environment dev --config @sync.json --yes
 ```
 
-**推荐流程（最佳实践，不是强制）**：优先先 preview，再让用户确认映射，最后用 preview 输出的完整 config 正式创建；这样最稳，也避免手写复杂 `field_maps`。若用户明确要求直接执行、不需要 preview，也可以在 create config 中省略 `field_maps`（或传空数组），由服务端自动匹配并直接创建任务；CLI 不应为了拿 mapping 强制用户先 preview。
+**Recommended flow (best practice, not mandatory)**: Prefer previewing first, then having the user confirm the mapping, and finally using the complete config output by preview to formally create; this is the most reliable and also avoids hand-writing complex `field_maps`. If the user explicitly requests direct execution without preview, you may also omit `field_maps` in the create config (or pass an empty array), and the server will automatically match and directly create the task; the CLI should not force the user to preview first just to obtain the mapping.
 
 ```bash
 lark-cli apps +db-sync-create \
@@ -158,14 +167,14 @@ lark-cli apps +db-sync-create \
 JSON
 ```
 
-preview 返回 `data.config`、`syncable_source_fields` 和 `summary`。`--output` 只把 `data.config` 写入文件，文件可直接作为正式输入：
+preview returns `data.config`, `syncable_source_fields`, and `summary`. `--output` writes only `data.config` to the file, and the file can be used directly as formal input:
 
 ```bash
 lark-cli apps +db-sync-create --app-id app_xxx --environment dev --config @resolved-sync.json --yes
 lark-cli apps +db-sync-get --app-id app_xxx --task-id streaming_123
 ```
 
-**多表 Base**：本命令一次只处理一张表。用户要同步整个 Base 时，先把计划说清楚：不是一个“整库同步任务”，而是按表拆成 N 个单表任务。每张表各有一份配置文件、一次 `+db-sync-create --preview`、一次用户确认后的 `+db-sync-create --yes`，并记录各自 `task_id`。
+**Multi-table Base**: This command processes only one table at a time. When the user wants to sync the entire Base, first explain the plan clearly: it is not one "whole-database sync task," but N single-table tasks split by table. Each table has its own configuration file, one `+db-sync-create --preview`, one `+db-sync-create --yes` after user confirmation, and records its own `task_id`.
 
 ```bash
 lark-cli apps +db-sync-create --app-id app_xxx --environment dev --config @customers-sync.json --preview --output ./customers-resolved.json
@@ -173,20 +182,20 @@ lark-cli apps +db-sync-create --app-id app_xxx --environment dev --config @order
 lark-cli apps +db-sync-create --app-id app_xxx --environment dev --config @payments-sync.json --preview --output ./payments-resolved.json
 ```
 
-配置也必须是单表粒度：每份 JSON 只有一个 `source.table` 和一个 `target.table`，字段名保持 `field_maps`、`option_mappings`、`syncable_source_fields` 这些复数 key。
+The configuration must also be at single-table granularity: each JSON has only one `source.table` and one `target.table`, and field names keep the plural keys `field_maps`, `option_mappings`, `syncable_source_fields`.
 
-**修改 streaming 映射**：先用 get 导出当前配置，编辑 `field_maps` 后 update。update 是高危操作，必须经用户确认再加 `--yes`。
+**Modifying streaming mappings**: First use get to export the current configuration, edit `field_maps`, then update. update is a high-risk operation and must be confirmed by the user before adding `--yes`.
 
-`+db-sync-get` 返回的 `source` **不含 `base_url`**（只有 token / tableId，服务端没有 domain 拼不出完整 URL），这是正常的。原表 update 直接省略 `base_url` 即可；只有要换成另一张 Base 表时，才在 config 里显式补一个新的 `base_url`。不要为了"补全" `base_url` 而编造 domain 或拼接 URL——拿不到就省略，让服务端复用原任务的源 URL。
+The `source` returned by `+db-sync-get` **does not include `base_url`** (only token / tableId; the server has no domain and cannot assemble a full URL). This is normal. For updating the original table, simply omit `base_url`; only when switching to another Base table do you need to explicitly add a new `base_url` in the config. Do not fabricate a domain or concatenate a URL just to "complete" `base_url`—if you cannot obtain it, omit it and let the server reuse the original task's source URL.
 
-`+db-sync-update` 也遵循 db-sync 家族「省略 `--environment` 落 online」的规则，所以改 dev 上的任务必须显式带该任务所在环境的 `--environment`（多环境应用的 streaming 任务通常在 `dev`），否则会错落 online、找不到任务或改错分支。
+`+db-sync-update` also follows the db-sync family rule of "omitting `--environment` lands on online," so modifying a task on dev must explicitly include the `--environment` of the environment where that task resides (streaming tasks for multi-environment applications are usually in `dev`); otherwise it will incorrectly land on online, fail to find the task, or modify the wrong branch.
 
 ```bash
 lark-cli apps +db-sync-get --app-id app_xxx --task-id streaming_123 -q '.data | {mode, source, target, field_maps}' > sync.json
 lark-cli apps +db-sync-update --app-id app_xxx --task-id streaming_123 --environment dev --config @sync.json --yes
 ```
 
-**列表与生命周期**：
+**Listing and lifecycle**:
 
 ```bash
 lark-cli apps +db-sync-list --app-id app_xxx --mode streaming --table customers
@@ -195,96 +204,101 @@ lark-cli apps +db-sync-enable --app-id app_xxx --task-id streaming_123
 lark-cli apps +db-sync-delete --app-id app_xxx --task-id streaming_123 --yes
 ```
 
-`+db-sync-enable`、`+db-sync-disable`、`+db-sync-update`、`+db-sync-delete` 只适用于 `streaming_...` task。对 `batch_...` 执行这些操作会返回 failed-precondition。
+`+db-sync-enable`, `+db-sync-disable`, `+db-sync-update`, and `+db-sync-delete` apply only to `streaming_...` tasks. Performing these operations on `batch_...` returns failed-precondition.
 
-**batch 任务 operation-not-allowed 恢复**：用户说“批量任务重新启用”“导入历史订单表的任务重新 enable”“系统说操作不允许”时，先给生命周期结论：batch / import 类任务是一次性任务，完成或失败后不能重新启用，也不要反复调用 `+db-sync-enable`。下一步改为查状态和结果：
+**batch task operation-not-allowed recovery**: When the user says "re-enable the batch task", "re-enable the task that imported the historical orders table", or "the system says the operation is not allowed", first give the lifecycle conclusion: batch / import tasks are one-off tasks and cannot be re-enabled after they complete or fail, and do not repeatedly call `+db-sync-enable`. Instead, move on to checking status and results:
 
 ```bash
 lark-cli apps +db-sync-get --app-id app_xxx --task-id batch_123
 ```
 
-把 `status`、`result`、`warnings` 和目标表写入情况告诉用户。若用户要的是后续持续同步，不是“重启这个 batch”，应新建 `mode=streaming` 任务：先 `+db-sync-create --preview` 给用户确认映射和影响，再带 `--yes` 创建；不要强行 enable 已完成的 batch 任务。若此时 CLI 还缺授权，仍要先解释这个生命周期边界，再提示授权完成后用 `+db-sync-get` 查结果。
+Tell the user about `status`, `result`, `warnings`, and the target table write status. If what the user wants is ongoing subsequent sync rather than "restarting this batch", a new `mode=streaming` task should be created: first `+db-sync-create --preview` for the user to confirm the mapping and impact, then create it with `--yes`; do not force-enable a completed batch task. If the CLI is still missing authorization at this point, still explain this lifecycle boundary first, then prompt that after authorization completes, use `+db-sync-get` to check the results.
 
-**失败恢复**：看到 `warnings` 不要直接说同步成功。按 warning 或 error 的 `hint` 继续排查，恢复路径按任务 mode 分支：
+**Failure recovery**: When you see `warnings`, do not directly say the sync succeeded. Continue troubleshooting according to the warning or error's `hint`, and branch the recovery path by task mode:
 
-- **streaming 任务**：常见路径是 `+log-list --keyword <target_table>` / `+log-get` 查日志，然后用 `+db-execute` 修目标表结构，或用 `+db-sync-update`（带该任务所在环境的 `--environment`）修字段映射，最后对同一 `task_id` 再 `+db-sync-get` 复查。
-- **batch 任务**：batch 是一次性任务、**不能 update**（见上文生命周期）。修完目标表结构（`+db-execute`）后不要 update 原 batch，而是重新 `+db-sync-create --preview` 建新任务；只想看这个 batch 的结果就直接 `+db-sync-get`。
+- **streaming task**: The common path is `+log-list --keyword <target_table>` / `+log-get` to check logs, then use `+db-execute` to fix the target table structure, or use `+db-sync-update` (with the `--environment` of the environment where the task resides) to fix the field mapping, and finally `+db-sync-get` the same `task_id` again to recheck.
+- **batch task**: batch is a one-off task and **cannot be updated** (see the lifecycle above). After fixing the target table structure (`+db-execute`), do not update the original batch; instead `+db-sync-create --preview` again to create a new task; if you only want to see this batch's results, just `+db-sync-get`.
 
-若此时 CLI 还缺授权、查不到 warning 详情，也不要只给泛化的字段核对建议：先说明被授权卡住，再把对应 mode 的固定命令链作为授权完成后的下一步明确交代给用户。
+If the CLI is still missing authorization at this point and the warning details cannot be retrieved, do not just give generic field-checking suggestions either: first explain that you are blocked by authorization, then clearly lay out the fixed command chain for the corresponding mode as the next step after authorization completes.
 
-**online 禁 DDL（`k_dl_4000001`）恢复**：`+db-sync-create` 建表报 `k_dl_4000001：forbid ddl/dcl operation in online env` 时，这必然是多环境应用（共享库在 online 建表不会报此码）。online 分支**本就不允许**直接建表，这是多环境应用的产品设计、不是可绕过的限制。改用 `--environment dev` 重跑 `+db-sync-create`，把表建到 dev 分支；不要试图「在 online 想办法重试建表」，没有这个选项。
+**online DDL prohibition (`k_dl_4000001`) recovery**: When `+db-sync-create` table creation reports `k_dl_4000001：forbid ddl/dcl operation in online env`, this is necessarily a multi-environment app (a shared database creating a table in online would not report this code). The online branch **is inherently not allowed** to create tables directly; this is the product design for multi-environment apps, not a bypassable restriction. Instead use `--environment dev` to rerun `+db-sync-create` and create the table in the dev branch; do not try to "find a way to retry table creation in online"—there is no such option.
 
-**缺 Base 表记录 ID 映射列（`400002477`）恢复**：streaming 自动同步要求目标表有一个映射给「Base 表记录 ID」的 **text + 单值 + unique** 列。用 `action=use_existing` 写已有表时，若该表没有这样的列，会报 `400002477`（Field mapping must include 'Base 表记录 ID'）。先用 `+db-execute` 给表加一个，如 `ALTER TABLE <表> ADD COLUMN base_record_id varchar UNIQUE`，再把它映射给「Base 表记录 ID」、重跑 `+db-sync-create --preview`。注意这是**加列**、不是建表，不需要审计列 / RLS 那套建表规范。
+**Missing Base table record ID mapping column (`400002477`) recovery**: streaming auto-sync requires the target table to have a **text + single value + unique** column mapped to "Base table record ID". When using `action=use_existing` to write to an existing table, if the table has no such column, it reports `400002477` (Field mapping must include 'Base table record ID'). First use `+db-execute` to add one to the table, such as `ALTER TABLE <表> ADD COLUMN base_record_id varchar UNIQUE`, then map it to "Base table record ID" and rerun `+db-sync-create --preview`. Note that this is **adding a column**, not creating a table, so the audit column / RLS set of table-creation conventions is not needed.
 
-### 变更追溯与审计
+<a id="变更追溯与审计"></a>
+### Change tracing and auditing
 
-**`+db-changelog-list`**：查表结构变更（DDL）历史——谁、什么时候、改了哪张表、做了什么。可按 `--table` 过滤、按 `--change-id` 精确定位某条、用 `--since`/`--until` 圈时间区间，分页 `--page-size`/`--page-token`。
+**`+db-changelog-list`**: Check table structure change (DDL) history—who, when, which table was changed, and what was done. You can filter by `--table`, pinpoint a specific entry by `--change-id`, bound the time range with `--since`/`--until`, and paginate with `--page-size`/`--page-token`.
 
 ```bash
 lark-cli apps +db-changelog-list --app-id app_xxx --table orders --since 7d
 ```
 
-**`+db-audit-status`**：看审计开关状态。给 `--table` 看单表，不给则列出所有已配置的表（开没开、保留期）。
+**`+db-audit-status`**: View audit switch status. Provide `--table` to see a single table; if not provided, list all configured tables (whether enabled, retention period).
 
-**`+db-audit-enable` / `+db-audit-disable`**：开 / 关某张表的行级变更审计。`--retention` 设保留期，取值 `7d`/`30d`/`180d`/`360d`/`forever`（默认 `7d`）。不要对已经开启审计的表重复 enable——不确定就先用 `+db-audit-status` 查。
+**`+db-audit-enable` / `+db-audit-disable`**: Enable / disable row-level change auditing for a table. `--retention` sets the retention period, with values `7d`/`30d`/`180d`/`360d`/`forever` (default `7d`). Do not repeatedly enable a table that already has auditing enabled—if unsure, first check with `+db-audit-status`.
 
 ```bash
 lark-cli apps +db-audit-enable --app-id app_xxx --table orders --retention 30d
 lark-cli apps +db-audit-disable --app-id app_xxx --table orders
 ```
 
-**`+db-audit-list`**：列出表的行级变更事件（INSERT/UPDATE/DELETE 的前后值与操作人）。`--table` 必填、可重复传多张表；`--since`/`--until` 圈时间。
-- **多表查询**：会先帮用户把不存在、或没开审计的表过滤掉再查，被过滤的表及原因列在结果的 `skipped` 里——据此告诉用户哪些表没纳入及为什么。
-- **单表查询**：不预过滤，表不存在 / 未开审计会直接报错（按 `error.hint` 转述给用户，引导先 `+db-audit-enable`）。
+**`+db-audit-list`**: List a table's row-level change events (before/after values and operator for INSERT/UPDATE/DELETE). `--table` is required and can be passed repeatedly for multiple tables; `--since`/`--until` bound the time.
+- **Multi-table query**: Tables that do not exist or do not have auditing enabled are first filtered out for the user before querying; the filtered tables and reasons are listed in the result's `skipped`—use this to tell the user which tables were not included and why.
+- **Single-table query**: No pre-filtering; if the table does not exist / does not have auditing enabled, it errors directly (relay this to the user per `error.hint`, guiding them to first `+db-audit-enable`).
 
 ```bash
 lark-cli apps +db-audit-list --app-id app_xxx --table orders --since 24h
 lark-cli apps +db-audit-list --app-id app_xxx --table orders --table users
 ```
 
-### 时间点恢复（PITR）
+<a id="时间点恢复pitr"></a>
+### Point-in-time recovery (PITR)
 
-**`+db-recovery-diff`**：预览把库恢复到 `--target` 时间点会带来哪些变更（受影响的表、行数、预计耗时），不落地。同样需 `spark:app:write` scope。
+**`+db-recovery-diff`**: Preview what changes restoring the database to the `--target` point in time would bring (affected tables, row counts, estimated duration), without applying them. Also requires the `spark:app:write` scope.
 
-**`+db-recovery-apply`（高危）**：把库恢复到某个时间点，**会覆盖当前数据**，不可逆，必须带 `--yes`。
+**`+db-recovery-apply` (high risk)**: Restore the database to a point in time; **this overwrites current data**, is irreversible, and must include `--yes`.
 
-- 可恢复窗口最长 **7 天**，且不早于**最近一次 `+db-env-migrate`**；超出窗口的目标会被拒。
-- 目标时间点与当前库一致时返回 `no_changes`（空操作），不算失败。
-- 动手前务必先 `+db-recovery-diff` 给用户确认。
+- The recoverable window is at most **7 days**, and no earlier than the **most recent `+db-env-migrate`**; targets outside the window are rejected.
+- When the target point in time matches the current database, it returns `no_changes` (no-op), which does not count as a failure.
+- Before acting, be sure to first `+db-recovery-diff` for user confirmation.
 
 ```bash
 lark-cli apps +db-recovery-diff --app-id app_xxx --target 2h
 lark-cli apps +db-recovery-apply --app-id app_xxx --target 2026-04-15T10:00:00Z --yes
 ```
 
-### 配额
+<a id="配额"></a>
+### Quota
 
-**`+db-quota-get`**：查数据库存储用量（已用量、表数、视图数；配额接入后还会给总配额与使用率）。
+**`+db-quota-get`**: Check database storage usage (used amount, table count, view count; once quota integration is in place, it will also give total quota and usage rate).
 
 ```bash
 lark-cli apps +db-quota-get --app-id app_xxx --environment dev
 ```
 
-## 时间格式（`--since` / `--until` / `--target`）
+<a id="时间格式--since----until----target"></a>
+## Time format (`--since` / `--until` / `--target`)
 
-按用户口语自然传入即可，支持：
-- 相对时间 `7d` / `2h` / `30s`（从现在往前推）
-- 日期 `2026-04-15`
-- 日期时间 `2026-04-15T10:00:00`
-- 带时区的 ISO 8601 `2026-04-15T10:00:00Z` / `2026-04-15T10:00:00+08:00`
+Just pass it in naturally as the user speaks; supported:
+- Relative time `7d` / `2h` / `30s` (counting back from now)
+- Date `2026-04-15`
+- Date-time `2026-04-15T10:00:00`
+- ISO 8601 with time zone `2026-04-15T10:00:00Z` / `2026-04-15T10:00:00+08:00`
 
-> **时区**：不带时区的 `日期` / `日期时间` 按**运行机器的本地时区**解析（再归一化到 UTC）。CI（UTC）与本地（如 UTC+8）跑同一条命令，时间边界会差几小时；要精确锁定时区时显式写 ISO 8601 带偏移（如 `...+08:00` / `...Z`）。`--target`（PITR 恢复）尤其建议带时区，避免恢复到非预期时间点。
+> **Time zone**: `日期` / `日期时间` without a time zone are parsed according to the **local time zone of the machine running it** (then normalized to UTC). Running the same command in CI (UTC) and locally (e.g. UTC+8) will differ by a few hours at the time boundary; to lock the time zone precisely, explicitly write ISO 8601 with an offset (e.g. `...+08:00` / `...Z`). `--target` (PITR restore) especially should include a time zone, to avoid restoring to an unintended point in time.
 
-## Agent 规则
+<a id="agent-规则"></a>
+## Agent rules
 
-- 用户说「本地 / 开发库 / 调试库」优先 `--environment dev`，线上排查用 `--environment online`；数据面写操作（导入 / 审计开关）建议先在 `dev` 验再动 `online`。**注意省略 `--environment` 时写操作会落到服务端选中的分支——单环境应用即 `online`（生产）**：不确定应用是否多环境时，写操作显式传 `--environment`；显式 `dev` 在单环境应用上会安全报错（无 dev 分支），正好当「是否多环境」的探针用。
-- 看表用 `+db-table-list`，看结构用 `+db-table-get`（要建表语句加 `--format pretty`）；`+db-env-create` 仅用于存量单库拆多环境，新建的 full_stack 应用一般不需要。
-- 高危命令（`+db-env-create`、`+db-data-import`、`+db-env-migrate`、`+db-recovery-apply`、`+db-sync-create`、`+db-sync-update`、`+db-sync-delete`）动手前先看清影响再带 `--yes`：发布 / 恢复先跑对应预览 `+db-env-diff` / `+db-recovery-diff`，Base 同步先跑 `+db-sync-create --preview`，导入无预览命令、可先 `--dry-run` 看请求或先在 `--environment dev` 验；不要静默追加 `--yes`，遇 confirmation_required（exit 10）按 lark-shared 协议向用户确认不可逆风险后再补 `--yes` 重试。
-- 导入 / 导出的本地路径用工作目录内相对路径；超大表导出会被行数 / 体积上限拒，改用 `+db-execute` 分批。
-- Base 同步优先走 preview → 用户确认 → create，这是最稳的最佳实践、不是强制。用户明确要求直接 create 时，可省略 `field_maps`（或传空数组）让服务端自动匹配并创建；不要为了拿 mapping 强制用户先 preview。显式写映射时使用 `field_maps` / `option_mappings` 复数 key。
-- 修复 Base 同步配置时，只把 `field_map` / `option_mapping` 改成 `field_maps` / `option_mappings`。若显式给了 `field_maps`，检查至少一个映射启用；全是 `"enabled": false` 时先让用户确认要启用哪项。create 也可删掉/置空 `field_maps` 交给服务端自动匹配，但 update 仍必须提供启用的映射。
-- `+db-sync-update` 省略 `source.base_url` 是合法的（服务端复用原任务源 URL）；`+db-sync-get` 不返回 `base_url` 属正常，不要因此编造 domain / 拼接 URL 去"补全"，只有换源 / 替换表时才传新的 `base_url`。`+db-sync-create` 的 `base_url` 必填，缺失由服务端报错。用户说「同步 xxx 表」时把「xxx」填进 `source.table.name`——填了 name 就以 name 为准（服务端用 `base_url` 的 token + name 反查 tableId，覆盖 url 的 `table=` 参数），不填才用 url 的 `table=` 参数定位；别只给 `base_url`。
-- batch 同步任务不能重新 enable。遇到 operation-not-allowed 先 `+db-sync-get` 查状态和结果；要持续同步就新建 streaming 任务，走 preview -> 用户确认 -> create。
-- `+db-sync-*` 省略 `--environment` 默认落 online。多环境应用建表（`action=create`）必须显式 `--environment dev`；省略或填 `online` 会撞 `k_dl_4000001`（online 禁 DDL）——那是多环境应用的产品设计，把表建到 dev 分支即可，不要在 online 重试建表。共享库应用在 online 建表正常，不受此限。
-- `+db-audit-list` 多表查询时，把结果里 `skipped` 的表（不存在 / 未开审计）连同原因一并向用户说明，不要让用户以为这些表「没有变更」。
-- 恢复是覆盖式且不可逆：`+db-recovery-apply` 前必须先 `+db-recovery-diff`，并明确告知用户会覆盖当前数据。
+- When the user says "local / dev database / debug database", prefer `--environment dev`; for online troubleshooting use `--environment online`; for data-plane write operations (import / audit switches), it is recommended to first verify in `dev` before touching `online`. **Note that when `--environment` is omitted, write operations land on the branch selected by the server—for a single-environment app that is `online` (production)**: when unsure whether the app is multi-environment, explicitly pass `--environment` for write operations; explicitly passing `dev` on a single-environment app safely errors (no dev branch), which is exactly usable as a probe for "is it multi-environment".
+- To view tables use `+db-table-list`; to view structure use `+db-table-get` (add `--format pretty` for the create-table statement); `+db-env-create` is only for splitting an existing single database into multiple environments, and newly created full_stack apps generally do not need it.
+- For high-risk commands (`+db-env-create`, `+db-data-import`, `+db-env-migrate`, `+db-recovery-apply`, `+db-sync-create`, `+db-sync-update`, `+db-sync-delete`), understand the impact before acting, then include `--yes`: for publish / restore, first run the corresponding preview `+db-env-diff` / `+db-recovery-diff`; for Base sync, first run `+db-sync-create --preview`; import has no preview command, so you can first `--dry-run` to see the request or first verify in `--environment dev`; do not silently append `--yes`; when encountering confirmation_required (exit 10), confirm the irreversible risk with the user per the lark-shared protocol, then add `--yes` and retry.
+- Use relative paths within the working directory for import / export local paths; exporting an oversized table will be rejected by the row count / size limit, so switch to `+db-execute` for batching.
+- For Base sync, prefer preview → user confirmation → create; this is the most reliable best practice, not mandatory. When the user explicitly requests direct create, you may omit `field_maps` (or pass an empty array) to let the server auto-match and create; do not force the user to preview first just to get the mapping. When explicitly writing mappings, use the plural keys `field_maps` / `option_mappings`.
+- When fixing Base sync configuration, only change `field_map` / `option_mapping` to `field_maps` / `option_mappings`. If `field_maps` is explicitly given, check that at least one mapping is enabled; when all are `"enabled": false`, first have the user confirm which one to enable. For create you may also delete/empty `field_maps` and let the server auto-match, but update must still provide enabled mappings.
+- It is legal for `+db-sync-update` to omit `source.base_url` (the server reuses the original task's source URL); it is normal for `+db-sync-get` not to return `base_url`, so do not fabricate a domain / concatenate a URL to "complete" it on that basis; only pass a new `base_url` when changing the source / replacing the table. `+db-sync-create`'s `base_url` is required, and if missing the server reports an error. When the user says "sync the xxx table", put "xxx" into `source.table.name`—if name is provided, name takes precedence (the server uses `base_url`'s token + name to look up the tableId, overriding the url's `table=` parameter); only if not provided does it use the url's `table=` parameter for location; do not provide only `base_url`.
+- batch sync tasks cannot be re-enabled. When encountering operation-not-allowed, first `+db-sync-get` to check status and results; if ongoing sync is needed, create a new streaming task, going through preview -> user confirmation -> create.
+- When `+db-sync-*` omits `--environment`, it defaults to online. Creating tables for a multi-environment app (`action=create`) must explicitly include `--environment dev`; omitting it or passing `online` will hit `k_dl_4000001` (online prohibits DDL)—that is the product design for multi-environment apps, so just create the table in the dev branch and do not retry table creation in online. Shared-database apps creating tables in online is normal and not subject to this restriction.
+- For `+db-audit-list` multi-table queries, explain to the user the tables in the result's `skipped` (nonexistent / auditing not enabled) along with the reasons, so the user does not think these tables "have no changes".
+- Restore is overwrite-based and irreversible: before `+db-recovery-apply` you must first `+db-recovery-diff`, and clearly tell the user that current data will be overwritten.

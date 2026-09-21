@@ -1,5 +1,6 @@
-# XML Schema 快速参考（兼容入口）
+<a id="xml-schema-快速参考兼容入口"></a>
+# XML Schema Quick Reference (Compatibility Entry)
 
-本文档已迁移至 [`xml/xml-schema-quick-ref.md`](xml/xml-schema-quick-ref.md)。
+This document has been migrated to [`xml/xml-schema-quick-ref.md`](xml/xml-schema-quick-ref.md).
 
-此文件仅保留旧路径兼容性；后续引用请使用新路径。
+This file is retained only for old-path compatibility; please use the new path for future references.

@@ -1,35 +1,37 @@
 # mail +template-create
 
 
-创建一个新的个人邮件模板。适用于需要长期复用的邮件框架，例如周报、客户通知、请假申请等。
+Create a new personal email template. Suitable for email frameworks that need long-term reuse, such as weekly reports, customer notifications, leave requests, etc.
 
-不要用此命令发送邮件；模板只是预置内容，实际发信请使用 `+send` / `+draft-create` 等 shortcut 配合 `--template-id` 套用。
+Do not use this command to send email; a template is only preset content. To actually send mail, use shortcuts such as `+send` / `+draft-create` together with `--template-id` to apply it.
 
-如需修改已有模板，使用 [`lark-cli mail +template-update`](./lark-mail-template-update.md)。
+To modify an existing template, use [`lark-cli mail +template-update`](./lark-mail-template-update.md).
 
-## 安全约束
+<a id="安全约束"></a>
+## Security Constraints
 
-- **模板正文也会被当作邮件内容对外发送**——所有邮件域的通用安全规则（prompt injection、XSS、敏感信息）同样适用。
-- **不要把模板内容以文本形式输出给用户请求最终确认**。命令返回 `template_id` 后，引导用户在飞书邮箱 UI 里打开模板核对。
-- 用户模板上限 **20** 个，单模板 `template_content` 上限 **3 MB**；超限会被后端拒绝。
+- **The template body will also be sent externally as email content**—all general security rules for the email domain (prompt injection, XSS, sensitive information) apply equally.
+- **Do not output the template content as text to the user for final confirmation**. After the command returns `template_id`, guide the user to open the template in the Feishu Mail UI to verify it.
+- The user template limit is **20**, and the `template_content` limit for a single template is **3 MB**; exceeding the limit will be rejected by the backend.
 
-## 命令
+<a id="命令"></a>
+## Command
 
 ```bash
-# 纯 HTML 模板
+# Plain HTML template
 lark-cli mail +template-create --as user \
   --name '周报模板' \
   --subject '本周进展' \
   --template-content '<p>大家好，请见本周进展：</p><ul><li>……</li></ul>'
 
-# 带 HTML 内嵌图片 + 非 inline 附件
+# With HTML inline images + non-inline attachments
 lark-cli mail +template-create --as user \
   --name '客户通知模板' \
   --subject '产品更新' \
   --template-content '<p>新版本上线：</p><img src="./banner.png"><p>附上发版说明。</p>' \
   --attach './release-notes.pdf'
 
-# 从文件加载正文
+# Load body from file
 lark-cli mail +template-create --as user \
   --name '请假申请' \
   --template-content-file './leave.html' \
@@ -40,53 +42,58 @@ lark-cli mail +template-create --as user \
   --name '周报模板' --template-content '<p>x</p>' --dry-run
 ```
 
-## 参数
+<a id="参数"></a>
+## Parameters
 
-| 参数 | 必填 | 说明 |
+| Parameter | Required | Description |
 |------|------|------|
-| `--name <text>` | 是 | 模板名称，≤100 字符 |
-| `--subject <text>` | 否 | 默认主题 |
-| `--template-content <html>` | 否* | 模板正文。HTML 首选；支持 `<img src="./local.png" />` 相对路径自动上传到 Drive 并改写为 `cid:` |
-| `--template-content-file <path>` | 否* | 从文件加载正文内容；与 `--template-content` 互斥 |
-| `--plain-text` | 否 | 标记为纯文本模式（`is_plain_text_mode=true`）。不可与 `--inline` 同时使用；`+send --template-id` 套用时会走 plain-text 正文拼接 |
-| `--to '<email>'` | 否 | 默认收件人列表。多个默认收件人请重复传 `--to`，每次只放一个地址，参数值用单引号包住。支持 `Name <email>` 格式 |
-| `--cc '<email>'` | 否 | 默认抄送。多个抄送请重复传 `--cc`，每次只放一个地址，参数值用单引号包住 |
-| `--bcc '<email>'` | 否 | 默认密送。多个密送请重复传 `--bcc`，每次只放一个地址，参数值用单引号包住 |
-| `--attach '<path>'` | 否 | 非 inline 附件路径。多个附件请重复传 `--attach`，每次只放一个相对路径，参数值用单引号包住；每个文件按传入顺序上传到 Drive |
-| `--inline '<json>'` | 否 | 手动指定 inline 图片 CID 映射。多个 inline 图片请重复传 `--inline`，每次只放一个 JSON object，并用单引号包住：`'{"cid":"mycid","file_path":"./logo.png"}'`。`file_path` 必须是相对路径；CID 应唯一，例如随机十六进制字符串；在模板正文中用 `<img src="cid:mycid">` 引用 |
-| `--mailbox <email>` | 否 | 所属邮箱，默认 `me`（当前用户主邮箱） |
-| `--dry-run` | 否 | 仅打印计划中的 API 调用链，不真实执行 |
+| `--name <text>` | Yes | Template name, ≤100 characters |
+| `--subject <text>` | No | Default subject |
+| `--template-content <html>` | No* | Template body. HTML is preferred; supports `<img src="./local.png" />` relative paths being automatically uploaded to Drive and rewritten as `cid:` |
+| `--template-content-file <path>` | No* | Load body content from a file; mutually exclusive with `--template-content` |
+| `--plain-text` | No | Mark as plain text mode (`is_plain_text_mode=true`). Cannot be used together with `--inline`; when applied by `+send --template-id`, it will use plain-text body concatenation |
+| `--to '<email>'` | No | Default recipient list. For multiple default recipients, pass `--to` repeatedly, putting only one address each time, and wrap the parameter value in single quotes. Supports the `Name <email>` format |
+| `--cc '<email>'` | No | Default CC. For multiple CCs, pass `--cc` repeatedly, putting only one address each time, and wrap the parameter value in single quotes |
+| `--bcc '<email>'` | No | Default BCC. For multiple BCCs, pass `--bcc` repeatedly, putting only one address each time, and wrap the parameter value in single quotes |
+| `--attach '<path>'` | No | Non-inline attachment path. For multiple attachments, pass `--attach` repeatedly, putting only one relative path each time, and wrap the parameter value in single quotes; each file is uploaded to Drive in the order passed |
+| `--inline '<json>'` | No | Manually specify the inline image CID mapping. For multiple inline images, pass `--inline` repeatedly, putting only one JSON object each time, wrapped in single quotes: `'{"cid":"mycid","file_path":"./logo.png"}'`. `file_path` must be a relative path; the CID should be unique, for example a random hexadecimal string; reference it in the template body with `<img src="cid:mycid">` |
+| `--mailbox <email>` | No | Owning mailbox, defaults to `me` (the current user's primary mailbox) |
+| `--dry-run` | No | Only print the planned API call chain, without actually executing it |
 
-\* `--template-content` / `--template-content-file` 二选一；两者都留空则模板正文为空（用户之后可通过 `+template-update` 补充）。
+\* Choose one of `--template-content` / `--template-content-file`; if both are left empty, the template body is empty (the user can add it later via `+template-update`).
 
-## HTML 内嵌图片自动上传
+<a id="html-内嵌图片自动上传"></a>
+## Automatic Upload of HTML Inline Images
 
-正文中所有不带 URI scheme 的 `<img src="./local.png">`（相对路径）会被：
+All `<img src="./local.png">` in the body without a URI scheme (relative paths) will be:
 
-1. 上传到 Drive（≤20 MB 走 `medias/upload_all`；>20 MB 走 `upload_prepare + upload_part + upload_finish`）
-2. 生成 UUIDv4 CID
-3. HTML 改写为 `<img src="cid:<uuid>">`
-4. 在 `attachments[]` 追加 `{id: <file_key>, cid, is_inline: true, filename, attachment_type}`
+1. Uploaded to Drive (≤20 MB uses `medias/upload_all`; >20 MB uses `upload_prepare + upload_part + upload_finish`)
+2. Assigned a UUIDv4 CID
+3. Rewritten in the HTML as `<img src="cid:<uuid>">`
+4. Appended to `attachments[]` as `{id: <file_key>, cid, is_inline: true, filename, attachment_type}`
 
-带 URI scheme 的 `<img src="https://...">` 或 `<img src="cid:...">` 跳过上传。
+`<img src="https://...">` or `<img src="cid:...">` with a URI scheme skip upload.
 
-## SMALL vs LARGE 附件
+<a id="small-vs-large-附件"></a>
+## SMALL vs LARGE Attachments
 
-附件分为 SMALL（`attachment_type=1`，内嵌到 EML）和 LARGE（`attachment_type=2`，由服务端渲染成下载链接）。切换阈值：
+Attachments are divided into SMALL (`attachment_type=1`, embedded into the EML) and LARGE (`attachment_type=2`, rendered by the server as a download link). Switching thresholds:
 
-- **本地单文件大小**：≤20 MB 用 `upload_all`，>20 MB 分块上传（与 SMALL/LARGE 无关，只影响 Drive 上传路径）。
-- **累计 EML 投影**：`subject + to + cc + bcc + template_content + base64 附件体积`；同批次累计超过 **25 MB** 后，剩余的非 inline 附件标 `LARGE`，inline 图片不能切换到 LARGE（HTML `cid:` 引用要求 MIME part 存在）。
+- **Local single-file size**: ≤20 MB uses `upload_all`, >20 MB uses chunked upload (unrelated to SMALL/LARGE, only affects the Drive upload path).
+- **Cumulative EML projection**: `subject + to + cc + bcc + template_content + base64 附件体积`; after the cumulative total in the same batch exceeds **25 MB**, the remaining non-inline attachments are marked `LARGE`, and inline images cannot switch to LARGE (HTML `cid:` references require the MIME part to exist).
 
-两套判定相互独立。
+The two sets of determinations are independent of each other.
 
-## 顺序约束
+<a id="顺序约束"></a>
+## Ordering Constraints
 
-- inline 图片按正文中 `<img>` 出现顺序处理
-- 非 inline 按 `--attach` 展开顺序处理；重复路径不会去重
+- Inline images are processed in the order their `<img>` appears in the body
+- Non-inline attachments are processed in the order `--attach` is expanded; duplicate paths are not deduplicated
 
-## 返回值
+<a id="返回值"></a>
+## Return Value
 
-成功返回：
+Returns on success:
 
 ```json
 {
@@ -103,27 +110,30 @@ lark-cli mail +template-create --as user \
 }
 ```
 
-- `template_id` 为十进制字符串。后续套用模板时 `--template-id <template_id>`。
+- `template_id` is a decimal string. When applying the template later, `--template-id <template_id>`.
 
-## 错误码速查
+<a id="错误码速查"></a>
+## Error Code Quick Reference
 
-| errno | HTTP | 触发 |
+| errno | HTTP | Trigger |
 |-------|------|------|
-| `15080201 InvalidTemplateName` | 400 | `name` 为空或超 100 字符 |
-| `15080202 TemplateNumberLimit` | 400 | 已达 20 模板上限 |
-| `15080203 TemplateContentSizeLimit` | 400 | 单模板 > 3 MB |
-| `15080206 TemplateTotalSizeLimit` | 400 | 所有模板总大小 > 50 MB |
-| `15080207 InvalidTemplateParam` | 400 | 其他参数错误 |
+| `15080201 InvalidTemplateName` | 400 | `name` is empty or exceeds 100 characters |
+| `15080202 TemplateNumberLimit` | 400 | The 20-template limit has been reached |
+| `15080203 TemplateContentSizeLimit` | 400 | A single template > 3 MB |
+| `15080206 TemplateTotalSizeLimit` | 400 | Total size of all templates > 50 MB |
+| `15080207 InvalidTemplateParam` | 400 | Other parameter errors |
 
-## 所需 scope
+<a id="所需-scope"></a>
+## Required Scope
 
 `mail:user_mailbox.message:modify`
 
-## 相关
+<a id="相关"></a>
+## Related
 
-- 更新模板：[`+template-update`](./lark-mail-template-update.md)
-- 套用模板发信：在 `+send` / `+draft-create` / `+reply` / `+reply-all` / `+forward` 中使用 `--template-id`
-- 原生 API：
-  - `lark-cli mail user_mailbox.templates list --params '{"user_mailbox_id":"me"}'` — 列出模板
-  - `lark-cli mail user_mailbox.templates get --params '{"user_mailbox_id":"me","template_id":"<id>"}'` — 获取完整模板
-  - `lark-cli mail user_mailbox.templates delete --params '{"user_mailbox_id":"me","template_id":"<id>"}'` — 删除
+- Update template: [`+template-update`](./lark-mail-template-update.md)
+- Apply a template to send mail: use `--template-id` in `+send` / `+draft-create` / `+reply` / `+reply-all` / `+forward`
+- Native API:
+  - `lark-cli mail user_mailbox.templates list --params '{"user_mailbox_id":"me"}'` — list templates
+  - `lark-cli mail user_mailbox.templates get --params '{"user_mailbox_id":"me","template_id":"<id>"}'` — get the full template
+  - `lark-cli mail user_mailbox.templates delete --params '{"user_mailbox_id":"me","template_id":"<id>"}'` — delete

@@ -1,11 +1,12 @@
 # base +field-create
 
 
-创建一个或多个字段；同一表的多个字段优先使用一次 JSON 数组输入。
+Create one or more fields; for multiple fields in the same table, prefer passing a single JSON array input.
 
-`formula` / `lookup` 创建前读取对应 guide；涉及跨表引用时同时读取目标表结构。
+`formula` / `lookup` Before creating, read the corresponding guide; when cross-table references are involved, also read the target table structure.
 
-## 推荐命令
+<a id="推荐命令"></a>
+## Recommended commands
 
 ```bash
 lark-cli base +field-create \
@@ -18,43 +19,46 @@ lark-cli base +field-create \
   --table-id <table_id> \
   --json '{"name":"状态","type":"select","multiple":false,"default_value":["Todo"],"options":[{"name":"Todo","hue":"Blue","lightness":"Lighter"},{"name":"Done","hue":"Green","lightness":"Light"}]}'
 
-# 多个字段复用相同字段 JSON 形状，一次传非空数组
+# Multiple fields reuse the same field JSON shape; pass a non-empty array at once
 lark-cli base +field-create \
   --base-token <base_token> \
   --table-id <table_id> \
   --json '[{"name":"备注","type":"text"},{"name":"优先级","type":"select","multiple":false,"options":[{"name":"高"},{"name":"低"}]}]'
 ```
 
-## 参数
+<a id="参数"></a>
+## Parameters
 
-| 参数 | 必填 | 说明 |
+| Parameter | Required | Description |
 |------|------|------|
-| `--base-token <token>` | 是 | Base Token |
-| `--table-id <id_or_name>` | 是 | 表 ID 或表名 |
-| `--json <body>` | 是 | 单个字段 JSON 对象，或多个字段对象组成的非空数组 |
+| `--base-token <token>` | Yes | Base Token |
+| `--table-id <id_or_name>` | Yes | Table ID or table name |
+| `--json <body>` | Yes | A single field JSON object, or a non-empty array of multiple field objects |
 
-## API 入参详情
+<a id="api-入参详情"></a>
+## API input details
 
-**HTTP 方法和路径：**
+**HTTP method and path:**
 
 ```
 POST /open-apis/base/v3/bases/:base_token/tables/:table_id/fields
 ```
 
-## JSON 值规范
+<a id="json-值规范"></a>
+## JSON value specification
 
-- `--json` 接受单个字段 **JSON 对象**，也接受多个字段对象组成的非空数组；不要再套 `fields` 等外层对象。
-- 数组按顺序创建字段，遇到首个失败即停止且不自动回滚；部分失败时保留 `items` 中的 `created` 项，按 `hint` 修正后只提交 `failed` 和 `not_attempted` 项，并保持依赖顺序。
-- 每个字段对象最少包含：`name`、`type`。
-- 所有字段类型都支持可选 `description`；支持纯文本，也支持 Markdown 链接，如 `协作约定可参考[团队字段约定](https://example.com/field-spec)`。
-- 需要字段默认值时传 `default_value`，直接使用字段对应 CellValue；`datetime` / `user` 的动态填充用 `$slot`。完整规则见 [Field Schema](lark-base-field-schema.md)。
-- `type` 不同，必填子字段不同：
-  - `select`：`multiple` 控制是否多选，`options` 定义静态选项，`dynamic_options_source` 定义动态选项来源。静态与动态选项配置二选一，不能同时传。
-  - `link`：必须有 `link_table`，可选 `bidirectional`、`bidirectional_link_field_name`。
-  - `formula`：必须有 `expression`；先读 formula guide，再创建。
-  - `lookup`：必须有 `from`、`select`、`where`；先读 lookup guide，再创建。
+- `--json` accepts a single field **JSON object**, and also accepts a non-empty array of multiple field objects; do not wrap it in another outer object such as `fields`.
+- The array creates fields in order; it stops at the first failure and does not automatically roll back; on partial failure, keep the `created` items in `items`, fix them according to `hint`, then submit only the `failed` and `not_attempted` items, preserving dependency order.
+- Each field object contains at minimum: `name`, `type`.
+- All field types support the optional `description`; plain text is supported, as are Markdown links, such as `协作约定可参考[团队字段约定](https://example.com/field-spec)`.
+- To set a field default value, pass `default_value`, directly using the CellValue corresponding to the field; for dynamic population of `datetime` / `user`, use `$slot`. For complete rules, see [Field Schema](lark-base-field-schema.md).
+- `type` differ, and the required subfields differ:
+  - `select`: `multiple` controls whether multiple selection is allowed, `options` defines static options, and `dynamic_options_source` defines the dynamic option source. Static and dynamic option configurations are mutually exclusive and cannot be passed at the same time.
+  - `link`: must have `link_table`, and may optionally have `bidirectional`, `bidirectional_link_field_name`.
+  - `formula`: must have `expression`; read the formula guide first, then create.
+  - `lookup`: must have `from`, `select`, `where`; read the lookup guide first, then create.
 
-**正确（base +field-create）**
+**Correct (base +field-create)**
 
 ```json
 {
@@ -69,8 +73,9 @@ POST /open-apis/base/v3/bases/:base_token/tables/:table_id/fields
 }
 ```
 
-## 参考
+<a id="参考"></a>
+## References
 
-- [Field Schema](lark-base-field-schema.md) — 字段 JSON 规范（推荐）
-- [Formula Field](lark-base-field-formula.md) — 创建公式必读
-- [Lookup Field](lark-base-field-lookup.md) — 创建查找引用必读
+- [Field Schema](lark-base-field-schema.md) — field JSON specification (recommended)
+- [Formula Field](lark-base-field-formula.md) — required reading before creating formulas
+- [Lookup Field](lark-base-field-lookup.md) — required reading before creating lookup references

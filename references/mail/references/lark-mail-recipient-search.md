@@ -1,58 +1,64 @@
 # mail recipient search
 
 
-查找收件人邮箱地址，可搜索个人、企业邮件组、群邮件地址和外部联系人。
+Find recipient email addresses. You can search individuals, enterprise mail groups, group email addresses, and external contacts.
 
-## 何时使用
+<a id="何时使用"></a>
+## When to use
 
-- 用户只给了人名：如"给张三发邮件" -> query `"张三"`。
-- 用户只给了邮箱关键词：如"发到 larkmail 的邮箱" -> query `"@larkmail"`。
-- 用户只给了群名：如"发给项目群" -> query `"项目群"`。
-- 用户直接提供完整邮箱地址时不需要搜索，直接使用即可。
+- The user only gave a person's name: e.g. "send an email to Zhang San" -> query `"张三"`.
+- The user only gave an email keyword: e.g. "send to a larkmail email address" -> query `"@larkmail"`.
+- The user only gave a group name: e.g. "send to the project group" -> query `"项目群"`.
+- When the user directly provides a complete email address, no search is needed; use it directly.
 
-## 命令
+<a id="命令"></a>
+## Command
 
 ```bash
 lark-cli mail multi_entity search --as user --data '{"query":"<关键词>"}'
 ```
 
-## 结果类型
+<a id="结果类型"></a>
+## Result types
 
-| `type` 值 | `tag` 示例 | 说明 |
+| `type` value | `tag` example | Description |
 |-----------|-----------|------|
-| `user` / `chatter` | `chatter` | 个人用户 |
-| `enterprise_mail_group` | `mail_group` | 企业邮件组 |
-| `chat` / `group` | `chat_group_tenant` / `chat_group_normal` | 群聊（有群邮件地址） |
-| `external_contact` | `external_contact` | 外部联系人 |
+| `user` / `chatter` | `chatter` | Individual user |
+| `enterprise_mail_group` | `mail_group` | Enterprise mail group |
+| `chat` / `group` | `chat_group_tenant` / `chat_group_normal` | Group chat (has a group email address) |
+| `external_contact` | `external_contact` | External contact |
 
-## 处理规则
+<a id="处理规则"></a>
+## Handling rules
 
-1. 从结果中筛选有 `email` 字段的条目。
-2. 根据用户给出的姓名、邮箱、部门和既有上下文核对候选。唯一且精确匹配时直接使用；模糊搜索只有一条也不等于精确命中，仍有歧义时展示候选供用户选择。
-3. 展示尽可能多的字段帮助用户区分：`name`、`email`、`department`、`tag`、`display_name`、`type`、`member_count`。字段为空时省略。
-4. 若无匹配，告知用户未找到，建议换关键词或直接提供邮箱地址。
-5. 目标唯一确定后，将 `email` 传入发信 shortcut 的 `--to` / `--cc` / `--bcc` 参数。
+1. From the results, filter for entries that have the `email` field.
+2. Verify candidates against the name, email, department, and existing context provided by the user. When there is a unique and exact match, use it directly; a fuzzy search returning only one result does not equal an exact hit, and if ambiguity remains, show the candidates for the user to choose.
+3. Show as many fields as possible to help the user distinguish: `name`, `email`, `department`, `tag`, `display_name`, `type`, `member_count`. Omit fields that are empty.
+4. If there is no match, tell the user that nothing was found, and suggest changing the keyword or directly providing an email address.
+5. Once the target is uniquely determined, pass `email` to the `--to` / `--cc` / `--bcc` parameter of the send-mail shortcut.
 
-## 展示示例
+<a id="展示示例"></a>
+## Display examples
 
 ```text
-找到以下匹配"张三"的结果：
-1. 张三 <zhangsan@example.com>
-   类型：user | 部门：研发团队
+Found the following result matching "Zhang San":
+1. Zhang San <zhangsan@example.com>
+   Type: user | Department: R&D team
 ```
 
 ```text
-找到多个匹配"组"的结果，请选择：
-1. 团队邮件组 <team@example.com>
-   类型：enterprise_mail_group | 标签：mail_group
-2. 项目群 <project@example.com>
-   类型：chat | 成员数：50 | 标签：chat_group_normal
-3. 张群 <zhangqun@example.com>
-   类型：user | 部门：研发团队 | 备注名：张群同学
+Found multiple results matching "group", please choose:
+1. Team mail group <team@example.com>
+   Type: enterprise_mail_group | Tag: mail_group
+2. Project group <project@example.com>
+   Type: chat | Member count: 50 | Tag: chat_group_normal
+3. Zhang Qun <zhangqun@example.com>
+   Type: user | Department: R&D team | Alias: Zhang Qun classmate
 ```
 
-## 相关命令
+<a id="相关命令"></a>
+## Related commands
 
-- `lark-cli mail +send` — 新邮件收件人。
-- `lark-cli mail +draft-create` — 新建草稿收件人。
-- `lark-cli mail +draft-edit` — 编辑草稿收件人。
+- `lark-cli mail +send` — New email recipients.
+- `lark-cli mail +draft-create` — New draft recipients.
+- `lark-cli mail +draft-edit` — Edit draft recipients.

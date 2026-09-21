@@ -2,92 +2,96 @@
 # mail +watch
 
 
-实时监听新邮件事件（`mail.user_mailbox.event.message_received_v1`）。
+Listen for new mail events in real time (`mail.user_mailbox.event.message_received_v1`).
 
-**权限要求：** 应用需要 `mail:event`、`mail:user_mailbox.message:readonly` 权限，以及字段权限 `mail:user_mailbox.message.address:read`、`mail:user_mailbox.message.subject:read`、`mail:user_mailbox.message.body:read`，且机器人需订阅事件 `mail.user_mailbox.event.message_received_v1`。按需权限（缺失时会提示申请）：使用 `--folders` / `--folder-ids` 筛选自定义文件夹时需要 `mail:user_mailbox.folder:read`；使用 `--labels` / `--label-ids` 筛选自定义标签时需要 `mail:user_mailbox.message:modify`。
+**Permission requirements:** The app needs the `mail:event` and `mail:user_mailbox.message:readonly` permissions, as well as the field permissions `mail:user_mailbox.message.address:read`, `mail:user_mailbox.message.subject:read`, and `mail:user_mailbox.message.body:read`, and the bot must subscribe to the event `mail.user_mailbox.event.message_received_v1`. On-demand permissions (you will be prompted to apply when missing): using `--folders` / `--folder-ids` to filter custom folders requires `mail:user_mailbox.folder:read`; using `--labels` / `--label-ids` to filter custom labels requires `mail:user_mailbox.message:modify`.
 
-## 命令
+<a id="命令"></a>
+## Command
 
 ```bash
-# 默认：表格输出 message 元数据
+# Default: table output of message metadata
 lark-cli mail +watch
 
-# 仅输出 message 数据（jq 友好）
+# Output only message data (jq-friendly)
 lark-cli mail +watch --msg-format metadata --format data
 
-# 输出精简元数据（message_id / thread_id / folder_id / label_ids / internal_date / message_state）
+# Output condensed metadata (message_id / thread_id / folder_id / label_ids / internal_date / message_state)
 lark-cli mail +watch --msg-format minimal --format data
 
-# 输出纯文本全文
+# Output full plain text body
 lark-cli mail +watch --msg-format plain_text_full --format data
 
-# 输出完整 message（含正文相关字段）
+# Output the complete message (including body-related fields)
 lark-cli mail +watch --msg-format full --format data
 
-# 输出原始事件体
+# Output the raw event body
 lark-cli mail +watch --msg-format event --format data
 
-# 监听指定邮箱
+# Listen to the specified mailbox
 lark-cli mail +watch --mailbox alice@company.com
 
-# 按文件夹/标签过滤（客户端过滤，支持名称或 ID）
+# Filter by folder/label (client-side filtering, supports name or ID)
 lark-cli mail +watch --folders '["收件箱项目"]' --label-ids '["FLAGGED"]'
 
-# 写入文件
+# Write to file
 lark-cli mail +watch --msg-format metadata --output-dir ./mail-events
 
-# 查看各 --msg-format 的输出字段说明（解析前先运行）
+# View the output field descriptions for each --msg-format (run before parsing)
 lark-cli mail +watch --print-output-schema
 ```
 
-## 参数
+<a id="参数"></a>
+## Parameters
 
-| 参数 | 默认 | 说明 |
+| Parameter | Default | Description |
 |------|------|------|
-| `--mailbox <id>` | `me` | 订阅目标邮箱 |
-| `--msg-format <mode>` | `metadata` | 输出模式：`metadata` / `minimal` / `plain_text_full` / `full` / `event` |
-| `--format <mode>` | `data` | 输出样式：`json`（带 ok/data 信封的 NDJSON 流）/ `data`（裸 NDJSON 流） |
-| `--folder-ids <json-array>` | — | 文件夹 ID 过滤，如 `["INBOX","SENT"]` |
-| `--folders <json-array>` | — | 文件夹名称过滤（与 `--folder-ids` 取并集） |
-| `--label-ids <json-array>` | — | 标签 ID 过滤，如 `["FLAGGED","IMPORTANT"]` |
-| `--labels <json-array>` | — | 标签名称过滤（与 `--label-ids` 取并集） |
+| `--mailbox <id>` | `me` | Target mailbox to subscribe to |
+| `--msg-format <mode>` | `metadata` | Output mode: `metadata` / `minimal` / `plain_text_full` / `full` / `event` |
+| `--format <mode>` | `data` | Output style: `json` (NDJSON stream with ok/data envelope) / `data` (bare NDJSON stream) |
+| `--folder-ids <json-array>` | — | Folder ID filter, e.g. `["INBOX","SENT"]` |
+| `--folders <json-array>` | — | Folder name filter (union with `--folder-ids`) |
+| `--label-ids <json-array>` | — | Label ID filter, e.g. `["FLAGGED","IMPORTANT"]` |
+| `--labels <json-array>` | — | Label name filter (union with `--label-ids`) |
 
-> **过滤逻辑：** `--folder-ids`/`--folders` 与 `--label-ids`/`--labels` 之间是 **AND** 关系，即邮件必须**同时**匹配指定的文件夹和标签才会输出。同类参数内部是 **OR** 关系（匹配其中任一即可）。新收到的邮件通常只有系统标签（如 `UNREAD`、`IMPORTANT`），不会自动带有自定义标签。
-| `--output-dir <dir>` | — | 每条事件写入单独 JSON 文件 |
-| `--print-output-schema` | — | 打印各 `--msg-format` 的输出字段说明（解析输出前先运行此命令） |
-| `--dry-run` | — | 仅预览订阅请求，不实际连接 |
+> **Filter logic:** `--folder-ids`/`--folders` and `--label-ids`/`--labels` are in an **AND** relationship, meaning a message must match **both** the specified folder and label to be output. Within the same category of parameters, the relationship is **OR** (matching any one is sufficient). Newly received mail usually only has system labels (such as `UNREAD`, `IMPORTANT`) and will not automatically carry custom labels.
+| `--output-dir <dir>` | — | Write each event to a separate JSON file |
+| `--print-output-schema` | — | Print the output field descriptions for each `--msg-format` (run this command before parsing the output) |
+| `--dry-run` | — | Only preview the subscription request, without actually connecting |
 
-## --msg-format 输出结构（--format json）
+<a id="--msg-format-输出结构--format-json"></a>
+## --msg-format output structure (--format json)
 
-每条事件输出为一行 NDJSON。
+Each event is output as one line of NDJSON.
 
-**`metadata`**（默认，适合分拣/通知）
+**`metadata`** (default, suitable for triage/notification)
 ```json
 {"ok":true,"data":{"message":{"message_id":"...","thread_id":"...","subject":"...","head_from":{"name":"Alice","mail_address":"alice@example.com"},"to":[{"name":"Bob","mail_address":"bob@example.com"}],"folder_id":"INBOX","label_ids":["IMPORTANT"],"internal_date":"1742800000000","message_state":1,"body_preview":"Please find attached..."}}}
 ```
 
-**`minimal`**（仅 ID 和状态，适合追踪已读/文件夹变更）
+**`minimal`** (IDs and state only, suitable for tracking read/folder changes)
 ```json
 {"ok":true,"data":{"message":{"message_id":"...","thread_id":"...","folder_id":"INBOX","label_ids":["IMPORTANT"],"internal_date":"1742800000000","message_state":1}}}
 ```
 
-**`plain_text_full`**（metadata 全部字段 + 完整纯文本正文）
+**`plain_text_full`** (all metadata fields + full plain text body)
 ```json
 {"ok":true,"data":{"message":{"message_id":"...","subject":"...","head_from":{...},"folder_id":"INBOX","label_ids":[...],"body_preview":"...","body_plain_text":"<base64url>"}}}
 ```
 
-**`event`**（原始 WebSocket 事件，不发起 API 请求，适合调试）
+**`event`** (raw WebSocket event, no API request made, suitable for debugging)
 ```json
 {"ok":true,"data":{"header":{"event_id":"abc123","event_type":"mail.user_mailbox.event.message_received_v1","create_time":"1742800000000"},"event":{"message_id":"...","mail_address":"user@example.com"}}}
 ```
 
-**`full`**（全部字段，含 HTML 正文和附件）
+**`full`** (all fields, including HTML body and attachments)
 ```json
 {"ok":true,"data":{"message":{"message_id":"...","subject":"...","head_from":{...},"body_preview":"...","body_plain_text":"<base64url>","body_html":"<base64url>","attachments":[{"name":"report.pdf","size":102400}]}}}
 ```
 
-## 参考
+<a id="参考"></a>
+## References
 
-- [lark-mail](../index.md) — 邮箱域总览
-- [lark-mail-triage](lark-mail-triage.md) — 邮件摘要列表
-- [lark-event](../../event/index.md) — 通用事件订阅
+- [lark-mail](../index.md) — Mail domain overview
+- [lark-mail-triage](lark-mail-triage.md) — Mail summary list
+- [lark-event](../../event/index.md) — General event subscription

@@ -1,30 +1,32 @@
 # base field-extension
 
-字段插件用于扩展基础字段能力，当同行其他单元格更新时，触发 LLM 推理生成新单元格。当前公开支持的插件 ID 只有 `builtin_llm_completion`，已确认可用于文本、单选、数字字段，让目标字段基于 prompt 和字段引用生成内容，并可手动触发该字段的单元格异步更新任务。
+Field extensions are used to extend basic field capabilities. When other cells in the same row are updated, they trigger LLM inference to generate new cells. The only publicly supported extension ID currently is `builtin_llm_completion`, which has been confirmed to work with text, single select, and number fields, allowing the target field to generate content based on a prompt and field references, and allowing manual triggering of asynchronous cell update tasks for that field.
 
-三个命令：
+Three commands:
 
-- `+field-extension-get`：读取目标字段当前可识别的插件配置。
-- `+field-extension-update`：安装、更新或清空目标字段插件配置。
-- `+field-extension-update-cells`：对已配置字段插件的目标字段发起手动更新任务。
+- `+field-extension-get`: Read the currently recognizable extension configuration of the target field.
+- `+field-extension-update`: Install, update, or clear the target field extension configuration.
+- `+field-extension-update-cells`: Initiate a manual update task for a target field that already has a field extension configured.
 
-## 何时使用字段插件
+<a id="何时使用字段插件"></a>
+## When to use field extensions
 
-用户明确要让某个已有字段根据其他字段自动生成内容、总结、分类、翻译、提取信息，且目标能力可以用 prompt 表达时，使用字段插件。当前已确认的目标字段类型是文本、单选、数字。
+Use a field extension when the user explicitly wants an existing field to automatically generate content, summarize, classify, translate, or extract information based on other fields, and the target capability can be expressed with a prompt. The currently confirmed target field types are text, single select, and number.
 
-字段插件只能建立在已有字段上，不能创建列 schema。新建字段仍使用 `+field-create`；修改字段类型、选项、名称等 schema 属性仍使用 `+field-update`。
+A field extension can only be built on an existing field; it cannot create a column schema. To create a new field, still use `+field-create`; to modify schema properties such as field type, options, or name, still use `+field-update`.
 
-## 推荐命令
+<a id="推荐命令"></a>
+## Recommended commands
 
 ```bash
-# 读取当前插件配置
+# Read the current extension configuration
 lark-cli base +field-extension-get \
   --base-token <base_token> \
   --table-id <table_id> \
   --field-id <target_field_id> \
   --as user
 
-# 安装或更新 LLM Completion 插件
+# Install or update the LLM Completion extension
 lark-cli base +field-extension-update \
   --base-token <base_token> \
   --table-id <table_id> \
@@ -33,7 +35,7 @@ lark-cli base +field-extension-update \
   --as user \
   --yes
 
-# 清空字段插件配置
+# Clear the field extension configuration
 lark-cli base +field-extension-update \
   --base-token <base_token> \
   --table-id <table_id> \
@@ -42,7 +44,7 @@ lark-cli base +field-extension-update \
   --as user \
   --yes
 
-# 按视图范围触发整列更新
+# Trigger a full-column update scoped by view
 lark-cli base +field-extension-update-cells \
   --base-token <base_token> \
   --table-id <table_id> \
@@ -52,7 +54,7 @@ lark-cli base +field-extension-update-cells \
   --as user \
   --yes
 
-# 只更新指定记录
+# Update only specified records
 lark-cli base +field-extension-update-cells \
   --base-token <base_token> \
   --table-id <table_id> \
@@ -64,26 +66,29 @@ lark-cli base +field-extension-update-cells \
   --yes
 ```
 
-## 工作流
+<a id="工作流"></a>
+## Workflow
 
-1. 定位 Base、Table 和目标 Field。目标 Field 是承载插件输出的已有字段，不是 prompt 中被引用的输入字段。
-2. 用 `+field-extension-get` 读取当前配置。返回 `current_extension=null` 表示未配置、无法识别或存量配置无法转换。
-3. 构造 `+field-extension-update --json`。安装或更新时传 `extension_id=builtin_llm_completion` 和 `inputs.prompt`；清空时传 `{}`。
-4. 配置成功后，只有用户明确要立即生成或刷新已有单元格时，才调用 `+field-extension-update-cells` 发起异步生成任务。
-5. 需要验收结果时，等待任务完成或稍后用记录读取命令抽样查看目标字段单元格；`update_cells` 只返回任务 ID，不直接返回生成结果。
+1. Locate the Base, Table, and target Field. The target Field is the existing field that carries the extension output, not the input field referenced in the prompt.
+2. Use `+field-extension-get` to read the current configuration. Returning `current_extension=null` means it is not configured, cannot be recognized, or the existing configuration cannot be converted.
+3. Construct `+field-extension-update --json`. When installing or updating, pass `extension_id=builtin_llm_completion` and `inputs.prompt`; when clearing, pass `{}`.
+4. After the configuration succeeds, call `+field-extension-update-cells` to initiate an asynchronous generation task only when the user explicitly wants to immediately generate or refresh existing cells.
+5. When acceptance of results is needed, wait for the task to complete or later use a record read command to sample the target field cells; `update_cells` only returns the task ID and does not directly return the generated results.
 
-## JSON 结构
+<a id="json-结构"></a>
+## JSON structure
 
-### 通用结构
+<a id="通用结构"></a>
+### Common structure
 
-`+field-extension-update --json` 的顶层结构是字段插件配置 envelope。不同 `extension_id` 对应不同的 `inputs` 结构；不要把某个插件的 `inputs` 当成所有字段插件的固定结构。
+The top-level structure of `+field-extension-update --json` is the field extension configuration envelope. Different `extension_id` correspond to different `inputs` structures; do not treat the `inputs` of one extension as the fixed structure for all field extensions.
 
-| 字段 | 类型 | 说明 |
+| Field | Type | Description |
 |---|---|---|
-| `extension_id` | string | 插件 ID。当前公开只支持 `builtin_llm_completion` |
-| `inputs` | object | 插件配置对象，结构由 `extension_id` 决定 |
+| `extension_id` | string | Extension ID. Currently only `builtin_llm_completion` is publicly supported |
+| `inputs` | object | Extension configuration object; the structure is determined by `extension_id` |
 
-清空字段插件配置时传空对象：
+When clearing the field extension configuration, pass an empty object:
 
 ```json
 {}
@@ -91,16 +96,16 @@ lark-cli base +field-extension-update-cells \
 
 ### `builtin_llm_completion`
 
-当前 `builtin_llm_completion` 用于让已有字段根据 prompt 生成内容。它的 `inputs` 结构如下：
+Currently `builtin_llm_completion` is used to let an existing field generate content based on a prompt. Its `inputs` structure is as follows:
 
-| 字段 | 类型 | 说明 |
+| Field | Type | Description |
 |---|---|---|
-| `inputs.prompt` | PromptSegment[] | 有序 prompt 片段数组 |
-| `prompt[].type` | string | `text` 或 `field_ref` |
-| `prompt[].text` | string | `type=text` 时必填 |
-| `prompt[].field` | string | `type=field_ref` 时必填，可传当前表的字段 ID 或字段名 |
+| `inputs.prompt` | PromptSegment[] | Ordered array of prompt segments |
+| `prompt[].type` | string | `text` or `field_ref` |
+| `prompt[].text` | string | Required when `type=text` |
+| `prompt[].field` | string | Required when `type=field_ref`; can pass the field ID or field name of the current table |
 
-安装或更新示例：
+Install or update example:
 
 ```json
 {
@@ -124,22 +129,23 @@ lark-cli base +field-extension-update-cells \
 }
 ```
 
-`field_ref` 只能引用当前表中的其他字段，不能引用目标字段自身；附件字段和其他不支持字段不要作为引用字段。
+`field_ref` can only reference other fields in the current table and cannot reference the target field itself; do not use attachment fields or other unsupported fields as reference fields.
 
-## 更新单元格
+<a id="更新单元格"></a>
+## Update cells
 
-`+field-extension-update-cells` 有两种范围：
+`+field-extension-update-cells` has two scopes:
 
-这是异步生成任务，响应只表示任务已创建。单元格越多，生成和写回通常耗时越久；整列更新尤其需要控制范围。
+This is an asynchronous generation task; the response only indicates that the task has been created. The more cells there are, the longer generation and write-back usually take; full-column updates especially need scope control.
 
-| 范围 | 参数 | 语义 |
+| Scope | Parameter | Semantics |
 |---|---|---|
-| `--type column` | 可选 `--view-id` | 更新目标字段在该视图范围内的单元格；不传 `--view-id` 时后端使用目标表首视图 |
-| `--type row` | 必填一个或多个 `--record-id` | 只更新这些记录上的目标字段单元格 |
+| `--type column` | Optional `--view-id` | Update the target field cells within that view's scope; when `--view-id` is not passed, the backend uses the first view of the target table |
+| `--type row` | One or more `--record-id` required | Update only the target field cells on these records |
 
-`--type row` 不要传 `--view-id`；`--type column` 不要传 `--record-id`。
+`--type row` do not pass `--view-id`; `--type column` do not pass `--record-id`.
 
-响应只返回：
+The response only returns:
 
 ```json
 {
@@ -147,24 +153,27 @@ lark-cli base +field-extension-update-cells \
 }
 ```
 
-## 返回重点
+<a id="返回重点"></a>
+## Return highlights
 
-读取和写配置都返回 `current_extension`：
+Both reading and writing configuration return `current_extension`:
 
-- 已配置并可识别时，`current_extension.extension_id` 表示插件 ID，`current_extension.inputs` 是该插件对应的配置对象。
-- 未配置或当前无法识别时，`current_extension` 为 `null`。
+- When configured and recognizable, `current_extension.extension_id` indicates the extension ID, and `current_extension.inputs` is the configuration object corresponding to that extension.
+- When not configured or currently unrecognizable, `current_extension` is `null`.
 
-## 权限和风险
+<a id="权限和风险"></a>
+## Permissions and risks
 
-- `+field-extension-get` 是只读命令，权限 `base:field:read`。
-- `+field-extension-update` 是高风险写命令，权限 `base:field:update`，会改变目标字段的自动生成配置，执行时必须带 `--yes`。
-- `+field-extension-update-cells` 是高风险写命令，权限 `base:record:update`，会触发目标字段单元格异步写回，执行时必须带 `--yes`。
-- 用户需要具备管理目标表或目标字段插件的权限才能触发更新任务；如果接口返回权限不足，先按 Base 权限或高级权限角色确认用户权限。
+- `+field-extension-get` is a read-only command with permission `base:field:read`.
+- `+field-extension-update` is a high-risk write command with permission `base:field:update`; it changes the target field's automatic generation configuration and must be executed with `--yes`.
+- `+field-extension-update-cells` is a high-risk write command with permission `base:record:update`; it triggers asynchronous write-back to the target field cells and must be executed with `--yes`.
+- The user needs permission to manage the target table or the target field extension in order to trigger an update task; if the API returns insufficient permission, first confirm the user's permissions according to Base permissions or advanced permission roles.
 
-## 注意事项
+<a id="注意事项"></a>
+## Notes
 
-- 目标字段必须是当前字段插件已支持的字段类型；当前已确认支持文本、单选、数字字段。不要把字段插件当成任意字段类型都可用的通用能力。
-- 写入插件配置后，自动更新会强制开启；当前不提供关闭自动更新的参数。
-- 读取接口中的 `field_ref.field` 通常返回字段名称；字段名称不可用时可能返回字段 ID。
-- `+field-extension-update` 不返回 `input_schemas`。
-- `+field-extension-update-cells --type column` 可能触发大量 AI 生成任务，单元格越多耗时通常越久；除非用户明确要求整列刷新，否则优先按 `--type row` 精确更新目标记录。
+- The target field must be a field type already supported by the current field extension; currently confirmed supported field types are text, single select, and number. Do not treat field extensions as a general capability available for any field type.
+- After the extension configuration is written, automatic updates are forcibly enabled; currently there is no parameter to disable automatic updates.
+- The `field_ref.field` in the read API usually returns the field name; when the field name is unavailable, it may return the field ID.
+- `+field-extension-update` does not return `input_schemas`.
+- `+field-extension-update-cells --type column` may trigger a large number of AI generation tasks; the more cells there are, the longer it usually takes; unless the user explicitly requests a full-column refresh, prefer precise updates of target records by `--type row`.

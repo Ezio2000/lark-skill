@@ -1,210 +1,230 @@
-# 飞书表格样式与配色规范
+<a id="飞书表格样式与配色规范"></a>
+# Lark Sheets Style and Color Standards
 
-> **本文定位**：飞书表格"正确视觉输出"的取值标准与美化决策流——配色、表头、对齐、数值格式、斑马纹、列宽行高、图表展示，以及新增 / 继承 / 美化已有区域三类场景的做法。
-> **边界**：本文只讲"样式长什么样、怎么决策"；**怎么调用工具写入样式**（`cell_styles` / `border_styles` 字段、合并、resize 等参数）见 `references/lark-sheets-write-cells.md` / `references/lark-sheets-range-operations.md` / `references/lark-sheets-batch-update.md`。**条件格式**（高亮 / 标红 / 数据条 / 色阶）见 `references/lark-sheets-conditional-format.md`。本文不含 shortcut，通用编辑准则见主 index.md「飞书表格编辑准则」。
+> **Purpose of this document**: The value standards and beautification decision flow for "correct visual output" in Lark Sheets — color schemes, headers, alignment, number formats, zebra stripes, column widths and row heights, chart presentation, and the approaches for three scenarios: adding new areas, inheriting existing areas, and beautifying existing areas.
+> **Boundaries**: This document only covers "what styles look like and how to decide on them"; **how to call tools to write styles** (`cell_styles` / `border_styles` fields, merging, resize, and other parameters) is covered in `references/lark-sheets-write-cells.md` / `references/lark-sheets-range-operations.md` / `references/lark-sheets-batch-update.md`. **Conditional formatting** (highlighting / red-flagging / data bars / color scales) is covered in `references/lark-sheets-conditional-format.md`. This document does not include shortcuts; for general editing guidelines, see "Lark Sheets Editing Guidelines" in the main index.md.
 
-## 最高优先级原则
+<a id="最高优先级原则"></a>
+## Highest-Priority Principles
 
-- **用户指令优先**：用户明确提出的格式要求（如"使用红色背景"）具有最高权重，即使与通用审美冲突。
-- **继承原表风格**：编辑前先采样原文件视觉特征（色系、边框、对齐、数字格式），新增内容必须与之对齐。严禁对已有风格的文件强行施加通用标准化格式。
-- **扩展而非覆盖**：新增行列或追加数据时，目标是"扩展原模板"——继承邻近区域的表头风格、条纹节奏、边框层级、对齐方式、数字格式和列宽/行高策略。
-- **美化只动样式属性，不动数据**：对**已有区域**做美化时，**只能**修改 `font` / `fill` / `border` / `alignment` / `number_format` 这 5 类样式属性。**禁止**改动原始单元格的 `value` / `formula`、合并区域、行列结构、Sheet 名称。如果美化需求需要改变数据布局（例如"汇总行加进表里"），必须把"加汇总行"和"美化"拆成两步，前者属于编辑动作、需另行得到用户授权。
-- **不可见视觉属性也属保护对象**：原表的**合并范围、对齐方式（H-Align/V-Align）、行高列宽、数字格式**是用户能感知但不一定会明示的视觉属性。即使用户没说"保留这些"，**禁止**因写入新内容而修改它们；写公式 / 写值 / 写新列时只传 `value` / `formula`，不要重置 `alignment` / `number_format` 等字段为默认值（重置等同于改动）。**例外**：用户明示要修改这些属性时（如"调整对齐 / 合并 / 列宽"）才能动；用户**点名美化**（"美化 / 让表清晰 / 适合打印"）视同授权下节 checklist 的全部 5 个维度（含列宽行高）。
-- **标红 / 高亮默认用背景色**：用户说"标红 / 标出来 / 高亮"时，默认改**背景色**（可叠加字体色）——背景色在人工核对与导出后都更醒目；仅当用户明确说"字体标红"才只改字体色。
-- **打印 / 下载类任务的完成标准是导出后也无遮挡**：涉及"适合打印 / 下载 / 导出"时，飞书表格调整完行高列宽后，导出 xlsx 再检查一次无截断、无 `####`、无溢出；长文本列给足列宽并设明确行高兜底值，不要只依赖 auto。
-- **美化范围必须覆盖所有用户语义目标**：用户说"给表格加边框 / 美化整个表"时，范围 = 实际数据区域**含所有数据行**（含汇总行、总计行、表尾备注行），不能停在"看起来主体内容结束"的地方。落地前先用 `current_region` + 末尾 5~10 行核对真实末行（同 `references/lark-sheets-read-data.md` 的「确定数据范围的正确流程」），再设置美化范围。范围漏掉用户提到的目标行 / 列视为未完成，需补齐后再交付。
+- **User instructions take priority**: Format requirements explicitly stated by the user (such as "use a red background") carry the highest weight, even if they conflict with general aesthetics.
+- **Inherit the original sheet's style**: Before editing, first sample the original file's visual characteristics (color scheme, borders, alignment, number formats); new content must align with them. It is strictly forbidden to forcibly apply generic standardized formatting to a file that already has its own style.
+- **Extend rather than overwrite**: When adding rows/columns or appending data, the goal is to "extend the original template" — inherit the header style, stripe rhythm, border hierarchy, alignment, number formats, and column width/row height strategy of the adjacent area.
+- **Beautification only touches style attributes, not data**: When beautifying an **existing area**, you may **only** modify the 5 categories of style attributes: `font` / `fill` / `border` / `alignment` / `number_format`. It is **forbidden** to change the original cells' `value` / `formula`, merged areas, row/column structure, or Sheet names. If a beautification requirement necessitates changing the data layout (for example, "add a summary row into the table"), you must split "adding the summary row" and "beautification" into two separate steps; the former is an editing action and requires separate user authorization.
+- **Invisible visual attributes are also protected**: The original sheet's **merge ranges, alignment (H-Align/V-Align), row heights and column widths, and number formats** are visual attributes that users can perceive but may not explicitly mention. Even if the user did not say "preserve these," it is **forbidden** to modify them as a side effect of writing new content; when writing formulas / values / new columns, only pass `value` / `formula`, and do not reset fields such as `alignment` / `number_format` to default values (resetting is equivalent to modification). **Exception**: These attributes may only be modified when the user explicitly asks to change them (such as "adjust alignment / merge / column width"); when the user **explicitly requests beautification** ("beautify / make the table clear / suitable for printing"), this is treated as authorization for all 5 dimensions of the checklist in the next section (including column width and row height).
+- **Red-flagging / highlighting defaults to background color**: When the user says "mark in red / mark it / highlight," the default is to change the **background color** (font color may be layered on top) — background color is more conspicuous both during manual review and after export; only when the user explicitly says "mark the font in red" should you change only the font color.
+- **The completion standard for print / download tasks is that there is no occlusion after export**: When "suitable for printing / download / export" is involved, after adjusting row heights and column widths in Lark Sheets, export to xlsx and check once more for no truncation, no `####`, and no overflow; give long-text columns sufficient column width and set an explicit row height fallback value — do not rely solely on auto.
+- **The beautification range must cover all user semantic targets**: When the user says "add borders to the table / beautify the entire table," the range = the actual data area **including all data rows** (including summary rows, total rows, and footer note rows), and must not stop at the place where "the main content appears to end." Before finalizing, first use `current_region` + the last 5–10 rows to verify the true last row (same as the "Correct process for determining the data range" in `references/lark-sheets-read-data.md`), then set the beautification range. If the range misses any target row/column mentioned by the user, it is considered incomplete and must be supplemented before delivery.
 
-## 美化任务 5 维度 checklist（用户**点名美化**——"美化 / 让表更清晰 / 适合打印"时必做；"整理"默认指数据整理，不触发本节）
+<a id="美化任务-5-维度-checklist用户点名美化美化--让表更清晰--适合打印时必做整理默认指数据整理不触发本节"></a>
+## Beautification Task 5-Dimension Checklist (required when the user **explicitly requests beautification** — "beautify / make the table clearer / suitable for printing"; "organize" by default refers to data organization and does not trigger this section)
 
-当用户**点名美化**（"美化 / 让表清晰 / 适合打印 / 调整样式"——"整理"不算，那是数据整理）时，**必须**遍历以下 5 个维度逐一落地，只做一项（如只加边框）就交付是不完整的。**已有表点名美化时，5 个维度的取值先沿用原表色系 / 对齐（继承原则优先），checklist 只补原表缺失的维度**：
+When the user **explicitly requests beautification** ("beautify / make the table clear / suitable for printing / adjust styles" — "organize" does not count; that is data organization), you **must** go through the following 5 dimensions and implement each one; delivering with only one item done (such as only adding borders) is incomplete. **When beautification is explicitly requested for an existing table, the values for the 5 dimensions should first follow the original table's color scheme / alignment (the inheritance principle takes priority); the checklist only fills in the dimensions missing from the original table**:
 
-1. **表头格式区分**：表头行加粗 + 背景色填充（与数据行有色差）+ 居中对齐；多行表头时全部行同步处理
-2. **对齐方式**：文本列左对齐、数值 / 货币 / 百分比列右对齐、日期 / 分类列居中；垂直方向统一居中
-3. **数值格式**：每列统一小数位 + 千分位（用 `number_format`）；金额列统一货币符号；同一列内**禁止**出现 0 位 / 1 位 / 2 位小数混杂
-4. **边框**：覆盖范围按上方「美化范围必须覆盖所有用户语义目标」规则（含汇总 / 总计 / 表尾说明行），内外框线清晰
-5. **列宽 + 行高 + 自动换行**：详细规则见 `references/lark-sheets-range-operations.md` 的「写入后列宽自适应」章节（按最长字符数扩列宽 / 长文本设置 `cell_styles.word_wrap="auto-wrap"` + 调高行高 / 长数字设置 `number_format` 防科学计数法）
+1. **Header format differentiation**: Header row bold + background color fill (with color contrast against data rows) + center alignment; for multi-row headers, all rows must be handled consistently
+2. **Alignment**: Text columns left-aligned, numeric / currency / percentage columns right-aligned, date / category columns centered; vertical alignment uniformly centered
+3. **Number format**: Each column must have consistent decimal places + thousands separator (use `number_format`); amount columns must have a consistent currency symbol; within the same column, it is **forbidden** to mix 0-decimal / 1-decimal / 2-decimal values
+4. **Borders**: Coverage range follows the rule above, "The beautification range must cover all user semantic targets" (including summary / total / footer note rows), with clear inner and outer border lines
+5. **Column width + row height + auto-wrap**: For detailed rules, see the "Column width auto-fit after writing" section in `references/lark-sheets-range-operations.md` (expand column width based on the longest character count / set `cell_styles.word_wrap="auto-wrap"` for long text + increase row height / set `number_format` for long numbers to prevent scientific notation)
 
-**差异化标注场景**：用户要求"重复行 / 异常值 / 重要项视觉区分"时，标注列 / 行必须设置与普通数据**显著不同**的 `cell_styles`（背景色 + 加粗 + 字体色至少改一项），不能与普通数据格式完全一致。
+**Differentiated annotation scenarios**: When the user requests "visual distinction for duplicate rows / outliers / important items," the annotation column / row must be set with a `cell_styles` that is **significantly different** from normal data (at least one of background color + bold + font color must be changed), and must not be completely identical to the normal data format.
 
-**显式要求边框 / 表头 / 对齐时同样按上面标准落地**（不必等用户说"美化"）：① 用户说"给某矩形区域加边框"必须**整个矩形含表头行、数据行、汇总行全部加内外框**，落地后核起 / 末行、末列三边界（反例：要求加边框的区域实际无任何边框）；② **新建表头前先确认哪一行才是表头**——别把已有的第一行数据误当表头刷成蓝底白字，真正该加的表头列也要建出来（反例：把第一行数据误设成了表头样式）；③ 新增 / 编辑区域的字号必须与原表一致，禁止 13 号与 14 号、10 号与 11 号混杂（反例：新列字号与原表不一致）。
+**When borders / headers / alignment are explicitly requested, also implement according to the standards above** (no need to wait for the user to say "beautify"): ① When the user says "add borders to a certain rectangular area," you must **add inner and outer borders to the entire rectangle including the header row, data rows, and summary rows**, and after implementation verify the three boundaries: start / end row and last column (counter-example: the area requested to have borders actually has no borders at all); ② **Before creating a new header, first confirm which row is actually the header** — do not mistake an existing first data row for a header and paint it blue with white text, and also create the header columns that should actually be added (counter-example: the first data row was mistakenly styled as a header); ③ The font size of newly added / edited areas must match the original table; it is forbidden to mix size 13 with 14, or size 10 with 11 (counter-example: the new column's font size is inconsistent with the original table).
 
-## 通用样式规范
+<a id="通用样式规范"></a>
+## General Style Standards
 
-> 以下取值标准都在「最高优先级原则」的**继承原表风格 / 扩展而非覆盖**前提下生效：凡涉及"沿用原表"的条目，遵循该原则即可，本节不再逐条复述。
+> The following value standards all take effect under the premise of "inherit the original sheet's style / extend rather than overwrite" from the "Highest-Priority Principles": for any item involving "follow the original table," simply follow that principle; this section will not repeat it item by item.
 
-### 1. 表头样式
+<a id="1-表头样式"></a>
+### 1. Header Style
 
-- 表头/汇总行须与数据区域有明确视觉区分。
-- 使用低饱和度背景色搭配字体颜色（如深蓝 + 白字，浅蓝 + 黑字），文字加粗、水平居中。
-- 表头覆盖多列时使用合并单元格。
+- Headers/summary rows must have clear visual distinction from the data area.
+- Use low-saturation background colors paired with font colors (such as dark blue + white text, light blue + black text), with bold text and horizontal centering.
+- Use merged cells when a header spans multiple columns.
 
-### 2. 数据区域样式
+<a id="2-数据区域样式"></a>
+### 2. Data Area Style
 
-- 减少垂直线条，优先使用水平浅灰细线。
-- **对齐方式**：文本左对齐，数值/货币/百分比右对齐，日期或分类居中，所有内容垂直居中。
-- 次要信息（备注、次要日期等）使用缩小字号或浅灰色。
-- **Zebra Stripes**：数据行 > 10 行时可使用交替背景色引导视线。
-  - 设置前先清理原区域背景色为白色（#FFFFFF），再设置斑马纹色，避免新旧混杂。
-  - 优先直接设置单元格背景色，而非条件格式（除非用户要求）。
-  - 推荐配色：奇数行 #FFFFFF，偶数行 #F3F4F6 或 #EBF1F8。
+- Reduce vertical lines; prefer horizontal light gray thin lines.
+- **Alignment**: Text left-aligned, numeric/currency/percentage right-aligned, dates or categories centered, all content vertically centered.
+- Secondary information (notes, secondary dates, etc.) should use a smaller font size or light gray color.
+- **Zebra Stripes**: When data rows > 10, alternating background colors may be used to guide the eye.
+  - Before setting, first clear the original area's background color to white (#FFFFFF), then set the zebra stripe colors, to avoid mixing old and new.
+  - Prefer setting cell background colors directly rather than conditional formatting (unless the user requests it).
+  - Recommended colors: odd rows #FFFFFF, even rows #F3F4F6 or #EBF1F8.
 
-### 3. 数值格式
+<a id="3-数值格式"></a>
+### 3. Number Format
 
-- 百分比使用 `%` 符号，适当注明单位和货币符号（¥、$）。
-- 大于 1000 的数字使用千分位符，保留一致的小数位数（1–2 位）。
-- 涉及数据检索的须注明数据来源。
-- 可使用数据条/色阶/条件格式增强可视化。
+- Use the `%` symbol for percentages, and appropriately note units and currency symbols (¥, $).
+- Numbers greater than 1000 should use thousands separators, with consistent decimal places (1–2 digits).
+- When data retrieval is involved, the data source must be noted.
+- Data bars/color scales/conditional formatting may be used to enhance visualization.
 
-### 4. 整体结构
+<a id="4-整体结构"></a>
+### 4. Overall Structure
 
-- 数据行超过一屏的长表 / 宽表，收尾冻住表头（表头上方还有标题 / 说明行时一并冻住）：`+dim-freeze` 或 `+styles-put` 的 `freeze` 一次给全行列（整份状态覆盖，拆两次只留最后一次的轴），再 `+sheet-info` 回读确认。原表已有冻结设置的不动。
-- **长文本处理**：启用自动换行，行高合理调整以确保阅读舒适，添加适当垂直留白，目标是清晰、专业、不拥挤的布局。
-- 保持表格简洁，合理分组（可用合并单元格展示分组），在适当位置添加合计或汇总行。
-- **区域分隔**：多阶段或多类别时，使用柔和背景色块进行逻辑分区，而非简单边框。
-- **增删行列的样式规则**：
-  - 新增整列继承同组列的表头样式、列宽、对齐和数字格式；新增整行继承同层级数据行或汇总行风格，避免写成表头风格。追加列时需判断是否应加入已有合并单元格（常见于顶部标题行）。
-  - 若追加位置紧邻汇总行、说明区或空白分隔区，先判断真实数据区域边界再操作，避免破坏原有结构。
-  - **Zebra Stripes 维护**：插入或删除行后若影响后续行奇偶性，须从受影响行往后重建条纹（先清理再重设）。少量增删用局部重建，大量变动用全局清理+统一重建。
-  - 具体采样与复制流程见下方「场景二：从已有区域继承美化」。
-- **列宽 / 行高调整**（飞书 `+cols-resize` / `+rows-resize` 直接给像素值：统一尺寸用 `--range` + `--width`/`--height <px>`，多列 / 多行不同尺寸用 `--widths`/`--heights` map 一次调用完成，如 `--widths '{"A":100,"C:E":120}'`）：
-  - 禁止硬编码固定列宽，须根据该列实际内容长度估算像素。
-  - 经验估算：中文每字约 15-18px，英文/数字每字约 7-9px，外加 10-16px padding。
-  - 上下限建议 80~400px；超上限启用自动换行（`word_wrap: auto-wrap`）+ 调整行高，而非无限加宽。
-  - 合并单元格不参与列宽计算，避免撑宽单列。
-  - 复制自原文件的列优先沿用原列宽，不重新计算覆盖。
+- For long tables / wide tables whose data rows exceed one screen, freeze the header at the end (if there are title / description rows above the header, freeze those together): provide all rows and columns at once via `+dim-freeze` or `+styles-put`'s `freeze` (full state coverage; splitting into two calls keeps only the last axis), then read back with `+sheet-info` to confirm. Do not touch tables that already have freeze settings.
+- **Long text handling**: Enable auto-wrap, adjust row height reasonably to ensure comfortable reading, add appropriate vertical whitespace; the goal is a clear, professional, uncrowded layout.
+- Keep the table concise, group reasonably (merged cells may be used to show groupings), and add total or summary rows where appropriate.
+- **Area separation**: For multiple stages or categories, use soft background color blocks for logical partitioning rather than simple borders.
+- **Style rules for adding/removing rows and columns**:
+  - A newly added whole column inherits the header style, column width, alignment, and number format of the same column group; a newly added whole row inherits the style of data rows or summary rows at the same level, and must not be written in header style. When appending columns, determine whether they should be added to existing merged cells (commonly seen in top title rows).
+  - If the append position is adjacent to a summary row, description area, or blank separator area, first determine the true data area boundary before operating, to avoid breaking the original structure.
+  - **Zebra Stripes maintenance**: After inserting or deleting rows, if the parity of subsequent rows is affected, rebuild the stripes from the affected row onward (clear first, then reset). For small additions/deletions, use local rebuilding; for large changes, use global clearing + unified rebuilding.
+  - For the specific sampling and copying process, see "Scenario 2: Inheriting beautification from an existing area" below.
+- **Column width / row height adjustment** (Lark `+cols-resize` / `+rows-resize` directly take pixel values: for uniform sizes use `--range` + `--width`/`--height <px>`; for multiple columns / rows with different sizes use `--widths`/`--heights` map to complete in one call, such as `--widths '{"A":100,"C:E":120}'`):
+  - Hardcoding fixed column widths is forbidden; estimate pixels based on the column's actual content length.
+  - Empirical estimation: approximately 15-18px per Chinese character, approximately 7-9px per English character/digit, plus 10-16px padding.
+  - Recommended upper and lower limits: 80~400px; when exceeding the upper limit, enable auto-wrap (`word_wrap: auto-wrap`) + adjust row height, rather than widening indefinitely.
+  - Merged cells do not participate in column width calculation, to avoid stretching a single column wide.
+  - Columns copied from the original file should preferentially retain the original column width, not be recalculated and overwritten.
 
-### 5. 配色
+<a id="5-配色"></a>
+### 5. Color Scheme
 
-- 优先沿用原表色板与明暗层级（见「继承原表风格」），新增区域不凭空换色，确保视觉连续。
-- 背景填充选择柔和色（如浅蓝 `#DDEBF7`），区分颜色时优先同一主题色不同深浅，避免超过 3 种主题色。
+- Prefer following the original table's palette and light/dark hierarchy (see "Inherit the original sheet's style"); new areas should not change colors out of nowhere, ensuring visual continuity.
+- Choose soft colors for background fills (such as light blue `#DDEBF7`); when distinguishing colors, prefer different shades of the same theme color, and avoid more than 3 theme colors.
 
-### 6. 图表展示
+<a id="6-图表展示"></a>
+### 6. Chart Presentation
 
-- 遵循用户指令选择图表类型，或匹配用户意图（饼图 → 占比，折线图 → 趋势）。
-- 包含必要元素：标题、坐标轴标题、多系列图例；普通基础图先按开启数值标签运行尺寸建议器并默认展示，密集时依次采用建议尺寸、稀疏标签、Top-N 或拆图；目标线等常量系列不显示逐点重复标签。
-- Y 轴显示范围默认交给图表引擎，不按数据源单列的最小值 / 最大值主动设限；组合图先比较系列单位和量级，把会被压扁的系列放到右轴。
-- 饼图默认将图例放在底部；尺寸建议器保持相对固定的饼区，主要按最长标签增加两侧留白。类别过多或数值高度偏斜时优先 Top-N 或条形图，避免靠无限加宽解决。
-- 创建前运行 `scripts/lark_chart_size_advisor.py`，使用其 `create_flags`；若提示仅放大无法解决，则改用条形图、Top-N 或拆图。创建后运行 `scripts/lark_chart_quality_check.py`。
-- 优先继承原表配色，同一指标跨图保持同色；组合图使用同色系柱形和高对比折线，辅助系列使用中性色。分类色过多时优先精简数据，不依靠更多相近颜色区分。
-- **图表放置防重叠**：新增图表前须计算放置区域，避免与已有图表重叠。具体步骤：
-  1. 调用 `+chart-list` 获取当前工作表所有已有图表的 `position`（锚点单元格：`col` 是列字母如 "A"/"B"、`row` 是 1-based 行号；以 `+chart-list` 实际返回字段为准）、`offset`（锚点内偏移：`row_offset`、`col_offset`，单位像素）以及 `size`（`width`、`height`，单位像素）。
-  2. 获取工作表的行高和列宽信息（像素）。
-  3. 根据每个图表的锚点 `position.row`/`position.col` + 偏移 `offset.row_offset`/`offset.col_offset` + 尺寸 `size.width`/`size.height`，结合行高列宽，计算出每个已有图表覆盖的像素矩形区域 `(x_min, y_min, x_max, y_max)`。
-  4. 为新图表选定大小后，候选放置位置应避开所有已有矩形区域；若存在重叠则向下或向右偏移，直至找到无冲突位置。
-  5. 若工作表已无足够空间，优先向下方空白区域放置，保持图表间至少 1 行或 1 列的间距。
+- Follow user instructions to choose the chart type, or match user intent (pie chart → proportions, line chart → trends).
+- Include necessary elements: title, axis titles, legend for multiple series; for ordinary basic charts, first run the size advisor with value labels enabled and display them by default; when dense, successively adopt the suggested size, sparse labels, Top-N, or split charts; constant series such as target lines should not display repeated per-point labels.
+- The Y-axis display range is by default left to the chart engine; do not proactively set limits based on the minimum / maximum of a single data source column; for combo charts, first compare series units and magnitudes, and put series that would be squashed onto the right axis.
+- For pie charts, place the legend at the bottom by default; the size advisor keeps the pie area relatively fixed and mainly adds side whitespace based on the longest label. When there are too many categories or values are highly skewed, prefer Top-N or bar charts, and avoid solving it by widening indefinitely.
+- Before creating, run `scripts/lark_chart_size_advisor.py` and use its `create_flags`; if it indicates that enlarging alone cannot solve the problem, switch to a bar chart, Top-N, or split charts. After creating, run `scripts/lark_chart_quality_check.py`.
+- Prefer inheriting the original table's color scheme; keep the same color for the same metric across charts; for combo charts, use same-color-family bars and high-contrast lines, and use neutral colors for auxiliary series. When there are too many categorical colors, prefer simplifying the data rather than relying on more similar colors to distinguish them.
+- **Chart placement anti-overlap**: Before adding a new chart, calculate the placement area to avoid overlapping with existing charts. Specific steps:
+  1. Call `+chart-list` to get the `position` of all existing charts in the current worksheet (anchor cell: `col` is the column letter such as "A"/"B", `row` is the 1-based row number; refer to the actual fields returned by `+chart-list`), `offset` (offset within the anchor: `row_offset`, `col_offset`, in pixels), and `size` (`width`, `height`, in pixels).
+  2. Get the worksheet's row height and column width information (in pixels).
+  3. Based on each chart's anchor `position.row`/`position.col` + offset `offset.row_offset`/`offset.col_offset` + size `size.width`/`size.height`, combined with row heights and column widths, calculate the pixel rectangular area `(x_min, y_min, x_max, y_max)` covered by each existing chart.
+  4. After selecting a size for the new chart, candidate placement positions should avoid all existing rectangular areas; if overlap exists, offset downward or rightward until a conflict-free position is found.
+  5. If the worksheet no longer has enough space, preferentially place it in the blank area below, maintaining at least 1 row or 1 column of spacing between charts.
 
-> 飞书表格中颜色需带 `#` 前缀（如 `#0070C0`），与 openpyxl 的无前缀写法不同。
-> 具体工具调用参数格式，请读取对应工具 skill（`references/lark-sheets-write-cells.md`、`references/lark-sheets-conditional-format.md`、`references/lark-sheets-range-operations.md` 等）。
+> In Lark Sheets, colors need the `#` prefix (such as `#0070C0`), which differs from openpyxl's unprefixed notation.
+> For the specific tool call parameter formats, please read the corresponding tool skill (`references/lark-sheets-write-cells.md`, `references/lark-sheets-conditional-format.md`, `references/lark-sheets-range-operations.md`, etc.).
 
 ---
 
-## 场景化操作指南
+<a id="场景化操作指南"></a>
+## Scenario-Based Operation Guide
 
-### 场景一：新增独立样式
+<a id="场景一新增独立样式"></a>
+### Scenario 1: Adding Independent Styles
 
-> 适用情况：在表格中创建全新的、具有独立视觉特征的区域，如汇总行、新表头、独立数据表等。
+> Applicable situation: Creating entirely new areas in a sheet with independent visual characteristics, such as summary rows, new headers, independent data tables, etc.
 
-#### 1A. 添加汇总行 / 表头行
+<a id="1a-添加汇总行--表头行"></a>
+#### 1A. Adding a Summary Row / Header Row
 
-**决策流程：**
-1. 先用 `+cells-get` 读取目标位置上方的数据区域，确认数据边界和已有样式（背景色、字体大小等）
-2. 如果需要新增空行，先用 `+dim-{insert|delete|hide|unhide|freeze|group|ungroup}` 插入行
-3. 用 `+cells-set` 写入汇总公式 + 特殊样式（背景色区分 + 加粗 + 边框）
-4. 如果汇总行标题需要跨列显示，追加 `+cells-{merge|unmerge}` 合并标题区域
+**Decision flow:**
+1. First use `+cells-get` to read the data area above the target position, confirming the data boundary and existing styles (background color, font size, etc.)
+2. If a new blank row needs to be added, first use `+dim-{insert|delete|hide|unhide|freeze|group|ungroup}` to insert the row
+3. Use `+cells-set` to write the summary formula + special styles (background color differentiation + bold + borders)
+4. If the summary row title needs to span columns, append `+cells-{merge|unmerge}` to merge the title area
 
-**样式要点：**
-- 汇总行使用比数据区域更深的同色系背景（如数据区 #EBF1F8 → 汇总行 #D6E4F0 或 #4472C4 + 白字）
-- 必须加粗，水平对齐方式与数据列一致（数值列右对齐，文本列左对齐）
-- 上方加一条较粗的边框线，与数据区域形成视觉分隔
+**Style points:**
+- The summary row uses a darker shade of the same color family than the data area (such as data area #EBF1F8 → summary row #D6E4F0 or #4472C4 + white text)
+- Must be bold, with horizontal alignment consistent with the data columns (numeric columns right-aligned, text columns left-aligned)
+- Add a thicker border line above to create visual separation from the data area
 
-#### 1B. 添加独立数据表/独立区域
+<a id="1b-添加独立数据表独立区域"></a>
+#### 1B. Adding an Independent Data Table / Independent Area
 
-**决策流程：**
+**Decision flow:**
 
-1. 新建 sheet，或用 `+cells-get` 或 `+workbook-info` 确认已有表格的占用范围，找到空闲区域
-2. 用 `+cells-get` 采样已有表格的表头样式（背景色、字体大小、字重、对齐方式）和数据区域样式
-3. 新表头复用已有表头的配色和字体参数（保持风格统一），但内容和列宽可独立
-4. 新数据区域复用已有数据区域的对齐规则、边框风格、数字格式
-5. 用 `+cells-set` 一次性写入新表头 + 数据
+1. Create a new sheet, or use `+cells-get` or `+workbook-info` to confirm the occupied range of existing tables and find a free area
+2. Use `+cells-get` to sample the existing table's header style (background color, font size, font weight, alignment) and data area style
+3. The new header reuses the existing header's color scheme and font parameters (maintaining style consistency), but content and column width may be independent
+4. The new data area reuses the existing data area's alignment rules, border style, and number format
+5. Use `+cells-set` to write the new header + data in one call
 
-**样式要点：**
-- 必须复用：背景色色系、字体大小、字重、边框风格
-- 可以独立：列宽、行高、具体数字格式（根据新数据的类型调整）
-- 新旧表格之间至少留 1~2 行空白作为视觉分隔
+**Style points:**
+- Must reuse: background color family, font size, font weight, border style
+- May be independent: column width, row height, specific number format (adjusted based on the new data type)
+- Leave at least 1~2 blank rows between the new and old tables as visual separation
 
-### 场景二：从已有区域继承美化
+<a id="场景二从已有区域继承美化"></a>
+### Scenario 2: Inheriting Beautification from an Existing Area
 
-> 适用情况：新增的行/列/区域与已有内容性质相同（数据类型、层级一致），需要无缝衔接已有格式。
+> Applicable situation: Newly added rows/columns/areas have the same nature as existing content (consistent data type and hierarchy) and need to seamlessly connect with existing formatting.
 
-#### 2A. 继续补充行/列（数据性质与已有内容一致）
+<a id="2a-继续补充行列数据性质与已有内容一致"></a>
+#### 2A. Continuing to Add Rows/Columns (data nature consistent with existing content)
 
-**核心规则**：采样紧邻 2 行 → 判断并延续 Zebra Stripes 奇偶性 → 按 write-cells 的继承清单带齐样式写入。
+**Core rule**: Sample the 2 adjacent rows → determine and continue the Zebra Stripes parity → write with the full style set according to the write-cells inheritance checklist.
 
-**斑马纹延续要点**（本节只管"奇偶判断"这一标准，"带哪些样式字段写入"的机制见下方指针）：
+**Zebra stripe continuation points** (this section only covers the "parity determination" standard; for the mechanism of "which style fields to write," see the pointer below):
 
-- 至少读 2 行（末行 + 倒数第二行）才能判断是否有斑马纹交替色
-- 若倒数两行背景色不同（如 #FFFFFF 与 #F3F4F6），新行按奇偶延续，不要固定一个色
+- Read at least 2 rows (last row + second-to-last row) to determine whether there is zebra stripe alternating color
+- If the last two rows have different background colors (such as #FFFFFF and #F3F4F6), new rows should continue by parity; do not fix on a single color
 
-> 具体继承哪些字段、怎么采样与写入（`+cells-get` 读源行 `cell_styles` + `border_styles`、`+sheet-info --include row_heights,merges` 读行高合并、带齐 6 类样式写入）见 `references/lark-sheets-write-cells.md` 的「新增列 / 新增行的样式继承」章节——`border_styles` 四边易遗漏，以那里为准。
+> For which fields to inherit specifically and how to sample and write them (`+cells-get` reads source row `cell_styles` + `border_styles`, `+sheet-info --include row_heights,merges` reads row height and merges, write with the full 6 categories of styles), see the "Style inheritance for new columns / new rows" section in `references/lark-sheets-write-cells.md` — the four sides of `border_styles` are easily missed; refer to that section as authoritative.
 
-#### 2B. 基于模板区域的修改（copy 保留所有格式）
+<a id="2b-基于模板区域的修改copy-保留所有格式"></a>
+#### 2B. Modification Based on a Template Area (copy preserves all formatting)
 
-**核心思路：三步分层法**
-
-```
-Step 1 — 格式铺开：`+range-copy --paste-type formats`
-  └── 将模板行/区域的 **全部格式**（样式、边框、数字格式、数据验证等）复制到目标区域
-  └── 即"格式刷"——只复制格式，目标值/公式保留
-  └── 若需连带公式平移填充（如公式列结构一致），改用 `+range-fill --series-type copy`
-
-Step 2 — 内容覆写：`+cells-set`（仅传 value/formula，不传任何样式）
-  └── 将每行实际数据写入，cell_styles 全部省略，因为格式已在 Step 1 中就位
-
-Step 3 — 微调收尾：`+rows-resize --heights` / `+cols-resize --widths`（行高列宽 map 一次调用完成）、`+cells-{merge|unmerge}` 等
-  └── 调整行高列宽、处理合并单元格、扩展条件格式范围等边缘情况
-```
-
-**关键注意事项：**
-- Step 1 用 `+range-copy --paste-type formats` 时只铺格式、不动值/公式，Step 2 再用 `+cells-set` 写值即可（`+cells-set` 默认覆盖，无需额外 flag）；若 Step 1 用 `--paste-type all` 连带复制了值/公式，Step 2 写入同样会覆盖（默认行为）
-- `+range-fill --series-type auto`（或 `linear`/`date`）会自动递增数字序列（1→2→3）和日期序列，`+range-fill --series-type copy` 则原样复制值但公式引用会自动平移
-- 如果模板区域存在合并单元格，copy/fill 不会复制合并状态，必须在 Step 3 中用 `+cells-{merge|unmerge}` 补全
-- 如果模板区域有条件格式，需要在 Step 3 中通过 `+cond-format-update` 扩展 ranges
-
-**场景：纯"格式刷"（用户说"把 A 列样式应用到 B 列"、"格式复制过去"、"只刷格式不改数据"）**
-
-单步即可，无需三步分层：调用 `+range-copy --paste-type formats`，`--source-range` 为样式来源、`--target-range` 为目标起点。参数细节见 `references/lark-sheets-range-operations.md`。
-
-### 场景三：已有区域格式美化
-
-> 适用情况：对已存在数据的区域进行格式美化（不改变数据内容），重点处理表头、汇总行等特殊行的识别与格式设置，需特别注意合并单元格的安全操作。
-
-#### 整体操作流程
+**Core approach: Three-step layered method**
 
 ```
-1. 探查阶段
-   ├── `+workbook-info` → 获取子表列表、行列数、冻结位置
-   ├── `+sheet-info --include merges` → 获取合并区域
-   ├── `+cells-get`（前几行 + 末尾几行，`--include style`）→ 采样表头/数据区/汇总行样式
-   └── 分析结果 → 建立区域地图（表头行号、数据起止行号、汇总行号、合并区域列表）
+Step 1 — Format spreading: `+range-copy --paste-type formats`
+  └── Copy the template row/area's **entire formatting** (styles, borders, number formats, data validation, etc.) to the target area
+  └── This is the "format painter" — only formatting is copied; target values/formulas are preserved
+  └── If formula translation and fill are also needed (such as when the formula column structure is consistent), use `+range-fill --series-type copy` instead
 
-2. 规划阶段
-   ├── 判断表头行：通常第 1 行或前 2 行，特征为加粗/背景色/合并/居中
-   ├── 判断汇总行：通常最后 1~2 行，特征为加粗/SUM/AVERAGE 公式/更深背景色
-   ├── 判断合并区域：从 `+cells-get` 返回中识别（多个单元格同值且样式相同通常暗示合并）
-   └── 制定美化方案：按区域分别设置样式
+Step 2 — Content overwrite: `+cells-set` (only pass value/formula, no styles)
+  └── Write the actual data for each row, omitting all cell_styles, because the formatting is already in place from Step 1
 
-3. 执行阶段（按顺序）
-   ├── 先处理合并单元格（如需取消合并再重新合并，必须先 unmerge 再 merge）
-   ├── 设置表头样式
-   ├── 设置数据区域样式
-   ├── 设置汇总行样式
-   └── 调整列宽行高
+Step 3 — Fine-tuning and finishing: `+rows-resize --heights` / `+cols-resize --widths` (row height and column width map completed in one call), `+cells-{merge|unmerge}`, etc.
+  └── Adjust row heights and column widths, handle merged cells, extend conditional formatting ranges, and other edge cases
 ```
 
-#### 美化中的合并单元格要点
+**Key notes:**
+- When using `+range-copy --paste-type formats` in Step 1, only spread formatting without touching values/formulas; then in Step 2 use `+cells-set` to write values (`+cells-set` overwrites by default, no extra flag needed); if Step 1 used `--paste-type all` and copied values/formulas along with it, Step 2's write will also overwrite them (default behavior)
+- `+range-fill --series-type auto` (or `linear`/`date`) automatically increments numeric sequences (1→2→3) and date sequences, while `+range-fill --series-type copy` copies values as-is but formula references are automatically translated
+- If the template area has merged cells, copy/fill will not copy the merge state; it must be completed in Step 3 using `+cells-{merge|unmerge}`
+- If the template area has conditional formatting, the ranges need to be extended in Step 3 via `+cond-format-update`
 
-- 编辑前先识别已有合并区域（见探查阶段），避免破坏原有语义分区。
-- 美化表头/分组标题时，若需修改合并区域的范围或样式，遵循"先 `unmerge` → 修改 → 再 `merge`"顺序。
-- 合并区域样式只写左上角，不要对合并内的其他单元格重复写入样式。
+**Scenario: Pure "format painter" (user says "apply column A's style to column B," "copy the formatting over," "only paint the format without changing data")**
 
-> 合并单元格完整的安全操作规则（含数据保护、样式占位等 5 条）见 `references/lark-sheets-range-operations.md` 的 `+cells-{merge|unmerge}` 章节。
+A single step suffices; no three-step layering needed: call `+range-copy --paste-type formats`, with `--source-range` as the style source and `--target-range` as the target starting point. For parameter details, see `references/lark-sheets-range-operations.md`.
+
+<a id="场景三已有区域格式美化"></a>
+### Scenario 3: Format Beautification of an Existing Area
+
+> Applicable situation: Format beautification of an area that already contains data (without changing data content), focusing on the identification and format setting of special rows such as headers and summary rows, with particular attention to safe operations on merged cells.
+
+<a id="整体操作流程"></a>
+#### Overall Operation Flow
+
+```
+1. Exploration phase
+   ├── `+workbook-info` → Get the sheet list, row/column counts, freeze positions
+   ├── `+sheet-info --include merges` → Get merged areas
+   ├── `+cells-get` (first few rows + last few rows, `--include style`) → Sample header/data area/summary row styles
+   └── Analyze results → Build an area map (header row number, data start/end row numbers, summary row number, merged area list)
+
+2. Planning phase
+   ├── Determine the header row: usually row 1 or the first 2 rows, characterized by bold/background color/merge/centering
+   ├── Determine the summary row: usually the last 1~2 rows, characterized by bold/SUM/AVERAGE formulas/darker background color
+   ├── Determine merged areas: identify from the `+cells-get` return (multiple cells with the same value and same style usually suggest a merge)
+   └── Formulate the beautification plan: set styles separately by area
+
+3. Execution phase (in order)
+   ├── Handle merged cells first (if unmerging and re-merging is needed, you must unmerge first, then merge)
+   ├── Set header styles
+   ├── Set data area styles
+   ├── Set summary row styles
+   └── Adjust column widths and row heights
+```
+
+<a id="美化中的合并单元格要点"></a>
+#### Key Points for Merged Cells During Beautification
+
+- Before editing, first identify existing merged areas (see the exploration phase) to avoid breaking the original semantic partitions.
+- When beautifying headers/group titles, if the range or style of a merged area needs to be modified, follow the order "first `unmerge` → modify → then `merge`."
+- Only write styles to the top-left cell of a merged area; do not repeatedly write styles to other cells within the merge.
+
+> For the complete safe operation rules for merged cells (including data protection, style placeholders, and 5 other rules), see the `+cells-{merge|unmerge}` section in `references/lark-sheets-range-operations.md`.

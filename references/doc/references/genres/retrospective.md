@@ -1,25 +1,30 @@
-# Genre Contract: Retrospective / 复盘 (`workplace.retrospective`)
+<a id="genre-contract-retrospective--复盘-workplaceretrospective"></a>
+# Genre Contract: Retrospective (`workplace.retrospective`)
 
-## 体裁规则表（硬约束）
+<a id="体裁规则表硬约束"></a>
+## Genre Rules Table (Hard Constraints)
 
-| 规则项 | 规则 |
+| Rule Item | Rule |
 |-|-|
-| 写作风格 | 坦诚、无责备、因果克制，围绕证据和下一轮改变，不用“加强沟通 / 持续关注”代替可验证实验 |
-| 内容逻辑 | 界定已结束周期 / 事件，再按“目标 / 证据 → 预期与实际 → 聚类观察 → 洞见 / 待验证因果 → 保留项 → 少量改进实验 → 复查”推进 |
-| 事实 / 边界 | 事实 / 观察、解释 / 假设、洞见和行动分层；结论回链事件、指标或交付物；根因仅在证据充分时声明，否则写可证伪假设；保护必要隐私 |
-| 错误 | 周报换标题、成绩陈列 / 情绪宣泄、个人归罪、单一根因臆测、行动无 owner / 验证 / 跟踪、不回看上轮或把模板便签当结论，任一出现即失败 |
+| Writing Style | Candid, blame-free, restrained about causality, centered on evidence and the next round of change; do not substitute "strengthen communication / keep monitoring" for verifiable experiments |
+| Content Logic | Define the concluded cycle / event, then proceed through "goals / evidence → expected vs. actual → clustered observations → insights / causal hypotheses to verify → what to keep → a small number of improvement experiments → review" |
+| Facts / Boundaries | Layer facts / observations, explanations / hypotheses, insights, and actions; link conclusions back to events, metrics, or deliverables; state root causes only when evidence is sufficient, otherwise write falsifiable hypotheses; protect necessary privacy |
+| Errors | Retitling a weekly report, listing achievements / venting emotions, blaming individuals, speculating a single root cause, actions without an owner / verification / tracking, not reviewing the previous round, or treating template sticky notes as conclusions — any one of these means failure |
 
-## 适用与消歧
+<a id="适用与消歧"></a>
+## Applicability and Disambiguation
 
-用于回看明确迭代、阶段、项目或事件，形成可复用学习并改变下一轮做法。当前状态与升级需求走 `weekly-report.md`；仍在未知中止损、取证、恢复或调查生产事故走 `technical-doc.md`。生产事故可由 Technical 主文承载影响 / 时间线 / 根因 / 恢复，再附本体裁的团队学习层。
+Use for looking back at a clearly defined iteration, phase, project, or event to form reusable learning and change how the next round is done. For current status and escalation needs, use `weekly-report.md`; for ongoing unknown situations involving loss-stopping, evidence gathering, recovery, or investigation of a production incident, use `technical-doc.md`. A production incident may be carried by a Technical main document covering impact / timeline / root cause / recovery, with a team-learning layer of this genre attached.
 
-## 证据与因果
+<a id="证据与因果"></a>
+## Evidence and Causality
 
-- 开头界定范围、时间、目标 / 原计划、参与视角和已知证据；不得补造指标、时间线、共识、原因或行动。
-- 同时识别应保留与应改变的条件，按影响聚类；以系统、流程、工具、接口和当时条件为对象，不把惩罚叙事冒充根因。
-- 个人工作心得 / 成长反思以一个真实事件或转折为证据，呈现“当时判断 → 反证 / 后果 → 新认识 → 下一次可观察行为”；不代写材料没有提供的情绪、动机、心路或成长。
-- 证据不足时写“促成条件 / 假设 + 验证方式”，不能用确定语气。缺基线用`[基线待补]`，涉及安全 / 法务而证据不足时转 Technical 并 `blocked`。
+- At the beginning, define the scope, time, goals / original plan, participating perspectives, and known evidence; do not fabricate metrics, timelines, consensus, causes, or actions.
+- Identify both the conditions to keep and the conditions to change, clustering them by impact; take systems, processes, tools, interfaces, and the conditions at the time as the object, and do not pass off a punitive narrative as a root cause.
+- For personal work reflections / growth reflections, use one real event or turning point as evidence, presenting "judgment at the time → counterevidence / consequences → new understanding → next observable behavior"; do not ghostwrite emotions, motivations, inner journeys, or growth that the material does not provide.
+- When evidence is insufficient, write "contributing conditions / hypotheses + verification method"; do not use a definitive tone. If a baseline is missing, use `[基线待补]`; if safety / legal matters are involved and evidence is insufficient, switch to Technical and `blocked`.
 
-## 结构与高质量写法
+<a id="结构与高质量写法"></a>
+## Structure and High-Quality Writing
 
-便签、4Ls、Start / Stop / Continue 只是收集手段，成稿须综合为主题和判断。改进实验写动作、owner、目标时间、验证条件和跟踪位置，优先改变系统而不是要求人“更小心”；按需补上轮行动效果和下轮复查点。项目收尾可增加成本、范围、相关方和知识移交，但不机械扩章。
+Sticky notes, 4Ls, and Start / Stop / Continue are only collection methods; the final draft must synthesize them into themes and judgments. Improvement experiments should state the action, owner, target time, verification conditions, and tracking location, prioritizing changes to the system rather than asking people to "be more careful"; add the effects of the previous round's actions and the next round's review points as needed. Project wrap-ups may add cost, scope, stakeholders, and knowledge transfer, but do not mechanically expand sections.

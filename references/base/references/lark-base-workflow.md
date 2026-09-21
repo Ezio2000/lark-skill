@@ -1,18 +1,20 @@
 # Base Workflow
 
-本文档是 Workflow 的入口指南，帮助选择步骤组合、理解创建/更新边界，并引导到 steps JSON SSOT。
+This document is the entry guide for Workflow, helping you choose step combinations, understand the create/update boundaries, and navigate to the steps JSON SSOT.
 
-> **配套文档**:
-> - Workflow 的数据结构参考：[lark-base-workflow-schema.md](lark-base-workflow-schema.md)
-> - 创建/更新时重点构造 `title`、`status` 和 `steps`；复杂度集中在 `steps[].type/data/next`
+> **Companion documents**:
+> - Workflow data structure reference: [lark-base-workflow-schema.md](lark-base-workflow-schema.md)
+> - When creating/updating, focus on constructing `title`, `status`, and `steps`; the complexity is concentrated in `steps[].type/data/next`
 
 ---
 
-## 快速开始
+<a id="快速开始"></a>
+## Quick Start
 
-### 最简单的 Workflow
+<a id="最简单的-workflow"></a>
+### The Simplest Workflow
 
-新增记录时发送消息通知：
+Send a message notification when a record is added:
 
 ```json
 {
@@ -50,25 +52,28 @@
 
 ---
 
-## 场景速查表
+<a id="场景速查表"></a>
+## Scenario Quick Reference
 
-| 场景 | 步骤组合 | 示例 |
+| Scenario | Step Combination | Example |
 |------|---------|------|
-| 新增触发+通知 | AddRecordTrigger → LarkMessageAction | [下方](#示例1-新增记录触发--发送消息) |
-| 按钮点击+调用外部接口+写入日志 | ButtonTrigger → HTTPClientAction → AddRecordAction | [下方](#示例-6-按钮触发--调用外部接口--写入同步日志) |
-| 定时+循环 | TimerTrigger → FindRecordAction → Loop → LarkMessageAction | [下方](#示例2-定时触发--查找记录--循环遍历--发送消息) |
-| 条件判断 | ... → IfElseBranch → 分支处理 | [下方](#示例3-条件分支ifelsebranch) |
-| 多路分类 | ... → SwitchBranch → 多分支处理 | [下方](#示例4-多路分支switchbranch) |
-| 复杂组合 | 定时+查找+循环+分支+消息 | [下方](#示例5-组合场景定时查找循环分支消息) |
-| AI 分类 | ... → AIClassificationBranch → 分类后处理 | [下方](#示例7-ai-分类用户反馈自动分流) |
+| Add trigger + notification | AddRecordTrigger → LarkMessageAction | [Below](#示例-1-新增记录触发--发送消息) |
+| Button click + call external API + write log | ButtonTrigger → HTTPClientAction → AddRecordAction | [Below](#示例-6-按钮触发--调用外部接口--写入同步日志) |
+| Scheduled + loop | TimerTrigger → FindRecordAction → Loop → LarkMessageAction | [Below](#示例-2-定时触发--查找记录--循环遍历--发送消息) |
+| Conditional judgment | ... → IfElseBranch → branch handling | [Below](#示例-3-条件分支ifelsebranch) |
+| Multi-way classification | ... → SwitchBranch → multi-branch handling | [Below](#示例-4-多路分支switchbranch) |
+| Complex combination | Scheduled + find + loop + branch + message | [Below](#示例-5-组合场景定时查找循环分支消息) |
+| AI classification | ... → AIClassificationBranch → post-classification handling | [Below](#示例-7-ai-分类用户反馈自动分流) |
 
 ---
 
-## 完整示例
+<a id="完整示例"></a>
+## Complete Examples
 
-### 示例 1: 新增记录触发 + 发送消息
+<a id="示例-1-新增记录触发--发送消息"></a>
+### Example 1: Add Record Trigger + Send Message
 
-**场景**: 当订单表新增记录时，发送飞书消息通知负责人。
+**Scenario**: When a record is added to the order table, send a Feishu message to notify the person in charge.
 
 ```json
 {
@@ -114,16 +119,17 @@
 }
 ```
 
-**关键点**:
-- `AddRecordTrigger` 监控 `table_name` 表的 `watched_field_name` 字段
-- 使用 `ref` 引用触发器输出的字段值（注意是 fieldId，不是字段名）
-- `recordLink` 是触发器内置输出，表示记录链接
+**Key points**:
+- `AddRecordTrigger` monitors the `watched_field_name` field of the `table_name` table
+- Use `ref` to reference the field value output by the trigger (note it is the fieldId, not the field name)
+- `recordLink` is a built-in trigger output, representing the record link
 
 ---
 
-### 示例 2: 定时触发 + 查找记录 + 循环遍历 + 发送消息
+<a id="示例-2-定时触发--查找记录--循环遍历--发送消息"></a>
+### Example 2: Scheduled Trigger + Find Records + Loop Iteration + Send Message
 
-**场景**: 每天早上 9 点，查找所有待处理订单，给每个客户发送提醒。
+**Scenario**: Every day at 9 AM, find all pending orders and send a reminder to each customer.
 
 ```json
 {
@@ -207,17 +213,18 @@
 }
 ```
 
-**关键点**:
-- `Loop.data` 必须传入 `ref` 类型的数据源（通常是 FindRecordAction 的 `fieldRecords`）
-- `Loop.children.links` 必须包含 `kind: "loop_start"` 的链接指向循环体
-- 循环体内用 `$.{loopStepId}.item.{fieldId}` 引用当前遍历记录的字段
-- `$.{loopStepId}.index` 获取当前索引（从 0 开始）
+**Key points**:
+- `Loop.data` must be passed a data source of type `ref` (usually the `fieldRecords` of FindRecordAction)
+- `Loop.children.links` must contain a link to the loop body via `kind: "loop_start"`
+- Inside the loop body, use `$.{loopStepId}.item.{fieldId}` to reference the fields of the current iterated record
+- `$.{loopStepId}.index` gets the current index (starting from 0)
 
 ---
 
-### 示例 3: 条件分支（IfElseBranch）
+<a id="示例-3-条件分支ifelsebranch"></a>
+### Example 3: Conditional Branch (IfElseBranch)
 
-**场景**: 根据订单金额判断，大额订单通知主管审批，小额订单自动通过。
+**Scenario**: Based on the order amount, notify the supervisor for approval for large orders, and automatically approve small orders.
 
 ```json
 {
@@ -312,17 +319,18 @@
 }
 ```
 
-**关键点**:
-- `IfElseBranch.children.links` 必须包含 `if_true` 和 `if_false` 两个分支
-- `next` 指向两个分支汇合后的步骤（可选，为 null 则分支结束）
-- `condition` 使用 OrGroup 结构，支持 `(A and B) or (C and D)` 的复杂条件
-- 分支内可以用 `ref_info` 引用触发记录，用 `filter_info` 批量筛选记录
+**Key points**:
+- `IfElseBranch.children.links` must contain the two branches `if_true` and `if_false`
+- `next` points to the step after the two branches merge (optional; if null, the branch ends)
+- `condition` uses the OrGroup structure, supporting complex conditions with `(A and B) or (C and D)`
+- Inside the branch, you can use `ref_info` to reference the trigger record, and `filter_info` to batch-filter records
 
 ---
 
-### 示例 4: 多路分支（SwitchBranch）
+<a id="示例-4-多路分支switchbranch"></a>
+### Example 4: Multi-way Branch (SwitchBranch)
 
-**场景**: 根据订单优先级（P0/P1/P2）执行不同的处理流程。
+**Scenario**: Execute different processing flows based on order priority (P0/P1/P2).
 
 ```json
 {
@@ -463,17 +471,18 @@
 }
 ```
 
-**关键点**:
-- `SwitchBranch` 适合 3 路及以上的分支场景（少于 3 路用 `IfElseBranch` 更简洁）
-- `children.links` 中 `kind: "case"` 的 `label` 对应 `child_branch_list` 中的条件
-- `mode: "exclusive"` 表示排他执行（第一个匹配的分支执行后停止）
-- `no_match_action: "classifyToOther"` 表示无匹配时走最后一个 `case`（兜底分支）
+**Key points**:
+- `SwitchBranch` is suitable for scenarios with 3 or more branches (for fewer than 3 branches, `IfElseBranch` is more concise)
+- In `children.links`, the `label` of `kind: "case"` corresponds to the conditions in `child_branch_list`
+- `mode: "exclusive"` indicates exclusive execution (stops after the first matching branch executes)
+- `no_match_action: "classifyToOther"` indicates that when there is no match, the last `case` is used (fallback branch)
 
 ---
 
-### 示例 5: 组合场景（定时+查找+循环+分支+消息）
+<a id="示例-5-组合场景定时查找循环分支消息"></a>
+### Example 5: Combined Scenario (Scheduled + Find + Loop + Branch + Message)
 
-**场景**: 每天早上 9 点，查找昨天的订单，按金额分级，给不同级别的销售发送不同的通知。
+**Scenario**: Every day at 9 AM, find yesterday's orders, classify them by amount, and send different notifications to salespeople of different levels.
 
 ```json
 {
@@ -629,9 +638,10 @@
 
 ---
 
-### 示例 6: 按钮触发 + 调用外部接口 + 写入同步日志
+<a id="示例-6-按钮触发--调用外部接口--写入同步日志"></a>
+### Example 6: Button Trigger + Call External API + Write Sync Log
 
-**场景**: 在「客户线索表」里给每条记录配置一个“同步到 CRM”按钮。销售点击按钮后，Workflow 调用外部 CRM 接口同步当前线索，再在「同步日志表」新增一条记录，方便后续审计和排查。
+**Scenario**: In the "Customer Lead Table", configure a "Sync to CRM" button for each record. After the salesperson clicks the button, the Workflow calls the external CRM API to sync the current lead, then adds a record to the "Sync Log Table" for subsequent auditing and troubleshooting.
 
 ```json
 {
@@ -731,20 +741,21 @@
 }
 ```
 
-**关键点**:
-- `ButtonTrigger` 适合“人工确认后再执行”的场景，比如同步 CRM、推送 ERP、发起审批等
-- `button_type: "buttonField"` 表示按钮挂在记录上，因此可以直接引用当前记录的字段和值
-- `HTTPClientAction.raw_body` 可以通过 `text + ref + text` 的方式动态拼接 JSON 请求体
-- `HTTPClientAction` 的输出引用规则是：`response_type=none` 时不可引用；`response_type=text` 时只能用 `$.stepId` 引整个文本；`response_type=json` 时用 `$.stepId.body` 引整个 body、用 `$.stepId.body.字段名` 引 body 中字段，同时 `$.stepId.status_code` 表示 HTTP 返回状态码
-- `HTTPClientAction.response_value` 中声明了哪些字段，后续节点就只能引用这些字段；例如 `$.step_call_crm_api.body.success`、`$.step_call_crm_api.body.message`
-- `AddRecordAction` 常用于写日志表、操作审计表、同步结果表，便于追踪谁在什么时候触发了外部调用
-- 示例里的 `fldLeadName` / `fldMobile` / `fldCompany` / `fldOwner` 只是占位的 fieldId，请以实际表字段 ID 为准
+**Key points**:
+- `ButtonTrigger` is suitable for scenarios of "execute after manual confirmation", such as syncing to CRM, pushing to ERP, initiating approvals, etc.
+- `button_type: "buttonField"` indicates that the button is attached to the record, so it can directly reference the fields and values of the current record
+- `HTTPClientAction.raw_body` can dynamically concatenate the JSON request body via `text + ref + text`
+- The output reference rules for `HTTPClientAction` are: when `response_type=none`, it cannot be referenced; when `response_type=text`, only `$.stepId` can be used to reference the entire text; when `response_type=json`, use `$.stepId.body` to reference the entire body, use `$.stepId.body.字段名` to reference fields in the body, and `$.stepId.status_code` represents the HTTP response status code
+- Only the fields declared in `HTTPClientAction.response_value` can be referenced by subsequent nodes; for example, `$.step_call_crm_api.body.success`, `$.step_call_crm_api.body.message`
+- `AddRecordAction` is commonly used to write to log tables, operation audit tables, and sync result tables, making it easy to track who triggered the external call and when
+- The `fldLeadName` / `fldMobile` / `fldCompany` / `fldOwner` in the example are just placeholder fieldIds; please refer to the actual table field IDs
 
 ---
 
-### 示例 7: AI 分类（用户反馈自动分流）
+<a id="示例-7-ai-分类用户反馈自动分流"></a>
+### Example 7: AI Classification (Automatic Routing of User Feedback)
 
-**场景**: 当用户反馈表新增记录时，AI 根据反馈内容分类为 Bug 或功能建议；无法判断时标记为待人工复核。
+**Scenario**: When a record is added to the user feedback table, AI classifies the feedback content as a Bug or a feature suggestion; if it cannot be determined, it is marked as pending manual review.
 
 ```json
 {
@@ -832,95 +843,103 @@
   ]
 }
 ```
-**关键点**:
-- `classes` 按顺序对应 `branch_1`、`branch_2`；`desc` 与分类名一致，`to` 指向已定义的下游 step；
+**Key points**:
+- `classes` corresponds in order to `branch_1`, `branch_2`; `desc` matches the classification name, and `to` points to an already-defined downstream step;
 
 ---
 
-## 构造技巧
+<a id="构造技巧"></a>
+## Construction Techniques
 
-### Loop 构造要点
+<a id="loop-构造要点"></a>
+### Loop Construction Key Points
 
-1. **数据源**: `Loop.data` 必须传入 `ref` 类型，通常是 `FindRecordAction` 的 `fieldRecords`
-2. **循环体**: `children.links` 必须包含 `kind: "loop_start"` 指向循环体入口
-3. **引用**: 循环体内用 `$.{loopStepId}.item.{fieldId}` 引用当前元素
-4. **索引**: 用 `$.{loopStepId}.index` 获取当前索引（从 0 开始）
+1. **Data source**: `Loop.data` must be passed a type of `ref`, usually the `fieldRecords` of `FindRecordAction`
+2. **Loop body**: `children.links` must contain `kind: "loop_start"` pointing to the loop body entry
+3. **Reference**: Inside the loop body, use `$.{loopStepId}.item.{fieldId}` to reference the current element
+4. **Index**: Use `$.{loopStepId}.index` to get the current index (starting from 0)
 
-### 分支构造要点
+<a id="分支构造要点"></a>
+### Branch Construction Key Points
 
 1. **IfElseBranch**:
-   - 适合二元判断（是/否、大于/小于）
-   - `children.links` 必须包含 `if_true` 和 `if_false`
-   - 可以用 `next` 指向汇合点
+   - Suitable for binary judgments (yes/no, greater than/less than)
+   - `children.links` must contain `if_true` and `if_false`
+   - You can use `next` to point to the merge point
 
 2. **SwitchBranch**:
-   - 适合多路分类（3路及以上）
-   - `label` 对应 `child_branch_list` 中的条件顺序
-   - 建议加一个兜底分支（其他）
+   - Suitable for multi-way classification (3 or more branches)
+   - `label` corresponds to the condition order in `child_branch_list`
+   - It is recommended to add a fallback branch (other)
 
-### 字段值构造
+<a id="字段值构造"></a>
+### Field Value Construction
 
-| 字段类型 | value_type | 示例 |
+| Field Type | value_type | Example |
 |---------|------------|------|
-| 文本 | `text` | `{"value_type": "text", "value": "张三"}` |
-| 数字 | `number` | `{"value_type": "number", "value": 100}` |
-| 单选 | `option` | `{"value_type": "option", "value": {"name": "已完成"}}` |
-| 人员 | `user` | `{"value_type": "user", "value": {"id": "ou_xxxx"}}` |
-| 引用 | `ref` | `{"value_type": "ref", "value": "$.step_1.fldxxx"}` |
+| Text | `text` | `{"value_type": "text", "value": "张三"}` |
+| Number | `number` | `{"value_type": "number", "value": 100}` |
+| Single select | `option` | `{"value_type": "option", "value": {"name": "已完成"}}` |
+| Person | `user` | `{"value_type": "user", "value": {"id": "ou_xxxx"}}` |
+| Reference | `ref` | `{"value_type": "ref", "value": "$.step_1.fldxxx"}` |
 
 ---
 
-## 常见错误避免
+<a id="常见错误避免"></a>
+## Avoiding Common Errors
 
-### Top 10 高频错误
+<a id="top-10-高频错误"></a>
+### Top 10 High-Frequency Errors
 
-| # | 错误信息 | 原因 | 解决方案 |
+| # | Error Message | Cause | Solution |
 |---|---------|------|---------|
-| 1 | `path "xxx" does not exist in the output path tree` | ref 引用路径错误或 stepId 不存在 | 检查 stepId 是否在 steps 数组中；使用 fieldId 而非字段名；确保路径以 `$.` 开头 |
-| 2 | `recordInfo.conditions must be non-empty` | `condition_list` 为空数组 `[]` | 改用 `null` 或省略该字段 |
-| 3 | `At least one of filter info and ref info is required` | SetRecordAction/FindRecordAction 缺少定位条件 | 必须提供 `filter_info` 或 `ref_info` 之一 |
-| 4 | `client token is empty` | 缺少 `client_token` | 每次请求传入唯一值（时间戳或随机字符串） |
-| 5 | `valueType 'text' not allowed for fieldType '3'` | select 类型字段值格式错误 | 改用 `option` 类型 |
-| 6 | `Undefined Step Type` | 使用了不支持的 StepType | 使用 `AddRecordTrigger` 而非 `CreateRecordTrigger` |
-| 7 | `prompt references an unknown reference from step` | 引用的 stepId 不存在 | 确保引用的 step 在同一 workflow 的 steps 数组中 |
-| 8 | `[2200] Internal Error` | 1. steps[].id 重复 2. next/children.links 引用了不存在的 step | 确保所有 step id 唯一；检查引用关系 |
-| 9 | 工作流结构不完整 | Branch/Loop 节点缺少 `children` | 仅 Branch（IfElseBranch/SwitchBranch）和 Loop 节点需要 `children`，Trigger/Action 节点无需设置 |
-| 10 | 嵌套分支过于复杂 | 多层 IfElseBranch 嵌套 | 3+ 路分支用 SwitchBranch 替代嵌套 IfElseBranch |
+| 1 | `path "xxx" does not exist in the output path tree` | Incorrect ref reference path or stepId does not exist | Check whether the stepId is in the steps array; use fieldId instead of field name; ensure the path starts with `$.` |
+| 2 | `recordInfo.conditions must be non-empty` | `condition_list` is an empty array `[]` | Switch to `null` or omit this field |
+| 3 | `At least one of filter info and ref info is required` | SetRecordAction/FindRecordAction is missing a locating condition | You must provide one of `filter_info` or `ref_info` |
+| 4 | `client token is empty` | Missing `client_token` | Pass a unique value with each request (timestamp or random string) |
+| 5 | `valueType 'text' not allowed for fieldType '3'` | Incorrect value format for a select-type field | Switch to the `option` type |
+| 6 | `Undefined Step Type` | An unsupported StepType was used | Use `AddRecordTrigger` instead of `CreateRecordTrigger` |
+| 7 | `prompt references an unknown reference from step` | The referenced stepId does not exist | Ensure the referenced step is in the steps array of the same workflow |
+| 8 | `[2200] Internal Error` | 1. Duplicate steps[].id 2. next/children.links references a nonexistent step | Ensure all step ids are unique; check the reference relationships |
+| 9 | Incomplete workflow structure | Branch/Loop nodes are missing `children` | Only Branch (IfElseBranch/SwitchBranch) and Loop nodes need `children`; Trigger/Action nodes do not need to set it |
+| 10 | Nested branches are too complex | Multiple levels of IfElseBranch nesting | For 3+ branches, use SwitchBranch instead of nested IfElseBranch |
 
-### 其他常见错误
+<a id="其他常见错误"></a>
+### Other Common Errors
 
-**1. condition_list 为空数组**
+**1. condition_list is an empty array**
 ```json
-// ❌ 错误
+// ❌ Incorrect
 { "condition_list": [] }
 
-// ✅ 正确
+// ✅ Correct
 { "condition_list": null }
-// 或省略该字段
+// or omit this field
 ```
 
-**2. filter_info 和 ref_info 同时提供**
+**2. filter_info and ref_info are provided at the same time**
 ```json
-// ❌ 错误
+// ❌ Incorrect
 { "filter_info": {...}, "ref_info": {...} }
 
-// ✅ 正确（二选一）
+// ✅ Correct (choose one)
 { "filter_info": {...}, "ref_info": null }
 { "filter_info": null, "ref_info": {...} }
 ```
 
-**3. 使用字段名而非 fieldId**
+**3. Using the field name instead of fieldId**
 ```json
-// ❌ 错误
+// ❌ Incorrect
 { "value": "$.step_1.客户名称" }
 
-// ✅ 正确
+// ✅ Correct
 { "value": "$.step_1.fldXXXXXXXX" }
 ```
 
 ---
 
-## 参考
+<a id="参考"></a>
+## Reference
 
-- [lark-base-workflow-schema.md](lark-base-workflow-schema.md) — 字段定义参考
-- 创建/更新前先确认真实表名、字段名和目标 workflow ID；`steps` 结构按 schema 构造，不凭自然语言猜 `type`
+- [lark-base-workflow-schema.md](lark-base-workflow-schema.md) — Field definition reference
+- Before creating/updating, first confirm the real table name, field name, and target workflow ID; construct the `steps` structure according to the schema, and do not guess `type` from natural language

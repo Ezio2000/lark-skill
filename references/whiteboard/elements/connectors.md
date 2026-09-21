@@ -1,102 +1,108 @@
-# 连线系统
+<a id="连线系统"></a>
+# Connector System
 
-## 连线策略
+<a id="连线策略"></a>
+## Connector Strategy
 
-| 连线数 | 策略 |
+| Number of connectors | Strategy |
 |--------|------|
-| ≤8 | 逐条画 |
-| 9-15 | 代表性连线（每层选 1-2 个节点连到下一层）|
-| >15 | 层到层连线，或回退精简分组 |
+| ≤8 | Draw one by one |
+| 9-15 | Representative connectors (select 1-2 nodes per layer to connect to the next layer) |
+| >15 | Layer-to-layer connectors, or fall back to simplified grouping |
 
-一个节点有 3+ 条连线时：入线从 top，出线从 bottom，同侧多条线用不同方向分散。
+When a node has 3+ connectors: incoming lines from top, outgoing lines from bottom, and multiple lines on the same side are spread out using different directions.
 
 ---
 
-## connector 必须放根 nodes 数组
+<a id="connector-必须放根-nodes-数组"></a>
+## connector must be placed in the root nodes array
 
 ```typescript
-// 错误：connector 放在 frame children 里
+// Wrong: connector placed inside frame children
 { type: 'frame', children: [
-  { type: 'connector', ... }  // 会导致 Schema 报错或无法连线！
+  { type: 'connector', ... }  // Will cause a Schema error or fail to connect!
 ]}
 
-// 正确：connector 放在根 nodes 数组
+// Correct: connector placed in the root nodes array
 const doc: WBDocument = {
   version: 2,
   nodes: [
     { type: 'frame', id: 'box', ... },
-    { type: 'connector', ... },  // 必须和顶层 frame 平级
+    { type: 'connector', ... },  // Must be at the same level as the top-level frame
   ],
 };
 ```
 
 ---
 
-## 箭头默认值
+<a id="箭头默认值"></a>
+## Arrow Defaults
 
-- `endArrow` 省略时默认为 `'arrow'`（即连线末端默认带箭头）。
-- `startArrow` 省略时默认为 `'none'`（即连线起始端默认无箭头）。
+- When `endArrow` is omitted, it defaults to `'arrow'` (i.e., the end of the connector has an arrow by default).
+- When `startArrow` is omitted, it defaults to `'none'` (i.e., the start of the connector has no arrow by default).
 
 ---
 
-## 连线技巧
+<a id="连线技巧"></a>
+## Connector Techniques
 
 ```typescript
-// 自动绕线（推荐）：仅需指定节点 id（引擎可自动推断最优出线方向），并使用 polyline 或 rightAngle 形状
-// 只要不传 waypoints，引擎会尝试自动避开障碍物并生成折线。
+// Automatic routing (recommended): only need to specify node ids (the engine can automatically infer the optimal outgoing direction), and use polyline or rightAngle shapes
+// As long as waypoints are not passed, the engine will attempt to automatically avoid obstacles and generate polylines.
 { type: 'connector', connector: {
-  from: 'a', to: 'b', // fromAnchor 和 toAnchor 也可以省略，让引擎自己找最短路径
+  from: 'a', to: 'b', // fromAnchor and toAnchor can also be omitted, letting the engine find the shortest path itself
   lineShape: 'polyline', lineColor: '#000000', lineWidth: 2, endArrow: 'arrow' }}
 
-// 精确坐标（做注解箭头）
+// Precise coordinates (for annotation arrows)
 { type: 'connector', connector: {
   from: { x: 150, y: 200 }, to: 'b', toAnchor: 'left',
   lineShape: 'curve', lineColor: '#BBBFC4', lineWidth: 2,
   lineStyle: 'dashed', endArrow: 'triangle' }}
 
-// 手动控制路径点 waypoints（仅在需要强制固定路线、或者自动路由不符合预期时使用）
-// 注意：一旦提供了 waypoints，引擎将严格尊重这些点，不再进行自动避障。
+// Manually control waypoints (only used when a fixed route must be enforced, or when automatic routing does not meet expectations)
+// Note: once waypoints are provided, the engine will strictly respect these points and will no longer perform automatic obstacle avoidance.
 { type: 'connector', connector: {
   from: { x: 300, y: 140 }, to: { x: 300, y: 340 },
   waypoints: [{ x: 350, y: 140 }, { x: 350, y: 340 }],
   lineShape: 'polyline', lineColor: '#000000', lineWidth: 2, endArrow: 'arrow' }}
 
-// 绘制坐标轴/数轴（必须使用 straight，防止刻度文字触发自动避障导致线条弯曲）
+// Drawing coordinate axes/number lines (must use straight, to prevent tick labels from triggering automatic obstacle avoidance and causing lines to bend)
 { type: 'connector', connector: {
   from: { x: 100, y: 400 }, to: { x: 600, y: 400 },
   lineShape: 'straight', lineColor: '#000000', lineWidth: 2, endArrow: 'arrow' }}
 ```
 
 > [!IMPORTANT]
-> **1. 形状选用要求（核心）**，需明确 `lineShape` 类型：
-> - **`'polyline'`（圆角折线）**：**默认首选**。适用于流程图、架构图等绝大多数场景。支持引擎的**自动绕线与避障**功能（只需指定 `from` 和 `to`）。
-> - **`'rightAngle'`（直角折线）**：适用于明确要求“总线/直角规约”、树状层级严格对齐的场景，同样支持**自动绕线与避障**。
-> - **`'straight'`（直线）**：不受自动避障机制的影响，适用于**坐标轴、数轴、几何图形边框、直接指向关系**等要求线条绝对笔直、不允许出现任何绕行或弯曲的场景。
-> - **`'curve'`（曲线）**：适用于优雅的跨层连线（S型弯）、自由发散的脑图分支、或做注解箭头时。
-> - **注意**：你需要根据当前绘制的图表类型和上下文语境，选择最合适的 `lineShape`。不要盲目全部使用 `polyline`，例如在绘制坐标系时必须主动切换为 `straight`。
-> **2. 间距要求**：有 connector 连线的卡片间 gap 需 ≥ 40，否则箭头挤在缝里看不清。
-> **3. 顶层约束**：`connector` 必须直接放在 `WBDocument.nodes`，**严禁**嵌套在 `children` 内。建议在数据末尾统一声明连线。
+> **1. Shape selection requirements (core)**, you need to clearly specify the `lineShape` type:
+> - **`'polyline'` (rounded polyline)**: **default first choice**. Suitable for the vast majority of scenarios such as flowcharts and architecture diagrams. Supports the engine's **automatic routing and obstacle avoidance** features (only need to specify `from` and `to`).
+> - **`'rightAngle'` (right-angle polyline)**: Suitable for scenarios that explicitly require "bus/right-angle conventions" and strictly aligned tree hierarchies; also supports **automatic routing and obstacle avoidance**.
+> - **`'straight'` (straight line)**: Not affected by the automatic obstacle avoidance mechanism; suitable for scenarios such as **coordinate axes, number lines, geometric figure borders, direct pointing relationships** that require lines to be absolutely straight and not allow any detours or bends.
+> - **`'curve'` (curve)**: Suitable for elegant cross-layer connectors (S-shaped bends), freely diverging mind map branches, or annotation arrows.
+> - **Note**: You need to choose the most appropriate `lineShape` based on the type of diagram currently being drawn and the context. Do not blindly use `polyline` for everything; for example, when drawing a coordinate system you must actively switch to `straight`.
+> **2. Spacing requirements**: The gap between cards with connector lines must be ≥ 40, otherwise the arrows will be squeezed into the gap and be hard to see.
+> **3. Top-level constraint**: `connector` must be placed directly in `WBDocument.nodes`, and is **strictly prohibited** from being nested inside `children`. It is recommended to declare connectors uniformly at the end of the data.
 >
 > [!TIP]
-> **自动绕线 vs 手动控制**
-> - **优先依赖自动绕线**：对于 `'polyline'` 和 `'rightAngle'`，引擎会自动规划路径并尝试避开障碍物（`fromAnchor` 和 `toAnchor` 也可省略，引擎会自动推断最优出线方向），这是最推荐的方式。
-> - **何时手动算 waypoints**：**仅在必要时**（例如自动路由不符合预期，或者必须强制走特定形状绕开特定元素时），才需要通过 `waypoints` 手动接管坐标序列。
+> **Automatic routing vs manual control**
+> - **Prefer relying on automatic routing**: For `'polyline'` and `'rightAngle'`, the engine will automatically plan the path and attempt to avoid obstacles (`fromAnchor` and `toAnchor` can also be omitted, and the engine will automatically infer the optimal outgoing direction); this is the most recommended approach.
+> - **When to manually calculate waypoints**: **Only when necessary** (for example, when automatic routing does not meet expectations, or when a specific shape must be enforced to bypass specific elements), should you manually take over the coordinate sequence via `waypoints`.
 >
-> **连线标签**
-> - **连线文字说明**：需要文字说明时，可用 `label` 标注。
+> **Connector labels**
+> - **Connector text descriptions**: When a text description is needed, you can annotate it with `label`.
 
 ---
 
-## 锚点方向规则
+<a id="锚点方向规则"></a>
+## Anchor Direction Rules
 
-锚点（top/right/bottom/left）表示连线从节点的哪个边出发，方向含义与 CSS border 四边相同。
+An anchor (top/right/bottom/left) indicates which edge of the node the connector starts from; the direction meaning is the same as the four sides of a CSS border.
 
-**注意：由于目前自动绕线功能支持省略锚点让引擎自动推断，以下规则主要适用于你想强制控制出线方向，或者使用直线/曲线时的场景。**
+**Note: Since the current automatic routing feature supports omitting anchors and letting the engine infer them automatically, the following rules mainly apply to scenarios where you want to forcibly control the outgoing direction, or when using straight lines/curves.**
 
-选择锚点时根据两个节点的相对位置：目标在下方用 `fromAnchor: 'bottom'` + `toAnchor: 'top'`，目标在右侧用 `fromAnchor: 'right'` + `toAnchor: 'left'`。如果手动指定了锚点，必须与节点的实际相对位置匹配，否则可能导致连线反向绕行。
+When choosing anchors, base it on the relative positions of the two nodes: if the target is below, use `fromAnchor: 'bottom'` + `toAnchor: 'top'`; if the target is on the right, use `fromAnchor: 'right'` + `toAnchor: 'left'`. If anchors are manually specified, they must match the actual relative positions of the nodes; otherwise the connector may route in the opposite direction.
 
-**锚点绑定的常见范式**：
-- **同层横向推进**（目标在正右）：`fromAnchor: "right"` -> `toAnchor: "left"`
-- **垂直下沉推进**（目标在正下）：`fromAnchor: "bottom"` -> `toAnchor: "top"`
-- **跨层斜切推进**（目标在左下或右下）：首选 **`fromAnchor: "bottom"` -> `toAnchor: "top"`**。由于线段自身带有重力倾向，从底部出线再弯曲进入下一层顶部，完美契合流水线的 S 型大弯，能画出最优雅顺滑的跨层曲线。**避免**使用左右锚点互相跨接。
-- **逆流回捞**（底部发散回指顶部原点）：首选 **`fromAnchor: "top"` -> `toAnchor: "bottom"`** 配合 `lineStyle: "dashed"`。
+**Common paradigms for anchor binding**:
+- **Same-layer horizontal progression** (target is directly to the right): `fromAnchor: "right"` -> `toAnchor: "left"`
+- **Vertical downward progression** (target is directly below): `fromAnchor: "bottom"` -> `toAnchor: "top"`
+- **Cross-layer diagonal progression** (target is at lower-left or lower-right): prefer **`fromAnchor: "bottom"` -> `toAnchor: "top"`**. Since the line segment itself has a gravitational tendency, exiting from the bottom and then curving into the top of the next layer perfectly matches the S-shaped large bend of a pipeline, producing the most elegant and smooth cross-layer curve. **Avoid** using left and right anchors to cross-connect with each other.
+- **Reverse flow retrieval** (bottom diverges back to point to the top origin): prefer **`fromAnchor: "top"` -> `toAnchor: "bottom"`** combined with `lineStyle: "dashed"`.

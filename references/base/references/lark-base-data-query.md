@@ -1,20 +1,22 @@
 
 # Base data-query DSL reference
 
-> **前置路由**: [Record 查询与分析 SOP](lark-base-record-query-and-analysis-sop.md) | **认证或授权问题**: [`../../shared/index.md`](../../shared/index.md)
+> **Prerequisite routing**: [Record query and analysis SOP](lark-base-record-query-and-analysis-sop.md) | **Authentication or authorization issues**: [`../../shared/index.md`](../../shared/index.md)
 
-## 限制
+<a id="限制"></a>
+## Limitations
 
-- **权限要求**（按文档类型分流）：
-  - **普通多维表格**：调用者拥有文档的**阅读权限**即可
-  - **高级权限多维表格**：调用者必须是文档管理员，拥有 **FA（Full Access / 完全访问权限）**
+- **Permission requirements** (routed by document type):
+  - **Standard Base**: the caller only needs **read permission** on the document
+  - **Advanced-permission Base**: the caller must be a document admin with **FA (Full Access)**
 
-  权限不足时返回权限错误。
+  When permissions are insufficient, a permission error is returned.
 
-## 推荐命令
+<a id="推荐命令"></a>
+## Recommended commands
 
 ```bash
-# 按字段分组计数
+# Group by field and count
 lark-cli base +data-query \
   --base-token MAGObxxxxx \
   --dsl '{
@@ -24,7 +26,7 @@ lark-cli base +data-query \
     "shaper": {"format": "flat"}
   }'
 
-# 带过滤条件 + 排序 + 限制条数
+# With filter conditions + sort + limit count
 lark-cli base +data-query \
   --base-token MAGObxxxxx \
   --dsl '{
@@ -41,7 +43,7 @@ lark-cli base +data-query \
     "shaper": {"format": "flat"}
   }'
 
-# 使用 tableName（表名）代替 tableId
+# Use tableName (table name) instead of tableId
 lark-cli base +data-query \
   --base-token MAGObxxxxx \
   --dsl '{
@@ -50,7 +52,7 @@ lark-cli base +data-query \
     "shaper": {"format": "flat"}
   }'
 
-# 聚合或维度查询后如需读取逐条记录，先让 data-query 返回可回查的业务 key
+# After an aggregation or dimension query, if you need to read individual records, first have data-query return a business key that can be used for lookup
 lark-cli base +data-query \
   --base-token MAGObxxxxx \
   --dsl '{
@@ -68,89 +70,92 @@ lark-cli base +data-query \
   }'
 ```
 
-## 参数
+<a id="参数"></a>
+## Parameters
 
-| 参数                     | 必填 | 说明 |
+| Parameter                     | Required | Description |
 |------------------------|------|------|
-| `--base-token <token>` | 是 | Base Token（base_token） |
-| `--dsl <json>`         | 是 | LiteQuery Protocol JSON DSL 查询语句。注意，本工具 schema 与 record/view 查询的 schema 不同，需要充分阅读本文档后，编写正确的 DSL，避免与其他场景的 DSL 混淆。 |
+| `--base-token <token>` | Yes | Base Token (base_token) |
+| `--dsl <json>`         | Yes | LiteQuery Protocol JSON DSL query statement. Note that this tool's schema differs from the schema for record/view queries; read this document thoroughly before writing a correct DSL to avoid confusing it with DSLs from other scenarios. |
 
-## 如何从链接中解析参数
+<a id="如何从链接中解析参数"></a>
+## How to parse parameters from a link
 
-用户通常会提供如下 URL：
+Users usually provide a URL like the following:
 
 ```text
 https://example.feishu.cn/base/<base_token>?table=<block_id>
 ```
 
-不要直接把 URL 中的 `table=` 当成数据表 ID。它表示当前选中的 Base 顶层块，可能是数据表、仪表盘、工作流、文件夹或文档。先解析链接：
+Do not directly treat the `table=` in the URL as the table ID. It represents the currently selected Base top-level block, which may be a table, dashboard, workflow, folder, or document. Parse the link first:
 
 ```bash
 lark-cli base +url-resolve --url "<url>" --as user
 ```
 
-- `--base-token`：使用返回的 `base_token`
-- 仅当返回的 `block_type` 为 `table` 时，DSL 中的 `tableId` 才使用返回的 `table_id`
-- 如果返回的是其他块类型，按 `hint.next_step` 继续处理；如果只返回中性的 `block_id`，先用 `+base-block-list` 确认块类型，再选择实际要查询的数据表
+- `--base-token`: use the returned `base_token`
+- Only when the returned `block_type` is `table` should the `tableId` in the DSL use the returned `table_id`
+- If another block type is returned, continue processing according to `hint.next_step`; if only a neutral `block_id` is returned, first use `+base-block-list` to confirm the block type, then choose the actual table to query
 
-## API 入参详情
+<a id="api-入参详情"></a>
+## API input details
 
-**HTTP 方法和路径：**
+**HTTP method and path:**
 
 ```
 POST /open-apis/base/v3/bases/:base_token/data/query
 ```
 
-**Path 参数：**
+**Path parameters:**
 
-| 参数 | 必填 | 说明 |
+| Parameter | Required | Description |
 |------|------|------|
-| `base_token` | 是 | Base Token |
+| `base_token` | Yes | Base Token |
 
-**Request Body — DSL 结构：**
+**Request Body — DSL structure:**
 
-| 字段 | 类型 | 必填 | 说明 |
+| Field | Type | Required | Description |
 |------|------|------|------|
-| `datasource` | object | 是 | 数据源，包含 `type`（固定 `"table"`）和 `table` 对象 |
-| `datasource.table.tableId` | string | 二选一 | 目标数据表 ID |
-| `datasource.table.tableName` | string | 二选一 | 目标数据表名称 |
-| `dimensions` | Dimension[] | 否* | 分组维度字段（GROUP BY） |
-| `measures` | Measure[] | 否* | 聚合度量字段 |
-| `filters` | FilterGroup | 否 | 过滤条件（WHERE） |
-| `sort` | Sort[] | 否 | 排序规则 |
-| `pagination` | object | 否 | 限制返回行数，`{limit: N}`，最大 5000 |
-| `shaper` | object | 否 | 结果格式，固定 `{format: "flat"}` |
+| `datasource` | object | Yes | Data source, containing `type` (fixed to `"table"`) and the `table` object |
+| `datasource.table.tableId` | string | Choose one | Target table ID |
+| `datasource.table.tableName` | string | Choose one | Target table name |
+| `dimensions` | Dimension[] | No* | Grouping dimension fields (GROUP BY) |
+| `measures` | Measure[] | No* | Aggregate measure fields |
+| `filters` | FilterGroup | No | Filter conditions (WHERE) |
+| `sort` | Sort[] | No | Sort rules |
+| `pagination` | object | No | Limit the number of returned rows, `{limit: N}`, maximum 5000 |
+| `shaper` | object | No | Result format, fixed to `{format: "flat"}` |
 
-> \* `dimensions` 和 `measures` 至少填写一个。
+> \* At least one of `dimensions` and `measures` must be provided.
 
-**Dimension 字段：**
+**Dimension fields:**
 
-| 字段 | 类型 | 必填 | 说明 |
+| Field | Type | Required | Description |
 |------|------|------|------|
-| `field_name` | string | 是 | 字段名称 |
-| `alias` | string | 否 | 输出列别名，需全局唯一 |
+| `field_name` | string | Yes | Field name |
+| `alias` | string | No | Output column alias, must be globally unique |
 
-**Measure 字段：**
+**Measure fields:**
 
-| 字段 | 类型 | 必填 | 说明 |
+| Field | Type | Required | Description |
 |------|------|------|------|
-| `field_name` | string | 是 | 字段名称 |
-| `aggregation` | string | 是 | 聚合函数：`sum`、`avg`、`min`、`max`、`count`、`count_all`、`distinct_count` |
-| `alias` | string | 否 | 输出列别名，需全局唯一 |
+| `field_name` | string | Yes | Field name |
+| `aggregation` | string | Yes | Aggregate function: `sum`, `avg`, `min`, `max`, `count`, `count_all`, `distinct_count` |
+| `alias` | string | No | Output column alias, must be globally unique |
 
-**聚合函数适用字段类型：**
+**Field types applicable to aggregate functions:**
 
-| 聚合函数 | 适用字段类型 |
+| Aggregate function | Applicable field types |
 |----------|-------------|
 | `sum` / `avg` | `number` |
-| `min` / `max` | `number`、`datetime` |
-| `count` | 全字段适用，计数非空值 |
-| `count_all` | 全字段适用，计数所有行 |
-| `distinct_count` | 全字段适用 |
+| `min` / `max` | `number`, `datetime` |
+| `count` | Applies to all fields, counts non-null values |
+| `count_all` | Applies to all fields, counts all rows |
+| `distinct_count` | Applies to all fields |
 
-> `number` 包含 `style.type` 为 `progress` / `currency` / `rating` 等所有子类型。
+> `number` includes all subtypes where `style.type` is `progress` / `currency` / `rating`, etc.
 
-**FilterGroup：**
+**FilterGroup:**
 
 ```json
 {
@@ -164,218 +169,219 @@ POST /open-apis/base/v3/bases/:base_token/data/query
 }
 ```
 
-| 字段 | 类型 | 必填 | 说明 |
+| Field | Type | Required | Description |
 |------|------|------|------|
-| `type` | int | 是 | 固定填 `1` |
-| `conjunction` | string | 否 | 条件组合逻辑：`"and"` 或 `"or"`，默认 `"and"` |
-| `conditions` | Condition[] | 否 | 条件列表 |
+| `type` | int | Yes | Fixed to `1` |
+| `conjunction` | string | No | Condition combination logic: `"and"` or `"or"`, default `"and"` |
+| `conditions` | Condition[] | No | Condition list |
 
-**Condition：**
+**Condition:**
 
-| 字段 | 类型 | 必填 | 说明 |
+| Field | Type | Required | Description |
 |------|------|------|------|
-| `field_name` | string | 是 | 字段名称（必须与表中字段名精确匹配） |
-| `operator` | string | 是 | 运算符（见下方运算符表） |
-| `value` | string[] | 是 | 条件值数组；`isEmpty`/`isNotEmpty` 时**必须**传空数组 `[]` |
+| `field_name` | string | Yes | Field name (must exactly match the field name in the table) |
+| `operator` | string | Yes | Operator (see the operator table below) |
+| `value` | string[] | Yes | Condition value array; for `isEmpty`/`isNotEmpty`, an empty array `[]` **must** be passed |
 
-**运算符：**
+**Operators:**
 
-| 运算符 | 说明 |
+| Operator | Description |
 |--------|------|
-| `is` | 等于 |
-| `isNot` | 不等于 |
-| `contains` | 包含 |
-| `doesNotContain` | 不包含 |
-| `isEmpty` | 为空 |
-| `isNotEmpty` | 不为空 |
-| `isGreater` | 大于 |
-| `isGreaterEqual` | 大于等于 |
-| `isLess` | 小于 |
-| `isLessEqual` | 小于等于 |
+| `is` | Equals |
+| `isNot` | Not equals |
+| `contains` | Contains |
+| `doesNotContain` | Does not contain |
+| `isEmpty` | Is empty |
+| `isNotEmpty` | Is not empty |
+| `isGreater` | Greater than |
+| `isGreaterEqual` | Greater than or equal to |
+| `isLess` | Less than |
+| `isLessEqual` | Less than or equal to |
 
-> 各运算符的适用字段类型见下方「按各字段类型筛选时 value 格式详解」。
+> For the field types applicable to each operator, see "Detailed value format when filtering by each field type" below.
 
-**按各字段类型筛选时 value 格式详解：**
+**Detailed value format when filtering by each field type:**
 
 *`text`*
 
-| 运算符 | value 格式 | 元素个数 | 示例 |
+| Operator | value format | Number of elements | Example |
 |--------|-----------|---------|------|
-| `is` / `isNot` / `contains` / `doesNotContain` | `["文本内容"]` | 仅 1 个 | `["Hello"]` |
-| `isEmpty` / `isNotEmpty` | `[]` | 0 个 | `[]` |
+| `is` / `isNot` / `contains` / `doesNotContain` | `["文本内容"]` | Exactly 1 | `["Hello"]` |
+| `isEmpty` / `isNotEmpty` | `[]` | 0 | `[]` |
 
-> **不支持** `isGreater` / `isGreaterEqual` / `isLess` / `isLessEqual`：文本无自然顺序，比较运算无意义。
-> `text` 也覆盖电话、超链接、邮箱、条码字段；通过 `style.type` 区分（`plain`（默认）/ `phone` / `url` / `email` / `barcode`），运算符集合一致。
-> 当 `style.type=url` 时，value 筛选的是链接显示名称，而不是 URL 本身。
+> `isGreater` / `isGreaterEqual` / `isLess` / `isLessEqual` are **not supported**: text has no natural order, so comparison operations are meaningless.
+> `text` also covers phone, hyperlink, email, and barcode fields; distinguish them via `style.type` (`plain` (default) / `phone` / `url` / `email` / `barcode`), and the operator set is the same.
+> When `style.type=url`, value filters on the link display name, not the URL itself.
 
 *`number`*
 
-| 运算符 | value 格式 | 元素个数 | 示例 |
+| Operator | value format | Number of elements | Example |
 |--------|-----------|---------|------|
-| `is` / `isNot` / `isGreater` / `isGreaterEqual` / `isLess` / `isLessEqual` | `["数字字符串"]` | 仅 1 个 | `["23.4"]`、`["-100"]` |
-| `isEmpty` / `isNotEmpty` | `[]` | 0 个 | `[]` |
+| `is` / `isNot` / `isGreater` / `isGreaterEqual` / `isLess` / `isLessEqual` | `["数字字符串"]` | Exactly 1 | `["23.4"]`, `["-100"]` |
+| `isEmpty` / `isNotEmpty` | `[]` | 0 | `[]` |
 
-> value 必须为合法数字的字符串形式。
-> `number` 也覆盖货币、进度、评分字段；通过 `style.type` 区分（`plain`（默认）/ `currency` / `progress` / `rating`），运算符集合一致，仅 value 解释不同：
-> - 当 `style.type=progress` 时，34% 对应 0.34 而不是 34。
-> - 当 `style.type=rating` 时，必须输入整数，代表评分。
+> value must be a string representation of a valid number.
+> `number` also covers currency, progress, and rating fields; distinguish them via `style.type` (`plain` (default) / `currency` / `progress` / `rating`), and the operator set is the same, with only the value interpretation differing:
+> - When `style.type=progress`, 34% corresponds to 0.34 rather than 34.
+> - When `style.type=rating`, an integer must be entered, representing the rating.
 
 *`auto_number`*
 
-| 运算符 | value 格式 | 元素个数 | 示例 |
+| Operator | value format | Number of elements | Example |
 |--------|-----------|---------|------|
-| `is` / `isNot` / `contains` / `doesNotContain` | `["编号字符串"]` | 仅 1 个 | `["00001"]` |
-| `isGreater` / `isGreaterEqual` / `isLess` / `isLessEqual` | `["编号字符串"]` | 仅 1 个 | `["00010"]` |
-| `isEmpty` / `isNotEmpty` | `[]` | 0 个 | `[]` |
+| `is` / `isNot` / `contains` / `doesNotContain` | `["编号字符串"]` | Exactly 1 | `["00001"]` |
+| `isGreater` / `isGreaterEqual` / `isLess` / `isLessEqual` | `["编号字符串"]` | Exactly 1 | `["00010"]` |
+| `isEmpty` / `isNotEmpty` | `[]` | 0 | `[]` |
 
 *`select`*
 
-| 运算符 | value 格式 | 元素个数 | 示例 |
+| Operator | value format | Number of elements | Example |
 |--------|-----------|---------|------|
-| `is` / `isNot` | `["选项名"]` | **仅 1 个** | `["选项A"]` |
-| `contains` / `doesNotContain` | `["选项A", "选项B"]` | 可多个 | `["选项A", "选项B"]` |
-| `isEmpty` / `isNotEmpty` | `[]` | 0 个 | `[]` |
+| `is` / `isNot` | `["选项名"]` | **Exactly 1** | `["选项A"]` |
+| `contains` / `doesNotContain` | `["选项A", "选项B"]` | Multiple allowed | `["选项A", "选项B"]` |
+| `isEmpty` / `isNotEmpty` | `[]` | 0 | `[]` |
 
-> **不支持** `isGreater` / `isGreaterEqual` / `isLess` / `isLessEqual`：选项为枚举值，无自然顺序。
-> 通过 `multiple` 区分单选（`multiple=false`，默认）/ 多选（`multiple=true`）。
+> `isGreater` / `isGreaterEqual` / `isLess` / `isLessEqual` are **not supported**: options are enumeration values with no natural order.
+> Distinguish single select (`multiple=false`, default) / multiple select (`multiple=true`) via `multiple`.
 
 *`user` / `created_by` / `updated_by`*
 
-| 运算符 | value 格式 | 元素个数 | 示例                     |
+| Operator | value format | Number of elements | Example                     |
 |--------|-----------|---------|------------------------|
-| `is` / `isNot` | `["用户ID1", "用户ID2"]` | **可多个** | `["ou_aaa", "ou_bbb"]` |
-| `contains` / `doesNotContain` | `["用户ID1", "用户ID2"]` | 可多个 | `["ou_aaa", "ou_bbb"]` |
-| `isEmpty` / `isNotEmpty` | `[]` | 0 个 | `[]`                   |
+| `is` / `isNot` | `["用户ID1", "用户ID2"]` | **Multiple allowed** | `["ou_aaa", "ou_bbb"]` |
+| `contains` / `doesNotContain` | `["用户ID1", "用户ID2"]` | Multiple allowed | `["ou_aaa", "ou_bbb"]` |
+| `isEmpty` / `isNotEmpty` | `[]` | 0 | `[]`                   |
 
-> **不支持** `isGreater` / `isGreaterEqual` / `isLess` / `isLessEqual`：人员无法比大小。
-> 用户 ID 使用 `open_id`（`ou_` 前缀），接口层会自动做 ID 转换。
+> `isGreater` / `isGreaterEqual` / `isLess` / `isLessEqual` are **not supported**: people cannot be compared by magnitude.
+> User IDs use `open_id` (`ou_` prefix), and the API layer automatically performs ID conversion.
 
 *`group_chat`*
 
-| 运算符 | value 格式 | 元素个数 | 示例 |
+| Operator | value format | Number of elements | Example |
 |--------|-----------|---------|------|
-| `is` / `isNot` | `["群组ID1", "群组ID2"]` | 可多个 | `["oc_aaa", "oc_bbb"]` |
-| `contains` / `doesNotContain` | `["群组ID1", "群组ID2"]` | 可多个 | `["oc_aaa", "oc_bbb"]` |
-| `isEmpty` / `isNotEmpty` | `[]` | 0 个 | `[]` |
+| `is` / `isNot` | `["群组ID1", "群组ID2"]` | Multiple allowed | `["oc_aaa", "oc_bbb"]` |
+| `contains` / `doesNotContain` | `["群组ID1", "群组ID2"]` | Multiple allowed | `["oc_aaa", "oc_bbb"]` |
+| `isEmpty` / `isNotEmpty` | `[]` | 0 | `[]` |
 
-> **不支持** `isGreater` / `isGreaterEqual` / `isLess` / `isLessEqual`：群组无法比大小。
+> `isGreater` / `isGreaterEqual` / `isLess` / `isLessEqual` are **not supported**: groups cannot be compared by magnitude.
 
 *`link`*
 
-| 运算符 | value 格式 | 元素个数 | 示例 |
+| Operator | value format | Number of elements | Example |
 |--------|-----------|---------|------|
-| `is` / `isNot` | `["recId1", "recId2"]` | 可多个 | `["recAAA", "recBBB"]` |
-| `contains` / `doesNotContain` | `["recId1", "recId2"]` | 可多个 | `["recAAA", "recBBB"]` |
-| `isEmpty` / `isNotEmpty` | `[]` | 0 个 | `[]` |
+| `is` / `isNot` | `["recId1", "recId2"]` | Multiple allowed | `["recAAA", "recBBB"]` |
+| `contains` / `doesNotContain` | `["recId1", "recId2"]` | Multiple allowed | `["recAAA", "recBBB"]` |
+| `isEmpty` / `isNotEmpty` | `[]` | 0 | `[]` |
 
-> **不支持** `isGreater` / `isGreaterEqual` / `isLess` / `isLessEqual`：关联记录无法比大小。
-> value 传关联表记录的 `record_id`。
-> 双向关联（创建时设 `bidirectional=true`）也属于 `link` 类型，运算符与单向关联一致。
+> `isGreater` / `isGreaterEqual` / `isLess` / `isLessEqual` are **not supported**: linked records cannot be compared by magnitude.
+> value passes the `record_id` of the record in the linked table.
+> Two-way links (with `bidirectional=true` set at creation) also belong to the `link` type, and their operators are the same as one-way links.
 
 *`location`*
 
-| 运算符 | value 格式 | 元素个数 | 示例 |
+| Operator | value format | Number of elements | Example |
 |--------|-----------|---------|------|
-| `is` / `isNot` / `contains` / `doesNotContain` | `["地址文本"]` | 仅 1 个 | `["北京市朝阳区..."]` |
-| `isEmpty` / `isNotEmpty` | `[]` | 0 个 | `[]` |
+| `is` / `isNot` / `contains` / `doesNotContain` | `["地址文本"]` | Exactly 1 | `["北京市朝阳区..."]` |
+| `isEmpty` / `isNotEmpty` | `[]` | 0 | `[]` |
 
-> **不支持** `isGreater` / `isGreaterEqual` / `isLess` / `isLessEqual`：地理位置无自然顺序。
-> location 按 `full_address` 字符串筛选，不支持经纬度空间筛选；查城市/片区时优先用 `contains`，避免用 `is` 匹配短地址词。
+> `isGreater` / `isGreaterEqual` / `isLess` / `isLessEqual` are **not supported**: geographic locations have no natural order.
+> location is filtered by `full_address` string, and latitude/longitude spatial filtering is not supported; when querying cities/districts, prefer `contains` and avoid using `is` to match short address terms.
 
 *`checkbox`*
 
-| 运算符 | value 格式 | 元素个数 | 示例 |
+| Operator | value format | Number of elements | Example |
 |--------|-----------|---------|------|
-| `is` | `["true"]` 或 `["false"]` | 仅 1 个 | `["true"]` |
+| `is` | `["true"]` or `["false"]` | Exactly 1 | `["true"]` |
 
-> 仅支持 `is` 运算符，不支持其他运算符。
+> Only the `is` operator is supported; other operators are not supported.
 
 *`datetime` / `created_at` / `updated_at`*
 
-日期字段仅支持 `is`、`isEmpty`、`isNotEmpty`、`isGreater`、`isLess` 五种运算符。
+Date fields support only five operators: `is`, `isEmpty`, `isNotEmpty`, `isGreater`, and `isLess`.
 
-value 使用预定义关键字机制，第一个元素为字符串常量名称：
+value uses a predefined keyword mechanism, where the first element is a string constant name:
 
-| 关键字 | 说明 | value 格式 | 支持的运算符 |
+| Keyword | Description | value format | Supported operators |
 |--------|------|-----------|-------------|
-| `ExactDate` | 精确日期 | `["ExactDate", "1773187200000"]`（毫秒时间戳） | `is`、`isGreater`、`isLess` |
-| `Today` | 今天 | `["Today"]` | `is`、`isGreater`、`isLess` |
-| `Tomorrow` | 明天 | `["Tomorrow"]` | `is`、`isGreater`、`isLess` |
-| `Yesterday` | 昨天 | `["Yesterday"]` | `is`、`isGreater`、`isLess` |
-| `CurrentWeek` | 本周 | `["CurrentWeek"]` | 仅 `is` |
-| `LastWeek` | 上周 | `["LastWeek"]` | 仅 `is` |
-| `CurrentMonth` | 本月 | `["CurrentMonth"]` | 仅 `is` |
-| `LastMonth` | 上月 | `["LastMonth"]` | 仅 `is` |
-| `TheLastWeek` | 过去七天 | `["TheLastWeek"]` | 仅 `is` |
-| `TheNextWeek` | 未来七天 | `["TheNextWeek"]` | 仅 `is` |
-| `TheLastMonth` | 过去三十天 | `["TheLastMonth"]` | 仅 `is` |
-| `TheNextMonth` | 未来三十天 | `["TheNextMonth"]` | 仅 `is` |
+| `ExactDate` | Exact date | `["ExactDate", "1773187200000"]` (millisecond timestamp) | `is`, `isGreater`, `isLess` |
+| `Today` | Today | `["Today"]` | `is`, `isGreater`, `isLess` |
+| `Tomorrow` | Tomorrow | `["Tomorrow"]` | `is`, `isGreater`, `isLess` |
+| `Yesterday` | Yesterday | `["Yesterday"]` | `is`, `isGreater`, `isLess` |
+| `CurrentWeek` | This week | `["CurrentWeek"]` | Only `is` |
+| `LastWeek` | Last week | `["LastWeek"]` | Only `is` |
+| `CurrentMonth` | This month | `["CurrentMonth"]` | Only `is` |
+| `LastMonth` | Last month | `["LastMonth"]` | Only `is` |
+| `TheLastWeek` | Past seven days | `["TheLastWeek"]` | Only `is` |
+| `TheNextWeek` | Next seven days | `["TheNextWeek"]` | Only `is` |
+| `TheLastMonth` | Past thirty days | `["TheLastMonth"]` | Only `is` |
+| `TheNextMonth` | Next thirty days | `["TheNextMonth"]` | Only `is` |
 
-> - **ExactDate 时区行为**：毫秒时间戳在实际筛选时会被转为**文档时区当天零点**，跨时区场景需注意日期可能偏移一天。
-> - **范围型关键字**（`CurrentWeek`、`LastWeek`、`CurrentMonth`、`LastMonth`、`TheLastWeek`、`TheNextWeek`、`TheLastMonth`、`TheNextMonth`）仅支持 `is` 运算符。
-> - **关键字大小写敏感**：`ExactDate`、`Today`、`CurrentWeek` 等首字母大写，写错大小写会导致校验失败。
+> - **ExactDate time zone behavior**: The millisecond timestamp is converted to **midnight of the day in the document time zone** during actual filtering. In cross-time-zone scenarios, note that the date may shift by one day.
+> - **Range-type keywords** (`CurrentWeek`, `LastWeek`, `CurrentMonth`, `LastMonth`, `TheLastWeek`, `TheNextWeek`, `TheLastMonth`, `TheNextMonth`) only support the `is` operator.
+> - **Keywords are case-sensitive**: `ExactDate`, `Today`, `CurrentWeek`, etc. have a capitalized first letter. Incorrect casing will cause validation to fail.
 
 *`attachment`*
 
-| 运算符 | value 格式 | 元素个数 | 示例 |
+| Operator | value format | Element count | Example |
 |--------|-----------|---------|------|
-| `isEmpty` / `isNotEmpty` | `[]` | 0 个 | `[]` |
+| `isEmpty` / `isNotEmpty` | `[]` | 0 | `[]` |
 
-> 附件字段仅支持 `isEmpty` 和 `isNotEmpty`，不支持其他运算符。
+> Attachment fields only support `isEmpty` and `isNotEmpty`; other operators are not supported.
 
 *`formula` / `lookup`*
 
-公式和查找引用字段的运算符和 value 格式 **取决于其结果数据类型**，按结果类型参照上方对应字段类型的规则。例如：
+The operators and value formats for formula and lookup reference fields **depend on their result data type**. Refer to the rules for the corresponding field type above based on the result type. For example:
 
-- 公式结果为数字 → 按 `number` 规则
-- 公式结果为日期 → 按 `datetime` 规则
-- 公式结果为单选 → 按 `select` 规则
+- Formula result is a number → follow `number` rules
+- Formula result is a date → follow `datetime` rules
+- Formula result is a single select → follow `select` rules
 
-**Sort 字段：**
+**Sort fields:**
 
-| 字段 | 类型 | 必填 | 说明 |
+| Field | Type | Required | Description |
 |------|------|------|------|
-| `field_name` | string | 是 | 字段名称或 alias |
-| `order` | string | 否 | `"asc"`（默认）或 `"desc"` |
+| `field_name` | string | Yes | Field name or alias |
+| `order` | string | No | `"asc"` (default) or `"desc"` |
 
-**Pagination 字段：**
+**Pagination fields:**
 
-| 字段 | 类型 | 必填 | 说明 |
+| Field | Type | Required | Description |
 |------|------|------|------|
-| `limit` | int | 否 | 返回记录数上限，必须为正整数，最大 5000；不填时使用系统默认值。不支持 offset |
+| `limit` | int | No | Maximum number of records to return. Must be a positive integer, maximum 5000; if not provided, the system default is used. offset is not supported |
 
-**Shaper 字段：**
+**Shaper fields:**
 
-| 字段 | 类型 | 必填 | 说明 |
+| Field | Type | Required | Description |
 |------|------|------|------|
-| `format` | string | 是 | 固定为 `"flat"`，表示返回扁平化的对象数组 |
+| `format` | string | Yes | Fixed to `"flat"`, indicating a flattened object array is returned |
 
-## CLI 出参详情
+<a id="cli-出参详情"></a>
+## CLI output details
 
-CLI 输出标准信封 `{ok, identity, data}`（失败时为 `{ok:false, identity, error}`）。
+The CLI outputs the standard envelope `{ok, identity, data}` (`{ok:false, identity, error}` on failure).
 
-**成功时：**
+**On success:**
 
 ```json
 {"ok": true, "identity": "user", "data": {"main_data": [{"dim_city": {"value": "北京"}, "total_amount": {"value": 12345.00}}, ...]}}
 ```
 
-**失败时：**
+**On failure:**
 
 ```json
 {"ok": false, "identity": "user", "error": {"type": "api", "subtype": "unknown", "code": 800004006, "message": "...does not exist in table schema", "hint": "...", "log_id": "..."}}
 ```
 
-**Response 字段：**
+**Response fields:**
 
-| 字段 | 类型 | 说明 |
+| Field | Type | Description |
 |------|------|------|
-| `ok` | bool | 是否成功 |
-| `identity` | string | 执行身份：`user` / `bot` |
-| `data.main_data` | []object | 查询结果数组，每个元素为一行数据（成功时） |
-| `error` | object | 失败时的 typed 错误，含 `type` / `subtype` / `code` / `message` / `hint` / `log_id` |
+| `ok` | bool | Whether it succeeded |
+| `identity` | string | Execution identity: `user` / `bot` |
+| `data.main_data` | []object | Query result array; each element is a row of data (on success) |
+| `error` | object | Typed error on failure, containing `type` / `subtype` / `code` / `message` / `hint` / `log_id` |
 
-每行数据的字段值封装在 CellValue 中：
+The field values of each row of data are wrapped in CellValue:
 
 ```json
 {
@@ -388,11 +394,12 @@ CLI 输出标准信封 `{ok, identity, data}`（失败时为 `{ok:false, identit
 }
 ```
 
-- `value`：展示值（人员名称、选项名称、格式化日期等）
+- `value`: Display value (person name, option name, formatted date, etc.)
 
-## 返回值
+<a id="返回值"></a>
+## Return value
 
-命令成功后输出 `data` 字段的内容：
+After the command succeeds, it outputs the contents of the `data` field:
 
 ```json
 {
@@ -409,46 +416,50 @@ CLI 输出标准信封 `{ok, identity, data}`（失败时为 `{ok:false, identit
 }
 ```
 
-## 工作流
+<a id="工作流"></a>
+## Workflow
 
-1. 确认 base-token 和 table-id
-2. **先查表结构**：执行 `lark-cli base +field-list --base-token <base_token> --table-id <table_id>`
-3. 从返回的字段列表中获取 field_name（DSL 中使用的字段名称）
-4. 根据字段信息构造 DSL JSON
-5. 执行 +data-query
-6. 解读返回结果：
-   - 结果在 `data.main_data` 数组中，每个元素代表一行
-   - 每行对象的 key 为 DSL 中指定的 `alias`；未指定 alias 时，key 为自动生成的列名
-   - 每个 value 是 CellValue 对象，实际值在 `value` 字段中，如 `{"value": "北京"}` 或 `{"value": 12345.00}`
-   - 失败时结果在 `data.error` 中，包含具体错误码和信息
+1. Confirm the base-token and table-id
+2. **Query the table schema first**: run `lark-cli base +field-list --base-token <base_token> --table-id <table_id>`
+3. Obtain the field_name (the field name used in the DSL) from the returned field list
+4. Construct the DSL JSON based on the field information
+5. Run +data-query
+6. Interpret the returned result:
+   - The result is in the `data.main_data` array; each element represents one row
+   - The key of each row object is the `alias` specified in the DSL; if no alias is specified, the key is the automatically generated column name
+   - Each value is a CellValue object; the actual value is in the `value` field, such as `{"value": "北京"}` or `{"value": 12345.00}`
+   - On failure, the result is in `data.error`, containing the specific error code and message
 
-## 与记录读取组合
+<a id="与记录读取组合"></a>
+## Combining with record reading
 
-`+data-query` 可返回聚合结果，也可在只传 `dimensions` 时返回维度字段行；这些维度行按字段组合去重，不包含 `record_id`，不能等同于逐条原始记录。需要输出聚合结果对应的原始记录字段、展示值、记录定位信息或关联表字段时，按以下方式组合：
+`+data-query` can return aggregated results, and can also return dimension field rows when only `dimensions` is passed; these dimension rows are deduplicated by field combination, do not include `record_id`, and cannot be equated with individual raw records. When you need to output the raw record fields, display values, record location information, or linked table fields corresponding to the aggregated results, combine them as follows:
 
-1. 用 `+data-query` 在 Base 云端查询服务中完成全局筛选、分组、聚合、排序和 TopN，得到业务 key、分组值或候选字段组合。
-2. 如果已经拿到候选记录的 `record_id`，用 `+record-get` 读取逐条记录字段。
-3. 如果拿到的是结构化业务 key（例如编号、状态、日期、金额等），用 `+record-list --filter-json` 做精确过滤后读取；`+record-search` 用于文本展示值关键词。
-4. 只有候选条件本身是文本展示值关键词时，才使用 `+record-search`，并用 `search_fields` 限定范围、`select_fields` 做投影。
-5. 若候选记录包含 link 字段，提取关联 `record_id` 后到关联表用 `+record-get` 批量读取展示字段。
-6. 最终回答展示真实业务字段；内部 `record_id` 用于连接或定位。
+1. Use `+data-query` to perform global filtering, grouping, aggregation, sorting, and TopN in the Base cloud query service to obtain business keys, group values, or candidate field combinations.
+2. If you already have the `record_id` of the candidate records, use `+record-get` to read the fields of individual records.
+3. If what you have is a structured business key (such as an ID, status, date, amount, etc.), use `+record-list --filter-json` for exact filtering before reading; `+record-search` is used for text display value keywords.
+4. Only when the candidate condition itself is a text display value keyword should you use `+record-search`, and use `search_fields` to limit the range and `select_fields` for projection.
+5. If the candidate records contain link fields, extract the linked `record_id` and then use `+record-get` in the linked table to batch-read the display fields.
+6. The final answer should display real business fields; internal `record_id` is used for joining or locating.
 
-不要把 `data-query pagination.limit` 理解为分页扫描；它只限制 Base 云端查询服务返回的聚合结果行数，不支持 offset。需要逐条原始记录时按 [Record 查询与分析 SOP](lark-base-record-query-and-analysis-sop.md) 的完整读取或回查路径处理。
+Do not interpret `data-query pagination.limit` as a paginated scan; it only limits the number of aggregated result rows returned by the Base cloud query service and does not support offset. When individual raw records are needed, handle them according to the full read or lookup path in the [Record query and analysis SOP](lark-base-record-query-and-analysis-sop.md).
 
-## 坑点
+<a id="坑点"></a>
+## Pitfalls
 
-- ⚠️ **必须先查表结构**：DSL 的 `field_name` 必须与表中字段名称精确匹配（区分大小写），不能凭猜测构造。先用 `lark-cli base +field-list --base-token <base_token> --table-id <table_id>` 获取真实字段名
-- ⚠️ **权限要求按文档类型分流**：普通多维表格只需文档**阅读权限**；高级权限多维表格必须是文档管理员（**FA / Full Access**），否则返回权限错误
-- ⚠️ **alias 不支持中文**：dimensions 和 measures 的 alias 必须使用英文（如 `dim_city`、`total_amount`），中文 alias 会导致错误
-- ⚠️ **API 路径是 `base/v3`**：本接口路径为 `/open-apis/base/v3/bases/:base_token/data/query`，不是 `bitable/v1`。两者完全不同，用错版本号会返回 `[2200] Internal Error`
-- ⚠️ **`dimensions` 和 `measures` 至少填一个**：两个都不填会返回 DSL 校验错误
-- ⚠️ **`shaper` 必须为 `{"format": "flat"}`**：不填或填其他值会导致结果格式不可预期，建议始终显式指定
-- ⚠️ **数据表标识 `tableId` vs `tableName`**：datasource 中可以用 `tableId`（如 `tblXXX`）或 `tableName`（数据表的用户自定义显示名称），二选一，不要混用
-- ⚠️ **`pagination.limit` 最大 5000**：超过会报错，且不支持 offset，只支持 limit
-- ⚠️ **所有 alias 必须全局唯一**：dimensions 和 measures 之间的 alias 也不能重名
+- ⚠️ **You must query the table schema first**: The `field_name` in the DSL must exactly match the field name in the table (case-sensitive); do not construct it by guessing. First use `lark-cli base +field-list --base-token <base_token> --table-id <table_id>` to obtain the real field names
+- ⚠️ **Permission requirements differ by document type**: An ordinary Base only requires document **read permission**; an advanced-permission Base requires being a document admin (**FA / Full Access**), otherwise a permission error is returned
+- ⚠️ **alias does not support Chinese**: The alias of dimensions and measures must use English (such as `dim_city`, `total_amount`); a Chinese alias will cause an error
+- ⚠️ **The API path is `base/v3`**: The path of this interface is `/open-apis/base/v3/bases/:base_token/data/query`, not `bitable/v1`. The two are completely different; using the wrong version number returns `[2200] Internal Error`
+- ⚠️ **At least one of `dimensions` and `measures` must be provided**: If neither is provided, a DSL validation error is returned
+- ⚠️ **`shaper` must be `{"format": "flat"}`**: If it is not provided or another value is provided, the result format will be unpredictable; it is recommended to always specify it explicitly
+- ⚠️ **Data table identifier `tableId` vs `tableName`**: In datasource, you can use `tableId` (such as `tblXXX`) or `tableName` (the user-defined display name of the data table); choose one, do not mix them
+- ⚠️ **`pagination.limit` maximum 5000**: Exceeding it will cause an error, and offset is not supported; only limit is supported
+- ⚠️ **All aliases must be globally unique**: Aliases between dimensions and measures must not have duplicate names either
 
-## 参考
+<a id="参考"></a>
+## References
 
-- [lark-base](../index.md) — 多维表格全部命令
-- [lark-shared](../../shared/index.md) — 认证和全局参数
-- [Field Schema](lark-base-field-schema.md) — 字段类型与 JSON 结构
+- [lark-base](../index.md) — all Base commands
+- [lark-shared](../../shared/index.md) — authentication and global parameters
+- [Field Schema](lark-base-field-schema.md) — field types and JSON structures

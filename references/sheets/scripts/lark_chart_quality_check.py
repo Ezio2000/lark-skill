@@ -43,8 +43,8 @@ MAX_CELL_READ_SIZE = 2_000
 MAX_SOURCE_SAMPLE_POINTS = 50
 
 
-# 类型别名是运行期求值的，__future__ annotations 豁免不了它们；
-# 内置泛型下标要 3.9，CI 的解释器是 3.7，只能走 typing 里的等价物。
+# Type aliases are evaluated at runtime, and __future__ annotations cannot exempt them;
+# Built-in generic subscripting requires 3.9, but the CI interpreter is 3.7, so we can only use the equivalents in typing.
 CellBounds = Tuple[int, int, int, int]
 CellCache = Dict[Tuple[str, str, str, bool], Dict[str, Any]]
 SeriesProfile = Dict[str, Any]

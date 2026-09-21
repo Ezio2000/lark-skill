@@ -1,90 +1,95 @@
 
 # approval tasks query
 
-查询当前用户的审批任务列表，可用于查看待办、已办、知会等分组。只读操作，不会修改审批状态。
+Query the current user's approval task list; can be used to view groups such as to-do, done, and notified. Read-only operation; does not modify approval status.
 
-需要的 scopes: ["approval:task:read"]
+Required scopes: ["approval:task:read"]
 
-## 命令
+<a id="命令"></a>
+## Command
 
 ```bash
-# 查询待办审批
+# Query to-do approvals
 lark-cli approval tasks query --params '{"topic":"1"}' --as user
 
-# 查询已办审批
+# Query done approvals
 lark-cli approval tasks query --params '{"topic":"2"}' --as user
 
-# 按关键词搜索任务列表
+# Search the task list by keyword
 lark-cli approval tasks query --params '{"topic":"1","keyword":"测试","page_size":10}' --as user
 
-# 按任务时间范围筛选（秒级时间戳）
+# Filter by task time range (second-level timestamp)
 lark-cli approval tasks query --params '{"topic":"1","start_timestamp":"<START_SECONDS>","end_timestamp":"<END_SECONDS>"}' --as user
 
-# 使用 page_token 翻页
+# Paginate using page_token
 lark-cli approval tasks query --params '{"topic":"1","page_token":"example_page_token"}' --as user
 
-# 表格格式输出，便于快速浏览
+# Table format output for quick browsing
 lark-cli approval tasks query --params '{"topic":"1"}' --format table --as user
 ```
 
-## 参数
+<a id="参数"></a>
+## Parameters
 
-| 参数 | 必填 | 说明 |
+| Parameter | Required | Description |
 |------|------|------|
-| `--params '{"topic":"..."}'` | 是 | 查询参数，使用 JSON 传入 |
-| `topic` | 是 | 任务分组主题，见下方“topic 枚举” |
-| `definition_code` | 否 | 审批定义 Code，用于仅查询某个审批定义下的任务 |
-| `keyword` | 否 | 搜索关键词；非空时走搜索链路，空或仅空格时保持普通列表链路 |
-| `start_timestamp` | 否 | 按任务时间筛选，时间范围开始值，秒级时间戳 |
-| `end_timestamp` | 否 | 按任务时间筛选，时间范围结束值，秒级时间戳 |
-| `locale` | 否 | 返回语言：`zh-CN`、`en-US`、`ja-JP` |
-| `page_size` | 否 | 分页大小 |
-| `page_token` | 否 | 翻页标记；首次请求不填，后续使用上一次返回的 `page_token` |
-| `user_id_type` | 否 | 用户 ID 类型：`user_id`、`union_id`、`open_id` |
-| `--as user` | 否 | 建议显式指定用户身份；审批任务查询通常应使用用户身份 |
-| `--format` | 否 | 输出格式：`json`（默认）、`ndjson`、`table`、`csv` |
-| `--dry-run` | 否 | 预览 API 调用，不执行 |
+| `--params '{"topic":"..."}'` | Yes | Query parameters, passed in as JSON |
+| `topic` | Yes | Task group topic, see "topic enum" below |
+| `definition_code` | No | Approval definition Code, used to query only tasks under a certain approval definition |
+| `keyword` | No | Search keyword; when non-empty, the search path is used; when empty or only spaces, the normal list path is kept |
+| `start_timestamp` | No | Filter by task time, start value of the time range, second-level timestamp |
+| `end_timestamp` | No | Filter by task time, end value of the time range, second-level timestamp |
+| `locale` | No | Return language: `zh-CN`, `en-US`, `ja-JP` |
+| `page_size` | No | Page size |
+| `page_token` | No | Pagination token; leave empty on the first request, then use the `page_token` returned last time |
+| `user_id_type` | No | User ID type: `user_id`, `union_id`, `open_id` |
+| `--as user` | No | It is recommended to explicitly specify the user identity; approval task queries should usually use the user identity |
+| `--format` | No | Output format: `json` (default), `ndjson`, `table`, `csv` |
+| `--dry-run` | No | Preview the API call without executing it |
 
-## topic 枚举
+<a id="topic-枚举"></a>
+## topic enum
 
-| 值 | 含义 |
+| Value | Meaning |
 |----|------|
-| `1` | 待办审批 |
-| `2` | 已办审批 |
-| `17` | 未读知会 |
-| `18` | 已读知会 |
+| `1` | To-do approvals |
+| `2` | Done approvals |
+| `17` | Unread notifications |
+| `18` | Read notifications |
 
-## 输出重点字段
+<a id="输出重点字段"></a>
+## Key output fields
 
-返回结果中常见字段：
+Common fields in the returned result:
 
-| 字段 | 说明 |
+| Field | Description |
 |------|------|
-| `count` | 列表计数，只在第一页返回；当任务数大于等于 100 时返回 `99` |
-| `has_more` | 是否还有更多数据 |
-| `page_token` | 下一页翻页 Token |
-| `tasks[].task_id` | 任务 ID，全局唯一 |
-| `tasks[].instance_code` | 审批实例 Code；后续执行 approve / reject / rollback 等操作时通常需要与 `task_id` 成对使用 |
-| `tasks[].title` | 任务标题 |
-| `tasks[].status` | 任务状态：`1` 待办、`2` 已办、`17` 未读、`18` 已读、`33` 处理中、`34` 撤回 |
-| `tasks[].topic` | 任务所属分组主题 |
-| `tasks[].instance_status` | 审批实例状态：`0` 无状态、`1` 流转中、`2` 已通过、`3` 已拒绝、`4` 已撤销、`5` 已终止 |
-| `tasks[].definition_code` | 审批定义 Code |
-| `tasks[].definition_name` | 审批定义名称 |
-| `tasks[].initiator` | 发起人 ID |
-| `tasks[].initiator_name` | 发起人姓名 |
-| `tasks[].summaries` | 表单摘要字段列表 |
-| `tasks[].support_api_operate` | 是否支持通过 API 同意或拒绝该任务 |
-| `tasks[].user_id` | 任务所属用户 ID |
-| `tasks[].instance_external_id` | 三方审批实例 ID，仅第三方审批实例存在 |
-| `tasks[].task_external_id` | 三方审批任务 ID，仅第三方审批任务存在 |
-| `tasks[].link` | 三方审批跳转链接 |
+| `count` | List count, returned only on the first page; returns `99` when the number of tasks is greater than or equal to 100 |
+| `has_more` | Whether there is more data |
+| `page_token` | Next page pagination Token |
+| `tasks[].task_id` | Task ID, globally unique |
+| `tasks[].instance_code` | Approval instance Code; when subsequently performing operations such as approve / reject / rollback, it usually needs to be used in pairs with `task_id` |
+| `tasks[].title` | Task title |
+| `tasks[].status` | Task status: `1` to-do, `2` done, `17` unread, `18` read, `33` in progress, `34` withdrawn |
+| `tasks[].topic` | Group topic the task belongs to |
+| `tasks[].instance_status` | Approval instance status: `0` no status, `1` in progress, `2` approved, `3` rejected, `4` revoked, `5` terminated |
+| `tasks[].definition_code` | Approval definition Code |
+| `tasks[].definition_name` | Approval definition name |
+| `tasks[].initiator` | Initiator ID |
+| `tasks[].initiator_name` | Initiator name |
+| `tasks[].summaries` | List of form summary fields |
+| `tasks[].support_api_operate` | Whether approving or rejecting this task via API is supported |
+| `tasks[].user_id` | ID of the user the task belongs to |
+| `tasks[].instance_external_id` | Third-party approval instance ID, exists only for third-party approval instances |
+| `tasks[].task_external_id` | Third-party approval task ID, exists only for third-party approval tasks |
+| `tasks[].link` | Third-party approval redirect link |
 
-## 使用建议
+<a id="使用建议"></a>
+## Usage recommendations
 
-- 常见处理链：先用 `tasks query` 拿到 `task_id` 和 `instance_code`，若用户需要查看详情、当前节点、表单内容、流程进度等内容，则调用 `instances get` 查看详情，最后执行 `tasks approve` / `tasks reject` / `tasks transfer` / `tasks add_sign` / `tasks rollback`。
-- 如果你只想看“已发起的审批实例”，使用 `instances initiated`；`tasks query` 更适合围绕“任务分组”来拉取列表。
-- 需要搜索任务标题、摘要或相关内容时传入 `keyword`；搜索排序和普通列表排序不同，按搜索服务结果为准。
-- 按时间排查任务时使用 `start_timestamp` / `end_timestamp` 缩小范围；这两个值都是秒级时间戳。
-- 需要继续翻页时，直接把上一次返回的 `page_token` 放回 `--params`。
-- 当结果量较大时，优先使用 `--format table` 提升可读性。
+- Common processing chain: first use `tasks query` to get `task_id` and `instance_code`; if the user needs to view details, the current node, form content, process progress, etc., call `instances get` to view details, and finally execute `tasks approve` / `tasks reject` / `tasks transfer` / `tasks add_sign` / `tasks rollback`.
+- If you only want to see "approval instances that have been initiated", use `instances initiated`; `tasks query` is more suitable for pulling lists around "task groups".
+- Pass `keyword` when you need to search task titles, summaries, or related content; search sorting differs from normal list sorting, and the search service results take precedence.
+- When troubleshooting tasks by time, use `start_timestamp` / `end_timestamp` to narrow the range; both values are second-level timestamps.
+- When you need to continue paginating, directly put the `page_token` returned last time back into `--params`.
+- When the result volume is large, prefer using `--format table` to improve readability.

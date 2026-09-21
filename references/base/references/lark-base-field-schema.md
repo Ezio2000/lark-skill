@@ -1,21 +1,22 @@
 # Base Field Schema
 
-> 适用命令：`lark-cli base +field-create`、`lark-cli base +field-update`
+> Applicable commands: `lark-cli base +field-create`, `lark-cli base +field-update`
 
-本文档定义 `+field-create` / `+field-update` 写字段时 `--json` 的推荐格式，是字段类型与字段 JSON 结构的 source of truth。目标不是复刻完整 schema，而是让 agent 稳定产出正确 payload。
+This document defines the recommended format of `--json` when writing fields with `+field-create` / `+field-update`, and is the source of truth for field types and field JSON structure. The goal is not to replicate the complete schema, but to enable the agent to reliably produce correct payloads.
 
-## 1. 顶层规则（必须遵守）
+<a id="1-顶层规则必须遵守"></a>
+## 1. Top-level rules (must be followed)
 
-- 单个字段定义始终是 JSON 对象，每个字段对象统一使用：`type` + `name` + 类型特有字段。
-- `+field-create --json` 接受一个字段对象或非空字段对象数组。
-- `+field-update --json` 只接受一个字段对象。
-- 所有字段类型都支持可选 `description`；支持纯文本，也支持 Markdown 链接。
-- 字段默认值使用 `default_value`，直接传对应 CellValue；支持范围只有 `text`、`number`、静态 `select`、`datetime`、`user`。清空默认值传 `null`；创建时省略表示不设置。
-- 不要使用旧结构：`field_name`、`property`、`ui_type`、数字枚举 `type`。
-- `+field-update` 是 override 式的完整覆盖 `PUT`，不是 partial update；先用 `+field-get` 读取当前定义，在其基础上修改目标属性，并把整个字段需要保留的可写配置完整写回，同时带 `--yes`。
-- `type=formula` 或 `type=lookup` 创建/更新前，必须先读对应 guide。
+- A single field definition is always a JSON object, and every field object uniformly uses: `type` + `name` + type-specific fields.
+- `+field-create --json` accepts a single field object or a non-empty array of field objects.
+- `+field-update --json` accepts only a single field object.
+- All field types support the optional `description`; plain text is supported, as are Markdown links.
+- Field default values use `default_value`, passing the corresponding CellValue directly; the supported scope is only `text`, `number`, static `select`, `datetime`, `user`. To clear the default value, pass `null`; omitting it at creation time means it is not set.
+- Do not use the old structures: `field_name`, `property`, `ui_type`, numeric enum `type`.
+- `+field-update` is an override-style full replacement of `PUT`, not a partial update; first use `+field-get` to read the current definition, modify the target properties based on it, and write back the entire field's writable configuration that needs to be preserved in full, while including `--yes`.
+- Before creating/updating with `type=formula` or `type=lookup`, you must first read the corresponding guide.
 
-推荐示例：
+Recommended example:
 
 ```json
 {
@@ -25,34 +26,36 @@
 }
 ```
 
-## 2. 字段速查
+<a id="2-字段速查"></a>
+## 2. Field quick reference
 
-| 类型 | 最小必填字段 | 常见补充字段 |
+| Type | Minimum required fields | Common supplementary fields |
 |------|--------------|-------------|
 | `text` | `type` `name` | `style.type` `default_value` |
 | `number` | `type` `name` | `style` `default_value` |
-| `select` | `type` `name` | `multiple` + `options` + 静态 `default_value`，或 `multiple` + `dynamic_options_source` |
+| `select` | `type` `name` | `multiple` + `options` + static `default_value`, or `multiple` + `dynamic_options_source` |
 | `datetime` | `type` `name` | `style.format` `default_value` |
 | `created_at` / `updated_at` | `type` `name` | `style.format` |
-| `user` / `group_chat` | `type` `name` | `multiple`；仅 `user` 支持 `default_value` |
-| `created_by` / `updated_by` | `type` `name` | 无 |
+| `user` / `group_chat` | `type` `name` | `multiple`; only `user` supports `default_value` |
+| `created_by` / `updated_by` | `type` `name` | None |
 | `link` | `type` `name` `link_table` | `bidirectional` `bidirectional_link_field_name` |
-| `formula` | `type` `name` `expression` | 无 |
+| `formula` | `type` `name` `expression` | None |
 | `lookup` | `type` `name` `from` `select` `where` | `aggregate` |
 | `auto_number` | `type` `name` | `style.rules` |
-| `attachment` / `location` / `checkbox` | `type` `name` | 无 |
-| `button` | `type` `name` `button_config.title` | 无 |
+| `attachment` / `location` / `checkbox` | `type` `name` | None |
+| `button` | `type` `name` `button_config.title` | None |
 
-所有类型都可额外传 `description`；上表的“常见补充字段”只列类型特有配置。
+All types can additionally pass `description`; the "common supplementary fields" in the table above list only type-specific configuration.
 
-## 3. 各类型写法
+<a id="3-各类型写法"></a>
+## 3. How to write each type
 
 ### 3.1 text
 
-文本字段；电话、超链接、邮箱、条码也都属于 `text`，通过 `style.type` 区分。
-支持 `default_value`：静态 Markdown 文本字符串；`phone` style 必须是合法电话号码；`url` style 传一个 Markdown 链接或裸 URL；`email` style 必须是合法邮箱字符串，不要传 Markdown 链接或 `mailto:`。
+Text field; phone, hyperlink, email, and barcode also belong to `text`, distinguished via `style.type`.
+Supports `default_value`: static Markdown text string; `phone` style must be a valid phone number; `url` style passes a Markdown link or bare URL; `email` style must be a valid email string, do not pass a Markdown link or `mailto:`.
 
-最小写法（默认 `style.type` 为 `plain`）：
+Minimal form (default `style.type` is `plain`):
 
 ```json
 {
@@ -62,9 +65,9 @@
 }
 ```
 
-常用写法：
+Common form:
 
-默认值可以是 Markdown 文本
+The default value can be Markdown text
 ```json
 {
   "type": "text",
@@ -74,7 +77,7 @@
 }
 ```
 
-`style.type=phone` 时默认值是合法电话号码字符串。
+When `style.type=phone`, the default value is a valid phone number string.
 ```json
 {
   "type": "text",
@@ -102,14 +105,14 @@
 }
 ```
 
-常用 `style.type`：`plain`（默认）、`phone`、`url`、`email`、`barcode`。
+Common `style.type`: `plain` (default), `phone`, `url`, `email`, `barcode`.
 
 ### 3.2 number
 
-数字字段；货币、进度、评分都属于 `number`，通过 `style.type` 区分。
-支持 `default_value`：静态 JSON number；所有 number style 都按这个规则写。
+Number field; currency, progress, and rating also belong to `number`, distinguished via `style.type`.
+Supports `default_value`: static JSON number; all number styles are written according to this rule.
 
-最小写法（默认 `style.type` 为 `plain`）：
+Minimal form (default `style.type` is `plain`):
 
 ```json
 {
@@ -119,16 +122,16 @@
 }
 ```
 
-`style` 是按 `type` 区分的对象；不同 `style.type` 的内部字段不一样，不要混传。
+`style` is an object distinguished by `type`; different `style.type` have different internal fields, do not mix them up.
 
 #### `plain`
 
-支持字段：`precision`、`percentage`、`thousands_separator`
+Supported fields: `precision`, `percentage`, `thousands_separator`
 
-默认值 / 约束：
-- `precision` 取值 `0..4`，默认 `2`
-- `percentage` 默认 `false`
-- `thousands_separator` 默认 `false`
+Default values / constraints:
+- `precision` takes values `0..4`, default `2`
+- `percentage` default `false`
+- `thousands_separator` default `false`
 
 ```json
 {
@@ -146,11 +149,11 @@
 
 #### `currency`
 
-支持字段：`precision`、`currency_code`
+Supported fields: `precision`, `currency_code`
 
-默认值 / 约束：
-- `precision` 取值 `0..4`，默认 `2`
-- `currency_code` 必填，如 `CNY`、`USD`、`EUR`
+Default values / constraints:
+- `precision` takes values `0..4`, default `2`
+- `currency_code` required, such as `CNY`, `USD`, `EUR`
 
 ```json
 {
@@ -162,12 +165,12 @@
 
 #### `progress`
 
-支持字段：`percentage`、`color`
+Supported fields: `percentage`, `color`
 
-默认值 / 约束：
-- `percentage` 默认 `true`
-- `color` 必填
-- `color` 可用：`Blue`、`Purple`、`DarkGreen`、`Green`、`Cyan`、`Orange`、`Red`、`Gray`、`WhiteToBlueGradient`、`WhiteToPurpleGradient`、`WhiteToOrangeGradient`、`GreenToRedGradient`、`RedToGreenGradient`、`BlueToPinkGradient`、`PinkToBlueGradient`、`SpectralGradient`
+Default values / constraints:
+- `percentage` default `true`
+- `color` required
+- `color` available: `Blue`, `Purple`, `DarkGreen`, `Green`, `Cyan`, `Orange`, `Red`, `Gray`, `WhiteToBlueGradient`, `WhiteToPurpleGradient`, `WhiteToOrangeGradient`, `GreenToRedGradient`, `RedToGreenGradient`, `BlueToPinkGradient`, `PinkToBlueGradient`, `SpectralGradient`
 
 ```json
 {
@@ -180,13 +183,13 @@
 
 #### `rating`
 
-支持字段：`icon`、`min`、`max`
+Supported fields: `icon`, `min`, `max`
 
-默认值 / 已知平台范围：
-- `icon` 默认 `star`
-- `icon` 可用：`star`、`heart`、`thumbsup`、`fire`、`smile`、`lightning`、`flower`、`number`
-- `min` 取值 `0..1`，默认 `1`
-- `max` 取值 `1..10`，默认 `5`
+Default values / known platform scope:
+- `icon` default `star`
+- `icon` available: `star`, `heart`, `thumbsup`, `fire`, `smile`, `lightning`, `flower`, `number`
+- `min` takes values `0..1`, default `1`
+- `max` takes values `1..10`, default `5`
 
 ```json
 {
@@ -198,22 +201,23 @@
 
 ### 3.3 select
 
-单选和多选都使用 `select`；用 `multiple` 区分。`multiple` 默认 `false`。静态选项用 `options`，动态选项用 `dynamic_options_source`；两者不要同时传。
+Both single-select and multi-select use `select`; distinguished via `multiple`. `multiple` defaults to `false`. Static options use `options`, dynamic options use `dynamic_options_source`; do not pass both at the same time.
 
-#### 静态选项
+<a id="静态选项"></a>
+#### Static options
 
-支持字段：`multiple`、`options`
-支持 `default_value`：静态选项名数组；即使 `multiple=false` 也写数组，如 `["Todo"]`。
+Supported fields: `multiple`, `options`
+Supports `default_value`: array of static option names; even for `multiple=false`, write an array, such as `["Todo"]`.
 
-默认值 / 约束：
-- `multiple` 默认 `false`
-- `options` 最多 `10000` 项
-- `options[]` 结构是 `{name, hue?, lightness?}`
-- `options[].name` 必填
-- `options[].hue` 可用：`Red`、`Orange`、`Yellow`、`Lime`、`Green`、`Turquoise`、`Wathet`、`Blue`、`Carmine`、`Purple`、`Gray` 缺省值为 `Blue`
-- `options[].lightness` 可用：`Lighter`、`Light`、`Standard`、`Dark`、`Darker` 缺省值为 `Lighter`
-- 选项里没有 `id`，只有 `name`。
-- 支持 `default_value` 配置：填选项名数组。
+Default values / constraints:
+- `multiple` default `false`
+- `options` at most `10000` items
+- `options[]` structure is `{name, hue?, lightness?}`
+- `options[].name` required
+- `options[].hue` available: `Red`, `Orange`, `Yellow`, `Lime`, `Green`, `Turquoise`, `Wathet`, `Blue`, `Carmine`, `Purple`, `Gray` default value is `Blue`
+- `options[].lightness` available: `Lighter`, `Light`, `Standard`, `Dark`, `Darker` default value is `Lighter`
+- Options do not have `id`, only `name`.
+- Supports `default_value` configuration: fill in an array of option names.
 
 ```json
 {
@@ -228,21 +232,22 @@
 }
 ```
 
-#### 动态选项
+<a id="动态选项"></a>
+#### Dynamic options
 
-当新字段要引用或复用另一选项字段的选项列表时，优先使用 `dynamic_options_source`，避免重复定义和维护 `options`。
+When a new field needs to reference or reuse the option list of another option field, prefer using `dynamic_options_source` to avoid repeatedly defining and maintaining `options`.
 
-支持字段：`multiple`、`dynamic_options_source`
-动态选项不支持 `default_value`。
+Supported fields: `multiple`, `dynamic_options_source`
+Dynamic options do not support `default_value`.
 
-默认值 / 约束：
-- `multiple` 默认 `false`
-- `dynamic_options_source` 结构是 `{table_id, field_id}`
-- `dynamic_options_source.table_id` 填来源表 id 或表名
-- `dynamic_options_source.field_id` 填来源字段 id 或字段名
-- `dynamic_options_source` 仅创建支持；更新已有字段时不要传
-- 引用选项条件 / 级联筛选条件：这个功能在 Base 前端支持，属于 UI-only 属性，OpenAPI 里不支持，CLI 不能读取、创建或更新；不要根据接口返回缺失判断未配置
-- 动态选项不支持配置 `default_value`。
+Default values / constraints:
+- `multiple` default `false`
+- `dynamic_options_source` structure is `{table_id, field_id}`
+- `dynamic_options_source.table_id` fill in the source table id or table name
+- `dynamic_options_source.field_id` fill in the source field id or field name
+- `dynamic_options_source` is supported only at creation; do not pass it when updating an existing field
+- Referenced option conditions / cascading filter conditions: this feature is supported in the Base frontend and is a UI-only property; it is not supported in OpenAPI, and the CLI cannot read, create, or update it; do not judge that it is unconfigured based on its absence from the API response
+- Dynamic options do not support configuring `default_value`.
 
 ```json
 {
@@ -258,10 +263,10 @@
 
 ### 3.4 datetime
 
-手动填写的日期/时间字段。系统时间用 `created_at` / `updated_at`。
-支持 `default_value`：静态时间字符串，或 `{ "$slot": "record_created_time" }`。`datetime + record_created_time` 是自动填充可编辑单元格；`created_at` 是只读创建时间元信息。
+A manually filled date/time field. For system time use `created_at` / `updated_at`.
+Supports `default_value`: a static time string, or `{ "$slot": "record_created_time" }`. `datetime + record_created_time` is an auto-filled editable cell; `created_at` is read-only creation-time metadata.
 
-最小写法：
+Minimal form:
 
 ```json
 {
@@ -271,13 +276,13 @@
 }
 ```
 
-支持字段：`style.format`
+Supported fields: `style.format`
 
-默认值 / 约束：
-- `style.format` 默认 `yyyy/MM/dd` 可用格式：`yyyy/MM/dd`、`yyyy/MM/dd HH:mm`、`yyyy/MM/dd HH:mm Z`、`yyyy-MM-dd`、`yyyy-MM-dd HH:mm`、`yyyy-MM-dd HH:mm Z`、`MM-dd`、`MM/dd/yyyy`、`dd/MM/yyyy`
-- `style.format` 只控制 Base 前端展示，不影响 CLI 读取的 CellValue；前端当前最多配置到分钟级展示，底层时间值以毫秒级精度存储。
+Default values / constraints:
+- `style.format` default `yyyy/MM/dd` available formats: `yyyy/MM/dd`, `yyyy/MM/dd HH:mm`, `yyyy/MM/dd HH:mm Z`, `yyyy-MM-dd`, `yyyy-MM-dd HH:mm`, `yyyy-MM-dd HH:mm Z`, `MM-dd`, `MM/dd/yyyy`, `dd/MM/yyyy`
+- `style.format` only controls Base frontend display and does not affect the CellValue read by the CLI; the frontend currently supports configuring display down to the minute level at most, and the underlying time value is stored with millisecond precision.
 
-常用写法：
+Common form:
 
 ```json
 {
@@ -290,13 +295,13 @@
 
 ### 3.5 created_at / updated_at
 
-系统创建时间 / 系统更新时间字段；可配显示格式，但记录写入时应视为只读。
+System creation time / system update time fields; the display format can be configured, but they should be treated as read-only when records are written.
 
-支持字段：`style.format`
+Supported fields: `style.format`
 
-默认值 / 约束：
-- `style.format` 默认 `yyyy/MM/dd`
-- 可用格式：`yyyy/MM/dd`、`yyyy/MM/dd HH:mm`、`yyyy/MM/dd HH:mm Z`、`yyyy-MM-dd`、`yyyy-MM-dd HH:mm`、`yyyy-MM-dd HH:mm Z`、`MM-dd`、`MM/dd/yyyy`、`dd/MM/yyyy`
+Default values / constraints:
+- `style.format` default `yyyy/MM/dd`
+- Available formats: `yyyy/MM/dd`, `yyyy/MM/dd HH:mm`, `yyyy/MM/dd HH:mm Z`, `yyyy-MM-dd`, `yyyy-MM-dd HH:mm`, `yyyy-MM-dd HH:mm Z`, `MM-dd`, `MM/dd/yyyy`, `dd/MM/yyyy`
 
 ```json
 { "type": "created_at", "name": "创建时间" }
@@ -308,7 +313,7 @@
 
 ### 3.6 user / group_chat
 
-两者都支持 `multiple`（默认 `true`）；仅 `user` 支持人员数组 `default_value`，元素使用 `{ "id": "ou_xxx" }` 或 `{ "$slot": "current_user" }`，用户 ID 必须来自真实查询。
+Both support `multiple` (default `true`); only `user` supports the personnel array `default_value`, whose elements use `{ "id": "ou_xxx" }` or `{ "$slot": "current_user" }`, and user IDs must come from real queries.
 
 ```json
 {
@@ -325,21 +330,21 @@
 
 ### 3.7 created_by / updated_by
 
-系统创建人和修改人字段，记录写入时只读：`{ "type": "created_by", "name": "创建人" }`、`{ "type": "updated_by", "name": "更新人" }`。
+System creator and modifier fields, read-only when records are written: `{ "type": "created_by", "name": "创建人" }`, `{ "type": "updated_by", "name": "更新人" }`.
 
 ### 3.8 link
 
-关联字段；`link_table` 必填。
+Link field; `link_table` is required.
 
-支持字段：`link_table`、`bidirectional`、`bidirectional_link_field_name`
+Supported fields: `link_table`, `bidirectional`, `bidirectional_link_field_name`
 
-默认值 / 约束：
-- `link_table` 必填
-- `link` 字段的单元格表示“当前记录关联到的对侧表记录集合”
-- `bidirectional` 默认 `false`
-- `bidirectional=true` 时，会在被关联表自动创建一个反向关联字段。任一侧记录的关联关系发生变更时，另一侧对应记录会自动同步更新
-- `bidirectional_link_field_name` 仅在 `bidirectional=true` 时使用
-- 关联字段筛选：这个功能在 Base 前端支持，属于 UI-only 属性，OpenAPI 里不支持，CLI 不能读取、创建或更新；不要根据接口返回缺失判断未配置
+Default values / constraints:
+- `link_table` required
+- The cell of the `link` field represents "the set of records in the opposite table that the current record is linked to"
+- `bidirectional` default `false`
+- When `bidirectional=true`, a reverse link field is automatically created in the linked table. When the link relationship of a record on either side changes, the corresponding record on the other side is automatically updated
+- `bidirectional_link_field_name` is used only when `bidirectional=true`
+- Link field filtering: this feature is supported in the Base frontend and is a UI-only property; it is not supported in OpenAPI, and the CLI cannot read, create, or update it; do not judge that it is unconfigured based on its absence from the API response
 
 ```json
 {
@@ -349,7 +354,7 @@
 }
 ```
 
-双向关联：
+Bidirectional link:
 
 ```json
 {
@@ -361,13 +366,13 @@
 }
 ```
 
-更新时注意：
-- `link` 不允许转换为其他类型，其他类型也不能转换为 `link`。
-- 现有 `link` 字段的 `bidirectional` 不能改。
+Notes when updating:
+- `link` is not allowed to be converted to other types, and other types cannot be converted to `link`.
+- The `bidirectional` of an existing `link` field cannot be changed.
 
 ### 3.9 formula
 
-公式字段；`expression` 必填。创建/更新前先读 [Formula Field](lark-base-field-formula.md) 学习公式语法。
+Formula field; `expression` is required. Before creating/updating, first read [Formula Field](lark-base-field-formula.md) to learn the formula syntax.
 
 ```json
 {
@@ -379,13 +384,13 @@
 
 ### 3.10 lookup
 
-查找引用字段使用 `from`、`select`、`where` 和可选 `aggregate`；结构、条件和聚合值必须按 [Lookup Field](lark-base-field-lookup.md) 构造。
+Lookup reference fields use `from`, `select`, `where`, and the optional `aggregate`; the structure, conditions, and aggregate values must be constructed according to [Lookup Field](lark-base-field-lookup.md).
 
 ### 3.11 auto_number
 
-自动编号字段；创建时不写 `style.rules` 会使用默认规则：`NO.001`。更新已有自动编号字段时应显式提交目标 `style.rules`，因为 `+field-update` 会把新的编号规则重新应用到已有编号。
+Auto-number field; if `style.rules` is not written at creation, the default rule is used: `NO.001`. When updating an existing auto-number field, the target `style.rules` should be submitted explicitly, because `+field-update` will reapply the new numbering rule to existing numbers.
 
-最小写法：
+Minimal form:
 
 ```json
 {
@@ -394,9 +399,9 @@
 }
 ```
 
-`style.rules` 包含 1–9 条规则：固定文本用 `{ "type":"text", "text":"TASK-" }`；递增序号用 `{ "type":"incremental_number", "length":4 }`（长度 1–9）；创建时间用 `{ "type":"created_time", "date_format":"yyyyMMdd" }`，格式支持 `yyyyMMdd`、`yyyyMM`、`yyMM`、`MMdd`、`yyyy`、`MM`、`dd`。
+`style.rules` contains 1–9 rules: use `{ "type":"text", "text":"TASK-" }` for fixed text; use `{ "type":"incremental_number", "length":4 }` for the incrementing sequence number (length 1–9); use `{ "type":"created_time", "date_format":"yyyyMMdd" }` for creation time, with supported formats `yyyyMMdd`, `yyyyMM`, `yyMM`, `MMdd`, `yyyy`, `MM`, `dd`.
 
-自定义规则：
+Custom rules:
 
 ```json
 {
@@ -422,7 +427,7 @@
 { "type": "location", "name": "位置" }
 ```
 
-Location 读取为 `{lng,lat,full_address}`；写入只使用数字 `{lng,lat}`，`full_address` 由平台根据坐标解析，不允许手动指定；筛选行为按照 `full_address` 做字符串筛选，将 Location 当作文本列使用文本 operator。`location -> text` 时只保留 `full_address`。
+Location is read as `{lng,lat,full_address}`; for writing, use only the numeric `{lng,lat}`, and `full_address` is resolved by the platform based on the coordinates and cannot be specified manually; filtering behavior follows `full_address` for string filtering, treating Location as a text column and using text operators. When `location -> text`, only `full_address` is retained.
 
 ```json
 { "type": "checkbox", "name": "完成" }
@@ -434,21 +439,24 @@ Location 读取为 `{lng,lat,full_address}`；写入只使用数字 `{lng,lat}`�
 { "type": "button", "name": "按钮", "button_config": { "title": "点击按钮" } }
 ```
 
-绑定 Workflow 时，使用 `+button-rule-bind`；读取绑定关系时，使用 `+button-rule-get`；解除绑定用 `+button-rule-unbind`。
+When binding a Workflow, use `+button-rule-bind`; when reading the binding relationship, use `+button-rule-get`; to unbind, use `+button-rule-unbind`.
 
-## 4. 创建与更新
+<a id="4-创建与更新"></a>
+## 4. Creation and update
 
-- `+field-create`：按目标字段配置直接构造 `--json`。
-- `+field-update`：使用同样的 JSON 结构，但执行完整覆盖更新，不是局部 patch。先用 `+field-get` 读取当前定义，在其基础上修改目标属性；需要保留的名称、类型、样式、选项、默认值、描述及类型专属配置都应完整写回，并带 `--yes`。
+- `+field-create`: directly construct `--json` according to the target field configuration.
+- `+field-update`: use the same JSON structure, but perform a full replacement update, not a partial patch. First use `+field-get` to read the current definition, and modify the target properties based on it; the name, type, style, options, default value, description, and type-specific configuration that need to be preserved should all be written back in full, with `--yes` included.
 
-## 5. 暂不支持字段
+<a id="5-暂不支持字段"></a>
+## 5. Fields not yet supported
 
-Object（对象字段）、Stage（流程字段）暂时没有被 CLI 支持。这些字段会展示为 `not_support` 字段并被保护：不允许修改，不允许读取内容。
+Object (object field) and Stage (process field) are not yet supported by the CLI. These fields are displayed as `not_support` fields and are protected: modification is not allowed, and content reading is not allowed.
 
-## 6. 易错点
+<a id="6-易错点"></a>
+## 6. Common pitfalls
 
-- `select` 只有一个类型；不要写 `single_select` / `multi_select`，用 `multiple` 控制是否多选。
-- `number` 的精度、货币、进度、评分配置都放在 `style` 下，不要写顶层 `precision`。
-- `datetime` 是手动日期字段；系统时间请改用 `created_at` / `updated_at`。
-- `formula` / `lookup` 没读 guide 前不要直接写。
-- 只有 `text`、`number`、静态 `select`、`datetime`、`user` 支持 `default_value`；清空统一传 `"default_value": null`。其他字段类型不要配置默认值。
+- `select` has only one type; do not write `single_select` / `multi_select`, use `multiple` to control whether it is multi-select.
+- The precision, currency, progress, and rating configuration of `number` are all placed under `style`, do not write top-level `precision`.
+- `datetime` is a manual date field; for system time use `created_at` / `updated_at` instead.
+- Do not write `formula` / `lookup` directly before reading the guide.
+- Only `text`, `number`, static `select`, `datetime`, `user` support `default_value`; to clear, uniformly pass `"default_value": null`. Do not configure default values for other field types.

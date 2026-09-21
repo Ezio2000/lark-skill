@@ -1,37 +1,43 @@
-# Genre Contract: Consumer / 消费决策内容 (`router.consumer`)
+<a id="genre-contract-consumer--消费决策内容-routerconsumer"></a>
+# Genre Contract: Consumer / Consumer Decision Content (`router.consumer`)
 
-## 体裁规则表（硬约束）
+<a id="体裁规则表硬约束"></a>
+## Genre Rules Table (Hard Constraints)
 
-| 规则项 | 规则 |
+| Rule Item | Rule |
 |-|-|
-| 写作风格 | 具体、可信、可亲近，体验感服务于选择，不用热情语气替代测试、价格和适用条件 |
-| 内容逻辑 | 围绕具体消费场景，用“需求 / 使用条件 → 评价标准 → 体验或测试证据 → 权衡 → 适合谁 / 不适合谁”推进；合集和比较须共享标准，不按品牌逐段堆卖点 |
-| 事实 / 边界 | 只声称真实体验或有方法支撑的测试；披露赠品、佣金、赞助和其他重要关系；标明版本、时间、价格口径及限制；用户 / 专家引语、图片和前后对比须有授权、来源、语境与真实性依据，非文字证据须有文字等价信息；遵守目标法域和平台当期消费者、广告与高风险品类规则，关键利益关系、核心功效、安全条件或报价条款缺失时 blocked |
-| 错误 | 编造使用经历、未披露商业关系、无方法的评分 / 排名、把主观偏好写成客观最佳、隐藏不适用人群或总成本、用极端个案概括功效、过期信息仍当现状，任一出现即失败 |
+| Writing Style | Specific, credible, approachable; the sense of experience serves the choice; do not substitute an enthusiastic tone for testing, price, and applicable conditions |
+| Content Logic | Center on a concrete consumption scenario and advance through "need / usage conditions → evaluation criteria → experience or test evidence → trade-offs → who it suits / who it does not suit"; roundups and comparisons must share criteria and must not pile up selling points brand by brand |
+| Facts / Boundaries | Claim only real experience or methodologically supported testing; disclose gifts, commissions, sponsorships, and other material relationships; state version, time, price basis, and limitations; user / expert quotes, images, and before-and-after comparisons must have authorization, source, context, and a basis in authenticity, and non-textual evidence must have a textual equivalent; comply with the target jurisdiction's and platform's current consumer, advertising, and high-risk category rules; blocked when key conflicts of interest, core efficacy, safety conditions, or offer terms are missing |
+| Errors | Fabricating usage experience, undisclosed commercial relationships, scoring / ranking without methodology, presenting subjective preference as objectively best, hiding unsuitable audiences or total cost, generalizing efficacy from extreme individual cases, or treating outdated information as current — any one of these constitutes failure |
 
-## 适用与消歧
+<a id="适用与消歧"></a>
+## Applicability and Disambiguation
 
-用于帮助读者购买、比较、避坑或判断某种生活方式是否适合自己。仅出现小红书、微信等平台名不触发；明确要求最终交付小红书笔记或微信公众号文章时走 `route_platform`，再选择对应 leaf，消费选择任务作为该 leaf contract 的硬约束，不再并读 Consumer。以公共事件核实为主走 Media，以价值判断为主走 Opinion，以品牌拥有的转化内容走 Marketing。
+Used to help readers buy, compare, avoid pitfalls, or judge whether a certain lifestyle suits them. The mere appearance of platform names such as Xiaohongshu or WeChat does not trigger this contract; when the final deliverable is explicitly required to be a Xiaohongshu note or a WeChat Official Account article, go to `route_platform` and then select the corresponding leaf, with the consumption choice task serving as a hard constraint of that leaf contract, and do not read Consumer in parallel. When the focus is verifying public events, go to Media; when the focus is value judgment, go to Opinion; when the focus is brand-owned conversion content, go to Marketing.
 
-“测评”必须继续区分独立比较、真实个人体验和品牌演示：前两者可走本合同，品牌控制结论或行动入口时走 Marketing，并保留显著披露。
+"Review" must continue to distinguish independent comparison, genuine personal experience, and brand demonstration: the first two may follow this contract, while brand-controlled conclusions or action entry points go to Marketing, with prominent disclosure retained.
 
-## 子类型
+<a id="子类型"></a>
+## Subtypes
 
-| 子类型 | 读者任务与推进 |
+| Subtype | Reader Task and Progression |
 |-|-|
-| 单品体验 / 好物分享 | 判断某物在真实场景是否值得；使用背景 → 观察 → 优缺点 → 适用人群 |
-| 对比测评 / 排名 | 在同一任务下选择；方法与样本 → 共同标准 → 结果 → 权衡与不确定性 |
-| 合集 / 清单 | 快速缩小候选范围；选择门槛 → 分组理由 → 各项差异 → 最终选择路径 |
-| 探店 / 服务体验 | 判断是否到访或购买服务；时间地点 → 实际流程 / 价格 → 体验证据 → 限制 |
-| 生活方式内容 | 判断实践成本与可复制性；目标 → 做法 → 真实投入 / 结果 → 适用边界 |
+| Single-product experience / good finds sharing | Judge whether something is worth it in a real scenario; usage background → observation → pros and cons → suitable audience |
+| Comparative review / ranking | Choose under the same task; method and sample → shared criteria → results → trade-offs and uncertainty |
+| Roundup / list | Quickly narrow down candidates; selection threshold → grouping rationale → differences among items → final selection path |
+| Store visit / service experience | Judge whether to visit or purchase a service; time and place → actual process / price → experience evidence → limitations |
+| Lifestyle content | Judge the cost of practice and reproducibility; goal → approach → real investment / results → applicable boundaries |
 
-## 证据、披露与合规
+<a id="证据披露与合规"></a>
+## Evidence, Disclosure, and Compliance
 
-- 第一人称体验交代使用时长、频率、版本和条件；未亲测就明确资料来源，不伪装成亲历。比较结论说明样本、标准、测量方法及未覆盖变量。
-- 把“真实 / 有效”“适合当前读者”“值得当前价格”分开判断。强参数品只保留会改变选择的指标，并解释版本口径和决策影响；使用评分 / 排名时公开标准、权重、主观边界和反转条件，安全或资格等一票否决项不得被平均分稀释。
-- 商业关系和激励在读者接触推荐时清楚出现，不能藏在模糊标签或文末。披露、重大限制和安全警示须就近可见，不能只藏在链接或视觉装饰中。
-- 健康、安全、金融、未成年人等高风险内容只写证据支持且适用法域允许的范围；不能核实的功效或个体化建议删除。规则冲突时按交付地区、渠道和发布时间核验，不把单一国家指南写成全球义务。
+- First-person experience should state duration of use, frequency, version, and conditions; if not personally tested, clearly state the source of information and do not disguise it as firsthand experience. Comparative conclusions should explain the sample, criteria, measurement method, and uncovered variables.
+- Judge "real / effective," "suitable for the current reader," and "worth the current price" separately. For products with strong specifications, retain only the indicators that would change the choice, and explain the version basis and decision impact; when using scoring / ranking, disclose the criteria, weights, subjective boundaries, and reversal conditions, and veto items such as safety or eligibility must not be diluted by average scores.
+- Commercial relationships and incentives must appear clearly when readers encounter the recommendation and must not be hidden in vague labels or at the end of the text. Disclosures, major limitations, and safety warnings must be visible nearby and must not be hidden only in links or visual decoration.
+- High-risk content such as health, safety, finance, and minors should only be written within the scope supported by evidence and permitted by the applicable jurisdiction; efficacy claims or individualized advice that cannot be verified should be deleted. When rules conflict, verify according to the delivery region, channel, and publication time, and do not write a single country's guidance as a global obligation.
 
-## 结构与高质量写法
+<a id="结构与高质量写法"></a>
+## Structure and High-Quality Writing
 
-先告诉读者评判基准，再给结论，才能让“推荐”可复核。优点与代价写在同一决策语境内，价格同时说明时间、地区、规格和附加成本。结尾给条件化选择，而不是人人适用的口号；关键参数待补时用具体占位并暂停对应结论，不能靠语气填空。
+Tell readers the evaluation baseline first, then give the conclusion, so that the "recommendation" can be reviewed. Write advantages and costs within the same decision context, and for price also state the time, region, specifications, and additional costs. End with a conditional choice rather than a slogan applicable to everyone; when key parameters are still to be filled in, use concrete placeholders and suspend the corresponding conclusion, and do not fill the gap with tone.

@@ -1,4 +1,5 @@
-# 知识整理工作流
+<a id="知识整理工作流"></a>
+# Knowledge Organization Workflow
 
 Workflow id: `knowledge_organize`
 
@@ -40,38 +41,38 @@ When this workflow is triggered, the agent MUST:
 
 ## Scope
 
-本 workflow 用于对指定 Drive 文件夹、Wiki 知识库、个人文档库或搜索范围做知识整理。默认只生成可审阅方案；只有用户明确确认执行范围后，才创建目录 / 节点或移动资源。
+This workflow is used to organize knowledge for a specified Drive folder, Wiki knowledge base, personal document library, or search scope. By default, it only generates a reviewable plan; only after the user explicitly confirms the execution scope are directories / nodes created or resources moved.
 
-适用触发语包括：
+Applicable trigger phrases include:
 
-- "帮我整理我的云盘 / 文档库 / 知识库"
-- "帮我盘点这个知识库，给出整理后的目录结构"
-- "这个文件夹太乱了，先给我一个整理方案"
-- "把知识库里的文档按项目 / 客户 / 时间 / 类型归类"
-- "帮我找出未归档、临时、重复、空目录和命名混乱的内容"
+- "Help me organize my cloud drive / document library / knowledge base"
+- "Help me take stock of this knowledge base and give me the organized directory structure"
+- "This folder is too messy, give me an organization plan first"
+- "Categorize the documents in the knowledge base by project / customer / time / type"
+- "Help me find unarchived, temporary, duplicate, empty directory, and poorly named content"
 
 ## Non-goals
 
-默认不生成：
+By default, do not generate:
 
-- 研究报告
-- 对比分析
-- 风险 / 结论 / 行动项
-- 引用来源列表
-- 权限治理报告
+- Research reports
+- Comparative analysis
+- Risks / conclusions / action items
+- Citation source lists
+- Permission governance reports
 
-默认禁止执行：
+By default, it is forbidden to execute:
 
-- 删除原有文件、文件夹、Wiki 节点或知识空间
-- owner 转移
-- 批量权限申请
-- 批量公开权限修改
-- 批量协作者权限修改
-- 任何资源重命名或标题修改；即使用户要求，也不由本 workflow 执行
+- Deleting original files, folders, Wiki nodes, or knowledge spaces
+- Owner transfer
+- Batch permission requests
+- Batch public permission modifications
+- Batch collaborator permission modifications
+- Any resource renaming or title modification; even if the user requests it, it is not executed by this workflow
 
-仅在 rollback cleanup 阶段，允许删除本次 workflow 新建且当前可安全清理的空 Drive 文件夹或空 Wiki 节点，且清理动作已获授权；未覆盖的清理再询问。不得删除知识空间。
+Only in the rollback cleanup stage is it allowed to delete empty Drive folders or empty Wiki nodes newly created by this workflow that can currently be safely cleaned up, and the cleanup action has been authorized; for uncovered cleanup, ask again. Knowledge spaces must not be deleted.
 
-用户要求其他能力时转入相应模块，沿用覆盖该动作的授权。资源重命名 / 标题修改用对应原子命令，不把本流程的动作范围当成 CLI 能力限制。
+When the user requests other capabilities, transfer to the corresponding module and continue to use the authorization covering that action. For resource renaming / title modification, use the corresponding atomic command; do not treat this process's action scope as a CLI capability limitation.
 
 ## Responsibility Boundary
 

@@ -2,75 +2,84 @@
 # minutes +download
 
 
-下载妙记的音视频媒体文件到本地，或获取有效期 1 天的下载链接。只读操作，支持 `--as user` / `--as bot`。
+Download the audio/video media file of a Minutes to local storage, or obtain a download link valid for 1 day. Read-only operation, supports `--as user` / `--as bot`.
 
-本模块 对应 shortcut：`lark-cli minutes +download`。
+This module corresponds to shortcut: `lark-cli minutes +download`.
 
-`minute_token` 是在某个身份下解析出来的（如 `vc +recording --as bot`）：调用本命令时必须显式沿用同一个 `--as`，不要省略让身份被默认值悄悄换掉（完整规则见 [lark-shared](../../shared/index.md) 的「身份延续」）。
+`minute_token` is resolved under a certain identity (such as `vc +recording --as bot`): when calling this command, you must explicitly carry over the same `--as`, do not omit it and let the identity be silently replaced by the default value (for complete rules, see "Identity Continuation" in [lark-shared](../../shared/index.md)).
 
-## 命令
+<a id="命令"></a>
+## Command
 
 ```bash
-# 下载妙记（默认布局，落到 ./minutes/{minute_token}/<server-filename>）
+# Download Minutes (default layout, saved to ./minutes/{minute_token}/<server-filename>)
 lark-cli minutes +download --minute-tokens obcnxxxxxxxxxxxxxxxxxxxx
 
-# 指定输出文件（单 token，文件路径）
+# Specify output file (single token, file path)
 lark-cli minutes +download --minute-tokens obcnxxxxxxxxxxxxxxxxxxxx --output ./meeting.mp4
 
-# 指定输出目录（单/批量均可，目录路径）
+# Specify output directory (single/batch, directory path)
 lark-cli minutes +download --minute-tokens obcnxxxxxxxxxxxxxxxxxxxx --output-dir ./downloads
 
-# 仅获取下载链接（有效期 1 天），不下载文件
+# Only obtain the download link (valid for 1 day), do not download the file
 lark-cli minutes +download --minute-tokens obcnxxxxxxxxxxxxxxxxxxxx --url-only
 
-# 批量下载多个妙记（默认布局，逐个落到 ./minutes/{minute_token}/）
+# Batch download multiple Minutes (default layout, each saved to ./minutes/{minute_token}/)
 lark-cli minutes +download --minute-tokens obcnxxxxxxxxxxxxxxxxxxxx,obcnyyyyyyyyyyyyyyyyyyyy
 
-# 批量下载到同一指定目录
+# Batch download to the same specified directory
 lark-cli minutes +download --minute-tokens obcnxxxxxxxxxxxxxxxxxxxx,obcnyyyyyyyyyyyyyyyyyyyy --output-dir ./downloads
 
-# 预览 API 调用
+# Preview API call
 lark-cli minutes +download --minute-tokens obcnxxxxxxxxxxxxxxxxxxxx --dry-run
 ```
 
-## 参数
+<a id="参数"></a>
+## Parameters
 
-| 参数 | 必填 | 说明 |
+| Parameter | Required | Description |
 |------|------|------|
-| `--minute-tokens <tokens>` | 是 | 妙记 Token，逗号分隔支持批量（最多 50 个） |
-| `--output <path>` | 否 | 输出文件路径（单 token）。若传入的是已存在目录，等价于 `--output-dir`。与 `--output-dir` 互斥 |
-| `--output-dir <dir>` | 否 | 输出目录（单/批量均可）。与 `--output` 互斥 |
-| `--overwrite` | 否 | 覆盖已存在的输出文件 |
-| `--url-only` | 否 | 仅返回下载链接，不下载文件 |
-| `--dry-run` | 否 | 预览 API 调用，不执行 |
+| `--minute-tokens <tokens>` | Yes | Minutes Token, comma-separated supports batch (up to 50) |
+| `--output <path>` | No | Output file path (single token). If an existing directory is passed, equivalent to `--output-dir`. Mutually exclusive with `--output-dir` |
+| `--output-dir <dir>` | No | Output directory (single/batch). Mutually exclusive with `--output` |
+| `--overwrite` | No | Overwrite existing output file |
+| `--url-only` | No | Only return the download link, do not download the file |
+| `--dry-run` | No | Preview API call, do not execute |
 
-> **默认落点**：未指定 `--output` / `--output-dir` 时，文件落到 `./minutes/{minute_token}/<server-filename>`。文件名沿用服务端 Content-Disposition / Content-Type 推断，Agent 可从 `saved_path` 字段读取实际路径。同一 minute_token 的录像和 `minutes +detail` 的逐字稿默认会落在**同一目录**下，方便聚合。
+> **Default location**: When `--output` / `--output-dir` is not specified, the file is saved to `./minutes/{minute_token}/<server-filename>`. The file name is inferred from the server-side Content-Disposition / Content-Type, and the Agent can read the actual path from the `saved_path` field. The recording and the `minutes +detail` transcript of the same minute_token are by default saved in the **same directory**, for easy aggregation.
 
-## 核心约束
+<a id="核心约束"></a>
+## Core Constraints
 
-### 1. 妙记必须已完成转写
+<a id="1-妙记必须已完成转写"></a>
+### 1. Minutes must have completed transcription
 
-音视频文件仅在妙记转写完成后可下载。如果妙记尚未准备好，API 会返回 `2091003` 错误。
+The audio/video file can only be downloaded after the Minutes transcription is complete. If the Minutes is not yet ready, the API returns a `2091003` error.
 
-### 2. 下载链接有效期 1 天
+<a id="2-下载链接有效期-1-天"></a>
+### 2. Download link valid for 1 day
 
-`--url-only` 返回的链接有效期为 1 天，过期后需重新获取。
+The link returned by `--url-only` is valid for 1 day; after expiration, it must be obtained again.
 
-### 3. 频率限制
+<a id="3-频率限制"></a>
+### 3. Rate limit
 
-API 限流 5 次/秒，批量下载时需注意控制频率。
+The API is rate-limited to 5 times/second; when batch downloading, be careful to control the frequency.
 
-### 4. 所需权限
+<a id="4-所需权限"></a>
+### 4. Required permissions
 
-| 身份 | 所需权限 |
+| Identity | Required permission |
 |------|---------|
 | user / bot | `minutes:minutes.media:export` |
 
-## 输出结果
+<a id="输出结果"></a>
+## Output
 
-### 下载模式（默认）
+<a id="下载模式默认"></a>
+### Download mode (default)
 
-单 token：
+Single token:
 
 ```json
 {
@@ -81,16 +90,17 @@ API 限流 5 次/秒，批量下载时需注意控制频率。
 }
 ```
 
-批量：`downloads` 数组，每条与上面结构一致，失败项带 `error` 字段。
+Batch: `downloads` array, each entry has the same structure as above, failed entries carry a `error` field.
 
-| 字段 | 说明 |
+| Field | Description |
 |------|------|
-| `minute_token` | 妙记 Token（用于 Agent 索引） |
-| `artifact_type` | 固定为 `"recording"`（与 `minutes +detail` 的 `"transcript"` 区分） |
-| `saved_path` | 文件保存的本地路径（绝对路径） |
-| `size_bytes` | 文件大小（字节） |
+| `minute_token` | Minutes Token (used for Agent indexing) |
+| `artifact_type` | Fixed to `"recording"` (distinguished from `"transcript"` of `minutes +detail`) |
+| `saved_path` | Local path where the file is saved (absolute path) |
+| `size_bytes` | File size (bytes) |
 
-### URL 模式（--url-only）
+<a id="url-模式--url-only"></a>
+### URL mode (--url-only)
 
 ```json
 {
@@ -99,37 +109,41 @@ API 限流 5 次/秒，批量下载时需注意控制频率。
 }
 ```
 
-| 字段 | 说明 |
+| Field | Description |
 |------|------|
-| `minute_token` | 妙记 Token |
-| `download_url` | 媒体文件下载链接（有效期 1 天） |
+| `minute_token` | Minutes Token |
+| `download_url` | Media file download link (valid for 1 day) |
 
-## 如何获取 minute_token
+<a id="如何获取-minute_token"></a>
+## How to obtain minute_token
 
-| 来源 | 获取方式 |
+| Source | How to obtain |
 |------|---------|
-| 妙记 URL | 从 URL 末尾提取，如 `https://sample.feishu.cn/minutes/obcnxxxxxxxxxxxxxxxxxxxx` → `obcnxxxxxxxxxxxxxxxxxxxx` |
-| 妙记元信息查询 | `lark-cli minutes minutes get --params '{"minute_token": "obcn..."}'` |
-| 会议录制查询 | `lark-cli vc +recording --meeting-ids <id>` 或 `lark-cli vc +recording --calendar-event-ids <event_id>` |
+| Minutes URL | Extract from the end of the URL, e.g. `https://sample.feishu.cn/minutes/obcnxxxxxxxxxxxxxxxxxxxx` → `obcnxxxxxxxxxxxxxxxxxxxx` |
+| Minutes metadata query | `lark-cli minutes minutes get --params '{"minute_token": "obcn..."}'` |
+| Meeting recording query | `lark-cli vc +recording --meeting-ids <id>` or `lark-cli vc +recording --calendar-event-ids <event_id>` |
 
-## 常见错误与排查
+<a id="常见错误与排查"></a>
+## Common errors and troubleshooting
 
-| 错误现象 | 错误码 | 根本原因 | 解决方案 |
+| Error symptom | Error code | Root cause | Solution |
 |---------|--------|---------|---------|
-| 参数无效 | 2091001 | minute_token 格式不正确 | 检查 token 是否完整（24 位） |
-| 资源不存在 | 2091002 | token 不存在 | 确认 minute_token 正确 |
-| 妙记尚未准备好 | 2091003 | 转写未完成 | 等待转写完成后重试 |
-| 资源已删除 | 2091004 | 妙记已被删除 | 确认妙记文件仍然存在 |
-| 权限不足 | 2091005 | 无阅读权限 | 检查是否有该妙记的访问权限 |
-| `missing required scope(s)` | — | 当前身份缺少 scope | `--as user`：运行 `auth login --scope "minutes:minutes.media:export"`；`--as bot`：使用错误中的 `console_url` 去开发者后台开通，**禁止**对 bot 执行 `auth login`（见 [lark-shared](../../shared/index.md) 的权限管理） |
+| Invalid parameter | 2091001 | minute_token format is incorrect | Check whether the token is complete (24 characters) |
+| Resource not found | 2091002 | token does not exist | Confirm the minute_token is correct |
+| Minutes not yet ready | 2091003 | Transcription not complete | Wait for transcription to complete and retry |
+| Resource deleted | 2091004 | Minutes has been deleted | Confirm the Minutes file still exists |
+| Insufficient permission | 2091005 | No read permission | Check whether you have access permission for this Minutes |
+| `missing required scope(s)` | — | Current identity lacks scope | `--as user`: run `auth login --scope "minutes:minutes.media:export"`; `--as bot`: use the `console_url` in the error to enable it in the developer console, **do not** execute `auth login` on the bot (see permission management in [lark-shared](../../shared/index.md)) |
 
-## 提示
+<a id="提示"></a>
+## Tips
 
-- 音视频文件可能较大，下载无固定超时限制（由用户 Ctrl+C 控制取消）。
-- 默认落点 `./minutes/{minute_token}/` 与 `minutes +detail` 的逐字稿共享同一目录，方便 Agent 聚合同一妙记的原始音视频和逐字稿。
-- 单 token 模式下 `--output` 若传入已存在目录（如 `--output ./existing-dir`），等价于 `--output-dir`，文件落入该目录（cp 语义）。
-- 批量模式下 `--output` 不接受已存在的文件路径（会报错），应改用 `--output-dir`。
-- 如需获取妙记的纪要内容（逐字稿、AI 总结等），请使用 [minutes +detail](lark-minutes-detail.md)。
+- Audio/video files may be large; there is no fixed timeout limit for downloading (cancellation is controlled by the user via Ctrl+C).
+- The default location `./minutes/{minute_token}/` shares the same directory as the `minutes +detail` transcript, making it easy for the Agent to aggregate the original audio/video and transcript of the same Minutes.
+- In single token mode, if `--output` is passed an existing directory (such as `--output ./existing-dir`), it is equivalent to `--output-dir`, and the file is saved into that directory (cp semantics).
+- In batch mode, `--output` does not accept an existing file path (it will error); use `--output-dir` instead.
+- To obtain the Minutes summary content (transcript, AI summary, etc.), use [minutes +detail](lark-minutes-detail.md).
 
-## 相关场景
-- [查询妙记及其产物](../scenes/query-minutes-and-artifacts.md)
+<a id="相关场景"></a>
+## Related scenarios
+- [Query Minutes and its artifacts](../scenes/query-minutes-and-artifacts.md)

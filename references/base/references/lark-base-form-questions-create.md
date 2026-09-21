@@ -1,60 +1,61 @@
 # base +form-questions-create
 
 
-向多维表格表单/问卷中批量添加问题。可以新建字段并作为题目，也可以把已有字段加到表单中作为题目而不新建字段。
+Batch add questions to a Base form/survey. You can create new fields and use them as questions, or add existing fields to the form as questions without creating new fields.
 
-## 命令
+<a id="命令"></a>
+## Command
 
 ```bash
-# 添加一个文本必填问题
+# Add a required text question
 lark-cli base +form-questions-create \
   --base-token <base_token> \
   --table-id <table_id> \
   --form-id <form_id> \
   --questions '[{"type":"text","title":"您的姓名是？","required":true}]'
 
-# 添加多个问题（按顺序排列）
+# Add multiple questions (in order)
 lark-cli base +form-questions-create \
   --base-token <base_token> \
   --table-id <table_id> \
   --form-id <form_id> \
   --questions '[{"type":"text","title":"您的姓名是？","required":true},{"type":"text","title":"您的联系方式是？","required":false}]'
 
-# 添加单选题（带选项）
+# Add a single-select question (with options)
 lark-cli base +form-questions-create \
   --base-token <base_token> \
   --table-id <table_id> \
   --form-id <form_id> \
   --questions '[{"type":"select","title":"满意度评价","required":true,"multiple":false,"options":[{"name":"非常满意","hue":"Green"},{"name":"满意","hue":"Blue"},{"name":"一般","hue":"Yellow"}]}]'
 
-# 添加评分题
+# Add a rating question
 lark-cli base +form-questions-create \
   --base-token <base_token> \
   --table-id <table_id> \
   --form-id <form_id> \
   --questions '[{"type":"number","title":"服务评分","style":{"type":"rating","icon":"star","min":1,"max":5}}]'
   
-# 添加带描述的问题（纯文本）
+# Add a question with a description (plain text)
 lark-cli base +form-questions-create \
   --base-token <base_token> \
   --table-id <table_id> \
   --form-id <form_id> \
   --questions '[{"type":"text","title":"您的姓名","description":"请填写真实姓名"}]'
-# 添加带描述的问题（含链接）
+# Add a question with a description (with a link)
 lark-cli base +form-questions-create \
   --base-token <base_token> \
   --table-id <table_id> \
   --form-id <form_id> \
   --questions '[{"type":"text","title":"反馈建议","description":"更多详情请查看[帮助文档](https://example.com/help)"}]'  
 
-# 添加带显隐条件（visible_rule）的问题：当「是否需要发票」选择「是」时才显示「发票抬头」
+# Add a question with a visibility rule (visible_rule): show "Invoice title" only when "Do you need an invoice?" is set to "Yes"
 lark-cli base +form-questions-create \
   --base-token <base_token> \
   --table-id <table_id> \
   --form-id <form_id> \
   --questions '[{"type":"select","title":"是否需要发票","required":true,"options":[{"name":"是","hue":"Blue"},{"name":"否","hue":"Gray"}]},{"type":"text","title":"发票抬头","visible_rule":{"logic":"and","conditions":[["是否需要发票","==","是"]]}}]'
 
-# 把已有字段作为题目加到表单中，不新建字段
+# Add an existing field to the form as a question without creating a new field
 lark-cli base +form-questions-create \
   --base-token <base_token> \
   --table-id <table_id> \
@@ -62,77 +63,83 @@ lark-cli base +form-questions-create \
   --questions '[{"use_existing_field":true,"field_id":"fldEmail","title":"你的邮箱","description":"用于接收回执","required":true}]'
 ```
 
-## 参数
+<a id="参数"></a>
+## Parameters
 
-| 参数 | 必填 | 说明 |
+| Parameter | Required | Description |
 |------|------|------|
-| `--base-token <token>` | 是 | Base Token（base_token） |
-| `--table-id <id>` | 是 | 数据表 ID |
-| `--form-id <id>` | 是 | 表单 ID |
-| `--questions <json>` | 是 | 问题 JSON 数组，最多 10 个（见下方格式） |
-| `--format` | 否 | 输出格式：json（默认）\| pretty \| table \| ndjson \| csv |
-| `--as` | 否 | 身份：user（默认）\| bot |
-| `--dry-run` | 否 | 预览 API 调用，不执行 |
+| `--base-token <token>` | Yes | Base Token (base_token) |
+| `--table-id <id>` | Yes | Table ID |
+| `--form-id <id>` | Yes | Form ID |
+| `--questions <json>` | Yes | Question JSON array, up to 10 (see the format below) |
+| `--format` | No | Output format: json (default) \| pretty \| table \| ndjson \| csv |
+| `--as` | No | Identity: user (default) \| bot |
+| `--dry-run` | No | Preview the API call without executing it |
 
-## `--questions` 格式
+<a id="--questions-格式"></a>
+## `--questions` Format
 
-`--questions` 是 1~10 个问题对象的数组。每个对象二选一：
+`--questions` is an array of 1 to 10 question objects. Each object is one of two forms:
 
-- 新建字段题目：创建一个新字段，并把该字段作为表单题目。
-- 已有字段题目：把一个已存在字段加入表单，只改变该字段在表单中的可见性，不创建字段。
+- New-field question: create a new field and use that field as a form question.
+- Existing-field question: add an existing field to the form, changing only the field's visibility in the form without creating a field.
 
-### 形态 A：新建字段题目
+<a id="形态-a新建字段题目"></a>
+### Form A: New-field question
 
-新建字段题目会在数据表中创建新字段，返回的 question `id` 就是新字段的 `field_id`。CLI 当前要求每个新建字段题目显式传 `title` 和 `type`。
+A new-field question creates a new field in the table, and the returned question `id` is the `field_id` of the new field. The CLI currently requires each new-field question to explicitly pass `title` and `type`.
 
-| 字段                    | 必填 | 说明 |
+| Field                    | Required | Description |
 |-----------------------|------|------|
-| `title`               | **是** | 问题标题（字段名） |
-| `type`                | **是** | 题目类型：`text`、`number`、`select`、`datetime`、`user`、`attachment`、`location` |
-| `description`         | 否 | 问题描述（纯文本或 Markdown 链接，如 `[文本](https://example.com)`） |
-| `required`            | 否 | 是否必填（true/false） |
-| `option_display_mode` | 否 | 选项展示方式（仅 `select` 有效）：`0`=下拉，`1`=纵向（默认），`2`=横向 |
-| `multiple`            | 否 | 是否多选（`select`/`user` 类型有效，bool） |
-| `options`             | 否 | 选项列表（仅 `select` 有效）：`[{"name":"选项1","hue":"Blue"}]`，hue 可选：`Red`/`Orange`/`Yellow`/`Green`/`Blue`/`Purple`/`Gray` |
-| `style`               | 否 | 字段样式配置（见下方说明） |
-| `visible_rule`        | 否 | 题目显隐条件（见下方「`visible_rule` 显隐条件」） |
+| `title`               | **Yes** | Question title (field name) |
+| `type`                | **Yes** | Question type: `text`, `number`, `select`, `datetime`, `user`, `attachment`, `location` |
+| `description`         | No | Question description (plain text or a Markdown link, such as `[文本](https://example.com)`) |
+| `required`            | No | Whether it is required (true/false) |
+| `option_display_mode` | No | Option display mode (only valid for `select`): `0`=dropdown, `1`=vertical (default), `2`=horizontal |
+| `multiple`            | No | Whether multiple selection is allowed (valid for `select`/`user` types, bool) |
+| `options`             | No | Option list (only valid for `select`): `[{"name":"选项1","hue":"Blue"}]`, hue options: `Red`/`Orange`/`Yellow`/`Green`/`Blue`/`Purple`/`Gray` |
+| `style`               | No | Field style configuration (see the description below) |
+| `visible_rule`        | No | Question visibility condition (see "`visible_rule` Visibility Condition" below) |
 
-### 形态 B：已有字段题目
+<a id="形态-b已有字段题目"></a>
+### Form B: Existing-field question
 
-已有字段题目只把一个已存在字段加入表单，不新建字段，也不改变已有记录数据。适合把之前用 `+form-questions-delete --keep-field` 移出表单的题目重新加回，或把表里已有字段补充为表单题目。
+An existing-field question only adds an existing field to the form; it does not create a field or change existing record data. It is suitable for adding back questions that were previously removed from the form with `+form-questions-delete --keep-field`, or for supplementing the form with fields that already exist in the table.
 
-| 字段                    | 必填 | 说明 |
+| Field                    | Required | Description |
 |-----------------------|------|------|
-| `use_existing_field`  | **是** | 固定传 `true`，表示使用已有字段 |
-| `field_id`            | **是** | 已有字段的 ID 或字段名；推荐字段 ID，避免同名字段歧义。引用长度 1~100，较长字段名请改用字段 ID |
-| `title`               | 否 | 题目标题；省略时使用字段名 |
-| `description`         | 否 | 问题描述（纯文本或 Markdown 链接，如 `[文本](https://example.com)`） |
-| `required`            | 否 | 是否必填（true/false），默认 false |
-| `option_display_mode` | 否 | 选项展示方式（仅已有字段为 `select` 时有效）：`0`=下拉，`1`=纵向（默认），`2`=横向 |
-| `visible_rule`        | 否 | 题目显隐条件（见下方「`visible_rule` 显隐条件」） |
+| `use_existing_field`  | **Yes** | Always pass `true`, indicating that an existing field is used |
+| `field_id`            | **Yes** | The ID or field name of the existing field; field ID is recommended to avoid ambiguity with fields of the same name. Reference length is 1 to 100; for longer field names, use the field ID instead |
+| `title`               | No | Question title; if omitted, the field name is used |
+| `description`         | No | Question description (plain text or a Markdown link, such as `[文本](https://example.com)`) |
+| `required`            | No | Whether it is required (true/false), default false |
+| `option_display_mode` | No | Option display mode (only valid when the existing field is `select`): `0`=dropdown, `1`=vertical (default), `2`=horizontal |
+| `visible_rule`        | No | Question visibility condition (see "`visible_rule` Visibility Condition" below) |
 
-已有字段题目不要携带字段定义属性，例如 `type`、`style`、`options`、`multiple`、`name`。服务端使用 strict schema，误传不属于该形态的字段会被拒绝。
+An existing-field question must not carry field definition properties, such as `type`, `style`, `options`, `multiple`, `name`. The server uses a strict schema, and fields mistakenly passed that do not belong to this form will be rejected.
 
-### `style` 字段说明
+<a id="style-字段说明"></a>
+### `style` Field Description
 
-| 类型 | style 结构 | 说明 |
+| Type | style structure | Description |
 |------|------|------|
-| `text` | `{"type":"plain"}` | 当前仅支持 `plain` |
-| `number` | `{"type":"plain","precision":2}` | precision 为小数位数 |
-| `number`（评分） | `{"type":"rating","icon":"star","min":1,"max":5}` | icon 可选：`star`/`heart`/`thumbsup`/`fire`/`smile`/`lightning`/`flower`/`number` |
-| `datetime` | `{"format":"yyyy/MM/dd"}` | format 可选：`yyyy/MM/dd`、`yyyy/MM/dd HH:mm`、`MM-dd`、`MM/dd/yyyy`、`dd/MM/yyyy` |
+| `text` | `{"type":"plain"}` | Currently only `plain` is supported |
+| `number` | `{"type":"plain","precision":2}` | precision is the number of decimal places |
+| `number` (rating) | `{"type":"rating","icon":"star","min":1,"max":5}` | icon options: `star`/`heart`/`thumbsup`/`fire`/`smile`/`lightning`/`flower`/`number` |
+| `datetime` | `{"format":"yyyy/MM/dd"}` | format options: `yyyy/MM/dd`, `yyyy/MM/dd HH:mm`, `MM-dd`, `MM/dd/yyyy`, `dd/MM/yyyy` |
 
-### `visible_rule` 显隐条件
+<a id="visible_rule-显隐条件"></a>
+### `visible_rule` Visibility Condition
 
-> **仅当用户明确要求为题目设置显隐条件（显示/隐藏逻辑）时，才需要读下面的结构说明；否则忽略本节。**
+> **Read the structure description below only when the user explicitly asks to set a visibility condition (show/hide logic) for a question; otherwise ignore this section.**
 
-`visible_rule` 控制题目在表单中的显示/隐藏：当条件满足时题目显示，不满足时隐藏；不传或 `conditions` 为空数组则题目始终显示。
+`visible_rule` controls whether a question is shown or hidden in the form: the question is shown when the condition is met and hidden when it is not; if it is not passed or `conditions` is an empty array, the question is always shown.
 
-- **结构与视图筛选 `filter` 完全一致**，即 `{logic?, conditions?}`，共用同一套公共协议。
-- 与视图 `filter` 唯一的区别：`conditions` 中的 `field` 引用的是**同一表单内其他题目的题目名称或题目 ID**（推荐用题目 ID 以避免重名歧义），而不是数据表字段。
-- **只能引用前序题目**：条件只能引用排在当前题目之前的题目——创建时按 `questions` 数组顺序判定（可引用同批次更靠前的新题目或表单中已有题目），不支持循环引用。
-- 引用的题目必须真实存在，否则会报错。
-- 列出题目（`+form-questions-list`）会在每个题目对象中**原样返回** `visible_rule`；未设置显隐条件的题目返回 `null` 或 `conditions` 为空数组。
+- **The structure is exactly the same as view filter `filter`**, that is, `{logic?, conditions?}`, sharing the same common protocol.
+- The only difference from view `filter`: `field` in `conditions` references the **question name or question ID of other questions in the same form** (question ID is recommended to avoid ambiguity from duplicate names), not a table field.
+- **Only preceding questions can be referenced**: conditions can only reference questions that come before the current question — at creation time, this is determined by the order of the `questions` array (you can reference an earlier new question in the same batch or an existing question in the form); circular references are not supported.
+- The referenced question must actually exist, otherwise an error is reported.
+- Listing questions (`+form-questions-list`) **returns `visible_rule` as-is** in each question object; questions without a visibility condition return `null` or an empty array for `conditions`.
 
 ```json
 {
@@ -144,11 +151,12 @@ lark-cli base +form-questions-create \
 }
 ```
 
-详细的 `visible_rule` 结构（顶层规则、operator 列表、各题目类型的 value 写法）请阅读 [lark-base-filter-condition.md](lark-base-filter-condition.md)。
+For the detailed `visible_rule` structure (top-level rules, operator list, and value syntax for each question type), read [lark-base-filter-condition.md](lark-base-filter-condition.md).
 
-## 输出格式
+<a id="输出格式"></a>
+## Output Format
 
-返回创建成功的问题列表：
+Returns the list of successfully created questions:
 
 ```json
 {
@@ -161,21 +169,23 @@ lark-cli base +form-questions-create \
 }
 ```
 
-## 工作流
+<a id="工作流"></a>
+## Workflow
 
 > [!CAUTION]
-> 这是**写入操作** — 执行前必须向用户确认。
+> This is a **write operation** — you must confirm with the user before executing.
 
-1. 先确定表单所属的真实 `table_id`，并在整个表单管理工作流中复用它；仅在 ID 缺失或归属不明确时调用 `+table-list`。
-2. 用 `+form-questions-list` 查看现有问题。问题 `id` 是承载该问题的 `field_id`，不是独立于数据表的临时 ID。
-3. 需要把表里已有字段加进表单时，先用 `+field-list` 确认真实字段 ID 和字段类型，再用 `use_existing_field:true` + `field_id`；字段已经是可见题目时不要重复创建，改用 `+form-questions-update`。
-4. 除非用户明确要求同名的独立问题，否则目标标题已经存在时用 `+form-questions-update` 更新必填状态、标题或描述；不要创建同名问题后再删除旧问题。
-5. 创建确实不存在的问题，或用户明确要求的同名独立问题，并报告新建的问题 ID。
+1. First determine the real `table_id` that the form belongs to, and reuse it throughout the entire form management workflow; call `+table-list` only when the ID is missing or the ownership is unclear.
+2. Use `+form-questions-list` to view existing questions. The question `id` is the `field_id` that carries the question, not a temporary ID independent of the table.
+3. When you need to add an existing field from the table to the form, first use `+field-list` to confirm the real field ID and field type, then use `use_existing_field:true` + `field_id`; if the field is already a visible question, do not create it again — use `+form-questions-update` instead.
+4. Unless the user explicitly asks for an independent question with the same name, when the target title already exists, use `+form-questions-update` to update the required status, title, or description; do not create a question with the same name and then delete the old question.
+5. Create questions that truly do not exist, or independent questions with the same name explicitly requested by the user, and report the IDs of the newly created questions.
 
-`+form-questions-delete` 默认会删除承载问题的数据表字段及记录数据；如果只是想把题目移出表单并保留字段，必须用 `+form-questions-delete --keep-field`。移出后可用本文的已有字段题目形态加回。
+`+form-questions-delete` deletes the table field that carries the question and its record data by default; if you only want to remove the question from the form while keeping the field, you must use `+form-questions-delete --keep-field`. After removal, you can add it back using the existing-field question form described in this document.
 
-## 参考
+<a id="参考"></a>
+## References
 
-- [lark-base](../index.md) — 多维表格全部命令
-- [lark-base-filter-condition.md](lark-base-filter-condition.md) — `visible_rule` / `filter` 条件结构公共协议
-- [lark-shared](../../shared/index.md) — 认证和全局参数
+- [lark-base](../index.md) — all Base commands
+- [lark-base-filter-condition.md](lark-base-filter-condition.md) — common protocol for `visible_rule` / `filter` condition structures
+- [lark-shared](../../shared/index.md) — authentication and global parameters

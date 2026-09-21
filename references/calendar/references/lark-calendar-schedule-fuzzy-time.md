@@ -1,20 +1,24 @@
-# 模糊时间 / 无时间信息分支：suggestion + 批量查询
+<a id="模糊时间--无时间信息分支suggestion--批量查询"></a>
+# Fuzzy time / no time information branch: suggestion + batch query
 
-> 本文档处理**时间模糊**（如"明天下午""下周找个时间"）或**完全无时间信息**的场景。核心动作是调用 `+suggestion` 产出候选时间块，再根据是否需要会议室决定后续步骤。
+> This document handles scenarios with **fuzzy time** (such as "tomorrow afternoon" or "find a time next week") or **completely no time information**. The core action is to call `+suggestion` to produce candidate time blocks, then decide subsequent steps based on whether a meeting room is needed.
 
-## 前置条件
+<a id="前置条件"></a>
+## Prerequisites
 
-进入此分支前，调度器（[schedule-meeting.md](./lark-calendar-schedule-meeting.md)）已完成：
-- 任务类型判定（新建 / 编辑）
-- 编辑流：目标 event_id 已定位
-- 新建流：默认值已补全
-- 时间已判定为**模糊**或**无时间信息**
+Before entering this branch, the scheduler ([schedule-meeting.md](./lark-calendar-schedule-meeting.md)) has completed:
+- Task type determination (create / edit)
+- Edit flow: target event_id has been located
+- Create flow: default values have been filled in
+- Time has been determined to be **fuzzy** or **no time information**
 
-## 流程
+<a id="流程"></a>
+## Flow
 
-### 1. 调用 suggestion
+<a id="1-调用-suggestion"></a>
+### 1. Call suggestion
 
-详见 [`lark-calendar-suggestion.md`](./lark-calendar-suggestion.md)。
+See [`lark-calendar-suggestion.md`](./lark-calendar-suggestion.md) for details.
 
 ```bash
 lark-cli calendar +suggestion \
@@ -25,64 +29,71 @@ lark-cli calendar +suggestion \
   --event-rrule "<rrule>"
 ```
 
-规则：
-- 用户完全没有提供时间信息时，先默认一个合理区间（如"今天剩余时间"或"近两天"）再调用
-- 编辑流中，若用户说"改到明天下午""下周找个时间再约"，基于用户期望的**新时间范围**调用，不要沿用旧时间
-- **不要在用户完全没给时间时反问"你想约什么时候"** — 先补合理区间再进入 suggestion
+Rules:
+- When the user provides no time information at all, first default to a reasonable range (such as "the remaining time today" or "the next two days") before calling
+- In the edit flow, if the user says "change it to tomorrow afternoon" or "find a time next week to reschedule", call based on the user's desired **new time range**; do not reuse the old time
+- **Do not ask "when would you like to schedule it" when the user has given no time at all** — first fill in a reasonable range, then enter suggestion
 
-### 2. 分支处理
+<a id="2-分支处理"></a>
+### 2. Branch handling
 
-#### 不需要会议室
+<a id="不需要会议室"></a>
+#### No meeting room needed
 
-获取多个推荐时间块后，直接向用户展示候选时间，用户确认后进入落地操作。
+After obtaining multiple recommended time blocks, directly show the candidate times to the user; after the user confirms, proceed to the finalization operation.
 
-#### 需要会议室
+<a id="需要会议室"></a>
+#### Meeting room needed
 
-获取候选时间块后，**不要急于让用户只选时间**。先将这些时间块一次性交给 `+room-find` 批量查询可用会议室，然后将【候选时间】与【对应的可用会议室列表】结构化展示，让用户一次性完成选择。
+After obtaining candidate time blocks, **do not rush to have the user select only a time**. First pass these time blocks all at once to `+room-find` to batch query available meeting rooms, then present the [candidate times] and the [corresponding list of available meeting rooms] in a structured format, so the user can complete the selection in one go.
 
-> **注意**：即使用户最初只说"查会议室"且未带时间，也必须强制走 suggestion → room-find 路径。
+> **Note**: Even if the user initially only says "check meeting rooms" without a time, the suggestion → room-find path must still be enforced.
 
-详见 [`lark-calendar-room-find.md`](./lark-calendar-room-find.md)。
+See [`lark-calendar-room-find.md`](./lark-calendar-room-find.md) for details.
 
-### 3. 用户确认后
+<a id="3-用户确认后"></a>
+### 3. After user confirmation
 
-- 用户选中 `+suggestion` 返回的时间块后，**无需再次调用 `+freebusy`**，直接进入落地操作
-- **BLOCKING REQUIREMENT**：必须先向用户展示选项并等待确认，禁止在未获用户确认时直接创建/更新日程
+- After the user selects a time block returned by `+suggestion`, **there is no need to call `+freebusy` again**; proceed directly to the finalization operation
+- **BLOCKING REQUIREMENT**: You must first show the options to the user and wait for confirmation; it is forbidden to directly create/update a calendar event without user confirmation
 
-## 模糊语义消解与长期记忆
+<a id="模糊语义消解与长期记忆"></a>
+## Fuzzy semantics disambiguation and long-term memory
 
-针对存在歧义的时间场景，严禁主观臆断。典型例子：
-- "上班后" / "下班前"
-- 未明确上下午的 12 小时制时间
+For time scenarios with ambiguity, subjective assumptions are strictly forbidden. Typical examples:
+- "after work starts" / "before work ends"
+- 12-hour clock times without a clear AM/PM
 
-处理规则：
-- 主动澄清真实意图，不自行猜测
-- 用户澄清后，将个性化定义沉淀为长期偏好
+Handling rules:
+- Proactively clarify the true intent; do not guess on your own
+- After the user clarifies, persist the personalized definition as a long-term preference
 
-## 用户展示格式
+<a id="用户展示格式"></a>
+## User presentation format
 
-向用户展示多个时间块及对应会议室时，**必须结构化分行排版**，严禁将时间与会议室放在同一行：
+When showing multiple time blocks and corresponding meeting rooms to the user, **structured line-by-line formatting is required**; it is strictly forbidden to put the time and meeting room on the same line:
 
 ```text
-## 2026-03-27 周五
+## 2026-03-27 Friday
 
-[选项 1] 14:00 - 15:00（参会人均空闲）
-  可用会议室：
-  1. 学清嘉创大厦B座-F2-02🎦(7人)
-  2. 学清嘉创大厦B座-F2-05🎦(10人)
+[Option 1] 14:00 - 15:00 (all attendees free)
+  Available meeting rooms:
+  1. Xueqing Jiachuang Building Block B-F2-02🎦(7 people)
+  2. Xueqing Jiachuang Building Block B-F2-05🎦(10 people)
 
-[选项 2] 16:00 - 17:00（参会人均空闲）
-  可用会议室：
-  1. 学清嘉创大厦B座-F3-01🎦(6人)
-  2. 学清嘉创大厦B座-F3-06🎦(8人)
+[Option 2] 16:00 - 17:00 (all attendees free)
+  Available meeting rooms:
+  1. Xueqing Jiachuang Building Block B-F3-01🎦(6 people)
+  2. Xueqing Jiachuang Building Block B-F3-06🎦(8 people)
 
-💡 请回复您倾向的选项编号以及对应的会议室序号，我来为您完成预定。
+💡 Please reply with the option number you prefer and the corresponding meeting room number, and I will complete the booking for you.
 ```
 
-## 落地
+<a id="落地"></a>
+## Finalization
 
-根据任务类型：
-- 新建 → [`+create`](./lark-calendar-create.md)
-- 编辑 → [`+update`](./lark-calendar-update.md)
+Based on the task type:
+- Create → [`+create`](./lark-calendar-create.md)
+- Edit → [`+update`](./lark-calendar-update.md)
 
-落地规则详见 [schedule-meeting.md § 落地日程变更](./lark-calendar-schedule-meeting.md#落地日程变更)。
+For finalization rules, see [schedule-meeting.md § Finalizing calendar changes](./lark-calendar-schedule-meeting.md#落地日程变更).

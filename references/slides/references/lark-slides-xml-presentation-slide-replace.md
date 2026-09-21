@@ -1,5 +1,6 @@
-# slides +replace-slide（兼容入口）
+<a id="slides-replace-slide兼容入口"></a>
+# slides +replace-slide (compatibility entry point)
 
-本文档已迁移至 [`cli/lark-slides-xml-presentation-slide-replace.md`](cli/lark-slides-xml-presentation-slide-replace.md)。
+This document has been migrated to [`cli/lark-slides-xml-presentation-slide-replace.md`](cli/lark-slides-xml-presentation-slide-replace.md).
 
-此文件保留旧路径兼容性；后续引用请使用 `cli/` 下的正式 reference。
+This file is retained for old-path compatibility; for future references, use the official reference under `cli/`.

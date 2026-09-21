@@ -1,53 +1,61 @@
 # minutes +upload
 
 
-上传音视频文件到飞书妙记并生成妙记（Minute）。
+Upload audio/video files to Feishu Minutes and generate a Minute.
 
-本模块 对应 shortcut：`lark-cli minutes +upload`。
+This module corresponds to the shortcut: `lark-cli minutes +upload`.
 
-## 典型触发表达
+<a id="典型触发表达"></a>
+## Typical trigger expressions
 
-- "把这个音视频文件转成妙记"
-- "把这个音视频文件转成纪要"
-- "把这个音视频文件转成逐字稿、文字稿或撰写文字"
-- "把这个音视频文件转成总结、待办或章节"
+- "Convert this audio/video file into a Minute"
+- "Convert this audio/video file into meeting notes"
+- "Convert this audio/video file into a verbatim transcript, text transcript, or written text"
+- "Convert this audio/video file into a summary, to-dos, or chapters"
 
-## 命令示例
+<a id="命令示例"></a>
+## Command example
 
 ```bash
-# 通过已上传到云空间（云盘/云存储）的 file_token 生成妙记
+# Generate a Minute from a file_token already uploaded to cloud space (Drive/cloud storage)
 lark-cli minutes +upload --file-token boxcnxxxxxxxxxxxxxxxx
 
 ```
 
-## 参数
+<a id="参数"></a>
+## Parameters
 
-| 参数 | 必填 | 说明 |
+| Parameter | Required | Description |
 |------|------|------|
-| `--file-token <token>` | 是 | 已经上传到飞书云空间（云盘/云存储）的音视频文件的 file_token |
+| `--file-token <token>` | Yes | The file_token of the audio/video file already uploaded to Feishu cloud space (Drive/cloud storage) |
 
-## 支持的格式与限制
+<a id="支持的格式与限制"></a>
+## Supported formats and limits
 
-待上传到妙记的原始音视频文件必须满足以下要求：
+The original audio/video file to be uploaded to Minutes must meet the following requirements:
 
-- 支持音频格式：`wav`、`mp3`、`m4a`、`aac`、`ogg`、`wma`、`amr`
-- 支持视频格式：`avi`、`wmv`、`mov`、`mp4`、`m4v`、`mpeg`、`ogg`、`flv`
-- 音视频时长不能超过 `6` 小时
-- 文件大小不能超过 `6 GB`
+- Supported audio formats: `wav`, `mp3`, `m4a`, `aac`, `ogg`, `wma`, `amr`
+- Supported video formats: `avi`, `wmv`, `mov`, `mp4`, `m4v`, `mpeg`, `ogg`, `flv`
+- Audio/video duration must not exceed `6` hours
+- File size must not exceed `6 GB`
 
-> 说明：本 shortcut 只接收 `file_token`，不会直接读取本地文件内容，因此这些格式、时长和大小限制对应的是**原始上传文件**本身。若妙记生成失败，请先回查源文件是否满足上述要求。
+> Note: This shortcut only accepts `file_token` and does not directly read local file contents, so these format, duration, and size limits apply to the **original uploaded file** itself. If Minute generation fails, first check back whether the source file meets the above requirements.
 
-## 核心约束
+<a id="核心约束"></a>
+## Core constraints
 
-### 1. 必须提供 file_token
+<a id="1-必须提供-file_token"></a>
+### 1. file_token must be provided
 
-本接口不直接处理本地文件的上传，必须先使用 `drive +upload` 将文件上传到云空间（云盘/云存储）获取 `file_token`，然后再调用本接口。
+This API does not directly handle uploading local files. You must first use `drive +upload` to upload the file to cloud space (Drive/cloud storage) to obtain `file_token`, and then call this API.
 
-### 2. 异步生成
+<a id="2-异步生成"></a>
+### 2. Asynchronous generation
 
-API 会立即返回 `minute_url`，但妙记可能仍在异步生成中。`minutes +upload` 不返回处理状态，命令成功只表示异步创建请求已提交；只有后续执行 `minutes +detail` 并确认就绪，才能声称妙记产物已生成或可用。上传与后续产物获取由 [`create-and-edit-minutes`](../scenes/create-and-edit-minutes.md) 编排；上传后立即查询产物时，`minutes +detail` 必须使用 `--wait-ready`。
+The API returns `minute_url` immediately, but the Minute may still be generating asynchronously. `minutes +upload` does not return processing status; a successful command only means the asynchronous creation request has been submitted. Only after subsequently executing `minutes +detail` and confirming readiness can you claim that the Minute artifact has been generated or is available. Upload and subsequent artifact retrieval are orchestrated by [`create-and-edit-minutes`](../scenes/create-and-edit-minutes.md); when querying the artifact immediately after upload, `minutes +detail` must use `--wait-ready`.
 
-## 输出结果示例
+<a id="输出结果示例"></a>
+## Output result example
 
 ```json
 {
@@ -56,16 +64,18 @@ API 会立即返回 `minute_url`，但妙记可能仍在异步生成中。`minut
 }
 ```
 
-| 字段 | 说明 |
+| Field | Description |
 |------|------|
-| `minute_url` | 生成的妙记访问链接 |
-| `minute_token` | 从 `minute_url` 提取出的妙记 Token，可直接传给 `minutes +detail --minute-tokens` |
+| `minute_url` | The generated Minute access link |
+| `minute_token` | The Minute Token extracted from `minute_url`, which can be passed directly to `minutes +detail --minute-tokens` |
 
-## 常见错误与排查
+<a id="常见错误与排查"></a>
+## Common errors and troubleshooting
 
-| 错误现象 | 错误码 | 根本原因 | 解决方案 |
+| Error symptom | Error code | Root cause | Solution |
 |---------|--------|---------|---------|
-| `error.subtype` = `quota_exceeded` | 2091008 | ASR/AI 额度已用尽，不足以转写这个音视频，妙记未创建 | 让用户去妙记详情页查看额度详细信息；CLI 无法补充或提升额度，重试同一个 `--file-token` 不会成功 |
+| `error.subtype` = `quota_exceeded` | 2091008 | ASR/AI quota is exhausted, insufficient to transcribe this audio/video, and the Minute was not created | Have the user check the quota details on the Minute detail page; the CLI cannot supplement or increase quota, and retrying the same `--file-token` will not succeed |
 
-## 相关场景
-- [生成和修改妙记](../scenes/create-and-edit-minutes.md)
+<a id="相关场景"></a>
+## Related scenarios
+- [Generate and modify Minutes](../scenes/create-and-edit-minutes.md)

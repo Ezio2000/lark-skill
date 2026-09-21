@@ -1,147 +1,159 @@
-# Base 模板中心
+<a id="base-模板中心"></a>
+# Base Template Center
 
-模板中心是一个**公开的 Base 模板库**。当用户想“用一个现成的模板快速搭一个多维表格”时，这套命令帮助 AI 找到最合适的模板，最终通过 `+base-copy` 复制成用户自己的新 Base。
+The Template Center is a **public Base template library**. When a user wants to "quickly build a Base using a ready-made template," this set of commands helps the AI find the most suitable template, and ultimately copy it into the user's own new Base via `+base-copy`.
 
-模板中心里也可能返回 BaseApp / 应用模板。若模板预览链接 `templates[].link` 包含 `/app/`，它只是可展示的应用模板预览，不支持通过 `+base-copy` 复制创建。用户要求“基于这个应用模板创建 / 复制应用模板”时，应明确拒绝，并说明当前 CLI 只支持复制 Base 模板，不支持复制应用模板。
+The Template Center may also return BaseApp / app templates. If the template preview link `templates[].link` contains `/app/`, it is merely a displayable app template preview and does not support copy creation via `+base-copy`. When a user requests "create based on this app template / copy the app template," you should explicitly refuse and explain that the current CLI only supports copying Base templates, not app templates.
 
-三个命令：
+Three commands:
 
-- `+template-categories`：列出所有模板分类，用于把用户意图对齐到某个类目。
-- `+template-list`：列出某个分类下的模板（不传分类则返回“推荐”类目）。
-- `+template-search`：按关键词搜索模板。
+- `+template-categories`: List all template categories, used to align user intent to a category.
+- `+template-list`: List templates under a category (if no category is passed, returns the "Recommended" category).
+- `+template-search`: Search templates by keyword.
 
-## 何时使用模板中心
+<a id="何时使用模板中心"></a>
+## When to Use the Template Center
 
-满足以下特征时走模板中心：用户有**创建新 Base 的意图**，但**没有指向已有对象的锚点**（没有 Base URL、没有“我的/最近访问的表”、没有具体已存在的 Base 名）。
+Use the Template Center when the following characteristics are met: the user has the **intent to create a new Base**, but **has no anchor pointing to an existing object** (no Base URL, no "my/recently visited tables," no specific existing Base name).
 
-典型触发：
+Typical triggers:
 
-- “帮我建一个 CRM 多维表格”
-- “有没有适合项目管理的模板”
-- “找个 OKR 跟进的 Base 模板照着做”
+- "Help me build a CRM Base"
+- "Are there any templates suitable for project management?"
+- "Find a Base template for OKR tracking to follow"
 
-**不要**走模板中心的情况（即使用户嘴上说“模板”）：
+Cases where you should **not** use the Template Center (even if the user says "template"):
 
-- 用户给了 Base/Wiki 链接或 token → 走 `+url-resolve`。
-- 用户说“我之前那张表 / 我的模板 / 最近访问的” → 走 `+title-resolve` 或转 `lark-drive` 搜索。
-- 用户要从零定义字段 schema，而不是套现成模板 → 走 `+base-create --table-name --fields`。
+- The user provides a Base/Wiki link or token → use `+url-resolve`.
+- The user says "that table I had before / my template / recently visited" → use `+title-resolve` or switch to `lark-drive` search.
+- The user wants to define the field schema from scratch rather than apply a ready-made template → use `+base-create --table-name --fields`.
 
-模板中心是独立的公开数据集，**不能**用 `drive +search` 找到，`drive +search` 只搜用户自己可访问的云空间对象。
+The Template Center is an independent public dataset and **cannot** be found with `drive +search`; `drive +search` only searches cloud space objects accessible to the user themselves.
 
-## 推荐命令
+<a id="推荐命令"></a>
+## Recommended Commands
 
 ```bash
-# 列出所有模板分类
+# List all template categories
 lark-cli base +template-categories --as user
 
-# 列出某个分类下的模板（不传 --category-key 则返回“推荐”类目）
+# List templates under a category (if --category-key is not passed, returns the "Recommended" category)
 lark-cli base +template-list --category-key template_center_tab_ai --limit 10 --as user
 
-# 按关键词搜索模板
+# Search templates by keyword
 lark-cli base +template-search --keyword "项目管理" --limit 10 --as user
 
-# 翻页：把上一页返回的 offset 原样传给 --offset
+# Pagination: pass the offset returned by the previous page as-is to --offset
 lark-cli base +template-search --keyword "AI" --limit 10 --offset <上一页返回的 offset> --as user
 
-# 选定模板后，用模板 token 复制成用户自己的新 Base
+# After selecting a template, use the template token to copy it into the user's own new Base
 lark-cli base +base-copy --base-token <模板 token> --name "<新 Base 名>" --as user
 ```
 
-## 工作流
+<a id="工作流"></a>
+## Workflow
 
-模板中心有两条路径，按用户意图明确程度二选一，不要盲目全用。
+The Template Center has two paths; choose one based on how specific the user's intent is, and do not blindly use both.
 
-### 路径 A：分类浏览（意图偏宽泛时首选）
+<a id="路径-a分类浏览意图偏宽泛时首选"></a>
+### Path A: Category Browsing (preferred when intent is broad)
 
-用户只给了一个大方向（如“项目管理”“市场营销”），先按分类收敛，再在类目里挑模板。
+When the user only gives a general direction (such as "project management" or "marketing"), first narrow down by category, then pick a template within the category.
 
-1. `+template-categories` 列出全部分类，拿到 `categories[].key` 和 `name`。
-2. AI 把用户意图匹配到最贴近的一个分类 `name`，取它的 `key`。
-3. `+template-list --category-key <key>` 列出该类目下的模板。
-4. 读每个模板的 `name` / `introduction` / `scenarios`，挑出最符合用户场景的那个，拿它的 `token`。
-5. 用 `+base-copy --base-token <token>` 基于模板复制出新 Base（见下文“基于模板创建”）。
+1. `+template-categories` lists all categories; obtain `categories[].key` and `name`.
+2. The AI matches the user's intent to the closest category `name`, and takes its `key`.
+3. `+template-list --category-key <key>` lists the templates under that category.
+4. Read each template's `name` / `introduction` / `scenarios`, pick the one that best fits the user's scenario, and take its `token`.
+5. Use `+base-copy --base-token <token>` to copy a new Base based on the template (see "Creating Based on a Template" below).
 
 ```bash
-# 1. 看有哪些分类
+# 1. See what categories exist
 lark-cli base +template-categories --as user
 
-# 2~3. 匹配到“AI 应用”类目后，列出该类目模板
+# 2~3. After matching to the "AI Applications" category, list the templates in that category
 lark-cli base +template-list --category-key template_center_tab_ai --limit 10 --as user
 ```
 
-匹配不到贴切分类，或用户意图本身就跨类目 / 很具体时，改走路径 B。
+If no close category can be matched, or the user's intent itself spans categories / is very specific, switch to Path B.
 
-### 路径 B：关键词搜索（意图有具体词时首选）
+<a id="路径-b关键词搜索意图有具体词时首选"></a>
+### Path B: Keyword Search (preferred when intent has specific words)
 
-用户给了明确、可检索的词（如“财务报销”“直播复盘”“AI 客服”），直接搜，不必先看分类。
+When the user gives clear, searchable words (such as "financial reimbursement," "livestream retrospective," "AI customer service"), search directly without first looking at categories.
 
-1. `+template-search --keyword "<词>"` 搜模板。
-2. 同样读 `name` / `introduction` / `scenarios` 选模板，拿 `token`。
-3. `+base-copy` 复制。
+1. `+template-search --keyword "<词>"` searches templates.
+2. Likewise read `name` / `introduction` / `scenarios` to select a template, and take its `token`.
+3. `+base-copy` to copy.
 
 ```bash
 lark-cli base +template-search --keyword "项目管理" --limit 10 --as user
 ```
 
-关键词不能为空；空搜会被拒绝。用户只有“大方向”而没有具体检索词时，用路径 A 的分类浏览更稳。
+The keyword cannot be empty; an empty search will be rejected. When the user only has a "general direction" without specific search terms, Path A's category browsing is more reliable.
 
-### 分类 vs 搜索怎么选
+<a id="分类-vs-搜索怎么选"></a>
+### How to Choose Between Category and Search
 
-| 用户意图 | 走哪条 |
+| User Intent | Which Path |
 |---|---|
-| 只有大类方向（“市场营销类的”“办公用的”） | 路径 A，先 `+template-categories` 收敛 |
-| 有具体、可检索的业务词（“报销”“OKR”“直播”） | 路径 B，直接 `+template-search` |
-| 大方向下没挑到合适的 | A 之后再用 B 换关键词补搜 |
+| Only a broad category direction ("marketing type," "for office use") | Path A, first narrow down with `+template-categories` |
+| Specific, searchable business terms ("reimbursement," "OKR," "livestream") | Path B, directly `+template-search` |
+| Nothing suitable found under the broad direction | After A, use B with different keywords to supplement the search |
 
-## 翻页
+<a id="翻页"></a>
+## Pagination
 
-`+template-list` 和 `+template-search` 都是游标翻页：
+`+template-list` and `+template-search` both use cursor pagination:
 
-- `--limit`：每页数量，默认 10，范围 1-100；`--page-size` 是等价别名。
-- `--offset`：翻页游标，来自上一次响应的 `offset` 字段。**首次请求不要传**。
-- 响应里 `has_more=true` 表示还有下一页，把响应的 `offset` 原样传给下一次 `--offset`。`has_more=false` 或 `offset` 为空字符串表示没有更多。
+- `--limit`: number per page, default 10, range 1-100; `--page-size` is an equivalent alias.
+- `--offset`: pagination cursor, from the `offset` field of the previous response. **Do not pass it on the first request**.
+- In the response, `has_more=true` indicates there is a next page; pass the response's `offset` as-is to the next `--offset`. `has_more=false` or `offset` being an empty string means there is no more.
 
-`--offset` 是服务端返回的不透明游标，不要解析它、不要自己拼造。
+`--offset` is an opaque cursor returned by the server; do not parse it, and do not construct it yourself.
 
 ```bash
 lark-cli base +template-search --keyword "AI" --limit 10 --offset <上一页返回的 offset> --as user
 ```
 
-## 数据结构
+<a id="数据结构"></a>
+## Data Structures
 
-### TemplateCategory（分类对象）
+<a id="templatecategory分类对象"></a>
+### TemplateCategory (Category Object)
 
-`+template-categories` 返回 `categories[]`，每个元素：
+`+template-categories` returns `categories[]`, each element:
 
-| 字段 | 类型 | 含义 |
+| Field | Type | Meaning |
 |---|---|---|
-| `key` | string | 分类唯一标识，形如 `template_center_tab_ai`（`template_center_tab_` 前缀 + 类目名）。传给 `+template-list --category-key` 用的就是它 |
-| `name` | string | 分类展示名，如 `AI 应用` / `办公通用`。AI 匹配用户意图时看这个 |
+| `key` | string | Unique category identifier, in the form `template_center_tab_ai` (`template_center_tab_` prefix + category name). This is what is passed to `+template-list --category-key` |
+| `name` | string | Category display name, such as `AI 应用` / `办公通用`. The AI looks at this when matching user intent |
 
-### Template（模板对象）
+<a id="template模板对象"></a>
+### Template (Template Object)
 
-`+template-list` / `+template-search` 返回 `templates[]`，每个元素：
+`+template-list` / `+template-search` returns `templates[]`, each element:
 
-| 字段 | 类型 | 含义 |
+| Field | Type | Meaning |
 |---|---|---|
-| `token` | string | 模板的 Base token，是模板的唯一标识。基于模板创建时作为 `+base-copy --base-token` 的入参 |
-| `name` | string | 模板名称，如 `工作汇报` |
-| `introduction` | string | 模板介绍，说明模板用途、内容结构和适用方向。AI 判断模板是否契合用户需求主要看它 |
-| `scenarios` | string[] | 适用场景列表，如 `["工作汇报","月报","项目进展"]`，用于快速判断场景匹配度 |
-| `developer` | string | 模板开发者，如 `飞书` |
-| `link` | string | 模板预览链接，可展示给用户，但复制模板用 `token` 而不是 `link` |
-| `created_at` / `updated_at` | string | 创建 / 更新时间 |
+| `token` | string | The template's Base token, which is the template's unique identifier. Used as the input for `+base-copy --base-token` when creating based on the template |
+| `name` | string | Template name, such as `工作汇报` |
+| `introduction` | string | Template introduction, explaining the template's purpose, content structure, and applicable direction. The AI mainly looks at this to judge whether the template fits the user's needs |
+| `scenarios` | string[] | List of applicable scenarios, such as `["工作汇报","月报","项目进展"]`, used to quickly judge scenario match |
+| `developer` | string | Template developer, such as `飞书` |
+| `link` | string | Template preview link, which can be shown to the user, but copying the template uses `token` rather than `link` |
+| `created_at` / `updated_at` | string | Creation / update time |
 
-列表 / 搜索响应还带分页字段：
+List / search responses also carry pagination fields:
 
-| 字段 | 类型 | 含义 |
+| Field | Type | Meaning |
 |---|---|---|
-| `has_more` | boolean | 是否还有下一页 |
-| `offset` | string | 下一页游标；无更多时为空字符串 |
+| `has_more` | boolean | Whether there is a next page |
+| `offset` | string | Next page cursor; empty string when there is no more |
 
-**约定**：模板的唯一标识就叫 `token`（模板 Base token），不要在输出或转述里改名成 `id` 或 `key`；`key` 是分类的标识（`category_key`）。
+**Convention**: The template's unique identifier is called `token` (template Base token); do not rename it to `id` or `key` in output or paraphrase; `key` is the category's identifier (`category_key`).
 
-### 模板列表/模版搜索-响应示例
+<a id="模板列表模版搜索-响应示例"></a>
+### Template List/Template Search - Response Example
 
 ```json
 {
@@ -166,34 +178,36 @@ lark-cli base +template-search --keyword "AI" --limit 10 --offset <上一页返�
 }
 ```
 
-读取模板列表时重点看：
+When reading the template list, focus on:
 
-- `templates[].name`：模板名称；基于模板创建 Base 且用户没有指定新名称时，直接作为 `+base-copy --name`。
-- `templates[].token`：模板 Base token；复制时传给 `+base-copy --base-token`。
-- `templates[].link`：模板预览链接；可以展示给用户帮助确认，但复制时不要用 link 代替 token。若链接包含 `/app/`，这是应用模板预览，只能展示，不能复制创建。
-- `templates[].introduction` / `templates[].scenarios`：用于判断模板是否匹配用户业务场景。
-- `data.offset`：下一页游标；只有 `has_more=true` 时才继续传给 `--offset`。
+- `templates[].name`: template name; when creating a Base based on the template and the user has not specified a new name, use it directly as `+base-copy --name`.
+- `templates[].token`: template Base token; pass it to `+base-copy --base-token` when copying.
+- `templates[].link`: template preview link; it can be shown to the user to help confirm, but do not use the link instead of the token when copying. If the link contains `/app/`, this is an app template preview, which can only be displayed and cannot be copied/created.
+- `templates[].introduction` / `templates[].scenarios`: used to judge whether the template matches the user's business scenario.
+- `data.offset`: next page cursor; only when `has_more=true` should you continue passing it to `--offset`.
 
-## 基于模板创建 Base
+<a id="基于模板创建-base"></a>
+## Creating a Base Based on a Template
 
-模板中心只负责“找到模板”，它本身不创建 Base。选定模板后，用模板的 `token` 复制出用户自己的新 Base：
+The Template Center is only responsible for "finding templates"; it does not itself create Bases. After selecting a template, use the template's `token` to copy out the user's own new Base:
 
 ```bash
 lark-cli base +base-copy --base-token <模板 token> --name "<新 Base 名>" --as user
 ```
 
-- `--name` 用用户想要的新 Base 名；不传则沿用模板名。
-- 只有用户明确说“只要结构 / 不要内容”时，才加 `--without-content`。
-- `+base-copy` 的返回和权限说明见 index.md 中 `+base-copy` 的相关规则。
-- 如果选中的模板 `link` 包含 `/app/`，不要调用 `+base-copy`。这类应用模板当前仅支持展示给用户，不支持复制创建；用户要求基于应用模板创建时应拒绝并说明能力边界。
+- `--name` uses the new Base name the user wants; if not passed, the template name is used.
+- Only when the user explicitly says "only the structure / no content" should you add `--without-content`.
+- For the return and permission description of `+base-copy`, see the relevant rules for `+base-copy` in index.md.
+- If the selected template's `link` contains `/app/`, do not call `+base-copy`. Such app templates currently only support being displayed to the user and do not support copy creation; when the user requests creation based on an app template, you should refuse and explain the capability boundary.
 
-## 注意事项
+<a id="注意事项"></a>
+## Notes
 
-- 三个命令都是只读，默认 `--as user`，所需权限 `base:template:read`。
-- 模板中心是公开数据集，不能用 `drive +search` 找到；用户要“我的/最近访问/已有 Base”不要走这里。
-- 分类先于列表：`+template-list` 的 `--category-key` 必须来自 `+template-categories` 的返回，不要凭空猜类目 key。
-- `+template-search` 不支持空关键词，会被拒绝；用户只有大方向、无具体检索词时改走分类浏览。
-- 模板的唯一标识是 `token`（模板 Base token），不要改名成 `id` 或 `key`。
-- `--offset` 是服务端返回的不透明游标，翻页时原样回传，不要解析或自行构造。
-- 模板中心只查模板、不创建 Base；创建一律走 `+base-copy --base-token <token>`，不要用模板 token 去调 `+base-get` 之类的当前用户 Base 命令。
-- 应用模板链接包含 `/app/`，仅用于预览展示，不支持 `+base-copy`；不要承诺可基于应用模板创建。
+- All three commands are read-only, default to `--as user`, and require the permission `base:template:read`.
+- The Template Center is a public dataset and cannot be found with `drive +search`; when the user wants "my/recently visited/existing Base," do not go here.
+- Category comes before list: the `--category-key` of `+template-list` must come from the return of `+template-categories`; do not guess the category key out of thin air.
+- `+template-search` does not support empty keywords and will be rejected; when the user only has a broad direction and no specific search terms, switch to category browsing.
+- The template's unique identifier is `token` (template Base token); do not rename it to `id` or `key`.
+- `--offset` is an opaque cursor returned by the server; pass it back as-is when paginating, and do not parse or construct it yourself.
+- The Template Center only queries templates and does not create Bases; creation always goes through `+base-copy --base-token <token>`, and do not use a template token to call current-user Base commands such as `+base-get`.
+- App template links contain `/app/` and are only for preview display; `+base-copy` is not supported; do not promise that creation based on an app template is possible.

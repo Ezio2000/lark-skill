@@ -1,97 +1,101 @@
 # mail +reply
 
 
-回复指定邮件，自动处理：
-- 主题前缀 `Re: `（已含常见回复前缀时不重复叠加）
-- 默认收件人为原邮件发件人
-- RFC 2822 会话头（`In-Reply-To` / `References`）维护邮件会话
+Reply to a specified email, with automatic handling of:
+- Subject prefix `Re: ` (not stacked again when a common reply prefix is already present)
+- Default recipient is the sender of the original email
+- RFC 2822 conversation headers (`In-Reply-To` / `References`) to maintain the email conversation
 
-> **默认草稿模式**：`+reply` 默认保存为草稿，不会立即发送。如需立即发送，使用 `--confirm-send` 参数（须经用户明确确认）。**优先使用 `+reply` 而不是 `+draft-create` 来创建回复草稿**，因为 `+reply` 会自动处理主题、收件人和会话头。
+> **Default draft mode**: `+reply` is saved as a draft by default and is not sent immediately. To send immediately, use the `--confirm-send` parameter (requires explicit user confirmation). **Prefer using `+reply` instead of `+draft-create` to create a reply draft**, because `+reply` automatically handles the subject, recipients, and conversation headers.
 
-本模块 对应 shortcut：`lark-cli mail +reply`，内部步骤：
-1. `GET /open-apis/mail/v1/user_mailboxes/me/messages/{message_id}` — 获取原邮件元数据
-2. `GET /open-apis/mail/v1/user_mailboxes/me/profile` — 获取邮箱主地址（`primary_email_address`，填入默认 From 头）
-3. `POST /open-apis/mail/v1/user_mailboxes/me/drafts` — 创建草稿
-4. `POST /open-apis/mail/v1/user_mailboxes/me/drafts/{draft_id}/send` — 发送草稿（仅在指定 `--confirm-send` 时执行）
+This module corresponds to the shortcut: `lark-cli mail +reply`, internal steps:
+1. `GET /open-apis/mail/v1/user_mailboxes/me/messages/{message_id}` — retrieve the original email metadata
+2. `GET /open-apis/mail/v1/user_mailboxes/me/profile` — retrieve the primary mailbox address (`primary_email_address`, filled into the default From header)
+3. `POST /open-apis/mail/v1/user_mailboxes/me/drafts` — create a draft
+4. `POST /open-apis/mail/v1/user_mailboxes/me/drafts/{draft_id}/send` — send the draft (executed only when `--confirm-send` is specified)
 
-## CRITICAL — 发送工作流（必须遵循）
+<a id="critical--发送工作流必须遵循"></a>
+## CRITICAL — Sending workflow (must be followed)
 
-**CRITICAL - 编辑邮件内容前 MUST 先用 Read 工具读取 [lark-mail-html.md](lark-mail-html.md)，其中包含邮件书写规范**
+**CRITICAL - Before editing email content you MUST first use the Read tool to read [lark-mail-html.md](lark-mail-html.md), which contains the email writing guidelines**
 
-此命令默认**只保存草稿**，不会发送邮件。需要发送时，有两种合规方式：
+This command by default **only saves a draft** and does not send the email. When sending is needed, there are two compliant approaches:
 
-**方式 A（推荐）** — 创建回复草稿（不带 `--confirm-send`）：
+**Approach A (recommended)** — create a reply draft (without `--confirm-send`):
 ```bash
 lark-cli mail +reply --message-id <邮件ID> --body '<回复正文>'
 ```
-→ 返回 `draft_id`
+→ returns `draft_id`
 
-向用户展示回复摘要（目标邮件、回复内容、收件人）；如果用户想先看效果，可引导其去飞书邮件里查看草稿。
+Show the user a reply summary (target email, reply content, recipients); if the user wants to preview the result first, guide them to view the draft in Feishu Mail.
 
-用户明确同意后，发送该草稿：
+After the user explicitly agrees, send the draft:
 ```bash
 lark-cli mail user_mailbox.drafts send --params '{"user_mailbox_id":"me","draft_id":"<Step 1 返回的 draft_id>"}'
 ```
 
-**方式 B（允许）** — 用户已经明确确认回复对象和内容时，可直接使用 `--confirm-send` 立即发送。
+**Approach B (allowed)** — when the user has already explicitly confirmed the reply target and content, you may directly use `--confirm-send` to send immediately.
 
-**禁止在用户未明确同意的情况下执行发送，无论是发送草稿还是直接使用 `--confirm-send`。**
+**It is forbidden to execute sending without the user's explicit consent, whether sending a draft or directly using `--confirm-send`.**
 
-## 命令
+<a id="命令"></a>
+## Command
 
 ```bash
-# 回复一封邮件（默认保存为草稿，返回 draft_id）— HTML 推荐
+# Reply to an email (saved as a draft by default, returns draft_id) — HTML recommended
 lark-cli mail +reply --message-id <邮件ID> --body '<p><b>已收到</b>，稍后跟进。</p>'
 
-# 回复并追加收件人/抄送（保存为草稿）
+# Reply and append recipients/CC (saved as a draft)
 lark-cli mail +reply --message-id <邮件ID> --body '<p>已处理</p>' --to 'lead@example.com' --cc 'colleague@example.com'
 
-# 回复时插入内嵌图片（推荐：直接用相对路径，自动解析）
+# Insert inline images when replying (recommended: use relative paths directly, resolved automatically)
 lark-cli mail +reply --message-id <邮件ID> --body '<p>详见图示：<img src="./logo.png" /></p>'
 
-# 纯文本回复（仅在内容极简时使用）
+# Plain text reply (use only when the content is extremely simple)
 lark-cli mail +reply --message-id <邮件ID> --body '收到，谢谢！'
 
-# 指定发件人地址
+# Specify the sender address
 lark-cli mail +reply --message-id <邮件ID> --body '收到' --from me@example.com
 
-# 确认发送回复（用户明确确认后使用）
+# Confirm sending the reply (use after explicit user confirmation)
 lark-cli mail +reply --message-id <邮件ID> --body '<p>收到，谢谢！</p>' --confirm-send
 
-# Dry Run（仅打印请求，不执行）
+# Dry Run (only prints the request, does not execute)
 lark-cli mail +reply --message-id <邮件ID> --body '<p>测试</p>' --dry-run
 ```
 
-## 参数
+<a id="参数"></a>
+## Parameters
 
-| 参数 | 必填 | 说明 |
+| Parameter | Required | Description |
 |------|------|------|
-| `--message-id <id>` | 是 | 被回复的邮件 ID |
-| `--body <text>` | 二选一 | 回复正文。推荐使用 HTML 获得富文本排版；也支持纯文本。根据回复正文和原邮件正文自动检测 HTML。使用 `--plain-text` 可强制纯文本模式。支持 `<img src="./local.png" />` 相对路径自动解析为内嵌图片（仅支持相对路径，不支持绝对路径）。与 `--body-file` 互斥 |
-| `--body-file <path>` | 二选一 | 从文件读取回复正文 HTML（相对路径，仅限 cwd 子树）。与 `--body` 互斥。文件大小上限 32 MB |
-| `--from <email>` | 否 | 发件人邮箱地址（EML From 头）。使用别名（send_as）发信时，设为别名地址并配合 `--mailbox` 指定所属邮箱。默认读取邮箱主地址 |
-| `--mailbox <email>` | 否 | 邮箱地址，指定草稿所属的邮箱（默认回退到 `--from`，再回退到 `me`）。当发件人（`--from`）与邮箱不同时使用。可通过 `accessible_mailboxes` 查询可用邮箱 |
-| `--to '<email>'` | 否 | 额外收件人。多个额外收件人请重复传 `--to`，每次只放一个地址，参数值用单引号包住；追加到原发件人 |
-| `--cc '<email>'` | 否 | 抄送邮箱。多个抄送请重复传 `--cc`，每次只放一个地址，参数值用单引号包住 |
-| `--bcc '<email>'` | 否 | 密送邮箱。多个密送请重复传 `--bcc`，每次只放一个地址，参数值用单引号包住。与 `--event-*` 不兼容（见 `+send` 日程邀请约束） |
-| `--plain-text` | 否 | 强制纯文本模式，忽略所有 HTML 自动检测。不可与 `--inline` 同时使用。纯文本模式下也会自动追加纯文本签名（HTML 签名经 `PlainTextFromHTML` 转换，内联图片丢弃） |
-| `--attach '<path>'` | 否 | 附件文件路径。多个附件请重复传 `--attach`，每次只放一个相对路径，参数值用单引号包住；按传入顺序追加。当附件导致 EML 总大小超过 25 MB 时，超出部分自动上传为超大附件（HTML 邮件插入下载卡片，纯文本邮件追加下载链接），单个文件上限 3 GB |
-| `--inline '<json>'` | 否 | 高级用法：手动指定内嵌图片 CID 映射。多个 inline 图片请重复传 `--inline`，每次只放一个 JSON object，并用单引号包住：`'{"cid":"mycid","file_path":"./logo.png"}'`。`file_path` 必须是相对路径；CID 应唯一，例如随机十六进制字符串；在 body 中用 `<img src="cid:mycid">` 引用。推荐直接在 `--body` 中使用 `<img src="./path" />`（自动解析）。不可与 `--plain-text` 同时使用 |
-| `--signature-id <id>` | 否 | 签名 ID。附加邮箱签名到回复正文与引用块之间。运行 `mail +signature` 查看可用签名。与 `--no-signature` 互斥 |
-| `--no-signature` | 否 | 跳过默认签名自动追加。与 `--signature-id` 互斥，同时使用时返回参数校验错误（退出码 2） |
-| `--priority <level>` | 否 | 邮件优先级：`high`、`normal`、`low`。省略或 `normal` 时不设置优先级 |
-| `--event-summary <text>` | 否 | 日程标题。设置此参数即在邮件中嵌入日程邀请。需同时设置 `--event-start` 和 `--event-end` |
-| `--event-start <time>` | 条件必填 | 日程开始时间（ISO 8601） |
-| `--event-end <time>` | 条件必填 | 日程结束时间（ISO 8601） |
-| `--event-location <text>` | 否 | 日程地点 |
-| `--confirm-send` | 否 | 确认发送回复（默认只保存草稿）。仅在用户明确确认后使用 |
-| `--send-time <timestamp>` | 否 | 定时发送时间，Unix 时间戳（秒）。需至少为当前时间 + 5 分钟。配合 `--confirm-send` 使用可定时发送邮件 |
-| `--request-receipt` | 否 | 请求已读回执（RFC 3798 Message Disposition Notification）。在出站 EML 里写 `Disposition-Notification-To: <sender>` 头。收件人的邮件客户端可能弹出提示、自动发送或忽略——送达不保证 |
-| `--dry-run` | 否 | 仅打印请求，不执行 |
+| `--message-id <id>` | Yes | ID of the email being replied to |
+| `--body <text>` | Choose one of two | Reply body. HTML is recommended for rich text formatting; plain text is also supported. HTML is auto-detected based on the reply body and the original email body. Use `--plain-text` to force plain text mode. Supports `<img src="./local.png" />` relative paths automatically resolved as inline images (only relative paths are supported, absolute paths are not). Mutually exclusive with `--body-file` |
+| `--body-file <path>` | Choose one of two | Read the reply body HTML from a file (relative path, limited to the cwd subtree). Mutually exclusive with `--body`. File size limit 32 MB |
+| `--from <email>` | No | Sender email address (EML From header). When sending with an alias (send_as), set this to the alias address and use `--mailbox` to specify the mailbox it belongs to. Defaults to reading the primary mailbox address |
+| `--mailbox <email>` | No | Mailbox address, specifies the mailbox the draft belongs to (defaults back to `--from`, then back to `me`). Used when the sender (`--from`) differs from the mailbox. Available mailboxes can be queried via `accessible_mailboxes` |
+| `--to '<email>'` | No | Additional recipients. For multiple additional recipients, pass `--to` repeatedly, one address at a time, wrapping the parameter value in single quotes; appended to the original sender |
+| `--cc '<email>'` | No | CC email addresses. For multiple CCs, pass `--cc` repeatedly, one address at a time, wrapping the parameter value in single quotes |
+| `--bcc '<email>'` | No | BCC email addresses. For multiple BCCs, pass `--bcc` repeatedly, one address at a time, wrapping the parameter value in single quotes. Incompatible with `--event-*` (see `+send` calendar invitation constraints) |
+| `--plain-text` | No | Force plain text mode, ignoring all HTML auto-detection. Cannot be used together with `--inline`. In plain text mode, a plain text signature is also automatically appended (HTML signatures are converted via `PlainTextFromHTML`, inline images are discarded) |
+| `--attach '<path>'` | No | Attachment file paths. For multiple attachments, pass `--attach` repeatedly, one relative path at a time, wrapping the parameter value in single quotes; appended in the order passed. When attachments cause the total EML size to exceed 25 MB, the excess is automatically uploaded as large attachments (a download card is inserted for HTML emails, a download link is appended for plain text emails), with a single file limit of 3 GB |
+| `--inline '<json>'` | No | Advanced usage: manually specify the inline image CID mapping. For multiple inline images, pass `--inline` repeatedly, one JSON object at a time, wrapping it in single quotes: `'{"cid":"mycid","file_path":"./logo.png"}'`. `file_path` must be a relative path; the CID should be unique, e.g. a random hexadecimal string; reference it in the body with `<img src="cid:mycid">`. It is recommended to use `<img src="./path" />` directly in `--body` (resolved automatically). Cannot be used together with `--plain-text` |
+| `--signature-id <id>` | No | Signature ID. Appends the mailbox signature between the reply body and the quoted block. Run `mail +signature` to view available signatures. Mutually exclusive with `--no-signature` |
+| `--no-signature` | No | Skip automatic appending of the default signature. Mutually exclusive with `--signature-id`; using both together returns a parameter validation error (exit code 2) |
+| `--priority <level>` | No | Email priority: `high`, `normal`, `low`. When omitted or `normal`, no priority is set |
+| `--event-summary <text>` | No | Calendar title. Setting this parameter embeds a calendar invitation in the email. `--event-start` and `--event-end` must also be set |
+| `--event-start <time>` | Conditionally required | Calendar start time (ISO 8601) |
+| `--event-end <time>` | Conditionally required | Calendar end time (ISO 8601) |
+| `--event-location <text>` | No | Calendar location |
+| `--confirm-send` | No | Confirm sending the reply (by default only saves a draft). Use only after explicit user confirmation |
+| `--send-time <timestamp>` | No | Scheduled send time, Unix timestamp (seconds). Must be at least the current time + 5 minutes. Use with `--confirm-send` to schedule email sending |
+| `--request-receipt` | No | Request a read receipt (RFC 3798 Message Disposition Notification). Writes the `Disposition-Notification-To: <sender>` header in the outbound EML. The recipient's email client may show a prompt, send automatically, or ignore it — delivery is not guaranteed |
+| `--dry-run` | No | Only prints the request, does not execute |
 
-## 返回值
+<a id="返回值"></a>
+## Return values
 
-默认（草稿模式）：
+Default (draft mode):
 ```json
 {
   "ok": true,
@@ -102,7 +106,7 @@ lark-cli mail +reply --message-id <邮件ID> --body '<p>测试</p>' --dry-run
 }
 ```
 
-`--confirm-send` 模式（发送成功）：
+`--confirm-send` mode (sent successfully):
 ```json
 {
   "ok": true,
@@ -113,136 +117,148 @@ lark-cli mail +reply --message-id <邮件ID> --body '<p>测试</p>' --dry-run
 }
 ```
 
-可选字段：
+Optional fields:
 
-- `automation_send_disable_reason`：发送被邮箱自动化设置拦截时返回的原因
-- `automation_send_disable_reference`：发送被拦截时的草稿打开链接
-- `recall_available` / `recall_tip`：发送成功后若返回可撤回提示，按需参考 [lark-mail-recall](lark-mail-recall.md)
+- `automation_send_disable_reason`: the reason returned when sending is blocked by mailbox automation settings
+- `automation_send_disable_reference`: the draft open link when sending is blocked
+- `recall_available` / `recall_tip`: after a successful send, if a recall hint is returned, refer to [lark-mail-recall](lark-mail-recall.md) as needed
 
-字段语义：
+Field semantics:
 
-- 若返回中包含 `automation_send_disable_reason` / `automation_send_disable_reference`，说明回复未真正发出，而是被邮箱设置拦截。此时应直接向用户展示原因和草稿打开链接，不要继续假设已经发送成功
-- 若返回中包含 `recall_available: true`，说明该邮件支持撤回；仅当用户明确要求撤回时，读取 [lark-mail-recall](lark-mail-recall.md) 并执行撤回流程
+- If the return contains `automation_send_disable_reason` / `automation_send_disable_reference`, it means the reply was not actually sent but was blocked by mailbox settings. In this case, directly show the user the reason and the draft open link, and do not continue assuming the send succeeded
+- If the return contains `recall_available: true`, it means the email supports recall; only when the user explicitly requests a recall, read [lark-mail-recall](lark-mail-recall.md) and execute the recall flow
 
-## 典型场景
+<a id="典型场景"></a>
+## Typical scenarios
 
-### 场景 1：用户说"帮我写个回复草稿"（只创建草稿）
+<a id="场景-1用户说帮我写个回复草稿只创建草稿"></a>
+### Scenario 1: The user says "help me write a reply draft" (only create a draft)
 ```bash
 lark-cli mail +reply --message-id <邮件ID> --body '<p>收到，谢谢！</p>'
 ```
-→ 返回 `draft_id`，告诉用户回复草稿已创建。**注意：用 `+reply` 而不是 `+draft-create`**，这样草稿会自动关联原邮件的主题、收件人和会话头。
+→ returns `draft_id`, tell the user the reply draft has been created. **Note: use `+reply` instead of `+draft-create`**, so the draft automatically associates the original email's subject, recipients, and conversation headers.
 
-### 场景 2：用户说"回复这封邮件说已处理"（需要发送）
+<a id="场景-2用户说回复这封邮件说已处理需要发送"></a>
+### Scenario 2: The user says "reply to this email saying it's handled" (needs sending)
 ```bash
-# 方式 A: 创建回复草稿
+# Approach A: create a reply draft
 lark-cli mail +reply --message-id <邮件ID> --body '<p>已处理，谢谢。</p>'
-# → 返回 draft_id
+# → returns draft_id
 
-# 向用户确认 "回复给 alice@example.com，内容「已处理，谢谢。」如果你想先看效果，也可以先去飞书邮件里查看草稿。确认发送吗？"
+# Confirm with the user "Reply to alice@example.com, content 'Handled, thanks.' If you want to preview the result first, you can also view the draft in Feishu Mail. Confirm sending?"
 
-# 用户确认后发送
+# Send after the user confirms
 lark-cli mail user_mailbox.drafts send --params '{"user_mailbox_id":"me","draft_id":"<draft_id>"}'
 
-# 方式 B: 用户已明确确认时，直接发送
+# Approach B: when the user has already explicitly confirmed, send directly
 lark-cli mail +reply --message-id <邮件ID> --body '<p>已处理，谢谢。</p>' --confirm-send
 ```
 
-### 场景 3：用户说"下午 3 点回复这封邮件说已处理"（定时发送）
+<a id="场景-3用户说下午-3-点回复这封邮件说已处理定时发送"></a>
+### Scenario 3: The user says "reply to this email at 3 PM saying it's handled" (scheduled send)
 ```bash
-# Step 1: 创建回复草稿
+# Step 1: create a reply draft
 lark-cli mail +reply --message-id <邮件ID> --body '<p>已处理，谢谢。</p>'
-# → 返回 draft_id
+# → returns draft_id
 
-# Step 2: 向用户确认 "回复草稿已创建：回复给 alice@example.com，内容「已处理，谢谢。」定时 <目标时间> 发送。确认吗？"
+# Step 2: confirm with the user "Reply draft created: reply to alice@example.com, content 'Handled, thanks.' Scheduled to send at <target time>. Confirm?"
 
-# Step 3: 用户确认后定时发送（send_time 为 Unix 时间戳，需至少当前时间 + 5 分钟）
+# Step 3: after the user confirms, schedule the send (send_time is a Unix timestamp, must be at least the current time + 5 minutes)
 lark-cli mail user_mailbox.drafts send --params '{"user_mailbox_id":"me","draft_id":"<draft_id>"}' --data '{"send_time":"<unix_timestamp>"}'
 ```
 
-### 场景 4：用户说"等等，先不回复了"（取消定时发送）
+<a id="场景-4用户说等等先不回复了取消定时发送"></a>
+### Scenario 4: The user says "wait, don't reply for now" (cancel scheduled send)
 ```bash
-# 取消定时发送（取消后邮件变回草稿）
+# Cancel the scheduled send (after cancellation the email reverts to a draft)
 lark-cli mail user_mailbox.drafts cancel_scheduled_send --params '{"user_mailbox_id":"me","draft_id":"<draft_id>"}'
 ```
-→ 取消成功后邮件恢复为草稿状态，用户可重新编辑或在之后重新发送。
+→ after successful cancellation the email reverts to draft status, and the user can re-edit or resend it later.
 
-## 实现说明
+<a id="实现说明"></a>
+## Implementation notes
 
-### 会话维护
+<a id="会话维护"></a>
+### Conversation maintenance
 
-本 shortcut 通过 raw EML 方式发送，包含标准 RFC 2822 会话头：
+This shortcut sends via raw EML, including standard RFC 2822 conversation headers:
 
 ```
 In-Reply-To: <原邮件smtp_message_id>
 References:  <原邮件references + smtp_message_id>
 ```
 
-若原邮件有 `thread_id`，发送时会一并传入，确保回复归入同一会话。
+If the original email has `thread_id`, it is also passed in when sending, ensuring the reply is grouped into the same conversation.
 
-### 收件人与引用
+<a id="收件人与引用"></a>
+### Recipients and quoting
 
-- 默认回复给原邮件发件人（`head_from`）
-- `--to` 会在默认收件人基础上追加
-- 自动拼接引用块（纯文本或 HTML）
+- By default, reply to the sender of the original email (`head_from`)
+- `--to` appends on top of the default recipients
+- Automatically concatenates a quoted block (plain text or HTML)
 
-## 发送后跟进
+<a id="发送后跟进"></a>
+## Post-send follow-up
 
-回复发送后，分两种情况处理：
+After the reply is sent, handle two cases:
 
-- 若返回中有 `automation_send_disable_reason` / `automation_send_disable_reference`：说明发送被邮箱设置拦截，应直接告诉用户原因并提供草稿打开链接，**不要**调用 `send_status`
-- 若用户基于发送结果要求撤回，先读取 [lark-mail-recall](lark-mail-recall.md)，再执行撤回流程
+- If the return contains `automation_send_disable_reason` / `automation_send_disable_reference`: it means the send was blocked by mailbox settings; directly tell the user the reason and provide the draft open link, and do **not** call `send_status`
+- If the user requests a recall based on the send result, first read [lark-mail-recall](lark-mail-recall.md), then execute the recall flow
 
-**1. 确认投递状态**（仅立即发送且返回非空 `message_id` 时必须）
+**1. Confirm delivery status** (required only for immediate sends that return a non-empty `message_id`)
 
-用返回的 `message_id` 查询投递状态：
+Use the returned `message_id` to query the delivery status:
 
 ```bash
 lark-cli mail user_mailbox.messages send_status --params '{"user_mailbox_id":"me","message_id":"<发送返回的 message_id>"}'
 ```
 
-状态码：1=正在投递, 2=投递失败重试, 3=退信, 4=投递成功, 5=待审批, 6=审批拒绝。向用户简要报告投递结果，异常状态需重点提示。
+Status codes: 1=delivering, 2=delivery failed and retrying, 3=bounced, 4=delivered successfully, 5=pending approval, 6=approval rejected. Briefly report the delivery result to the user; abnormal statuses should be highlighted.
 
-**1b. 定时发送（指定了 `--send-time`）**
+**1b. Scheduled send (`--send-time` specified)**
 
-定时发送不会立即产生 `message_id`，因此 `send_status` 在定时发送成功后会返回"待发送"状态，**不建议在定时发送后立即查询**。可在预定发送时间后再查询。
+A scheduled send does not immediately produce a `message_id`, so `send_status` returns a "pending send" status after a successful scheduled send; **it is not recommended to query immediately after scheduling**. You can query after the scheduled send time.
 
-如需取消定时发送：
+To cancel a scheduled send:
 
 ```bash
 lark-cli mail user_mailbox.drafts cancel_scheduled_send --params '{"user_mailbox_id":"me","draft_id":"<draft_id>"}'
 ```
 
-**取消后邮件会变回草稿**，可继续编辑或在之后重新发送。
+**After cancellation the email reverts to a draft**, and you can continue editing or resend it later.
 
-**2. 标记已读**（可选）— 询问用户是否需要将原邮件标记为已读。如果用户同意：
+**2. Mark as read** (optional) — ask the user whether the original email should be marked as read. If the user agrees:
 
 ```bash
 lark-cli mail +message-modify --message-ids <原邮件ID> --remove-label-ids UNREAD
 ```
 
-## 编辑回复草稿
+<a id="编辑回复草稿"></a>
+## Editing a reply draft
 
-`+reply` 创建的草稿正文包含引用区（原邮件的引用块）。如果需要编辑回复草稿的正文，**必须通过 `--patch-file` 使用 `set_reply_body` op**，它仅替换用户撰写部分，自动保留引用区。value 只传新的用户撰写内容，不要包含引用区。
+The draft body created by `+reply` contains a quoted area (the quoted block of the original email). If you need to edit the body of a reply draft, you **must use the `set_reply_body` op via `--patch-file`**, which only replaces the user-written part and automatically preserves the quoted area. Pass only the new user-written content as the value, without including the quoted area.
 
 ```bash
-# 编辑回复草稿正文（自动保留引用区）
+# Edit the reply draft body (automatically preserves the quoted area)
 cat > ./patch.json << 'EOF'
 { "ops": [{ "op": "set_reply_body", "value": "<p>修改后的回复内容</p>" }] }
 EOF
 lark-cli mail +draft-edit --draft-id <draft_id> --patch-file ./patch.json
 ```
 
-如果用户要修改引用区内容或去掉引用区，则使用 `set_body` 全量替换。
+If the user wants to modify the content of the quoted area or remove it, use `set_body` for a full replacement.
 
-## 注意事项
+<a id="注意事项"></a>
+## Notes
 
-- 需要已登录（`lark-cli auth login --scope "mail:user_mailbox.message:modify mail:user_mailbox.message:readonly mail:user_mailbox:readonly"`）且具备写/读邮件权限
-- 邮件 ID 可从 `lark-cli mail user_mailbox.messages list` 获取
-- `--bcc` 仅在发送链路中生效，通常不会在收件方看到
+- Requires being logged in (`lark-cli auth login --scope "mail:user_mailbox.message:modify mail:user_mailbox.message:readonly mail:user_mailbox:readonly"`) and having write/read mail permissions
+- The email ID can be obtained from `lark-cli mail user_mailbox.messages list`
+- `--bcc` only takes effect in the sending pipeline and is usually not visible to the recipient
 
-## 相关命令
+<a id="相关命令"></a>
+## Related commands
 
-- `lark-cli mail user_mailbox.messages list` — 列出邮件
-- `lark-cli mail user_mailbox.messages get` — 读取邮件详情
-- `lark-cli mail +reply-all` — 回复全部
-- `lark-cli mail +forward` — 转发邮件
+- `lark-cli mail user_mailbox.messages list` — list emails
+- `lark-cli mail user_mailbox.messages get` — read email details
+- `lark-cli mail +reply-all` — reply all
+- `lark-cli mail +forward` — forward email

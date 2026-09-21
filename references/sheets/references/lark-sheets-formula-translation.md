@@ -1,75 +1,82 @@
-# 飞书表格公式生成规则
+<a id="飞书表格公式生成规则"></a>
+# Lark Sheets Formula Generation Rules
 
-> **本文定位**：飞书公式正确性的**唯一权威**——书写任何飞书公式、或把 Excel 公式迁移到飞书前，先读本文。涵盖公式书写约定（绝对引用、范围语法）、投影 vs spill、`ARRAYFORMULA` / 数组语义与逐行填充、高风险引用函数、日期差、不支持函数清单。
-> **边界**：本文只讲"公式怎么写对"；公式**怎么写入表格**（`+cells-set` / 模板单元格 + `--copy-to-range` / 容错回读）见 `references/lark-sheets-write-cells.md`。公式写入完成后必须用 `references/lark-sheets-formula-verify.md` 对本次公式范围逐段诊断并回读关键公式；不要把"翻译对了"误当成"结果一定正确"。本文不含 shortcut，通用编辑准则见主 index.md「飞书表格编辑准则」。
+> **Purpose of this document**: The **sole authority** on Lark formula correctness — read this before writing any Lark formula or migrating an Excel formula to Lark. It covers formula writing conventions (absolute references, range syntax), projection vs. spill, `ARRAYFORMULA` / array semantics and row-by-row filling, high-risk reference functions, date differences, and the list of unsupported functions.
+> **Boundary**: This document only covers "how to write a formula correctly"; how a formula is **written into a sheet** (`+cells-set` / template cells + `--copy-to-range` / fault-tolerant read-back) is covered in `references/lark-sheets-write-cells.md`. After a formula is written, you must use `references/lark-sheets-formula-verify.md` to diagnose the formula range segment by segment and read back the key formulas; do not mistake "translated correctly" for "the result is definitely correct". This document contains no shortcuts; for general editing guidelines see "Lark Sheets Editing Guidelines" in the main index.md.
 
-**核心原则一：飞书不像 Excel 365 那样默认 spill（溢出展开）。** 某个参数要求单值、实际传入的却是区域时，飞书默认取"投影"（按公式所在行/列取对应的那一个值）；只有当求值处于**数组公式上下文内部**——最外层套了 `ARRAYFORMULA`，或公式里已有原生数组函数（`FILTER` / `XLOOKUP` / `SORT` 等，见下方清单）——才逐项展开。`ARRAYFORMULA` 与"逐行标量公式 + `--copy-to-range` 填充"导出后都保真，按需要选：前者一条公式覆盖整片、写起来短；后者每格是独立公式，导出后在 Excel 里能单格编辑。
+**Core principle one: Lark does not spill (overflow-expand) by default the way Excel 365 does.** When a parameter requires a single value but a range is actually passed in, Lark by default takes the "projection" (the one value corresponding to the formula's row/column); only when evaluation is **inside an array formula context** — the outermost layer is wrapped in `ARRAYFORMULA`, or the formula already contains a native array function (`FILTER` / `XLOOKUP` / `SORT`, etc., see the list below) — does it expand item by item. Both `ARRAYFORMULA` and "row-by-row scalar formula + `--copy-to-range` fill" are faithful after export; choose as needed: the former covers the whole block with one formula and is shorter to write; the latter has an independent formula in each cell, so after export each cell can be edited individually in Excel.
 
-**核心原则二：`LAMBDA` 系高阶函数（`MAP` / `REDUCE` / `SCAN` / `BYROW` / `BYCOL` / `MAKEARRAY`）在飞书内算得对，但导出 `.xlsx` 会静默算错。** 导出时飞书只把 LAMBDA 体内联展开成普通数组表达式，**不保留高阶语义**，全程不报错：
+**Core principle two: `LAMBDA`-family higher-order functions (`MAP` / `REDUCE` / `SCAN` / `BYROW` / `BYCOL` / `MAKEARRAY`) compute correctly inside Lark, but silently compute incorrectly when exported to `.xlsx`.** On export, Lark only inlines the LAMBDA body into an ordinary array expression and **does not preserve higher-order semantics**, with no error at any point:
 
-- `REDUCE(0,A2:A6,LAMBDA(acc,x,acc+x))`（归约求和）→ `=0+A2:A6`，归约整个丢失
-- `BYROW(A2:B6,LAMBDA(r,SUM(r)))`（逐行求和）→ `=SUM(A2:B6)`，5 个结果塌成 1 个
-- `MAP(A2:A6,LAMBDA(x,IF(x>0,x,0)))` → `=A2:A6>0`，`IF` 整个消失
+- `REDUCE(0,A2:A6,LAMBDA(acc,x,acc+x))` (reduction sum) → `=0+A2:A6`, the entire reduction is lost
+- `BYROW(A2:B6,LAMBDA(r,SUM(r)))` (row-by-row sum) → `=SUM(A2:B6)`, 5 results collapse into 1
+- `MAP(A2:A6,LAMBDA(x,IF(x>0,x,0)))` → `=A2:A6>0`, `IF` disappears entirely
 
-唯一例外是 `MAP` 且 LAMBDA 体为**纯运算符或单参函数**时展开恰好等价（`LAMBDA(a,b,a*b)` → `=A2:A6*B2:B6` ✓）。**除此之外一律改走 `ARRAYFORMULA` / 逐行填充 / 辅助列**——同样的逐项逻辑写成 `=ARRAYFORMULA(IF(A2:A6>0,A2:A6,0))` 导出后完整保留，写成 `MAP(...LAMBDA(...IF...))` 就丢。这类错误公式不报错、飞书里回读也是对的，只有导出后才暴露，靠事后检查发现不了。
+The only exception is `MAP` when the LAMBDA body is a **pure operator or single-parameter function**, where the expansion happens to be equivalent (`LAMBDA(a,b,a*b)` → `=A2:A6*B2:B6` ✓). **In all other cases, switch to `ARRAYFORMULA` / row-by-row filling / helper columns** — the same item-by-item logic written as `=ARRAYFORMULA(IF(A2:A6>0,A2:A6,0))` is fully preserved after export, while written as `MAP(...LAMBDA(...IF...))` it is lost. Such incorrect formulas raise no error, and read-back inside Lark is also correct; they are exposed only after export, and cannot be found by after-the-fact inspection.
 
-## 公式书写约定（写任何公式都先满足）
+<a id="公式书写约定写任何公式都先满足"></a>
+## Formula Writing Conventions (satisfy these before writing any formula)
 
-- **绝对引用 `$`**：向下 / 向右填充前判断哪些引用要锁定——用户指定的固定 cell（`$C$3`）、要固定的数据范围（`$A$2:$B$5`）、锁列不锁行（`$A2`）、锁行不锁列（`B$1`）。填充前检查是否需固定汇率 / 税率 / 查找表 / 权重表，以及同列 / 同行公式结构是否一致。
-- **公式字符串用飞书范围语法**：写 `H:H`、`A2:B5`，**禁止** `H2:H` / `2:2`。要在公式里引用整行，用显式范围（如 `$A2:$Z2`）替代禁用的 `2:2`。这与 CLI 工具参数（如 `--range` / `--copy-to-range`）的 A1 表示法写法不同：参数侧合法的 `D3:D`、`1:1`、`3:6` 在公式串里反而非法。**公式串 ≠ CLI 参数**，两套规则别互相照搬，混用会导致调用失败或公式报错。
-- **产物要导出 xlsx 交付时优先 Excel 兼容函数**：同一计算能用 Excel 兼容函数（SUMIFS / TEXT / MID / FIND 等）表达就不用飞书特有函数（MAP / REGEXEXTRACT / ARRAYFORMULA 等）——特有函数在导出后的 xlsx 里可能无法重算；确需使用时，导出后核对重算正常再交付。
+- **Absolute references `$`**: before filling down / to the right, determine which references must be locked — user-specified fixed cells (`$C$3`), data ranges to fix (`$A$2:$B$5`), lock column but not row (`$A2`), lock row but not column (`B$1`). Before filling, check whether exchange rates / tax rates / lookup tables / weight tables need to be fixed, and whether the formula structure is consistent within the same column / row.
+- **Formula strings use Lark range syntax**: write `H:H`, `A2:B5`; `H2:H` / `2:2` are **forbidden**. To reference an entire row in a formula, use an explicit range (e.g. `$A2:$Z2`) instead of the forbidden `2:2`. This differs from the A1 notation used for CLI tool parameters (e.g. `--range` / `--copy-to-range`): `D3:D`, `1:1`, `3:6`, which are legal on the parameter side, are instead illegal in a formula string. **Formula strings ≠ CLI parameters**; do not copy the two sets of rules onto each other, as mixing them causes call failures or formula errors.
+- **When the deliverable is an exported xlsx, prefer Excel-compatible functions**: if the same computation can be expressed with Excel-compatible functions (SUMIFS / TEXT / MID / FIND, etc.), do not use Lark-specific functions (MAP / REGEXEXTRACT / ARRAYFORMULA, etc.) — Lark-specific functions may fail to recalculate in the exported xlsx; if they must be used, verify recalculation works after export before delivering.
 
-## 业务语义契约（复杂统计公式写前必做）
+<a id="业务语义契约复杂统计公式写前必做"></a>
+## Business Semantics Contract (mandatory before writing complex statistical formulas)
 
-公式无错误码不等于业务逻辑正确。写入前把用户要求整理成一张短契约并逐项核对：
+A formula having no error code does not mean the business logic is correct. Before writing, organize the user's requirements into a short contract and check it item by item:
 
-1. **字段**：用表头 + 3–5 行真实值确认“姓名/工号、开始/结束、秒/分钟”等列语义，禁止只凭列字母或列名猜测。
-2. **阈值**：中文“以上 / 至少 / 不低于”用 `>=`，“超过 / 大于”用 `>`；“以下 / 至多 / 不高于”用 `<=`。阈值恰好相等的记录必须作为哨兵。
-3. **单位与时区**：显式记录秒↔分钟、百分比↔小数、Unix 秒/毫秒与 UTC→本地时区转换；日期由时间戳计算时先用一条已知记录手算。
-4. **完整范围**：公式范围覆盖源数据真实首末行，不能把探结构的前 N 行样本直接当计算范围；回读/落盘结果出现 `truncated` / `complete:false` 时先续读。
-5. **业务哨兵**：写前用本地脚本或手算得到至少一条可核预期；写后同时核首、中、末、空值、阈值边界和该预期。`formula-verify success` 只证明没有公式错误码，不能替代这些结果断言。
+1. **Fields**: use the header plus 3–5 rows of real values to confirm the semantics of columns such as "name/employee ID, start/end, seconds/minutes"; never guess from column letters or column names alone.
+2. **Thresholds**: for Chinese "Above / At least / No less than" use `>=`; for "Exceed / Greater than" use `>`; for "Below / At most / No higher than" use `<=`. Records whose value exactly equals the threshold must serve as sentinels.
+3. **Units and time zones**: explicitly record seconds↔minutes, percentage↔decimal, Unix seconds/milliseconds, and UTC→local time zone conversions; when a date is computed from a timestamp, first hand-calculate it with one known record.
+4. **Complete range**: the formula range must cover the true first and last rows of the source data; do not treat the first N rows sampled to probe the structure as the computation range; when `truncated` / `complete:false` appears in read-back/persisted results, continue reading first.
+5. **Business sentinels**: before writing, obtain at least one verifiable expectation using a local script or hand calculation; after writing, verify the first, middle, last, empty values, threshold boundaries, and that expectation at the same time. `formula-verify success` only proves there is no formula error code; it cannot replace these result assertions.
 
-## 翻译后建议：代码复现校验
+<a id="翻译后建议代码复现校验"></a>
+## Post-translation recommendation: code reproduction verification
 
-公式语法翻译完之后，建议用本地脚本在源数据上独立复现一份"等价计算结果"再写入。流程：
+After the formula syntax translation is complete, it is recommended to independently reproduce an "equivalent computation result" on the source data with a local script before writing. Process:
 
-1. **挑 3-5 个代表性输入行**（首行 / 中段 / 末行 / 含空值 / 含异常格式各一）
-2. **用 Python 复现 Excel 原公式的语义**（不是飞书译文的语义，而是用户原本想要的结果）
-3. **写入飞书译文公式后回读这几行的实际值**
-4. **三方对照**：`Excel 原公式语义 == Python 复现 == 飞书译文回读值`；不一致时优先排查（数组语义？日期差？范围引用？），无法修完时在交付说明标明风险。
+1. **Pick 3-5 representative input rows** (one each for first row / middle section / last row / containing empty values / containing abnormal formatting)
+2. **Use Python to reproduce the semantics of the original Excel formula** (not the semantics of the Lark translation, but the result the user originally wanted)
+3. **After writing the translated Lark formula, read back the actual values of these rows**
+4. **Three-way comparison**: `Excel 原公式语义 == Python 复现 == 飞书译文回读值`; when inconsistent, investigate first (array semantics? date difference? range reference?), and if it cannot be fully fixed, state the risk in the delivery notes.
 
-**理由**：Excel→飞书的语法翻译很容易在 spill / 数组 / 日期差 / 范围引用上出现等价性偏差，仅靠语法转换通过不足以保证业务结果正确。
+**Rationale**: Excel→Lark syntax translation easily produces equivalence deviations in spill / arrays / date differences / range references; passing syntax conversion alone is not enough to guarantee correct business results.
 
-## 落表后的默认交接
+<a id="落表后的默认交接"></a>
+## Default handoff after writing to the sheet
 
-本文解决的是"公式怎么写对"，不是"写进表里后一定能零错误运行"。因此：
+This document addresses "how to write a formula correctly", not "it will definitely run with zero errors once written into the sheet". Therefore:
 
-1. 按本文完成公式改写后，用 `references/lark-sheets-write-cells.md` / `references/lark-sheets-batch-update.md` 把公式真实写入表格。
-2. 公式一旦落表，必须对本次新增 / 修改的公式范围逐段运行 `+formula-verify --exit-on-error`；关键公式区还要回读首、中、末及汇总行的 `formula`。
-3. 每段 `status='success'` 后才结束公式任务；`errors_found` 继续修复，`partial` 缩小 `--range` 或按 sheet 拆分续扫，不能用说明替代完整验证；AI 公式不套这条 success 收敛，按下方「AI 公式」的全区间一次异步状态检查规则交付。
+1. After completing the formula rewrite per this document, use `references/lark-sheets-write-cells.md` / `references/lark-sheets-batch-update.md` to actually write the formula into the sheet.
+2. Once a formula is written to the sheet, you must run `+formula-verify --exit-on-error` segment by segment over the formula ranges added / modified this time; for key formula areas, also read back the `formula` of the first, middle, last, and summary rows.
+3. Only end the formula task after each segment's `status='success'`; for `errors_found` continue fixing, for `partial` narrow the `--range` or split by sheet and continue scanning; do not replace complete verification with an explanation; AI formulas do not follow this success convergence — deliver them per the "AI formulas" rule below of one asynchronous status check over the entire range.
 
-**静态值改公式（"让统计表跟随源数据变化"类任务）额外一步**：改写前先快照原静态值，公式写完后逐格与快照 diff。不一致时先尝试口径变体（`>` / `>=`、取整方式、匹配列）逼近原值；仍不一致不算失败——原静态值可能对应旧数据或含未声明口径——但必须在交付说明中给出 diff 表与所用口径的解释，禁止不声明差异直接交付。
+**Extra step for changing static values into formulas (tasks like "make the statistics table follow changes in the source data")**: before rewriting, snapshot the original static values, and after the formulas are written, diff each cell against the snapshot. When inconsistent, first try caliber variants (`>` / `>=`, rounding method, matching column) to approach the original values; still inconsistent does not count as failure — the original static values may correspond to old data or contain an undeclared caliber — but you must provide the diff table and an explanation of the caliber used in the delivery notes; never deliver without declaring the differences.
 
-**首次写计算结果时默认写公式**：在已有表上做统计、汇总、排名、分类计算等——无论源数据是已有单元格还是新读取的数据——默认把计算结果写成引用源数据的公式，不要用 Python 在本地算好数值再硬编码写入。公式优先原则的例外：外部抓取数据、永不变化的常量、循环引用。
+**When writing computation results for the first time, write formulas by default**: when doing statistics, summaries, rankings, classification calculations, etc. on an existing sheet — regardless of whether the source data is existing cells or newly read data — by default write the computation results as formulas referencing the source data; do not compute the values locally in Python and then hard-code them in. Exceptions to the formula-first principle: externally scraped data, constants that never change, circular references.
 
-## AI 公式（`AI` 函数）
+<a id="ai-公式ai-函数"></a>
+## AI formulas (`AI` function)
 
-飞书表格提供一个统一的 **`AI` 公式**：用自然语言描述需求，AI 返回文本结果。AI 公式的**写入方式与普通公式完全一致**（复用 `references/lark-sheets-write-cells.md` 的 `+cells-set` / `set_cell_range`，无需特殊接口），只是计算是**异步**的——写入后要等 AI 算完才有结果。
+Lark Sheets provides a unified **`AI` formula**: describe the requirement in natural language, and the AI returns a text result. An AI formula is **written in exactly the same way as an ordinary formula** (reusing `references/lark-sheets-write-cells.md`'s `+cells-set` / `set_cell_range`, no special interface needed); the only difference is that the computation is **asynchronous** — after writing, you must wait for the AI to finish computing before there is a result.
 
-**AI 公式几乎必然含逗号 + 双引号（如 `=AI("翻译成中文", E2)`），默认走 `+cells-set` 的 JSON `formula` 字段，不要走 `+csv-put`**：`+csv-put` 会按逗号把公式拆列、写坏（详见 `references/lark-sheets-write-cells.md`）。`+cells-set` 里公式内部的双引号写成 `\"`。整列填充用模板 + `--copy-to-range`：
+**AI formulas almost inevitably contain commas + double quotes (e.g. `=AI("翻译成中文", E2)`), so by default use `+cells-set`'s JSON `formula` field, not `+csv-put`**: `+csv-put` splits the formula into columns by comma and corrupts it (see `references/lark-sheets-write-cells.md` for details). In `+cells-set`, write the double quotes inside the formula as `\"`. To fill an entire column, use a template + `--copy-to-range`:
 
 ```bash
-# 种子格写一条 AI 公式（内部引号用 \" 转义），再向下铺满整列
+# Write one AI formula in the seed cell (escape internal quotes as \"), then fill down the entire column
 lark-cli sheets +cells-set --url <表URL> --sheet-name <子表名> \
   --range D2 --cells '[[{"formula":"=AI(\"翻译成中文\", E2)"}]]' \
   --copy-to-range "D2:D107"
-# 写完先对种子格 D2 做一次 +cells-get --include formula 核对文本，再用 --ai-only 校验整个写入区间；禁止用 +cells-get 轮询计算结果
+# After writing, first do one +cells-get --include formula check of the seed cell D2 to verify the text, then use --ai-only to validate the entire written range; do not use +cells-get to poll for computation results
 lark-cli sheets +formula-verify --url <表URL> --sheet-name <子表名> --range D2:D107 --ai-only
 ```
 
-**校验纪律**：AI 公式计算是异步的。写完先做**一次性公式文本核对**（对种子格 / 首格做**一次** `+cells-get --include formula`，确认落进去的确实是 `=AI(...)` 而非 `#ERROR` 或残缺字面量）——这一步是**必经**的；被禁止的只是用 `+cells-get` / `+csv-get` 反复**轮询计算结果**。计算状态的**第一校验入口必须是 `+formula-verify --ai-only`**，`--range` 给**整个写入区间**（只读、成本低，不要抽样）；注意 `--range` 只透传给后端，AI-only 汇总不保证按它收窄，**认返回里的单元格定位、不认总数**。交付判据（机读）：`ai_formula_failed_count == 0`，`failed` / `unsupported` 先修；满足后即使仍有 `ai_formula_pending_count > 0` 也可交付，并告知用户后台仍在计算。若文本核对暴露出 `#ERROR` / 残缺字面量（半截括号 / 全角括号），那是公式串在写入层被转义写坏了、不是 AI 失败，回到 `+cells-set` 用 `\"` 重写（详见 `references/lark-sheets-formula-verify.md`）。
+**Verification discipline**: AI formula computation is asynchronous. After writing, first do a **one-time formula text check** (do **one** `+cells-get --include formula` on the seed cell / first cell to confirm that what was written in is indeed `=AI(...)` rather than `#ERROR` or a truncated literal) — this step is **mandatory**; what is forbidden is only repeatedly **polling for computation results** with `+cells-get` / `+csv-get`. The **first verification entry point for computation status must be `+formula-verify --ai-only`**; `--range` gives the **entire written range** (read-only, low cost, do not sample); note that `--range` is only passed through to the backend, and the AI-only summary is not guaranteed to narrow by it, so **trust the cell locations in the response, not the total count**. Delivery criterion (machine-readable): `ai_formula_failed_count == 0`; for `failed` / `unsupported` fix first; once satisfied, it can be delivered even if `ai_formula_pending_count > 0` remains, and inform the user that the backend is still computing. If the text check reveals `#ERROR` / a truncated literal (half bracket / full-width bracket), then the formula string was corrupted by escaping at the writing layer, not an AI failure; go back to `+cells-set` and rewrite with `\"` (see `references/lark-sheets-formula-verify.md` for details).
 
-### 语法
+<a id="语法"></a>
+### Syntax
 
 ```
 =AI(prompt)
@@ -77,158 +84,170 @@ lark-cli sheets +formula-verify --url <表URL> --sheet-name <子表名> --range 
 =AI(part1, part2, ...)
 ```
 
-- `prompt`：提示词，说明要 AI 做什么（可以是字符串常量，也可以引用单元格）。
-- `range`：可选，交给 AI 处理的输入数据。可以是单个单元格（如 `A2`），也可以是一段单元格（如整行 `A2:G2` 或几列 `A2:C2`）——这段单元格会作为**这一次计算的输入上下文**一并喂给 AI，公式返回**一个**结果。具体写法见下方「常见用途」。
-- **多参数拼接**：`AI` 接受多个参数，会按顺序把字符串常量与单元格 / 区域引用拼成一段完整提示词。可用来把散落在不同位置的值组进一句话，例如 `=AI("结合", A2, "和", A4, "的描述，总结3个关键词")`。
+- `prompt`: the prompt, describing what you want the AI to do (it can be a string constant or a cell reference).
+- `range`: optional, the input data handed to the AI for processing. It can be a single cell (e.g. `A2`) or a range of cells (e.g. an entire row `A2:G2` or several columns `A2:C2`) — this range of cells is fed to the AI together as the **input context for this one computation**, and the formula returns **one** result. For the specific syntax see "Common uses" below.
+- **Multi-parameter concatenation**: `AI` accepts multiple parameters and concatenates string constants and cell / range references in order into one complete prompt. This can be used to assemble values scattered in different locations into one sentence, e.g. `=AI("结合", A2, "和", A4, "的描述，总结3个关键词")`.
 
-### 常见用途（同一个函数，靠提示词区分）
+<a id="常见用途同一个函数靠提示词区分"></a>
+### Common uses (same function, distinguished by the prompt)
 
-`range` 既可以是单个单元格，也可以引用整行 / 多列作为一次计算的输入上下文；也可以用多个参数把不同位置的值拼进同一句提示词：
+`range` can be a single cell, or reference an entire row / multiple columns as the input context for one computation; multiple parameters can also be used to concatenate values from different locations into the same prompt:
 
-| 场景 | 示例 |
+| Scenario | Example |
 |---|---|
-| 翻译 | `=AI("翻译成日语", A2)` |
-| 情感分析 | `=AI("判断客户情绪，只返回 Positive、Neutral、Negative", A2)` |
-| 分类打标签 | `=AI("判断这封邮件是不是垃圾邮件", D2)`；结合多列辅助信息判断：`=AI("把餐厅归类到它所属的纽约市行政区，可参考街区信息", A2:C2)` |
-| 信息提取 | `=AI("提取邮箱", A2)` / `=AI("提取手机号", A2)` |
-| 总结 | `=AI("为这位客户的反馈写一句话总结", A2:D2)`；`=AI("用要点列出这段书籍摘要的主要主题", D2)` |
-| 多值拼接 | `=AI("结合", A2, "和", A4, "的描述，总结3个关键词")` |
-| 润色改写 | `=AI("改写得更正式", A2)` |
-| 生成文案 | `=AI("用 10 个字以内为活动生成一句宣传语", A2)`；引用整行回应具体内容：`=AI("给评审写一封邮件，针对评审意见中的具体条目逐条回应", A2:G2)`；`=AI("根据这段岗位职责摘要，为该职位生成一组关键词", A2:C2)` |
-| 数据清洗 / 标准化 | `=AI("统一公司名称写法", A2)` |
-| 关键词提取 | `=AI("提取 5 个关键词，用逗号分隔", A2)` |
+| Translation | `=AI("翻译成日语", A2)` |
+| Sentiment analysis | `=AI("判断客户情绪，只返回 Positive、Neutral、Negative", A2)` |
+| Classification / tagging | `=AI("判断这封邮件是不是垃圾邮件", D2)`; combined with multiple columns of auxiliary information for judgment: `=AI("把餐厅归类到它所属的纽约市行政区，可参考街区信息", A2:C2)` |
+| Information extraction | `=AI("提取邮箱", A2)` / `=AI("提取手机号", A2)` |
+| Summarization | `=AI("为这位客户的反馈写一句话总结", A2:D2)`; `=AI("用要点列出这段书籍摘要的主要主题", D2)` |
+| Multi-value concatenation | `=AI("结合", A2, "和", A4, "的描述，总结3个关键词")` |
+| Polishing / rewriting | `=AI("改写得更正式", A2)` |
+| Copy generation | `=AI("用 10 个字以内为活动生成一句宣传语", A2)`; reference an entire row to respond to specific content: `=AI("给评审写一封邮件，针对评审意见中的具体条目逐条回应", A2:G2)`; `=AI("根据这段岗位职责摘要，为该职位生成一组关键词", A2:C2)` |
+| Data cleaning / standardization | `=AI("统一公司名称写法", A2)` |
+| Keyword extraction | `=AI("提取 5 个关键词，用逗号分隔", A2)` |
 
-### 提示词最佳实践（写对提示词是结果稳定的关键）
+<a id="提示词最佳实践写对提示词是结果稳定的关键"></a>
+### Prompt best practices (writing the prompt correctly is the key to stable results)
 
-AI 公式的质量高度依赖提示词。推荐：
+The quality of an AI formula depends heavily on the prompt. Recommended:
 
-1. **明确输出格式**：与其写"分析一下"，不如写"判断情绪，只返回 Positive / Neutral / Negative"。限定可选值能让结果可机读、可再计算。
-2. **指定语言**：写"翻译成中文"比只写"翻译"更稳定。
-3. **指定长度**：如"总结成一句话""30 字以内"。
-4. **需要结构化时明确要 JSON**：如提示"返回 JSON：{category:'', score:0-100}"，AI 能较稳定地输出结构化结果。
+1. **Specify the output format**: rather than writing "analyze this", write "judge the sentiment, return only Positive / Neutral / Negative". Limiting the possible values makes the result machine-readable and recomputable.
+2. **Specify the language**: writing "translate into Chinese" is more stable than just "translate".
+3. **Specify the length**: e.g. "summarize in one sentence", "within 30 characters".
+4. **When structure is needed, explicitly ask for JSON**: e.g. prompt "return JSON: {category:'', score:0-100}", and the AI can output a structured result fairly reliably.
 
-### 与普通公式组合
+<a id="与普通公式组合"></a>
+### Combining with ordinary formulas
 
-`AI` 可以像普通函数一样嵌进公式链，引用单元格或区域：
+`AI` can be nested into a formula chain like an ordinary function, referencing cells or ranges:
 
 ```
 =IF(B2>90, AI("夸奖一下这位员工"), "")
 =IF(A2="", "", AI("翻译成英文", A2))
 ```
 
-`AI(...)` 返回单个结果（标量），把它嵌进公式链时按标量对待即可，不要套 `TEXTJOIN` / `ARRAYFORMULA` 等按数组语义设计的写法——AI 公式不会 spill 出数组。
+`AI(...)` returns a single result (a scalar); when nesting it into a formula chain, just treat it as a scalar, and do not wrap it in `TEXTJOIN` / `ARRAYFORMULA` or other constructs designed for array semantics — AI formulas do not spill arrays.
 
-### 用 CLI 对一列逐行处理
+<a id="用-cli-对一列逐行处理"></a>
+### Processing a column row by row with the CLI
 
-对整列逐行跑 AI，推荐**模板单元格 + `--copy-to-range` 向下扩展**：在种子单元格写 `=AI("<提示词>", A2)`，再用 `--copy-to-range` 扩展到整列，相对引用会随行自增（`A2` → `A3` → …）。这样每行独立计算、行为可预测，比依赖单条公式一次铺开整列更稳。
+To run AI row by row over an entire column, the recommended approach is **template cell + `--copy-to-range` extension downward**: write `=AI("<提示词>", A2)` in the seed cell, then use `--copy-to-range` to extend it to the entire column; relative references increment with the row (`A2` → `A3` → …). This way each row is computed independently and behavior is predictable, which is more stable than relying on a single formula to spread across the entire column at once.
 
-**行数多时分批串行**：AI 公式是异步计算，一次扩展的行数越多越容易触发超时。普通公式可以照 `references/lark-sheets-write-cells.md` 的整列 / 到列尾（`H:H`、`D3:D`）用法一次铺开；**AI 公式**行数很多时建议按批（量级参考：每批约几百到一千行）**串行**扩展——写完一批、`+formula-verify --ai-only` 确认这批已进入计算后再铺下一批，不要一次铺极长的列，也不要多批并发。
+**When there are many rows, batch serially**: AI formula computation is asynchronous, and the more rows extended at once, the more likely a timeout is triggered. Ordinary formulas can be spread across the entire column / to the end of the column (`H:H`, `D3:D`) in one go per `references/lark-sheets-write-cells.md`; for **AI formulas** with many rows, it is recommended to extend **serially** in batches (order-of-magnitude reference: about a few hundred to a thousand rows per batch) — after writing one batch, use `+formula-verify --ai-only` to confirm this batch has entered computation before spreading the next batch; do not spread an extremely long column at once, and do not run multiple batches concurrently.
 
-**写完 AI 公式后的校验与交付**：先对种子格 / 首格做**一次** `+cells-get --include formula` 核对公式文本（**必经步骤**，确认落进去的是 `=AI(...)` 而非 `#ERROR` / 残缺字面量），随后计算状态的第一校验入口必须是 `references/lark-sheets-formula-verify.md` 的 `+formula-verify --ai-only --range <整个写入区间>`（只读、成本低，`--range` 覆盖全区间、不要抽样），**禁止用 `+cells-get` / `+csv-get` 轮询计算结果**。交付判据（机读）：`ai_formula_failed_count == 0`（`--range` 不保证收窄汇总口径，按返回的单元格定位核对本次区间，不按总数比对）；满足后即使仍有 `ai_formula_pending_count > 0` 也可以交付，飞书会在后台继续计算，交付时告知用户"AI 公式仍在后台运行，结果会陆续完成"。细节见 `references/lark-sheets-formula-verify.md`。
+**Verification and delivery after writing AI formulas**: first do **one** `+cells-get --include formula` on the seed cell / first cell to check the formula text (**mandatory step**, confirming that what was written in is `=AI(...)` rather than `#ERROR` / a truncated literal), then the first verification entry point for computation status must be `references/lark-sheets-formula-verify.md`'s `+formula-verify --ai-only --range <整个写入区间>` (read-only, low cost, `--range` covers the entire range, do not sample), and **polling for computation results with `+cells-get` / `+csv-get` is forbidden**. Delivery criterion (machine-readable): `ai_formula_failed_count == 0` (`--range` does not guarantee narrowing the summary scope; verify this range by the cell locations in the response, not by comparing totals); once satisfied, it can be delivered even if `ai_formula_pending_count > 0` remains; Lark will continue computing in the background, and at delivery inform the user that "the AI formula is still running in the background and results will complete progressively". For details see `references/lark-sheets-formula-verify.md`.
 
-## 决策流程
+<a id="决策流程"></a>
+## Decision flow
 
-1. 最终结果是**标量**（单值）→ 直接写普通公式
-2. 最终结果是**一维或二维数组**：
-   - 公式中**包含**飞书原生数组函数（如 FILTER、XLOOKUP、MAP 等）→ 直接写，数组语义会自动传播到整个公式，包括原生数组函数外层接的标量运算（如 `+1`、`*100`）
-   - 公式中**不包含**任何原生数组函数，只是在对区域做标量计算 → 用 `ARRAYFORMULA` 包住整个表达式，或写成**单行标量公式再向下 / 向右填充**（`--copy-to-range`）
-3. Excel 依赖 `ROW(range)` 逐项驱动 `SUBTOTAL/INDIRECT/OFFSET` → 拆成辅助列：辅助列每行写单行标量式（`=SUBTOTAL(103,INDIRECT("E"&ROW(E16)))`）向下填充，再对辅助列做聚合；但结果要随筛选联动时保持单条 `MAP(...LAMBDA(...))`，见下方「Excel 隐式逐项求值」
-4. 内层 `INDEX/INDIRECT/OFFSET` 返回范围，外层 `SUMIF/COUNTIF/SUMIFS` 还要继续吃这些范围 → 同样拆辅助列逐行算，再聚合
-5. 公式意图是"对多个区域分别计算再汇总"（例如用 INDIRECT/OFFSET 对每行生成一个范围，再对所有范围聚合）→ 飞书不能直接返回"区域的列表"，必须明确降维：用 `VSTACK` 垂直合并、`HSTACK` 水平合并、`TOCOL/TOROW` 展平，或先把各段结果落到辅助区域再用普通聚合函数汇总
-6. 算日期差 → 不要写 `DAY(end-start)`，用 `DAYS`、`DATEDIF` 或直接 `end-start`
+1. The final result is a **scalar** (single value) → write an ordinary formula directly
+2. The final result is a **one-dimensional or two-dimensional array**:
+   - The formula **contains** a Lark native array function (such as FILTER, XLOOKUP, MAP, etc.) → write it directly; array semantics automatically propagate through the entire formula, including scalar operations applied outside a native array function (e.g. `+1`, `*100`)
+   - The formula **contains no** native array function and is merely doing scalar computation on a range → wrap the entire expression in `ARRAYFORMULA`, or write a **single-row scalar formula and fill down / to the right** (`--copy-to-range`)
+3. Excel relies on `ROW(range)` to drive `SUBTOTAL/INDIRECT/OFFSET` item by item → split into helper columns: write a single-row scalar formula in each row of the helper column (`=SUBTOTAL(103,INDIRECT("E"&ROW(E16)))`) and fill down, then aggregate over the helper column; but when the result must stay linked to filtering, keep a single `MAP(...LAMBDA(...))`, see "Excel implicit item-by-item evaluation" below
+4. The inner `INDEX/INDIRECT/OFFSET` returns a range, and the outer `SUMIF/COUNTIF/SUMIFS` still needs to consume these ranges → likewise split into helper columns computed row by row, then aggregate
+5. The formula's intent is "compute over multiple ranges separately and then summarize" (for example, using INDIRECT/OFFSET to generate one range per row, then aggregate over all ranges) → Lark cannot directly return "a list of ranges"; you must explicitly reduce the dimensionality: use `VSTACK` to merge vertically, `HSTACK` to merge horizontally, `TOCOL/TOROW` to flatten, or first write the results of each segment into a helper area and then summarize with ordinary aggregate functions
+6. Computing a date difference → do not write `DAY(end-start)`; use `DAYS`, `DATEDIF`, or directly `end-start`
 
-## 飞书的投影行为（不是默认 spill）
+<a id="飞书的投影行为不是默认-spill"></a>
+## Lark's projection behavior (not spill by default)
 
-触发条件是**参数要求单值、实际传入的却是区域**，此时飞书取"投影"而不是"spill"：
+The trigger condition is **a parameter requires a single value but a range is actually passed in**; in this case Lark takes a "projection" rather than a "spill":
 
-- 单列区域 → 按当前公式所在行取值
-- 单行区域 → 按当前公式所在列取值
-- 二维区域 → 只有当前公式位置能映射到该区域时才取值，否则报错
-- 数组常量 `{...}` 或函数返回矩阵，在普通标量上下文里通常只取左上角
+- Single-column range → take the value by the row where the current formula is located
+- Single-row range → take the value by the column where the current formula is located
+- Two-dimensional range → take a value only when the current formula position can be mapped into that range; otherwise error
+- Array constant `{...}` or a function returning a matrix, in an ordinary scalar context, usually takes only the top-left corner
 
-**例外是数组公式上下文内部**：最外层套了 `ARRAYFORMULA`、或公式里已有原生数组函数时，同一个区域会逐项展开，不再投影。
+**The exception is inside an array formula context**: when the outermost layer is wrapped in `ARRAYFORMULA`, or the formula already contains a native array function, the same range is expanded item by item instead of projected.
 
-因此（以下均指普通公式，即不在数组公式上下文里）：
-- `=A1:A2` 在飞书普通公式里不会 spill，只会投影到当前行
-- `=ABS(A2:B2)` 不会得到一整行，要写 `=ARRAYFORMULA(ABS(A2:B2))`，或在 A、B 两格分别写 `=ABS(A2)` / `=ABS(B2)`
-- `=TRUNC({1.1111,2.222},{1,2})` 要得到一整行，写 `=ARRAYFORMULA(TRUNC({1.1111,2.222},{1,2}))`
+Therefore (the following all refer to ordinary formulas, i.e. not in an array formula context):
+- `=A1:A2` does not spill in an ordinary Lark formula; it only projects to the current row
+- `=ABS(A2:B2)` does not yield an entire row; write `=ARRAYFORMULA(ABS(A2:B2))`, or write `=ABS(A2)` / `=ABS(B2)` in cells A and B respectively
+- `=TRUNC({1.1111,2.222},{1,2})` to get an entire row, write `=ARRAYFORMULA(TRUNC({1.1111,2.222},{1,2}))`
 
-## 没有原生数组函数时：ARRAYFORMULA 或逐行填充
+<a id="没有原生数组函数时arrayformula-或逐行填充"></a>
+## When there is no native array function: ARRAYFORMULA or row-by-row filling
 
-**前提：本节适用于公式中没有任何原生数组函数的情况。** 若公式中已有原生数组函数（如 FILTER、XLOOKUP、MAP 等），数组语义会自动传播到整个公式的求值过程（见下一节）。
+**Prerequisite: this section applies when the formula contains no native array function.** If the formula already contains a native array function (such as FILTER, XLOOKUP, MAP, etc.), array semantics automatically propagate through the entire formula's evaluation process (see the next section).
 
-以下运算与函数**只按标量求值**，直接喂整段区域不会逐项展开：
+The following operations and functions **evaluate only as scalars**; feeding them an entire range directly does not expand item by item:
 
-- 算术运算：`+ - * / ^ %`
-- 比较运算：`= <> > >= < <=`
-- 标量数学函数：`ABS ROUND INT TRUNC MOD LOG LN SQRT SIN COS TAN ...`
-- 文本函数：`LEN LEFT RIGHT MID UPPER LOWER TRIM TEXT VALUE ...`
-- 日期函数：`YEAR MONTH DAY DATE TIME EDATE EOMONTH ...`
-- 条件函数：`IF IFS IFERROR IFNA NOT ISNUMBER ISTEXT ISBLANK ...`
-- 引用函数（高风险）：`INDEX OFFSET COLUMN ROW MATCH`
+- Arithmetic operations: `+ - * / ^ %`
+- Comparison operations: `= <> > >= < <=`
+- Scalar math functions: `ABS ROUND INT TRUNC MOD LOG LN SQRT SIN COS TAN ...`
+- Text functions: `LEN LEFT RIGHT MID UPPER LOWER TRIM TEXT VALUE ...`
+- Date functions: `YEAR MONTH DAY DATE TIME EDATE EOMONTH ...`
+- Conditional functions: `IF IFS IFERROR IFNA NOT ISNUMBER ISTEXT ISBLANK ...`
+- Reference functions (high risk): `INDEX OFFSET COLUMN ROW MATCH`
 
-**两条等价做法，导出 `.xlsx` 后都保真，按需要选一条：**
+**Two equivalent approaches, both faithful after exporting `.xlsx`; choose one as needed:**
 
-- **`ARRAYFORMULA(<整个表达式>)`**：一条公式覆盖整片，写起来短。`=ARRAYFORMULA(A2:A100*B2:B100)` ✓、`=ARRAYFORMULA(IF(A2:A100>0,B2:B100,""))` ✓
-- **逐行标量式 + 填充**：首行写 `=A2*B2` / `=IF(A2>0,B2,"")`，再用 `--copy-to-range` 铺到整列，引用随行递增。每格是独立公式，导出后在 Excel 里能单格编辑
+- **`ARRAYFORMULA(<整个表达式>)`**: one formula covers the whole block, shorter to write. `=ARRAYFORMULA(A2:A100*B2:B100)` ✓, `=ARRAYFORMULA(IF(A2:A100>0,B2:B100,""))` ✓
+- **Row-by-row scalar formula + fill**: write `=A2*B2` / `=IF(A2>0,B2,"")` in the first row, then use `--copy-to-range` to spread it across the entire column, with references incrementing by row. Each cell is an independent formula, so after export each cell can be edited individually in Excel
 
-`MAP` 只在 LAMBDA 体是**纯运算符或单参函数**时可用（如 `=MAP(A2:A100,B2:B100,LAMBDA(a,b,a*b))`）；体内出现 `IF`、多参函数或字符串拼接就改用上面两条路，理由见开头核心原则二。
+`MAP` is only usable when the LAMBDA body is a **pure operator or single-parameter function** (such as `=MAP(A2:A100,B2:B100,LAMBDA(a,b,a*b))`); if the body contains `IF`, a multi-parameter function, or string concatenation, switch to the two approaches above; for the reason, see core principle two at the beginning.
 
-### 公式中有原生数组函数时，整个公式已进入数组模式
+<a id="公式中有原生数组函数时整个公式已进入数组模式"></a>
+### When a formula contains a native array function, the entire formula has already entered array mode
 
-飞书的数组语义会在整个公式求值过程中累积传播：一旦某个原生数组函数运行，后续所有运算符和函数也会自动逐元素处理，无论它们出现在哪一层。
+Lark's array semantics accumulate and propagate throughout the entire formula evaluation process: once a native array function runs, all subsequent operators and functions are also automatically processed element by element, no matter which layer they appear in.
 
-因此以下写法直接成立，不必再包 `ARRAYFORMULA`、也不必拆成逐行填充：
+Therefore the following forms work directly, with no need to wrap them in `ARRAYFORMULA` or split them into row-by-row fills:
 
 - `=FILTER(A2:A10,B2:B10="x")+1` ✓
 - `=XLOOKUP(E2:E10,A2:A10,B2:B10)*100` ✓
 - `=ABS(FILTER(A2:A10,B2:B10>0))` ✓
 - `=MAP(A2:A10,LAMBDA(x,x*2))-1` ✓
 
-## 原生数组函数清单
+<a id="原生数组函数清单"></a>
+## List of native array functions
 
-以下函数按数组语义工作，可直接返回整片结果，不必拆成逐行填充；且它们在 Excel 侧同样存在，可安全使用：
+The following functions work with array semantics and can directly return an entire block of results without being split into row-by-row fills; they also exist on the Excel side, so they can be used safely:
 
 `CELL` `CHOOSECOLS` `CHOOSEROWS` `DROP` `EXPAND` `FILTER` `FREQUENCY` `GROWTH` `HSTACK` `LINEST` `LOGEST` `LOOKUP` `MINVERSE` `MMULT` `MUNIT` `RANDARRAY` `SEQUENCE` `SORT` `SORTBY` `SUMPRODUCT` `SWITCH` `TAKE` `TEXTSPLIT` `TOCOL` `TOROW` `TRANSPOSE` `TREND` `UNIQUE` `VSTACK` `WRAPCOLS` `WRAPROWS` `XLOOKUP`
 
-`BYCOL` `BYROW` `MAKEARRAY` `MAP` `REDUCE` `SCAN` 同样是原生数组函数，但受核心原则二约束——导出 `.xlsx` 会丢高阶语义，默认改走 `ARRAYFORMULA` / 逐行填充 / 辅助列。
+`BYCOL` `BYROW` `MAKEARRAY` `MAP` `REDUCE` `SCAN` are also native array functions, but they are subject to core principle two — exporting `.xlsx` loses higher-order semantics, so by default switch to `ARRAYFORMULA` / row-by-row fill / helper columns.
 
-`ARRAYFORMULA` 不在上面这份清单里——它的作用是给**本来只按标量求值**的表达式套上数组语义，而不是自己返回数组。导出 `.xlsx` 时它会被翻译成 Excel 原生数组公式（`=ARRAYFORMULA(IF(A2:A6>2,B2:B6,""))` → `=IF(A2:A6>2,B2:B6,"")`，作用范围覆盖整片），语义完整保留，可安全使用。
+`ARRAYFORMULA` is not in the list above — its role is to apply array semantics to expressions that **would otherwise be evaluated only as scalars**, rather than returning an array itself. When exporting `.xlsx`, it is translated into an Excel native array formula (`=ARRAYFORMULA(IF(A2:A6>2,B2:B6,""))` → `=IF(A2:A6>2,B2:B6,"")`, with the scope covering the entire block), fully preserving the semantics, so it can be used safely.
 
-> **注意：`SWITCH` 在飞书里被当作原生数组函数处理，这与 Excel 行为不同——把区域喂给它会逐项展开。**
+> **Note: `SWITCH` is treated as a native array function in Lark, which differs from Excel behavior — feeding a range to it expands it item by item.**
 
-## 跨电子表格取数不要用公式
+<a id="跨电子表格取数不要用公式"></a>
+## Do not use formulas to fetch data across spreadsheets
 
-飞书公式没有跨工作簿引用的通用写法（Excel 的外部链接迁过来也不成立）。需要另一份电子表格的数据时，先把那份数据读出来（`+csv-get` 等）落到本表的一张子表，再在本表内用普通引用计算——既避开跨表引用限制，也保证导出后公式仍可用。
+Lark formulas have no general way to reference across workbooks (Excel external links do not carry over either). When you need data from another spreadsheet, first read that data out (`+csv-get`, etc.) into a sub-sheet of the current sheet, then compute within the current sheet using ordinary references — this both avoids the cross-sheet reference limitation and ensures the formulas remain usable after export.
 
-## INDEX / OFFSET / COLUMN / ROW / MATCH 是高风险函数
+<a id="index--offset--column--row--match-是高风险函数"></a>
+## INDEX / OFFSET / COLUMN / ROW / MATCH are high-risk functions
 
-这组函数容易让人误以为会自动把多值铺开，但在飞书里不能这样假设。
+This group of functions easily leads people to assume they will automatically spread multiple values out, but in Lark you cannot assume this.
 
-**高风险信号：**
+**High-risk signals:**
 
-- 行号 / 列号 / 偏移量本身是数组
-- 结果本来应该是一行或一块二维区域
-- 外层还有算术、比较、`IF` 等继续处理它
+- The row number / column number / offset is itself an array
+- The result should originally be a row or a two-dimensional block
+- There is an outer layer of arithmetic, comparison, `IF`, etc. that continues to process it
 
-更稳的写法：整体包一层 `=ARRAYFORMULA(INDEX(...))` / `=ARRAYFORMULA(ROW(...))`；或退回**当前行的标量式再向下填充**——首行写 `=INDEX($A$2:$A$100,ROW(A1))`，向下填充时 `ROW(A1)` 自动递增为 1、2、3…
+More reliable approaches: wrap the whole thing in `=ARRAYFORMULA(INDEX(...))` / `=ARRAYFORMULA(ROW(...))`; or fall back to a **scalar formula for the current row and fill downward** — write `=INDEX($A$2:$A$100,ROW(A1))` in the first row, and when filling downward `ROW(A1)` automatically increments to 1, 2, 3…
 
-**例外：** 如果返回值只是立刻交给聚合函数消费，直接写即可：
+**Exception:** If the return value is immediately consumed by an aggregate function, write it directly:
 
 - `=SUM(INDEX(A1:B2,0,1))` ✓
 
-## Excel 隐式逐项求值，飞书里要拆辅助列
+<a id="excel-隐式逐项求值飞书里要拆辅助列"></a>
+## Excel evaluates implicitly item by item; in Lark you need to split out helper columns
 
-**典型特征：**
+**Typical characteristics:**
 
-- 外层是 `SUMPRODUCT`、`SUM` 等聚合
-- 内层用了 `SUBTOTAL`、`INDIRECT`、`OFFSET` 等更偏"单值/单引用"的函数
-- Excel 会把中间结果逐项带进去算
-- 飞书里直接照抄，往往不能得到同样的逐项语义
+- The outer layer is an aggregate such as `SUMPRODUCT`, `SUM`
+- The inner layer uses functions such as `SUBTOTAL`, `INDIRECT`, `OFFSET` that are more oriented toward "single value / single reference"
+- Excel carries the intermediate results into the calculation item by item
+- Copying this directly into Lark often does not produce the same item-by-item semantics
 
-同类本质也包括：`INDEX/INDIRECT/OFFSET` 先返回范围，外层再把这些范围交给 `SUMIF`、`COUNTIF`、`AVERAGEIF`、`SUMIFS` 等范围感知函数 —— 飞书里这些外层函数不会自动二次展开内层范围。
+The same category in essence also includes: `INDEX/INDIRECT/OFFSET` first returns ranges, and the outer layer then passes these ranges to range-aware functions such as `SUMIF`, `COUNTIF`, `AVERAGEIF`, `SUMIFS` — in Lark these outer functions do not automatically expand the inner ranges a second time.
 
-这时要把"遍历"落到**辅助列**上，分两步：
+In this case, move the "iteration" onto **helper columns**, in two steps:
 
 ```excel
 辅助列首行（如 Z16）：=单行计算逻辑          # 例：=SUBTOTAL(103,INDIRECT("E"&ROW(E16)))
@@ -236,17 +255,17 @@ AI 公式的质量高度依赖提示词。推荐：
 汇总格：              =SUM(Z16:Z387)         # 需要时可隐藏辅助列
 ```
 
-辅助列全是普通标量公式，导出 `.xlsx` 后逐格原样保留，也避开了 `LAMBDA` 系高阶函数的导出陷阱。
+The helper columns are all ordinary scalar formulas, and after exporting `.xlsx` they are preserved cell by cell exactly as they are, also avoiding the export pitfalls of `LAMBDA`-family higher-order functions.
 
-**例外：结果要随筛选联动时，保持单条公式。** `SUBTOTAL` 的意义就在于筛选变化后重新计算，这类需求写成
+**Exception: when the result needs to update with filtering, keep a single formula.** The point of `SUBTOTAL` is to recalculate after the filter changes; for this kind of requirement, write
 
 ```excel
 =SUMPRODUCT(MAP(ARRAYFORMULA(ROW($E$16:$E$387)),LAMBDA(row,SUBTOTAL(103,INDIRECT("E"&row)))))
 ```
 
-筛选状态本身导出 `.xlsx` 就不会保留，所以这个场景是飞书内专用，不受核心原则二的导出约束。
+The filter state itself is not preserved when exporting `.xlsx`, so this scenario is Lark-only and is not subject to the export constraint of core principle two.
 
-其余同类场景走辅助列：
+Other scenarios of the same kind use helper columns:
 
 - `INDIRECT("A"&ROW(...))`
 - `OFFSET(...,ROW(...)-ROW(...),...)`
@@ -254,122 +273,132 @@ AI 公式的质量高度依赖提示词。推荐：
 - `SUMIF(内层返回范围, ...)`
 - `COUNTIF(内层返回范围, ...)`
 - `SUMIFS(内层返回范围, ...)`
-- 任何"希望对每一行 / 每一列各算一次"的模式
+- Any pattern that "wants to compute once for each row / each column"
 
-## 多层范围结果与三维以上结果
+<a id="多层范围结果与三维以上结果"></a>
+## Multi-layer range results and results of three or more dimensions
 
-飞书公式结果只能是二维区域，不能是"数组的数组"。
+Lark formula results can only be two-dimensional ranges, not "arrays of arrays".
 
-### 多层范围不能自动二次展开
+<a id="多层范围不能自动二次展开"></a>
+### Multi-layer ranges cannot be automatically expanded a second time
 
-内层 `INDEX/INDIRECT/OFFSET` 返回的是二维范围，外层还想继续对这些范围做范围计算时，不要假设飞书会"再展开一层"。改用辅助列逐行算再聚合（见上一节），别把二次展开压进单条数组公式。
+When the inner `INDEX/INDIRECT/OFFSET` returns a two-dimensional range and the outer layer still wants to perform range calculations on these ranges, do not assume Lark will "expand one more layer". Instead, use helper columns to compute row by row and then aggregate (see the previous section); do not compress the second expansion into a single array formula.
 
-### 真正的三维或更高维结果不能直接返回
+<a id="真正的三维或更高维结果不能直接返回"></a>
+### Truly three-dimensional or higher-dimensional results cannot be returned directly
 
-典型触发场景：想把多个不同区域或不同条件的结果合并展示，例如：
-- 对 A 列、B 列、C 列分别做 FILTER，想把三列结果并排展示
-- 对多个月份分别生成数据行，想把所有月份上下堆叠展示
+Typical triggering scenarios: wanting to merge and display results from multiple different ranges or different conditions, for example:
+- Applying FILTER separately to column A, column B, and column C, and wanting to display the three columns of results side by side
+- Generating data rows separately for multiple months, and wanting to stack all months vertically
 
-飞书无法直接返回"多个区域的集合"，必须先决定降维方式：
+Lark cannot directly return "a collection of multiple ranges"; you must first decide how to reduce the dimensions:
 
-- 上下堆叠：`=VSTACK(slice1, slice2, slice3)`
-- 左右拼接：`=HSTACK(slice1, slice2, slice3)`
-- 压成单列：`=TOCOL(...)`
-- 压成单行：`=TOROW(...)`
-- 只保留聚合值：把各 slice 分别落到辅助区域，再用 `SUM` / `SUMPRODUCT` 等普通聚合函数汇总（`REDUCE` 受核心原则二约束，不要用）
+- Stack vertically: `=VSTACK(slice1, slice2, slice3)`
+- Concatenate horizontally: `=HSTACK(slice1, slice2, slice3)`
+- Flatten into a single column: `=TOCOL(...)`
+- Flatten into a single row: `=TOROW(...)`
+- Keep only aggregate values: place each slice into a helper area separately, then summarize with ordinary aggregate functions such as `SUM` / `SUMPRODUCT` (`REDUCE` is subject to core principle two; do not use it)
 
-不要替用户"偷定"第三维展示方式；如果用户没有明确说明怎么展示，至少先把结果改写成可见的二维形状。
+Do not "secretly decide" the display method for the third dimension on the user's behalf; if the user has not clearly stated how to display it, at least first rewrite the result into a visible two-dimensional shape.
 
-## 不能机械照抄的 Excel 语法
+<a id="不能机械照抄的-excel-语法"></a>
+## Excel syntax that cannot be copied mechanically
 
-### `@` 隐式交叉
+<a id="-隐式交叉"></a>
+### `@` implicit intersection
 
-Excel：`=@A1:A10`（强制单值，取当前行对应的值）
+Excel: `=@A1:A10` (forces a single value, taking the value corresponding to the current row)
 
-飞书没有 `@` 运算符。飞书普通公式对引用区域默认就有投影语义，去掉 `@` 即可：
+Lark does not have the `@` operator. Lark ordinary formulas already have projection semantics by default for referenced ranges, so just remove `@`:
 
 - Excel: `=@A1:A10`
-- 飞书: `=A1:A10`
+- Lark: `=A1:A10`
 
 ### `#` spill range
 
-Excel：`=A1#`（引用 A1 公式溢出的整片区域）
+Excel: `=A1#` (references the entire range spilled by the formula in A1)
 
-飞书没有此语法，迁移方式：
+Lark does not have this syntax; migration approaches:
 
-- spill 区域已知 → 改成明确范围
-- spill 区域未知 → 回到源公式重写，或用 `TAKE` / `DROP` 截取
+- Spill range known → change it to an explicit range
+- Spill range unknown → go back to the source formula and rewrite it, or use `TAKE` / `DROP` to extract
 
-### 结构化引用
+<a id="结构化引用"></a>
+### Structured references
 
-Excel：`=SUM(Table1[Amount])`
+Excel: `=SUM(Table1[Amount])`
 
-飞书不支持结构化引用，改成显式 A1 区域：`=SUM(A2:A100)`
+Lark does not support structured references; change them to explicit A1 ranges: `=SUM(A2:A100)`
 
-### 老式 CSE 花括号
+<a id="老式-cse-花括号"></a>
+### Old-style CSE curly braces
 
-Excel：`{=A1:A10*B1:B10}`（Ctrl+Shift+Enter 输入）
+Excel: `{=A1:A10*B1:B10}` (entered with Ctrl+Shift+Enter)
 
-飞书改为：`=ARRAYFORMULA(A1:A10*B1:B10)`——导出 `.xlsx` 后正好还原成 Excel 的 CSE 数组公式；或首行写 `=A1*B1` 再向下填充
+In Lark, change it to: `=ARRAYFORMULA(A1:A10*B1:B10)` — after exporting `.xlsx` it is restored exactly to Excel's CSE array formula; or write `=A1*B1` in the first row and fill downward
 
-## 日期序列与日期差
+<a id="日期序列与日期差"></a>
+## Date serials and date differences
 
-飞书日期序列：`0 = 1899-12-30`，`1 = 1899-12-31`，没有 Excel 的 1900 年闰年兼容问题。
+Lark date serials: `0 = 1899-12-30`, `1 = 1899-12-31`, with no Excel 1900 leap year compatibility issue.
 
-**错误写法（不要用）：**
+**Incorrect forms (do not use):**
 
-- `=DAY(B2-A2)` ✗ — 差值会被当成日期序列号再拆字段
+- `=DAY(B2-A2)` ✗ — the difference is treated as a date serial number and then split into fields
 - `=MONTH(B2-A2)` ✗
 - `=YEAR(B2-A2)` ✗
 
-**正确写法：**
+**Correct forms:**
 
-- 天数差：`=DAYS(B2,A2)` 或 `=DATEDIF(A2,B2,"D")` 或 `=B2-A2`
-- 月份差：`=DATEDIF(A2,B2,"M")`
-- 年份差：`=DATEDIF(A2,B2,"Y")`
-- 工作日差：`=NETWORKDAYS(A2,B2)`
+- Day difference: `=DAYS(B2,A2)` or `=DATEDIF(A2,B2,"D")` or `=B2-A2`
+- Month difference: `=DATEDIF(A2,B2,"M")`
+- Year difference: `=DATEDIF(A2,B2,"Y")`
+- Workday difference: `=NETWORKDAYS(A2,B2)`
 
-## 飞书不支持的函数
+<a id="飞书不支持的函数"></a>
+## Functions not supported by Lark
 
-> 本段是"飞书不支持函数"的**唯一权威清单**。以下函数在飞书里不存在或被禁用，禁止主动使用；用户明确要求时应拒绝并提供替代方案：
+> This section is the **sole authoritative list** of "functions not supported by Lark". The following functions do not exist in Lark or are disabled; do not use them proactively; if the user explicitly requests them, refuse and provide alternatives:
 
-- `STOCKHISTORY` — 实时股票数据，飞书无等价函数，需手动导入数据
-- `WEBSERVICE` — 外部 HTTP 请求，飞书无等价函数
-- CUBE 系列（`CUBEVALUE`、`CUBEMEMBER`、`CUBESET`、`CUBERANK` 等）— OLAP cube 函数，飞书不支持
-- `GOOGLEFINANCE`、`GOOGLETRANSLATE` 等 Google 特有函数 — 无等价函数
-- `FORECAST.ETS` 系列（`FORECAST.ETS`、`FORECAST.ETS.STAT` 等）— 飞书不支持
-- `INFO`、`RTD` — 系统信息 / 实时数据函数，飞书不支持
-- `PIVOT` — 用 `+pivot-{create|update|delete}` 透视表对象替代
-- `AMORDEGRC`、`PHONETIC`、`DETECTLANGUAGE` — 飞书不支持
-- `LET`、命名自定义函数（名称管理器里定义的 LAMBDA）、独立调用的 `LAMBDA`（如 `=LAMBDA(x,x+1)(5)`）— 会报 `#NAME?`；改用嵌套 IF / 辅助列。**例外**：`LAMBDA` 作为 `MAP` / `REDUCE` / `BYROW` / `BYCOL` / `SCAN` / `MAKEARRAY` 的内联参数时飞书**支持**，但受核心原则二约束（导出 `.xlsx` 丢高阶语义），默认仍走逐行填充 / 辅助列
+- `STOCKHISTORY` — real-time stock data; Lark has no equivalent function, so data must be imported manually
+- `WEBSERVICE` — external HTTP requests; Lark has no equivalent function
+- CUBE family (`CUBEVALUE`, `CUBEMEMBER`, `CUBESET`, `CUBERANK`, etc.) — OLAP cube functions, not supported by Lark
+- Google-specific functions such as `GOOGLEFINANCE`, `GOOGLETRANSLATE` — no equivalent functions
+- `FORECAST.ETS` family (`FORECAST.ETS`, `FORECAST.ETS.STAT`, etc.) — not supported by Lark
+- `INFO`, `RTD` — system information / real-time data functions, not supported by Lark
+- `PIVOT` — replace with the `+pivot-{create|update|delete}` pivot table object
+- `AMORDEGRC`, `PHONETIC`, `DETECTLANGUAGE` — not supported by Lark
+- `LET`, named custom functions (LAMBDA defined in Name Manager), standalone calls to `LAMBDA` (such as `=LAMBDA(x,x+1)(5)`) — will report `#NAME?`; switch to nested IF / helper columns. **Exception**: `LAMBDA` is **supported** by Lark when used as an inline parameter of `MAP` / `REDUCE` / `BYROW` / `BYCOL` / `SCAN` / `MAKEARRAY`, but it is subject to core principle two (exporting `.xlsx` loses higher-order semantics), so by default still use row-by-row fill / helper columns
 
-## 代表性改写示例
+<a id="代表性改写示例"></a>
+## Representative rewrite examples
 
-- 基础逐项计算
+- Basic item-by-item calculation
   - Excel: `=A2:A100*B2:B100`
-  - 飞书: `=ARRAYFORMULA(A2:A100*B2:B100)`；或首行 `=A2*B2` + `--copy-to-range` 向下填充
-- 条件判断
+  - Lark: `=ARRAYFORMULA(A2:A100*B2:B100)`; or first row `=A2*B2` + `--copy-to-range` filled downward
+- Conditional judgment
   - Excel: `=IF(A2:A100>0,B2:B100,"")`
-  - 飞书: `=ARRAYFORMULA(IF(A2:A100>0,B2:B100,""))`；或首行 `=IF(A2>0,B2,"")` + 向下填充（LAMBDA 体含 `IF`，不能用 `MAP`）
-- 原生数组函数（无需改动）
+  - Lark: `=ARRAYFORMULA(IF(A2:A100>0,B2:B100,""))`; or first row `=IF(A2>0,B2,"")` + fill downward (the LAMBDA body contains `IF`, so `MAP` cannot be used)
+- Native array function (no change needed)
   - Excel: `=FILTER(A2:C100,B2:B100="East")`
-  - 飞书: `=FILTER(A2:C100,B2:B100="East")`
-- 原生数组函数 + 标量运算（无需改动，数组语义自动传播）
+  - Lark: `=FILTER(A2:C100,B2:B100="East")`
+- Native array function + scalar operation (no change needed; array semantics propagate automatically)
   - Excel: `=XLOOKUP(E2:E10,A2:A10,B2:B10)*100`
-  - 飞书: `=XLOOKUP(E2:E10,A2:A10,B2:B10)*100`
-- 高风险引用函数
+  - Lark: `=XLOOKUP(E2:E10,A2:A10,B2:B10)*100`
+- High-risk reference functions
   - Excel: `=INDEX(A1:D2,{2,1},0)`
-  - 飞书: `=ARRAYFORMULA(INDEX(A1:D2,{2,1},0))`（`col_num=0` 取整行必须包在 `ARRAYFORMULA` 里才成立，裸写会报 `#VALUE!`）
-- 日期差
-  - 错误: `=DAY(B2-A2)`
-  - 推荐: `=DAYS(B2,A2)` 或 `=DATEDIF(A2,B2,"D")` 或 `=B2-A2`
-- Excel 隐式逐项求值
+  - Lark: `=ARRAYFORMULA(INDEX(A1:D2,{2,1},0))` (`col_num=0` taking an entire row must be wrapped in `ARRAYFORMULA` to work; writing it bare reports `#VALUE!`)
+- Date difference
+  - Incorrect: `=DAY(B2-A2)`
+  - Recommended: `=DAYS(B2,A2)` or `=DATEDIF(A2,B2,"D")` or `=B2-A2`
+- Excel implicit item-by-item evaluation
   - Excel: `=SUMPRODUCT(SUBTOTAL(103,INDIRECT("E"&ROW($E$16:$E$387))))`
-  - 飞书: `=SUMPRODUCT(MAP(ARRAYFORMULA(ROW($E$16:$E$387)),LAMBDA(row,SUBTOTAL(103,INDIRECT("E"&row)))))`（`SUBTOTAL` 要随筛选联动，保持单条公式）
-- 多层范围 / 二次展开
-  - 错误思路: `=SUMIF(INDIRECT("E"&ROW($E$16:$E$387)),">0")`
-  - 飞书: 辅助列 `Z16` 写 `=SUMIF(INDIRECT("E"&ROW(E16)),">0")` 向下填充到 `Z387`
-- 三维降二维（保留所有层）
-  - 飞书: `=VSTACK(slice1,slice2,slice3)` 或 `=HSTACK(slice1,slice2,slice3)`
-- 三维降二维（只保留聚合值）
-  - 飞书: 各 slice 落到辅助区域后 `=SUM(辅助区域)`（不要用 `REDUCE`）
+  - Lark: `=SUMPRODUCT(MAP(ARRAYFORMULA(ROW($E$16:$E$387)),LAMBDA(row,SUBTOTAL(103,INDIRECT("E"&row)))))` (`SUBTOTAL` needs to update with filtering, so keep a single formula)
+- Multi-layer ranges / second expansion
+  - Incorrect approach: `=SUMIF(INDIRECT("E"&ROW($E$16:$E$387)),">0")`
+  - Lark: helper column `Z16` writes `=SUMIF(INDIRECT("E"&ROW(E16)),">0")` and fills downward to `Z387`
+- Three dimensions reduced to two (keeping all layers)
+  - Lark: `=VSTACK(slice1,slice2,slice3)` or `=HSTACK(slice1,slice2,slice3)`
+- Three dimensions reduced to two (keeping only aggregate values)
+  - Lark: after each slice is placed into a helper area, `=SUM(辅助区域)` (do not use `REDUCE`)

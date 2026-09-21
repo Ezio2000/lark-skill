@@ -1,105 +1,115 @@
 # Card Style Guide
 
-选择组件组合和视觉样式的决策指南。字段写法见 `card-2.0-schema.md`。
+A decision guide for choosing component combinations and visual styles. For field syntax, see `card-2.0-schema.md`.
 
 ---
 
-## 好看的标准（P0–P7，唯一裁判基准）
+<a id="好看的标准p0p7唯一裁判基准"></a>
+## The Standard for Looking Good (P0–P7, the sole judging baseline)
 
-**先读这一节。** 下面的「意图→组件」表和「视觉规范」都是为这套标准服务的手段；构造和自检卡片时**以 P0–P7 为准**。
+**Read this section first.** The "intent → component" table and "visual specifications" below are all means serving this set of standards; when constructing and self-checking cards, **P0–P7 are authoritative**.
 
-**目标函数**：一张好卡片 = 让收件人在**约 2 秒一瞥**内 get 到「这是什么 + 最重要的是什么 + 要不要操作」，且观感**有序、克制、不嘈杂**。高效传达与视觉舒适在此统一。
+**Objective function**: a good card = lets the recipient grasp "what this is + what matters most + whether action is needed" within **about a 2-second glance**, and the look is **orderly, restrained, and not noisy**. Efficient communication and visual comfort are unified here.
 
-**用力分配**：P0 必过（前置闸）→ P1–P3 强约束（阻断）→ P4–P5 基础卫生 → P6–P7 加分。
+**Effort allocation**: P0 must pass (front gate) → P1–P3 strong constraints (blocking) → P4–P5 basic hygiene → P6–P7 bonus points.
 
-每条都附**结构化验证句**——卡片不能渲染成图，只能对 JSON 结构推理，所以验证靠「数结构」而非「眯眼看」。
+Each item comes with a **structured verification sentence**—cards cannot be rendered as images, so reasoning can only be done on the JSON structure; therefore verification relies on "counting structure" rather than "squinting at it".
 
-| | 准则 | 可操作要求 | 结构化验证（自检句） |
+| | Criterion | Actionable requirement | Structured verification (self-check sentence) |
 |---|---|---|---|
-| **P0** | **符合诉求**（前置闸·阻断） | 精确承载用户要的信息/意图/操作，不缺、不多、不跑题；意图类型与组件组合匹配 | 把诉求拆成信息点清单，逐点在 JSON 里找到承载组件；操作诉求逐个找到交互组件。有缺=不过 |
-| **P1** | **层级**（强约束·阻断） | header 承载「这是什么」；body 内**有且仅有一个**最强焦点（最大字号/最重色/指标卡大数字），其余为支撑；标题用 `**加粗**`、次要信息用 grey | 列出所有文本的「字号+粗细+颜色」三元组，能否排出主>次>辅三层；焦点是否唯一 |
-| **P2** | **分组**（强约束·阻断） | 同主题字段收进同一容器（`column_set`/`interactive_container`/背景块），不同主题分容器；块边界靠容器底色/描边/间距，**而非一路 `hr` 平铺** | 数顶层视觉块个数；是否存在「多主题挤在同一无分隔 markdown / 一路 hr 平铺」反模式 |
-| **P3** | **复杂度适中**（强约束·阻断·双边带） | 下限：不得纯文字流水账，至少有分块+层级+适度色彩/图标；上限：视觉块 2–5、主色系 ≤3、组件不堆砌、焦点唯一 | ①是否 >1 个视觉块且含≥1 个非纯文本结构元素（背景块/指标卡/图标/表格）；②块数 ≤5、主色系 ≤3。两端都满足才过 |
-| **P4** | **对比**（基础卫生） | 标题与正文字号或粗细至少差一档；强调用色/放大；正文不滥用 `#/##/###`（数值焦点放大除外，见 P1） | 标题与正文是否在「字号或粗细」上至少差一档 |
-| **P5** | **对齐**（基础卫生） | 间距优先交容器 `vertical_spacing`/`horizontal_spacing`/`padding`，**不滥用散设 margin 造成疏密无规律**；间距值收敛到一套档位（2/4/8/12px）；顶层容器间距一致 | 是否存在无规律的散落 margin；间距取值种类是否 ≤4 |
-| **P6** | **语义一致**（加分） | 红=降/警/失败、绿=升/成/通过、grey=次要；主色系起始色由 header 决定、取邻近色环；同色同义 | 同一颜色是否对应同一语义；header 模板色与块色是否同色系 |
-| **P7** | **健壮**（加分） | 并列/指标列默认 `weighted` 或 `none`、**慎用 `stretch`**（防移动端拉伸）；需要时配 `config.style.color` 的 light/dark；不靠固定像素宽硬排 | 是否存在 stretch 拉伸风险；深浅色是否都可读 |
+| **P0** | **Meets the requirement** (front gate · blocking) | Precisely carries the information/intent/action the user wants, no missing, no extra, no off-topic; intent type matches component combination | Break the requirement into a list of information points, and find the carrying component for each point in the JSON; for action requirements, find the interactive component for each one. Any missing = fail |
+| **P1** | **Hierarchy** (strong constraint · blocking) | header carries "what this is"; within body there is **exactly one** strongest focus (largest font size/heaviest color/large number in metric card), the rest are supporting; titles use `**加粗**`, secondary information uses grey | List the "font size + weight + color" triples of all text, and check whether three tiers of primary > secondary > auxiliary can be ordered; check whether the focus is unique |
+| **P2** | **Grouping** (strong constraint · blocking) | Fields on the same topic go into the same container (`column_set`/`interactive_container`/background block), different topics go into separate containers; block boundaries rely on container background color/stroke/spacing, **not on a flat run of `hr`** | Count the number of top-level visual blocks; check whether there is the anti-pattern of "multiple topics crammed into the same undivided markdown / a flat run of hr" |
+| **P3** | **Moderate complexity** (strong constraint · blocking · two-sided band) | Lower bound: must not be a plain text running account, at least has blocks + hierarchy + moderate color/icons; upper bound: visual blocks 2–5, primary color families ≤3, components not piled up, focus unique | ①Whether there is >1 visual block and it contains ≥1 non-plain-text structural element (background block/metric card/icon/table); ②block count ≤5, primary color families ≤3. Pass only if both ends are satisfied |
+| **P4** | **Contrast** (basic hygiene) | Title and body text differ by at least one tier in font size or weight; emphasis uses color/enlargement; body text does not overuse `#/##/###` (except for enlarged numeric focus, see P1) | Whether title and body text differ by at least one tier in "font size or weight" |
+| **P5** | **Alignment** (basic hygiene) | Spacing is preferably delegated to container `vertical_spacing`/`horizontal_spacing`/`padding`, **do not overuse scattered margin settings causing irregular density**; spacing values converge to one set of tiers (2/4/8/12px); top-level container spacing is consistent | Whether there are irregular scattered margins; whether the number of spacing value types is ≤4 |
+| **P6** | **Semantic consistency** (bonus) | Red=down/warning/failure, green=up/success/pass, grey=secondary; the starting color of the primary color family is determined by header, taking adjacent colors on the color wheel; same color same meaning | Whether the same color corresponds to the same semantics; whether the header template color and block colors are in the same color family |
+| **P7** | **Robust** (bonus) | Parallel/metric columns default to `weighted` or `none`, **use `stretch` with caution** (to prevent mobile stretching); when needed, pair with `config.style.color` light/dark; do not rely on fixed pixel widths for hard layout | Whether there is a stretch risk; whether both light and dark colors are readable |
 
 ---
 
-## 意图 → 组件组合
+<a id="意图--组件组合"></a>
+## Intent → Component Combination
 
-### 通知类（无交互或只读）
+<a id="通知类无交互或只读"></a>
+### Notification type (no interaction or read-only)
 
-| 用户意图 | 推荐组件组合 | header.template |
+| User intent | Recommended component combination | header.template |
 |---|---|---|
-| 纯文字通知 / 系统公告 | `column_set`（通知正文，带 `blue-50` 背景）+ `button(open_url)` | `blue` |
-| 活动公告（带主视觉图） | `img`（主图）+ `markdown`（时间/地点）+ `column_set`（详情对）+ `button(open_url)` | `turquoise` / `blue` |
-| 成功 / 完成状态通知 | `column_set`（关键字段，带 `green-50` 背景）+ `markdown`（结论加粗） | `green` |
-| 审批结果反馈（已通过 / 已拒绝） | `column_set`（申请信息）+ `column_set`（审批结论 + icon，带 `green-50`/`red-50` 背景） | `green` / `red` |
-| 生日 / 节日祝福 | `img`（主图）+ `column_set`（人名/日期）+ `button(open_url)` | `orange` |
-| 产品 / 功能上线推广 | `img`（主图）+ `markdown`（亮点）+ `column_set`（功能高亮块）+ `button(open_url)` | `blue` / `violet` |
-| 多图展示（图集、AI 生成图） | `img_combination` 或 多个 `img` + `markdown`（说明）+ `button(callback)` | `default` |
+| Plain text notification / system announcement | `column_set` (notification body, with `blue-50` background) + `button(open_url)` | `blue` |
+| Event announcement (with key visual image) | `img` (main image) + `markdown` (time/location) + `column_set` (detail pairs) + `button(open_url)` | `turquoise` / `blue` |
+| Success / completion status notification | `column_set` (key fields, with `green-50` background) + `markdown` (conclusion in bold) | `green` |
+| Approval result feedback (approved / rejected) | `column_set` (application information) + `column_set` (approval conclusion + icon, with `green-50`/`red-50` background) | `green` / `red` |
+| Birthday / holiday greeting | `img` (main image) + `column_set` (name/date) + `button(open_url)` | `orange` |
+| Product / feature launch promotion | `img` (main image) + `markdown` (highlights) + `column_set` (feature highlight block) + `button(open_url)` | `blue` / `violet` |
+| Multi-image display (image gallery, AI-generated images) | `img_combination` or multiple `img` + `markdown` (description) + `button(callback)` | `default` |
 
-### 提醒 + 操作类
+<a id="提醒--操作类"></a>
+### Reminder + action type
 
-| 用户意图 | 推荐组件组合 | header.template |
+| User intent | Recommended component combination | header.template |
 |---|---|---|
-| 提醒 + 一键操作 | `column_set`（详情，带 `yellow-50` 背景）+ `button(callback)` | `yellow` |
-| 任务清单 / 待办跟踪 | `checker` × N（每项带 `behaviors: callback`）+ `button(callback)`（全部完成操作） | `blue` |
-| 告警触发（需立即处理） | `column_set`（告警指标，带 `red-50` 背景）+ `column_set`（描述 + input 快速备注）+ `button(callback)` | `red` |
-| 告警已解决 / 状态变更 | `column_set`（解决时间 / 负责人，带 `green-50` 背景）+ `markdown`（结论加粗） | `green` |
-| 审批待处理（含备注输入） | `column_set`（申请信息，带 `grey-50` 背景）+ `column_set`（input 审批意见）+ `button(callback)` × 2（通过 / 拒绝） | `default` |
-| 日历 / 日程提醒（含参与人） | `column_set`（时间 / 地点，带 `yellow-50` 背景）+ `person_list`（参与人）+ `button(callback)` | `yellow` |
-| 危险操作确认 | `column_set`（说明，带 `red-50` 背景）+ `button(callback)` + `confirm` 弹窗配置 | `red` |
+| Reminder + one-click action | `column_set` (details, with `yellow-50` background) + `button(callback)` | `yellow` |
+| Task list / to-do tracking | `checker` × N (each item with `behaviors: callback`) + `button(callback)` (mark-all-complete action) | `blue` |
+| Alert triggered (requires immediate handling) | `column_set` (alert metric, with `red-50` background) + `column_set` (description + input quick note) + `button(callback)` | `red` |
+| Alert resolved / status changed | `column_set` (resolution time / owner, with `green-50` background) + `markdown` (conclusion in bold) | `green` |
+| Approval pending (with note input) | `column_set` (application information, with `grey-50` background) + `column_set` (input approval comment) + `button(callback)` × 2 (approve / reject) | `default` |
+| Calendar / schedule reminder (with participants) | `column_set` (time / location, with `yellow-50` background) + `person_list` (participants) + `button(callback)` | `yellow` |
+| Dangerous operation confirmation | `column_set` (description, with `red-50` background) + `button(callback)` + `confirm` dialog configuration | `red` |
 
-### 数据 / 报告类
+<a id="数据--报告类"></a>
+### Data / report type
 
-| 用户意图 | 推荐组件组合 | header.template |
+| User intent | Recommended component combination | header.template |
 |---|---|---|
-| 日报 / 工作汇报 | `column_set`（指标，带背景色）+ `interactive_container`（进展分块，带描边）× N；内容过长的块用 `collapsible_panel` 折叠次要细节 | `blue` / `default` |
-| 数据看板（含图表） | `column_set`（指标，带 `blue-50` 背景）+ `chart` + `table`（根节点，不可嵌套）+ `markdown`（说明） | `blue` |
-| 排行榜 | `column_set` 固定列宽（序号 + 头像 `img` + 名字 + 指标）循环条目 | `grey` |
-| 订单 / 工单详情 | `div.fields`（字段对）或 `column_set`（需彩色背景块时）+ `button(callback)` | `orange` |
+| Daily report / work report | `column_set` (metrics, with background color) + `interactive_container` (progress blocks, with stroke) × N; for blocks with overly long content, use `collapsible_panel` to collapse secondary details | `blue` / `default` |
+| Data dashboard (with charts) | `column_set` (metrics, with `blue-50` background) + `chart` + `table` (root node, cannot be nested) + `markdown` (description) | `blue` |
+| Leaderboard | `column_set` fixed column widths (rank + avatar `img` + name + metric) looping entries | `grey` |
+| Order / ticket details | `div.fields` (field pairs) or `column_set` (when a colored background block is needed) + `button(callback)` | `orange` |
 
-### 表单 / 收集类
+<a id="表单--收集类"></a>
+### Form / collection type
 
-| 用户意图 | 推荐组件组合 | header.template |
+| User intent | Recommended component combination | header.template |
 |---|---|---|
-| 纯文字表单收集 | `form`（内含 `input` + `button(form_action_type: submit)`） | `blue` |
-| 带下拉选择的表单（单选） | `form`（内含 `select_static` / `select_person` + `input` + `button`） | `wathet` |
-| 带多选的表单 | `form`（内含 `multi_select_static` / `multi_select_person` + `input` + `button`） | `wathet` |
-| 含日期 / 时间的表单 | `form`（内含 `date_picker` / `picker_time` / `picker_datetime` + `input` + `button`） | `blue` |
-| 设备 / 服务反馈 | `form`（内含 `select_static`（满意度）+ `input`（备注）+ `button`） | `yellow` |
-| 多步骤进度 / 引导 | `column_set`（横向步骤，带 `blue-50` 背景）+ `markdown`（当前状态）+ `button` | `blue` |
+| Plain text form collection | `form` (containing `input` + `button(form_action_type: submit)`) | `blue` |
+| Form with dropdown selection (single choice) | `form` (containing `select_static` / `select_person` + `input` + `button`) | `wathet` |
+| Form with multiple choice | `form` (containing `multi_select_static` / `multi_select_person` + `input` + `button`) | `wathet` |
+| Form with date / time | `form` (containing `date_picker` / `picker_time` / `picker_datetime` + `input` + `button`) | `blue` |
+| Device / service feedback | `form` (containing `select_static` (satisfaction) + `input` (notes) + `button`) | `yellow` |
+| Multi-step progress / guidance | `column_set` (horizontal steps, with `blue-50` background) + `markdown` (current status) + `button` | `blue` |
 
-### 推荐 / 选择类
+<a id="推荐--选择类"></a>
+### Recommendation / selection type
 
-| 用户意图 | 推荐组件组合 | header.template |
+| User intent | Recommended component combination | header.template |
 |---|---|---|
-| 推荐列表（带图卡片，可点击） | `interactive_container`（内含 `img` + `markdown`）× N + `button(open_url)` | `blue` |
-| AI 引导选项 / 功能菜单 | `markdown`（欢迎语）+ `interactive_container`（内含 `markdown` 选项说明）× N | 无 header |
-| Bot 功能引导 / 教程 | `column_set`（步骤说明，带背景）+ `button` × 2（主操作 / 次操作） | `blue` |
-| 服务台 / 多操作入口 | `column_set`（说明，带背景）+ `button` × N（≤3 个主操作，`type` 区分主次）；次要操作超过 3 个时改用 `overflow`（折叠菜单） | 无 header |
+| Recommendation list (clickable cards with images) | `interactive_container` (containing `img` + `markdown`) × N + `button(open_url)` | `blue` |
+| AI guidance options / feature menu | `markdown` (welcome message) + `interactive_container` (containing `markdown` option descriptions) × N | No header |
+| Bot feature guidance / tutorial | `column_set` (step descriptions, with background) + `button` × 2 (primary action / secondary action) | `blue` |
+| Service desk / multi-action entry | `column_set` (description, with background) + `button` × N (≤3 primary actions, `type` distinguishes primary from secondary); when secondary actions exceed 3, switch to `overflow` (collapsed menu) | No header |
 
-### 社交 / 互动类
+<a id="社交--互动类"></a>
+### Social / interaction type
 
-| 用户意图 | 推荐组件组合 | header.template |
+| User intent | Recommended component combination | header.template |
 |---|---|---|
-| 工作圈 / 社交分享 | `img_combination`（多图）+ `markdown`（正文）+ `button(open_url)` × 2 | `blue` |
-| 成交 / 业绩公告 | `img`（庆祝图）+ `markdown`（成绩）+ `column_set`（关键数字） | `green` |
+| Work circle / social sharing | `img_combination` (multiple images) + `markdown` (body text) + `button(open_url)` × 2 | `blue` |
+| Deal / performance announcement | `img` (celebration image) + `markdown` (results) + `column_set` (key numbers) | `green` |
 
 ---
 
-## 视觉规范（实现 P0–P7 的具体战术）
+<a id="视觉规范实现-p0p7-的具体战术"></a>
+## Visual Specifications (concrete tactics for implementing P0–P7)
 
-组件选型只解决「有没有」，下面各条是落地上面 P0–P7 的具体手段，括号标注它主要服务的原则。
+Component selection only solves "whether it exists"; the items below are the concrete means of implementing P0–P7 above, with the principle they mainly serve noted in parentheses.
 
-> **P3 特例 — 数据看板类**：`chart + table + column_set + markdown` 是四种不同组件各出现一次，不算「堆砌」，P3 上限照常满足；但仍须保证每类只出现一次。
+> **P3 special case — data dashboard type**: `chart + table + column_set + markdown` is four different components each appearing once, which does not count as "piling up", and the P3 upper bound is satisfied as usual; but it must still be ensured that each type appears only once.
 
-### 0. Header 图标（服务 P3 · 视觉质感底线）
+<a id="0-header-图标服务-p3--视觉质感底线"></a>
+### 0. Header icon (serves P3 · baseline of visual quality)
 
-**几乎所有卡片都应配 header icon**——这是提升「精致感」成本最低的一步，缺失会让 header 显得空洞、平价。
+**Almost all cards should have a header icon**—this is the lowest-cost step to improve the "refined feel"; its absence makes the header look empty and cheap.
 
 ```json
 "header": {
@@ -109,36 +119,39 @@
 }
 ```
 
-- `token` 必须从 `resource/icons.md` 的精确枚举中选择；禁止根据名称规律自行拼接 token。没有合适的 token 时省略 icon。
-- 场景速查：日历 `calendar_colorful`、待办 `todo_colorful`、投票 `vote_colorful`、妙记 `file-lark-minutes_colorful`、多维表格 `wiki-bitable_colorful`、表单 `file-form_colorful`、社区 `larkcommunity_colorful`、招聘 `hirelogo_colorful`、飞书品牌 `lark-logo_colorful`、Meego `meego_colorful`、AI `myai_colorful`、aPaaS `apaas_colorful`、审批 `approval_colorful`、通用 AI `ai-common_colorful`。
+- `token` must be selected from the exact enumeration of `resource/icons.md`; it is forbidden to concatenate tokens yourself based on naming patterns. When there is no suitable token, omit the icon.
+- Scenario quick reference: calendar `calendar_colorful`, to-do `todo_colorful`, voting `vote_colorful`, Minutes `file-lark-minutes_colorful`, Base `wiki-bitable_colorful`, forms `file-form_colorful`, community `larkcommunity_colorful`, recruiting `hirelogo_colorful`, Feishu brand `lark-logo_colorful`, Meego `meego_colorful`, AI `myai_colorful`, aPaaS `apaas_colorful`, approval `approval_colorful`, general AI `ai-common_colorful`.
 
-### 1. 配色纪律（服务 P6 语义一致）
+<a id="1-配色纪律服务-p6-语义一致"></a>
+### 1. Color discipline (serves P6 semantic consistency)
 
-- **邻近色环**：`Red → Carmine → Orange → Yellow → Green → Turquoise → Wathet → Blue → Violet → Purple →（回到）Red`。一张卡只能取色环上**相邻**的颜色，严禁跳跃（❌ blue + green + red）。
-- **最多 3 种主色系**（不含 grey / white）。
-- **起始色由 header 决定**：
+- **Adjacent color wheel**: `Red → Carmine → Orange → Yellow → Green → Turquoise → Wathet → Blue → Violet → Purple →（回到）Red`. A card may only use colors that are **adjacent** on the color wheel; jumping is strictly forbidden (❌ blue + green + red).
+- **At most 3 primary color families** (excluding grey / white).
+- **The starting color is determined by header**:
   - header `blue` → blue / violet / purple
   - header `green` → green / turquoise / wathet
   - header `red` → red / carmine / orange
-  - 无 header → 默认 blue / violet / purple
-- **深浅语义**（写法 `blue-50`、`blue-600`、`grey-500`）：
-  - `-50` 区块背景 · `-100` 标签背景 · `-500` 正文文字 · `-600`/`-700` 强调文字
+  - no header → default blue / violet / purple
+- **Light/dark semantics** (syntax `blue-50`, `blue-600`, `grey-500`):
+  - `-50` block background · `-100` tag background · `-500` body text · `-600`/`-700` emphasized text
 
-### 2. 间距纪律（服务 P5 对齐 · 视觉决定性因素）
+<a id="2-间距纪律服务-p5-对齐--视觉决定性因素"></a>
+### 2. Spacing discipline (serves P5 alignment · decisive visual factor)
 
-- **body padding 推荐**：`"padding": "12px 12px 20px 12px"`（上右下左；底部 20px 留白更舒适）。
-- **优先不用 `markdown` / `column` 的 `margin` 控间距**：交给父容器的 `vertical_spacing` / `horizontal_spacing` / `padding` 统一管理，多数情况显式置 `0px`；仅在需要精细缩进（如层级左缩进）时才设非零值。
-- 容器内 `vertical_spacing` 推荐值：`2px`（高亮块内标题↔正文）/ `4px`（正文段落、列表项）/ `8px`（需拉开的元素）。
-- **容器间智能 margin**：某个顶级容器若**不是** body 最后一个元素 → 设 `"margin": "0px 0px 12px 0px"`；若**是**最后一个 → `"0px"` 或不设，避免卡片底部多余留白。
+- **Recommended body padding**: `"padding": "12px 12px 20px 12px"` (top right bottom left; 20px bottom whitespace is more comfortable).
+- **Prefer not to use `markdown` / `column`'s `margin` to control spacing**: delegate to the parent container's `vertical_spacing` / `horizontal_spacing` / `padding` for unified management, and in most cases explicitly set `0px`; only set a non-zero value when fine indentation is needed (such as hierarchical left indentation).
+- Recommended `vertical_spacing` values within a container: `2px` (title ↔ body within a highlight block) / `4px` (body paragraphs, list items) / `8px` (elements that need to be pulled apart).
+- **Smart margin between containers**: if a top-level container is **not** the last element of body → set `"margin": "0px 0px 12px 0px"`; if it **is** the last → `"0px"` or leave unset, to avoid extra whitespace at the bottom of the card.
 
-### 3. 指标卡模式（服务 P1 焦点 · 出现 KPI / 数值 / 统计词时强制使用）
+<a id="3-指标卡模式服务-p1-焦点--出现-kpi--数值--统计词时强制使用"></a>
+### 3. Metric card pattern (serves P1 focus · mandatory when KPI / numeric / statistical terms appear)
 
-触发：内容含 `KPI/ROI/CTR/UV/PV/DAU/GMV/转化率/增长率/总数/营收` 等数值类信息。
+Trigger: content contains numeric information such as `KPI/ROI/CTR/UV/PV/DAU/GMV/转化率/增长率/总数/营收`.
 
-- 多个指标并列放进一个 `column_set`，`flex_mode` **默认用 `"none"`、慎用 `"stretch"`**（防移动端拉伸变形，P7）；仅在各列内容等宽、确认移动端不变形时才用 stretch。
-- 数值：用 `##` 放大（**唯一允许用 markdown 标题的特例**），可配 `<font>` 上色。
-- 描述：`<font color='grey'>` + `text_size: "notation"`。
-- 居中 `text_align: "center"`；列背景 `background_style: "grey-50"`；`padding: "12px"`；`vertical_spacing: "2px"`。
+- Multiple metrics placed side by side go into one `column_set`, and `flex_mode` **defaults to `"none"`, use `"stretch"` with caution** (to prevent mobile stretching and deformation, P7); use stretch only when the content of each column is equal width and it is confirmed that there is no deformation on mobile.
+- Numeric value: enlarge with `##` (**the only special case where a markdown heading is allowed**), and may be colored with `<font>`.
+- Description: `<font color='grey'>` + `text_size: "notation"`.
+- Center `text_align: "center"`; column background `background_style: "grey-50"`; `padding: "12px"`; `vertical_spacing: "2px"`.
 
 ```json
 {
@@ -157,9 +170,10 @@
 }
 ```
 
-### 4. 描边卡片模式（服务 P2 分组 · 进展 / 事项 / 列表项分块展示）
+<a id="4-描边卡片模式服务-p2-分组--进展--事项--列表项分块展示"></a>
+### 4. Stroked card pattern (serves P2 grouping · block display of progress / items / list entries)
 
-用 `interactive_container` 给每个事项块加描边 + 圆角，视觉上比彩色底色更轻盈，适合进展/工单/任务列表等「多条目」场景。
+Use `interactive_container` to add a stroke + rounded corners to each item block; visually lighter than a colored background, suitable for "multi-entry" scenarios such as progress/ticket/task lists.
 
 ```json
 {
@@ -186,26 +200,28 @@
 }
 ```
 
-- `border_color` 跟随主色系（蓝系用 `blue-100`，绿系用 `green-100`）。
-- 不需要交互时可省略 `behaviors`；需要点击回调时加 `"behaviors": [{"type":"callback","value":{...}}]`。
-- **不能在内部放 `form` 或 `table`**。
+- `border_color` follows the primary color family (blue family uses `blue-100`, green family uses `green-100`).
+- When interaction is not needed, `behaviors` may be omitted; when a click callback is needed, add `"behaviors": [{"type":"callback","value":{...}}]`.
+- **`form` or `table` cannot be placed inside**.
 
-### 5. 高亮块模式（服务 P2 分组 · 多分类信息成块展示）
+<a id="5-高亮块模式服务-p2-分组--多分类信息成块展示"></a>
+### 5. Highlight block pattern (serves P2 grouping · block display of multi-category information)
 
-两层结构：外层 `column_set` 管布局，内层 `column` 管样式（彩色背景）。
+Two-layer structure: the outer `column_set` manages layout, the inner `column` manages style (colored background).
 
-- 每个 `column` 设 `background_style` 用浅色（如 `blue-50` / `green-50`），`padding: "12px 12px 12px 12px"`，`vertical_spacing: "4px"`，`weight: 1`。
-- 块内首行用 `**<font color='blue'>分类标题</font>**` 着色加粗，正文紧随。
-- **布局选择**：分类 ≤ 3 个且内容简短 → 水平，优先用 `flex_mode: "bisect"`（2 列）或 `"trisect"`（3 列）；各列字数严格等宽且已确认移动端不变形时才用 `stretch`（慎用，见 §9）；**分类 ≥ 4 个、奇数、或任一块内容 > 3 行 → 垂直**（每块独占一行）。配色按上面第 1 条邻近色环依次取色。
-- ⚠️ **版本依赖**：`column.background_style` 需客户端 **≥ v7.9**，旧版静默丢背景。要求强健壮性时改用 `interactive_container` 的 `background_style`（无版本限制）替代 column 背景色。
+- Each `column` sets `background_style` to a light color (such as `blue-50` / `green-50`), `padding: "12px 12px 12px 12px"`, `vertical_spacing: "4px"`, `weight: 1`.
+- The first line within the block uses `**<font color='blue'>分类标题</font>**` for color and bold, with the body text immediately following.
+- **Layout choice**: categories ≤ 3 and content short → horizontal, preferably `flex_mode: "bisect"` (2 columns) or `"trisect"` (3 columns); use `stretch` only when the character counts of each column are strictly equal width and it is confirmed that there is no deformation on mobile (use with caution, see §9); **categories ≥ 4, odd number, or any block's content > 3 lines → vertical** (each block occupies its own row). Colors are taken in order according to the adjacent color wheel in item 1 above.
+- ⚠️ **Version dependency**: `column.background_style` requires client **≥ v7.9**; older versions silently drop the background. When strong robustness is required, switch to `interactive_container`'s `background_style` (no version restriction) instead of the column background color.
 
-### 6. Header 三件套（服务 P1 层级 · 语境补全）
+<a id="6-header-三件套服务-p1-层级--语境补全"></a>
+### 6. Header trio (serves P1 hierarchy · context completion)
 
-header 有三层能力，**尽量用满**（至少用 `title` + `icon`；`subtitle` 和 `text_tag_list` 按实际诉求取舍）——这是成本最低、语境最清晰的一步：
+header has three layers of capability; **use them as fully as possible** (at least use `title` + `icon`; `subtitle` and `text_tag_list` are chosen according to actual requirements)—this is the lowest-cost step with the clearest context:
 
-- `title`：这是什么（必填）
-- `subtitle`：一句上下文（谁发 / 什么时间 / 什么状态），≤1 行，`plain_text`
-- `text_tag_list`：状态标签，≤3 个，颜色语义与 P6 保持一致（`blue`=信息、`yellow`=待处理、`red`=紧急、`green`=完成）
+- `title`: what this is (required)
+- `subtitle`: one sentence of context (who sent it / what time / what status), ≤1 line, `plain_text`
+- `text_tag_list`: status tags, ≤3, with color semantics consistent with P6 (`blue`=information, `yellow`=pending, `red`=urgent, `green`=completed)
 
 ```json
 "header": {
@@ -219,11 +235,12 @@ header 有三层能力，**尽量用满**（至少用 `title` + `icon`；`subtit
 }
 ```
 
-**禁止**：在 `header.title` 里写 emoji；把 subtitle 信息改塞进 body 第一行 markdown，让 header 空洞；严肃场景（审批/告警/财务）在 title 或 body 标题里用装饰性 emoji。
+**Forbidden**: writing emoji in `header.title`; moving subtitle information into the first line of body markdown, leaving the header empty; using decorative emoji in the title or body heading in serious scenarios (approval/alert/finance).
 
-### 7. 字段对用 `div.fields`，不要用 `column_set` 模拟（服务 P5 对齐）
+<a id="7-字段对用-divfields不要用-column_set-模拟服务-p5-对齐"></a>
+### 7. Use `div.fields` for field pairs, do not simulate with `column_set` (serves P5 alignment)
 
-详情型"label: value"（订单字段、审批信息、日程详情）首选 `div.fields`——原生对齐，结构更轻：
+For detail-type "label: value" (order fields, approval information, schedule details), prefer `div.fields`—native alignment, lighter structure:
 
 ```json
 {
@@ -237,45 +254,49 @@ header 有三层能力，**尽量用满**（至少用 `title` + `icon`；`subtit
 }
 ```
 
-`is_short: true` 的字段自动两两并排，对齐由组件保证。`column_set` 留给**需要彩色背景块 / 不等宽 / 嵌套复杂结构**的场景，不要用它模拟简单字段对。
+Fields in `is_short: true` are automatically placed side by side in pairs, and alignment is guaranteed by the component. `column_set` is reserved for scenarios that **require colored background blocks / unequal widths / nested complex structures**; do not use it to simulate simple field pairs.
 
-### 8. 长文本必须设 `lines` 截断（服务 P3 复杂度上限）
+<a id="8-长文本必须设-lines-截断服务-p3-复杂度上限"></a>
+### 8. Long text must set `lines` truncation (serves the P3 complexity upper limit)
 
-凡接收动态数据的文本字段，必须设最大行数避免卡片被撑爆：
+Any text field that receives dynamic data must set a maximum number of lines to prevent the card from being stretched out:
 
-| 位置 | 字段 | 推荐上限 |
+| Location | Field | Recommended upper limit |
 |---|---|---|
-| `div.text` | `lines` | 正文 ≤4，次要说明 ≤2 |
+| `div.text` | `lines` | Body text ≤4, secondary explanation ≤2 |
 | `person_list` | `lines` | ≤2 |
 | `table.header_style` | `lines` | ≤1 |
-| `collapsible_panel` | 默认折叠 | 长文本优先用折叠面板而非截断 |
+| `collapsible_panel` | Collapsed by default | For long text, prefer a collapsible panel rather than truncation |
 
-不设 `lines` 的动态文本 = P3 上限的隐患。
+Dynamic text without `lines` set = a hidden risk of hitting the P3 upper limit.
 
-### 9. `flex_mode` 决策表（服务 P7 健壮）
+<a id="9-flex_mode-决策表服务-p7-健壮"></a>
+### 9. `flex_mode` decision table (serves P7 robustness)
 
-| 场景 | 推荐 flex_mode | 原因 |
+| Scenario | Recommended flex_mode | Reason |
 |---|---|---|
-| 指标卡并列（内容不等长） | `none` + `width: weighted` | 防移动端拉伸；各列按比例压缩 |
-| 2 列等宽内容（字数相近） | `bisect` | 语义最清晰的两等分 |
-| 3 列等宽内容 | `trisect` | 三等分，不写 weight |
-| 多 tag / 多图标横排，允许换行 | `flow` | 窄屏自动折行，不挤压 |
-| 明确要求两端对齐撑满且内容等宽 | `stretch` | 慎用：移动端窄屏内容过长时会拉伸变形 |
+| Metric cards side by side (content of unequal length) | `none` + `width: weighted` | Prevents stretching on mobile; each column compresses proportionally |
+| 2 columns of equal-width content (similar character counts) | `bisect` | The clearest semantic two-way equal split |
+| 3 columns of equal-width content | `trisect` | Three-way equal split, do not write weight |
+| Multiple tags / multiple icons in a horizontal row, wrapping allowed | `flow` | Automatically wraps on narrow screens without squeezing |
+| Explicit requirement for justified full-width alignment and equal-width content | `stretch` | Use with caution: on narrow mobile screens, overly long content will stretch and deform |
 
-> `stretch` 只在各列字数高度相近、且已确认移动端不变形时使用；其余场景默认 `none`。
+> `stretch` is used only when the character counts and heights of each column are similar and it has been confirmed that there is no deformation on mobile; in all other scenarios, default to `none`.
 
-### 10. `chart` 配色纳入 P6 纪律
+<a id="10-chart-配色纳入-p6-纪律"></a>
+### 10. `chart` color scheme included in P6 discipline
 
-`chart.color_theme` 必须与全卡色系保持一致：
+`chart.color_theme` must remain consistent with the overall card color system:
 
-- **默认**：`brand`（单色系，跟随飞书品牌色）或 `primary`（主色单色系），安全选项。
-- **禁止**：`rainbow`——会把色环上的跳跃色全打进图表，直接击穿 P6 的"主色系 ≤3 + 邻近色环"约束。
-- **例外**：数据维度 ≥4 个系列、且各系列无主次关系（如区域对比图）时，可用 `complementary` 或在 `chart_spec` 里自定义与主色系邻近的颜色数组。
+- **Default**: `brand` (single-color system, following the Feishu brand color) or `primary` (primary-color single-color system), safe options.
+- **Prohibited**: `rainbow`—it will push all the jumping colors on the color wheel into the chart, directly breaking through P6's "primary color system ≤3 + adjacent color wheel" constraint.
+- **Exception**: when there are ≥4 data dimensions/series and the series have no primary-secondary relationship (such as a regional comparison chart), you may use `complementary` or define a custom color array adjacent to the primary color system in `chart_spec`.
 
-### 11. `laser` 样式的克制规则（服务 P6 语义一致）
+<a id="11-laser-样式的克制规则服务-p6-语义一致"></a>
+### 11. Restraint rules for `laser` styles (serves P6 semantic consistency)
 
-`button.type: "laser"` 和 `background_style: "laser"` 是高饱和渐变效果：
+`button.type: "laser"` and `background_style: "laser"` are high-saturation gradient effects:
 
-- **允许**：AI 生成类、节日庆祝类、营销推广类，每卡 **≤1 处**，且位置在主操作按钮或视觉焦点块。
-- **禁止**：审批、告警、财务、工单、日程等严肃场景——laser 在这些场景里显得轻浮廉价。
-- **默认不用**；Step 1 设计方案里若要用，需显式说明"×× 场景适合 laser 风格"并得到确认。
+- **Allowed**: AI-generated, holiday celebration, and marketing promotion types, **≤1 place** per card, and the position must be the primary action button or visual focal block.
+- **Prohibited**: serious scenarios such as approvals, alerts, finance, tickets, and schedules—laser appears frivolous and cheap in these scenarios.
+- **Do not use by default**; if it is to be used in the Step 1 design plan, you must explicitly state "the ×× scenario is suitable for the laser style" and obtain confirmation.

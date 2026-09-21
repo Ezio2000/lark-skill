@@ -1,32 +1,38 @@
-# Genre Contract: Research Report / 调研报告 (`report.research_report`)
+<a id="genre-contract-research-report--调研报告-reportresearch_report"></a>
+# Genre Contract: Research Report (`report.research_report`)
 
-## 体裁规则表（硬约束）
+<a id="体裁规则表硬约束"></a>
+## Genre Rules Table (Hard Constraints)
 
-| 规则项 | 规则 |
+| Rule Item | Rule |
 |-|-|
-| 写作风格 | 证据驱动、校准、术语一致；摘要独立可读，语气强度不得超过证据强度 |
-| 内容逻辑 | 先确定研究问题与研究类型，再交付当前答案、证据强度和可推广边界；按问题或主题组织发现，解释、建议和验证计划必须回链发现 |
-| 事实 / 边界 | 区分原始事实或参与者陈述、分析推断、假设和建议；方法披露足以评估偏差；适用时确认委托、利益、同意、匿名或保密、敏感数据用途；研究材料须确认使用权、去标识、来源与说明，复杂视觉附文字等价信息；未知不补造 |
-| 错误 | 无明确问题；方法黑箱；资料摘要冒充发现；样本外推；醒目个案冒充模式；事实、解释和建议混写；相关写成因果；合规状态、授权或行业共识靠猜 |
+| Writing Style | Evidence-driven, calibrated, consistent terminology; the abstract is independently readable, and the strength of tone must not exceed the strength of the evidence |
+| Content Logic | First determine the research question and research type, then deliver the current answer, evidence strength, and generalizability boundaries; organize findings by question or theme, and explanations, recommendations, and validation plans must link back to findings |
+| Facts / Boundaries | Distinguish raw facts or participant statements, analytical inferences, assumptions, and recommendations; methodological disclosure is sufficient to assess bias; where applicable, confirm commissioning, interests, consent, anonymity or confidentiality, and sensitive data use; research materials must confirm usage rights, de-identification, sources, and explanations, and complex visuals must include text-equivalent information; do not fabricate what is unknown |
+| Errors | No clear question; black-box methodology; data summaries passed off as findings; extrapolation beyond the sample; striking individual cases passed off as patterns; facts, interpretations, and recommendations written together indiscriminately; correlation written as causation; compliance status, authorization, or industry consensus guessed at |
 
-## 适用与消歧
+<a id="适用与消歧"></a>
+## Applicability and Disambiguation
 
-以明确研究问题、研究设计或材料、发现和限制为主要交付。`调研`、`研究过`、`访谈`、`问卷`单独只用于召回；只解读既定指标走 [`data-report.md`](data-report.md)，比较特定战略或资源选项走 [`business-analysis.md`](business-analysis.md)，方法并非判断重点的问题框架综合走 [`white-paper.md`](white-paper.md)。
+The primary deliverable is a clear research question, research design or materials, findings, and limitations. `调研`, `研究过`, `访谈`, and `问卷` are used alone only for recall; interpreting only established metrics goes to [`data-report.md`](data-report.md), comparing specific strategic or resource options goes to [`business-analysis.md`](business-analysis.md), and problem framing synthesis where methodology is not the focus of judgment goes to [`white-paper.md`](white-paper.md).
 
-## 子类型
+<a id="子类型"></a>
+## Subtypes
 
-- **定量 / 定性 / 混合研究**：根据问题选择总体、抽样或招募、工具、采集和分析方法；不用一种方法的规范冒充全部研究标准。
-- **用户研究 / 项目或政策评估**：说明场景、参与者、干预或对象、成功标准、观察窗口和用途。
-- **证据综合**：只有检索范围、纳排和综合方法明确时才作为研究发现；普通资料汇总不得升级为系统结论。
+- **Quantitative / Qualitative / Mixed Research**: Select population, sampling or recruitment, instruments, collection, and analysis methods based on the question; do not pass off the norms of one method as all research standards.
+- **User Research / Project or Policy Evaluation**: State the scenario, participants, intervention or target, success criteria, observation window, and purpose.
+- **Evidence Synthesis**: Only treat as research findings when the search scope, inclusion/exclusion criteria, and synthesis methods are clear; ordinary data compilation must not be elevated to systematic conclusions.
 
-## 证据与方法
+<a id="证据与方法"></a>
+## Evidence and Methods
 
-- 明确对象、用途、非目标和适用情境；按需披露委托 / 执行方、总体与纳排、抽样 / 招募、样本量、工具 / 题项、采集方式 / 语言 / 时点、响应 / 脱落、加权、编码 / 分析和质量控制。
-- 写明偏差、缺失、反例、负结果、替代解释及其可能方向；透明报告不等于设计无偏，也不证明结论可复现。
-- 人员或敏感研究在适用规则下确认知情同意、撤回与伤害风险、匿名 / 保密、访问和数据用途；未获授权不公开可识别材料、原始数据或代码。
-- 引文只说明有出处的体验或机制，不把单个引文写成频率；结论只推广到设计和样本支持的人群、时间与环境。
-- 无原始材料只能产出研究范围或计划，不能生成 findings；方法或样本缺失时用 `[抽样方法待核]`、`[采集时点待核]` 并收窄为探索性观察。关键伦理、授权或方法缺口会改变结论时标记 `blocked`。
+- Clarify the target, purpose, non-goals, and applicable context; disclose as needed the commissioning / executing party, population and inclusion/exclusion criteria, sampling / recruitment, sample size, instruments / items, collection method / language / time points, response / attrition, weighting, coding / analysis, and quality control.
+- State bias, missing data, counterexamples, negative results, alternative explanations, and their possible directions; transparent reporting does not equal unbiased design, nor does it prove that conclusions are reproducible.
+- For human-participant or sensitive research, confirm informed consent, withdrawal and harm risks, anonymity / confidentiality, access, and data use under applicable rules; do not disclose identifiable materials, raw data, or code without authorization.
+- Citations only indicate experiences or mechanisms that have a source; do not write a single citation as a frequency; conclusions generalize only to the populations, times, and environments supported by the design and sample.
+- Without raw materials, only research scope or plans can be produced, not findings; when methods or samples are missing, use `[抽样方法待核]` and `[采集时点待核]` and narrow to exploratory observations. Mark `blocked` when key ethical, authorization, or methodological gaps would change the conclusions.
 
-## 结构与高质量写法
+<a id="结构与高质量写法"></a>
+## Structure and High-Quality Writing
 
-独立答案、证据强度与关键限制 → 问题 / 范围 / 既有知识 → 方法 / 样本 → 按问题或主题组织的发现 → 解释、反例与替代解释 → 有边界的建议 / 验证 → 局限、来源与必要附录。摘要覆盖目的、方法、发现、含义和限制；正文以“主张 → 证据 → 限定”推进，不按作业时间线罗列过程，不用组件数量代替研究质量。
+Independent answer, evidence strength, and key limitations → question / scope / existing knowledge → methods / sample → findings organized by question or theme → interpretation, counterexamples, and alternative explanations → bounded recommendations / validation → limitations, sources, and necessary appendices. The abstract covers purpose, methods, findings, implications, and limitations; the body advances as "claim → evidence → qualification," does not list the process according to the assignment timeline, and does not substitute the number of components for research quality.

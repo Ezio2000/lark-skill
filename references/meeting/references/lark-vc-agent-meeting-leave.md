@@ -1,66 +1,78 @@
 
 # vc +meeting-leave
 
-通过 `meeting_id` 离开当前身份所在的视频会议（bot leave）。这是一次**写操作**，会实际把当前身份从会议中移出。
+Leave the video meeting that the current identity is in via `meeting_id` (bot leave). This is a **write operation** that actually removes the current identity from the meeting.
 
-本模块 对应 shortcut：`lark-cli vc +meeting-leave`（调用 `POST /open-apis/vc/v1/bots/leave`）。
+This module corresponds to the shortcut: `lark-cli vc +meeting-leave` (calls `POST /open-apis/vc/v1/bots/leave`).
 
-## 命令
+<a id="命令"></a>
+## Command
 
 ```bash
-# 通过 meeting_id 离会
+# Leave the meeting via meeting_id
 lark-cli vc +meeting-leave --as bot --meeting-id 69xxxxxxxxxxxxx28
 ```
 
-## 参数
+<a id="参数"></a>
+## Parameters
 
-| 参数 | 必填 | 说明 |
+| Parameter | Required | Description |
 |------|------|------|
-| `--meeting-id <id>` | 是 | 会议 ID（**不是 9 位会议号**） |
-| `--dry-run` | 否 | 预览 API 调用，不实际离会；meeting_id 或身份不确定时先用它确认请求 |
+| `--meeting-id <id>` | Yes | Meeting ID (**not the 9-digit meeting number**) |
+| `--dry-run` | No | Preview the API call without actually leaving the meeting; use it to confirm the request when the meeting_id or identity is uncertain |
 
-## 核心约束
+<a id="核心约束"></a>
+## Core Constraints
 
-### 1. 入参是 meeting_id，不是会议号
+<a id="1-入参是-meeting_id不是会议号"></a>
+### 1. The input parameter is meeting_id, not the meeting number
 
-`--meeting-id` 必须是会议的长数字 ID，通常由 `+meeting-join --as bot` 返回体中的 `meeting.id` 提供，也可从应用身份 `+meeting-list-active --as bot --user-id <user_open_id>` 返回体中的 `meeting_id` 获取。**传 9 位会议号会失败**。
+`--meeting-id` must be the meeting's long numeric ID, usually provided by `meeting.id` in the response body of `+meeting-join --as bot`, and can also be obtained from `meeting_id` in the response body of the app identity's `+meeting-list-active --as bot --user-id <user_open_id>`. **Passing the 9-digit meeting number will fail**.
 
-### 2. 优先使用 bot 身份
+<a id="2-优先使用-bot-身份"></a>
+### 2. Prefer using the bot identity
 
-这是应用机器人离会能力，使用与入会或 active meeting 发现相同的 `--as bot`。只能让当前身份自己离会，无法强制移出其他参会人。
+This is the app bot's leave-meeting capability, using the same `--as bot` as joining a meeting or active meeting discovery. It can only make the current identity leave on its own; it cannot forcibly remove other participants.
 
-### 3. 当前身份必须在会议中
+<a id="3-当前身份必须在会议中"></a>
+### 3. The current identity must be in the meeting
 
-应用机器人必须已经在该会议中，否则接口会报错。如果 `meeting_id` 来自 `+meeting-list-active`，必须确认这是应用身份发现到的会议。
+The app bot must already be in the meeting, otherwise the API will return an error. If `meeting_id` comes from `+meeting-list-active`, you must confirm that this is a meeting discovered by the app identity.
 
-### 4. 离会立即生效，对其他参会人可见
+<a id="4-离会立即生效对其他参会人可见"></a>
+### 4. Leaving takes effect immediately and is visible to other participants
 
-机器人会立刻从参会列表消失；若会议启用了录制/纪要，bot 的参会时段到此截止。只有在用户明确要求退出 / 离开 / 结束参会时才调用；如需要重新入会，再跑 `+meeting-join` 即可（非真正"不可逆"）。
+The bot will immediately disappear from the participant list; if recording/minutes are enabled for the meeting, the bot's participation period ends here. Only call it when the user explicitly requests to exit / leave / end participation; if you need to rejoin, just run `+meeting-join` again (it is not truly "irreversible").
 
-## 输出结果
+<a id="输出结果"></a>
+## Output Result
 
-接口成功返回时，默认输出：`Left meeting <meeting-id> successfully.`。
-`--format json` 返回标准 `{ok, identity, data}` 信封，例如 `{"ok":true,"identity":"bot","data":{}}`，不是带 `code` / `msg` 的 API 原始响应体。
+When the API returns successfully, the default output is: `Left meeting <meeting-id> successfully.`.
+`--format json` returns the standard `{ok, identity, data}` envelope, for example `{"ok":true,"identity":"bot","data":{}}`, not the raw API response body with `code` / `msg`.
 
-## 如何获取输入参数
+<a id="如何获取输入参数"></a>
+## How to Obtain Input Parameters
 
-| 输入参数 | 获取方式 |
+| Input Parameter | How to Obtain |
 |---------|---------|
-| `meeting-id` | `+meeting-join --as bot` 返回的 `meeting.id`；或应用身份 `+meeting-list-active --as bot --user-id <user_open_id>` 返回的 `meeting_id` |
+| `meeting-id` | `meeting.id` returned by `+meeting-join --as bot`; or `meeting_id` returned by the app identity's `+meeting-list-active --as bot --user-id <user_open_id>` |
 
-## 常见错误与排查
+<a id="常见错误与排查"></a>
+## Common Errors and Troubleshooting
 
-| 错误现象 | 根本原因 | 解决方案 |
+| Error Symptom | Root Cause | Solution |
 |---------|---------|---------|
-| `--meeting-id is required` | 未传入 `--meeting-id` | 传入从 `+meeting-join --as bot` 得到的 `meeting.id`，或应用身份 `+meeting-list-active` 返回的 `meeting_id` |
-| `meeting not found` / `invalid meeting_id` | 误传了 9 位会议号 | 必须使用 `meeting.id`，不是会议号 |
-| `not in meeting` | 当前身份并不在该会议中 | 确认先 `+meeting-join` 成功 |
+| `--meeting-id is required` | `--meeting-id` was not passed in | Pass in the `meeting.id` obtained from `+meeting-join --as bot`, or the `meeting_id` returned by the app identity's `+meeting-list-active` |
+| `meeting not found` / `invalid meeting_id` | The 9-digit meeting number was mistakenly passed | You must use `meeting.id`, not the meeting number |
+| `not in meeting` | The current identity is not in that meeting | Confirm that `+meeting-join` succeeded first |
 
-## 提示
+<a id="提示"></a>
+## Tips
 
-- 只有用户明确要求退出 / 离开 / 结束参会时才调用；离会会让机器人从参会列表消失，对其他参会人可见。若需要重新入会直接再 `+meeting-join`，不是真正的"不可逆"。参数格式不确定时可选 `--dry-run` 预览。
-- `+meeting-leave` 优先使用 `+meeting-join --as bot` 返回的 `meeting.id`，但不是每次 join 后都必须调用 leave。
-- `meeting_id` 如果来自 `+meeting-list-active`，必须来自应用身份，并确认应用机器人就在该会议中。不要用 9 位会议号。
+- Only call it when the user explicitly requests to exit / leave / end participation; leaving will make the bot disappear from the participant list, visible to other participants. If you need to rejoin, just run `+meeting-join` again; it is not truly "irreversible". When unsure about the parameter format, you can optionally use `--dry-run` to preview.
+- For `+meeting-leave`, prefer the `meeting.id` returned by `+meeting-join --as bot`, but it is not necessary to call leave after every join.
+- If `meeting_id` comes from `+meeting-list-active`, it must come from the app identity, and confirm that the app bot is in that meeting. Do not use the 9-digit meeting number.
 
-## 相关场景
-- [应用机器人参会与会中互动](../scenes/live-meeting-attend.md)
+<a id="相关场景"></a>
+## Related Scenarios
+- [App bot joining a meeting and in-meeting interaction](../scenes/live-meeting-attend.md)

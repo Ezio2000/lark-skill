@@ -1,30 +1,33 @@
-# slides +media-upload（上传本地图片到飞书幻灯片）
+<a id="slides-media-upload上传本地图片到飞书幻灯片"></a>
+# slides +media-upload (Upload a local image to Lark Slides)
 
-把本地图片上传到指定演示文稿的 drive 媒体库，返回 `file_token`。**返回的 token 作为 `<img src="...">` 的值塞进 slide XML 即可显示图片。**
+Upload a local image to the drive media library of a specified presentation, returning `file_token`. **Put the returned token as the value of `<img src="...">` into the slide XML to display the image.**
 
-## 命令
+<a id="命令"></a>
+## Command
 
 ```bash
-# 直接传 xml_presentation_id
+# Pass xml_presentation_id directly
 lark-cli slides +media-upload --as user \
   --file ./pic.png \
   --presentation slidesXXXXXXXXXXXXXXXXXXXXXX
 
-# 传 slides URL 也行
+# Passing a slides URL also works
 lark-cli slides +media-upload --as user \
   --file ./chart.png \
   --presentation "https://xxx.feishu.cn/slides/slidesXXXXXXXXXXXXXXXXXXXXXX"
 
-# 传 wiki URL（CLI 自动通过 node_by_token 接口解析真实 token，校验 obj_type=slides）
+# Pass a wiki URL (the CLI automatically resolves the real token via the node_by_token API and validates obj_type=slides)
 lark-cli slides +media-upload --as user \
   --file ./pic.png \
   --presentation "https://xxx.feishu.cn/wiki/wikcnXXXXXX"
 
-# 预览（不实际上传）
+# Preview (no actual upload)
 lark-cli slides +media-upload --file ./pic.png --presentation $PRES_ID --dry-run
 ```
 
-## 返回值
+<a id="返回值"></a>
+## Return Value
 
 ```json
 {
@@ -35,64 +38,70 @@ lark-cli slides +media-upload --file ./pic.png --presentation $PRES_ID --dry-run
 }
 ```
 
-- **`file_token`**：把它写进 `<img src="...">`
-- **`file_name` / `size`**：上传文件元信息
-- **`presentation_id`**：解析后的真实 `xml_presentation_id`（wiki URL 解析后会变化）
+- **`file_token`**: write it into `<img src="...">`
+- **`file_name` / `size`**: uploaded file metadata
+- **`presentation_id`**: the resolved real `xml_presentation_id` (it changes after a wiki URL is resolved)
 
-## 参数
+<a id="参数"></a>
+## Parameters
 
-| 参数 | 必填 | 说明 |
+| Parameter | Required | Description |
 |------|------|------|
-| `--file` | 是 | 本地图片路径，**必须是 CWD 内的相对路径**（如 `./pic.png`）。**最大 20 MB**（媒体上传不支持分片）。**仅支持 png / jpeg / gif / bmp / tiff / webp** |
-| `--presentation` | 是 | `xml_presentation_id`、`/slides/<token>` URL，或 `/wiki/<token>` URL |
+| `--file` | Yes | Local image path, **must be a relative path within the CWD** (e.g. `./pic.png`). **Maximum 20 MB** (media upload does not support chunking). **Only png / jpeg / gif / bmp / tiff / webp are supported** |
+| `--presentation` | Yes | `xml_presentation_id`, `/slides/<token>` URL, or `/wiki/<token>` URL |
 
 > [!IMPORTANT]
-> **路径必须在 CWD 内**：`--file /abs/path/x.png` 或 `--file ../up/x.png` 会被 CLI 拒绝（报 `unsafe file path`）。如果素材在别的目录，先 `cd` 过去再执行。
+> **The path must be within the CWD**: `--file /abs/path/x.png` or `--file ../up/x.png` will be rejected by the CLI (reporting `unsafe file path`). If the asset is in another directory, `cd` there first before running.
 
-## 使用流程
+<a id="使用流程"></a>
+## Usage Flow
 
-> 新建 PPT（[`+create --slides`](lark-slides-create.md)）或给已有 PPT 加新页（[`+add-slide`](lark-slides-add-slide.md)）都不需要单独上传：XML 里把 `<img src>` 写成 `@<本地路径>`，CLI 会自动上传并替换成 `file_token`。
-> 本命令用于往**已有页**里加图，或需要自己拿着 `file_token` 拼 XML 的场景。
+> Creating a new PPT ([`+create --slides`](lark-slides-create.md)) or adding a new page to an existing PPT ([`+add-slide`](lark-slides-add-slide.md)) does not require a separate upload: write `<img src>` as `@<本地路径>` in the XML, and the CLI will automatically upload and replace it with `file_token`.
+> This command is for adding an image to an **existing page**, or for scenarios where you need to assemble XML yourself with `file_token`.
 
-### 给已有 PPT 的已有页加图
+<a id="给已有-ppt-的已有页加图"></a>
+### Add an image to an existing page of an existing PPT
 
-拿到 `file_token` 后走 [`+replace-slide`](lark-slides-replace-slide.md) 的 `block_insert`，不用搬原 XML、不改 `slide_id`、不打乱页序：
+After obtaining `file_token`, use `block_insert` of [`+replace-slide`](lark-slides-replace-slide.md); no need to move the original XML, change `slide_id`, or disturb the page order:
 
 ```bash
 PRES_ID=xxx
-SID=yyy       # 要加图的那一页
+SID=yyy       # The page to add the image to
 
-# 1) 上传图片拿 file_token
+# 1) Upload the image to get the file_token
 TOKEN=$(lark-cli slides +media-upload --as user \
   --file ./pic.png --presentation $PRES_ID --jq '.data.file_token')
 
-# 2) block_insert 到页末（或用 insert_before_block_id 指定插入位置）
+# 2) block_insert to the end of the page (or use insert_before_block_id to specify the insertion position)
 lark-cli slides +replace-slide --as user \
   --presentation "$PRES_ID" --slide-id "$SID" \
   --parts "$(jq -n --arg token "$TOKEN" \
     '[{action:"block_insert",insertion:("<img src=\""+$token+"\" topLeftX=\"500\" topLeftY=\"100\" width=\"200\" height=\"150\"/>")}]')"
 ```
 
-注意事项：
+Notes:
 
-1. **`<img>` 坐标避开现有元素** —— 先读现有元素 bbox 挑空白区；空间不够就先用 `block_replace` 挪动/缩小现有元素后再放图
-2. **`<img>` 的 `width:height` 对齐原图比例** —— 比例不一致会被裁剪，参见 [xml-schema-quick-ref.md](../xml/xml-schema-quick-ref.md) `<img>` 说明
+1. **`<img>` coordinates should avoid existing elements** — first read the bbox of existing elements to pick a blank area; if there is not enough space, first use `block_replace` to move/shrink existing elements before placing the image
+2. **`width:height` of `<img>` should match the original image's aspect ratio** — a mismatched ratio will be cropped; see the `<img>` description in [xml-schema-quick-ref.md](../xml/xml-schema-quick-ref.md)
 
-## 上传约束
+<a id="上传约束"></a>
+## Upload Constraints
 
-`+media-upload` 会处理 Slides 所需的媒体归属参数；调用者只需传入 `--file` 和 `--presentation`。单张图片最大 20 MB。
+`+media-upload` handles the media ownership parameters required by Slides; the caller only needs to pass `--file` and `--presentation`. A single image is at most 20 MB.
 
-## 常见错误
+<a id="常见错误"></a>
+## Common Errors
 
-| 错误码 | 含义 | 解决方案 |
+| Error Code | Meaning | Solution |
 |--------|------|----------|
-| 1061002 | params error / 不支持的 parent_type | 使用 `+media-upload`；它会采用 Slides 所需的 `parent_type` |
-| 1061004 | forbidden：当前身份对该演示文稿无编辑权限 | 确认当前身份（user 或 bot）对目标 PPT 有编辑权限。bot 模式常见原因：PPT 不是该 bot 创建的——可用 `+create --as bot` 新建，或以 user 身份执行 `lark-cli drive +member-add --as user --token "$PRES_ID" --type slides --member-id "$BOT_OPEN_ID" --member-type openid --perm full_access --yes` 给 bot 授权 |
-| 1061044 | parent node not exist | `--presentation` 给的 token 不对，或不是 slides 类型 |
-| 403 | 权限不足 | 检查 `docs:document.media:upload` scope；wiki URL 还需要 `wiki:node:read` |
+| 1061002 | params error / unsupported parent_type | Use `+media-upload`; it adopts the `parent_type` required by Slides |
+| 1061004 | forbidden: the current identity has no edit permission on this presentation | Confirm that the current identity (user or bot) has edit permission on the target PPT. A common cause in bot mode: the PPT was not created by that bot — you can create a new one with `+create --as bot`, or run `lark-cli drive +member-add --as user --token "$PRES_ID" --type slides --member-id "$BOT_OPEN_ID" --member-type openid --perm full_access --yes` as a user to grant the bot authorization |
+| 1061044 | parent node not exist | The token given by `--presentation` is incorrect, or it is not of slides type |
+| 403 | Insufficient permission | Check the `docs:document.media:upload` scope; a wiki URL also requires `wiki:node:read` |
 
-## 相关命令
+<a id="相关命令"></a>
+## Related Commands
 
-- [+create](lark-slides-create.md) — 新建 PPT（支持 `@` 占位符自动上传图片）
-- [+replace-slide](lark-slides-replace-slide.md) — 给已有页加图 / 换图（`block_insert` / `block_replace`）
-- [+add-slide](lark-slides-add-slide.md) — 追加/插入单页（同样支持 `@` 占位符自动上传）
+- [+create](lark-slides-create.md) — Create a new PPT (supports automatic image upload via the `@` placeholder)
+- [+replace-slide](lark-slides-replace-slide.md) — Add an image to / replace an image on an existing page (`block_insert` / `block_replace`)
+- [+add-slide](lark-slides-add-slide.md) — Append/insert a single page (also supports automatic upload via the `@` placeholder)

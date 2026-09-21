@@ -1,36 +1,41 @@
-# apps openapi-key 命令族 SOP
+<a id="apps-openapi-key-命令族-sop"></a>
+# apps openapi-key command family SOP
 
-管理妙搭应用对外暴露的 HTTP API Key（`/openapi/**` 鉴权凭证）。全部操作需 `--as user`（AuthType: user）。`--help` 是参数细节的完整来源；本文件只记录 Agent 不看就会做错的领域规则。
+Manage the HTTP API Keys exposed externally by Miaoda apps (`/openapi/**` authentication credentials). All operations require `--as user` (AuthType: user). `--help` is the complete source for parameter details; this file only records the domain rules that an Agent will get wrong if it does not read them.
 
-## 命令路由
+<a id="命令路由"></a>
+## Command routing
 
-| 命令 | 用途 |
+| Command | Purpose |
 |---|---|
-| `+openapi-key-list` | 列出应用所有 API Key（脱敏） |
-| `+openapi-key-get` | 查看单个 Key 详情（脱敏） |
-| `+openapi-key-create` | 创建新 Key，**原始密钥一次性可见** |
-| `+openapi-key-update` | 改名或改 config（不改 status） |
-| `+openapi-key-enable` | 启用 Key（status→1） |
-| `+openapi-key-disable` | 停用 Key（status→0），**泄露/疑似泄露优先用这个而非 delete** |
-| `+openapi-key-delete` | 永久删除 Key（不可逆） |
-| `+openapi-key-reset` | 轮换密钥（刷新原始 Key），**一次性可见** |
+| `+openapi-key-list` | List all API Keys of the app (masked) |
+| `+openapi-key-get` | View details of a single Key (masked) |
+| `+openapi-key-create` | Create a new Key, **the raw secret is visible only once** |
+| `+openapi-key-update` | Rename or change config (does not change status) |
+| `+openapi-key-enable` | Enable Key (status→1) |
+| `+openapi-key-disable` | Disable Key (status→0), **for leaks/suspected leaks prefer this over delete** |
+| `+openapi-key-delete` | Permanently delete Key (irreversible) |
+| `+openapi-key-reset` | Rotate the secret (refresh the raw Key), **visible only once** |
 
-## 脱敏口径（安全关键）
+<a id="脱敏口径安全关键"></a>
+## Masking rules (security-critical)
 
-- `list` / `get` / `update` / `enable` / `disable`：返回结构里 **无** `api_key` 字段，只有 `key_preview`（格式：`****` + 原始密钥末 4 位，如 `****5f4a`）。
-- `create` / `reset`：**仅** 在 `data.api_key`（顶层）返回原始密钥一次；同时在 stderr 打印一次性提示：
+- `list` / `get` / `update` / `enable` / `disable`: the returned structure has **no** `api_key` field, only `key_preview` (format: `****` + last 4 characters of the raw secret, e.g. `****5f4a`).
+- `create` / `reset`: the raw secret is returned **only** once in `data.api_key` (top level); at the same time a one-time notice is printed to stderr:
   ```
   warning: this api_key is shown only once and is NOT stored by lark-cli — copy it now and store it in your own secret manager.
   ```
-- 原始密钥绝不写入 cache / config / recent / debug log / 错误信息。
+- The raw secret is never written to cache / config / recent / debug log / error messages.
 
-## 一次性密钥语义
+<a id="一次性密钥语义"></a>
+## One-time secret semantics
 
-CLI 不保存原始密钥。密钥在 `create` / `reset` 时仅随响应返回一次。**密钥丢失不能用 `get` 找回**——唯一恢复方式是 `+openapi-key-reset` 重新生成新密钥（旧密钥同时失效）。
+The CLI does not save the raw secret. The secret is returned only once with the response at `create` / `reset`. **A lost secret cannot be recovered with `get`**—the only way to recover is `+openapi-key-reset` to regenerate a new secret (the old secret is invalidated at the same time).
 
-## scope 结构与 CLI 表达
+<a id="scope-结构与-cli-表达"></a>
+## scope structure and CLI expression
 
-后端 `config.request_scope` 的真实结构（**snake_case**——Lark 开放网关 `/open-apis/` 对外契约约定；`api_key.thrift` 的 camelCase go.tag 是内部表示，OGW 已转成 snake_case）：
+The real structure of the backend `config.request_scope` (**snake_case**—stipulated by the Lark Open Gateway `/open-apis/` external contract; the camelCase go.tag of `api_key.thrift` is an internal representation, and OGW has already converted it to snake_case):
 
 ```json
 {
@@ -41,39 +46,43 @@ CLI 不保存原始密钥。密钥在 `create` / `reset` 时仅随响应返回�
 }
 ```
 
-- `allow_all=true`：放开该应用所有 `/openapi/**` 路由；`http_infos` 此时忽略。
-- `allow_all=false`：按 `http_infos` 逐条授权，每条需 `http_method`（大写）+ `http_path`（`/openapi/` 开头）。
+- `allow_all=true`: open all `/openapi/**` routes of the app; `http_infos` is ignored in this case.
+- `allow_all=false`: authorize route by route according to `http_infos`; each entry requires `http_method` (uppercase) + `http_path` (starting with `/openapi/`).
 
-CLI 提供三种互斥的 scope 表达方式：
+The CLI provides three mutually exclusive ways to express scope:
 
-| flag | 用途 | 备注 |
+| flag | Purpose | Notes |
 |---|---|---|
-| `--scope-all` | `allow_all=true`，放开所有路由 | bool flag，显式传 `--scope-all=false` 也算"已设置" |
-| `--scope-api 'METHOD /openapi/path'` | 逐条授权一个路由，可重复 | 路由从应用 `docs/openapi.json` 取 |
-| `--scope '<raw request_scope JSON>'` | 高级逃生口，直传 request_scope JSON（snake_case） | CLI 只校验合法 JSON；`--scope` 与 `--scope-all`/`--scope-api` 互斥 |
+| `--scope-all` | `allow_all=true`, open all routes | bool flag; explicitly passing `--scope-all=false` also counts as "set" |
+| `--scope-api 'METHOD /openapi/path'` | Authorize one route at a time, repeatable | Routes are taken from the app's `docs/openapi.json` |
+| `--scope '<raw request_scope JSON>'` | Advanced escape hatch, directly passes request_scope JSON (snake_case) | The CLI only validates that it is legal JSON; `--scope` is mutually exclusive with `--scope-all`/`--scope-api` |
 
-### scope 值来源
+<a id="scope-值来源"></a>
+### Where scope values come from
 
-妙搭应用的 `/openapi/**` 路由定义在应用仓库，并同步维护在 `docs/openapi.json`（`paths` 下每个 `"/openapi/..."` 条目 + HTTP 方法）。要授权哪些路由，读目标应用自己的 `docs/openapi.json`，取 `(method, path)` 对。CLI 本身不提供 API 路由发现功能（P1 规划中）。
+The `/openapi/**` route definitions of a Miaoda app are defined in the app repository and are also kept in sync in `docs/openapi.json` (each `"/openapi/..."` entry under `paths` + HTTP method). To decide which routes to authorize, read the target app's own `docs/openapi.json` and take the `(method, path)` pairs. The CLI itself does not provide API route discovery (planned for P1).
 
-## 高风险操作
+<a id="高风险操作"></a>
+## High-risk operations
 
-`delete` 和 `reset` 是高风险（`high-risk-write`），有以下约束：
+`delete` and `reset` are high-risk (`high-risk-write`) and have the following constraints:
 
-- 需显式传 `--yes`（框架 `cmdutil.RequireConfirmation`）；缺少时退出码 10，**不要自动补 `--yes`**（遵循 lark-shared 安全红线）。
-- 支持 `--dry-run` 查看将要执行的 HTTP 请求（不含密钥）；不确定时先 dry-run。
-- **泄露场景**：应优先 `+openapi-key-disable` 立即停用，而非 `+openapi-key-delete`——停用可随时 enable 恢复，delete 不可逆。
+- `--yes` must be passed explicitly (framework `cmdutil.RequireConfirmation`); when missing, the exit code is 10, **do not automatically add `--yes`** (follow the lark-shared security red line).
+- Supports `--dry-run` to view the HTTP request that will be executed (excluding the secret); when unsure, dry-run first.
+- **Leak scenario**: prefer `+openapi-key-disable` to disable immediately, rather than `+openapi-key-delete`—disabling can be restored at any time with enable, while delete is irreversible.
 
-## 典型决策场景
+<a id="典型决策场景"></a>
+## Typical decision scenarios
 
-| 用户意图 | 正确操作 |
+| User intent | Correct operation |
 |---|---|
-| "key 泄露了，先停掉" | `+openapi-key-disable`（不是 delete） |
-| "key 丢了/忘了，再给我一个" | `+openapi-key-reset`（不是 create 新 key；reset 轮换密钥、保留原 key 配置） |
-| "我的 key 密钥是什么" | 解释：list/get 不回显原始密钥，只能用 `+openapi-key-reset` 轮换 |
-| "给应用创建一个有权限限制的 key" | `+openapi-key-create --name ... --scope-api 'GET /openapi/...'`（路由取自应用 `docs/openapi.json`） |
+| "The key leaked, disable it first" | `+openapi-key-disable` (not delete) |
+| "I lost/forgot the key, give me another one" | `+openapi-key-reset` (not create a new key; reset rotates the secret and keeps the original key config) |
+| "What is my key's secret" | Explain: list/get do not echo the raw secret; you can only rotate with `+openapi-key-reset` |
+| "Create a key with permission restrictions for the app" | `+openapi-key-create --name ... --scope-api 'GET /openapi/...'` (routes are taken from the app's `docs/openapi.json`) |
 
-## 不在本模块 范围
+<a id="不在本模块-范围"></a>
+## Out of scope for this module
 
-- OpenAPI spec 全量导出、实时日志 tail、Webhook 消费、多鉴权方式：本期不支持。
-- 身份选择、权限不足处理（`missing_scopes`→`console_url`）、exit-10 审批、高风险操作通用框架：见 [`../../shared/index.md`](../../shared/index.md)，不在此重复。
+- Full OpenAPI spec export, real-time log tail, Webhook consumption, multiple authentication methods: not supported in this release.
+- Identity selection, handling insufficient permissions (`missing_scopes`→`console_url`), exit-10 approval, general framework for high-risk operations: see [`../../shared/index.md`](../../shared/index.md), not repeated here.

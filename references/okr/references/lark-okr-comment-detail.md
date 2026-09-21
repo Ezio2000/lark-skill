@@ -1,39 +1,43 @@
 # okr +comment-detail
 
-获取指定 OKR 周期下 Cycle、Objective、KeyResult 和 Progress 的全部评论，并按评论对象和评论串整理后按时间升序排列。该 shortcut 是跨多个 OKR 接口的聚合查询。
+Get all comments for Cycle, Objective, KeyResult, and Progress under a specified OKR cycle, organized by comment target and comment thread, then sorted in ascending time order. This shortcut is an aggregate query across multiple OKR APIs.
 
-## 推荐命令
+<a id="推荐命令"></a>
+## Recommended Commands
 
 ```bash
-# 获取指定周期下所有 Cycle、Objective、KeyResult 和 Progress 的评论。
+# Get all comments for Cycle, Objective, KeyResult, and Progress under the specified cycle.
 lark-cli okr +comment-detail --cycle-id 1234567890123456789
 
-# 获取原始 ContentBlock 格式的评论正文。
+# Get the comment body in raw ContentBlock format.
 lark-cli okr +comment-detail --cycle-id 1234567890123456789 --style richtext
 
-# 预览聚合查询的 API 调用，不实际执行。
+# Preview the API calls of the aggregate query without actually executing them.
 lark-cli okr +comment-detail --cycle-id 1234567890123456789 --dry-run
 ```
 
-## 参数
+<a id="参数"></a>
+## Parameters
 
-| 参数       | 必填 | 默认值 | 说明                                                                                       |
-|------------|------|--------|--------------------------------------------------------------------------------------------|
-| --cycle-id | 是   | —      | OKR 周期 ID，int64 正整数，可从 +cycle-list 获取。                                         |
-| --style    | 否   | simple | simple 返回半纯文本格式，不涉及字体/颜色等信息时推荐使用；richtext 返回原始 ContentBlock。 |
-| --dry-run  | 否   | —      | 预览聚合查询而不实际执行。                                                                 |
-| --format   | 否   | json   | 输出格式。                                                                                 |
+| Parameter  | Required | Default | Description                                                                                |
+|------------|----------|---------|--------------------------------------------------------------------------------------------|
+| --cycle-id | Yes      | —       | OKR cycle ID, int64 positive integer, can be obtained from +cycle-list.                    |
+| --style    | No       | simple  | simple returns semi-plain text format, recommended when font/color information is not involved; richtext returns raw ContentBlock. |
+| --dry-run  | No       | —       | Preview the aggregate query without actually executing it.                                 |
+| --format   | No       | json    | Output format.                                                                             |
 
-## 工作流程
+<a id="工作流程"></a>
+## Workflow
 
-1. 使用 +cycle-list 获取周期 ID；如果用户已经提供周期 ID，直接使用。
-2. 执行 +comment-detail --cycle-id "..."。shortcut 会依次获取周期下的 Objective、每个 Objective 下的 KeyResult、每个 Objective/KeyResult 下的 Progress，以及四类对象的评论。
-3. 评论接口自动处理分页；对象读取和评论读取使用有界并发。任一底层请求失败时整体返回错误，不返回静默不完整结果。
-4. 评论串按首条评论的 create_time 升序排列，串内评论也按 create_time 升序排列。
+1. Use +cycle-list to get the cycle ID; if the user has already provided a cycle ID, use it directly.
+2. Execute +comment-detail --cycle-id "...". The shortcut will sequentially get the Objectives under the cycle, the KeyResults under each Objective, the Progress under each Objective/KeyResult, and the comments for the four types of objects.
+3. The comment API automatically handles pagination; object reads and comment reads use bounded concurrency. If any underlying request fails, an error is returned as a whole, and no silently incomplete result is returned.
+4. Comment threads are sorted in ascending order by the create_time of the first comment, and comments within a thread are also sorted in ascending order by create_time.
 
-## 输出
+<a id="输出"></a>
+## Output
 
-返回 JSON 的核心结构如下：
+The core structure of the returned JSON is as follows:
 
 ```json
 {
@@ -58,22 +62,24 @@ lark-cli okr +comment-detail --cycle-id 1234567890123456789 --dry-run
 }
 ```
 
-- comments 第一层 key 是 target_id；value 是评论串数组；每个评论串是评论数组。
-- simple 风格下 content 是 SemiPlainContent；richtext 风格下 content 是 ContentBlock。
-- 评论时间戳会转换为可读日期时间；selection、状态和引用字段会保留。
-- `comments` 会为周期遍历到的每个 target 保留一个 target_id key；即使该对象没有评论，对应 value 也会是空的评论串数组。
+- The first-level key of comments is target_id; the value is an array of comment threads; each comment thread is an array of comments.
+- In simple style, content is SemiPlainContent; in richtext style, content is ContentBlock.
+- Comment timestamps are converted to readable date-time; selection, status, and reference fields are preserved.
+- `comments` will preserve a target_id key for each target traversed in the cycle; even if the object has no comments, the corresponding value will be an empty comment thread array.
 
-## 注意事项
+<a id="注意事项"></a>
+## Notes
 
-- 这是聚合查询，接口调用次数取决于周期下的 Objective、KeyResult 和 Progress 数量。
-- +comment-detail 不接受 department-id-type，该接口参数由 shortcut 忽略。
-- 该命令只读取评论，不会修改、解决或删除评论。
+- This is an aggregate query, and the number of API calls depends on the number of Objectives, KeyResults, and Progress under the cycle.
+- +comment-detail does not accept department-id-type; this API parameter is ignored by the shortcut.
+- This command only reads comments and will not modify, resolve, or delete comments.
 
-## 参考
+<a id="参考"></a>
+## References
 
-- [lark-okr](../index.md) — OKR 命令、路由和通用约定
-- [OKR 实体定义](lark-okr-entities.md) — Cycle、Objective、KeyResult、Progress 和 Comment 的关系
-- [ContentBlock 格式](lark-okr-contentblock.md) — ContentBlock 与 SemiPlainContent 格式
-- [okr +cycle-detail](lark-okr-cycle-detail.md) — 获取周期下的 Objective 和 KeyResult
-- [okr +progress-list](lark-okr-progress-list.md) — 获取 Objective 或 KeyResult 下的 Progress
-- [lark-shared](../../shared/index.md) — 认证、身份、权限和安全规则
+- [lark-okr](../index.md) — OKR commands, routing, and general conventions
+- [OKR entity definitions](lark-okr-entities.md) — relationships among Cycle, Objective, KeyResult, Progress, and Comment
+- [ContentBlock format](lark-okr-contentblock.md) — ContentBlock and SemiPlainContent formats
+- [okr +cycle-detail](lark-okr-cycle-detail.md) — get Objectives and KeyResults under a cycle
+- [okr +progress-list](lark-okr-progress-list.md) — get Progress under an Objective or KeyResult
+- [lark-shared](../../shared/index.md) — authentication, identity, permissions, and security rules

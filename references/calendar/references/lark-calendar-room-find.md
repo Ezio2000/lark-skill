@@ -1,14 +1,16 @@
 # calendar +room-find
 
 
-针对一个或多个时间块查找/搜索可用会议室。会议室是日程的一种资源型参与人，不能脱离日程单独预定。
+Find/search available meeting rooms for one or more time blocks. A meeting room is a resource-type attendee of a calendar event and cannot be booked separately from a calendar event.
 
-## 适用场景
+<a id="适用场景"></a>
+## Applicable Scenarios
 
-- 已知一个或多个待选时间块，需要查找可用会议室
-- 需要在一组连续编号的会议室中批量搜索可用房间（如"帮我约一个 16~20 号之间的会议室"）
+- One or more candidate time blocks are known, and available meeting rooms need to be found
+- Available rooms need to be searched in bulk across a set of consecutively numbered meeting rooms (e.g., "help me book a meeting room between No. 16 and No. 20")
 
-## 命令
+<a id="命令"></a>
+## Command
 
 ```bash
 lark-cli calendar +room-find \
@@ -21,90 +23,95 @@ lark-cli calendar +room-find \
   --event-rrule "FREQ=DAILY;INTERVAL=1"
 ```
 
-### 批量会议室名称查询
+<a id="批量会议室名称查询"></a>
+### Batch Meeting Room Name Query
 
-当用户想在一组编号会议室中挑选可用房间时，可用英文逗号拼接多个会议室名称传入 `--room-name`：
+When the user wants to pick an available room from a set of numbered meeting rooms, multiple meeting room names can be joined with English commas and passed to `--room-name`:
 
 ```bash
-# 场景：帮我约一个 16~20 号之间的会议室
+# Scenario: help me book a meeting room between No. 16 and No. 20
 lark-cli calendar +room-find \
   --slot "2026-03-27T14:00:00+08:00~2026-03-27T15:00:00+08:00" \
   --room-name "16,17,18,19,20"
 ```
 
 ```bash
-# 场景：查找 木星 或 火星 会议室
+# Scenario: find the Jupiter or Mars meeting room
 lark-cli calendar +room-find \
   --slot "2026-03-27T14:00:00+08:00~2026-03-27T15:00:00+08:00" \
   --room-name "木星,火星"
 ```
 
-## 参数
+<a id="参数"></a>
+## Parameters
 
-| 参数 | 必填 | 说明 |
+| Parameter | Required | Description |
 |------|------|------|
-| `--slot <start~end>` | 是 | 期望查询的时间块，格式需遵循 `开始时间~结束时间`。若存在多个候选时间块，可重复传入此参数。 |
-| `--city <text>` | 否 | 会议室所在城市强约束。**仅当**用户明确说出具体城市（如北京、上海）时才提取，**严禁**根据园区或楼宇名称自行联想或补全。 |
-| `--building <text>` | 否 | 会议室所在楼宇强约束，承载城市以下、楼层以上的办公区/园区/楼栋描述。|
-| `--floor <text>` | 否 | 仅用于筛选会议室所在楼层。应先做归一化，再传递规范值；例如 `2楼` / `二楼` / `2F` 统一为 `F2`。注意：此参数只筛选楼层，不可混入区域定位（如“A区”）或具体会议室号。 |
-| `--room-name <text>` | 否 | 会议室名称约束，支持以**英文逗号**分隔传入多个名称。仅当用户明确提到会议室专名、会议室号或编号区间时使用。 |
-| `--min-capacity <n>` | 否 | 会议室最小容纳人数。当用户明确参会人数或提出“至少容纳N人”等要求时，提取数字放入此参数，必须为正整数。 |
-| `--max-capacity <n>` | 否 | 会议室最大容纳人数。用于过滤过大空间，必须为正整数。 |
-| `--attendee-ids <id_list>` | 否 | 参会对象 ID 列表。支持用户 ID（`ou_` 前缀）和群组 ID（`oc_` 前缀），多个 ID 以逗号分隔。**不要传入 bot 的 open_id**：bot 是虚拟身份，不占会议室席位、无会议室偏好，传入只会干扰推荐结果。 |
-| `--event-rrule <rrule>` | 否 | 重复日程的重复性规则，规则设置方式参考rfc5545。**【⚠️注意：系统绝对不支持 COUNT，如需限制重复次数，必须转为 UNTIL】**。示例值："FREQ=DAILY;INTERVAL=1" |
-| `--timezone <tz>` | 否 | 对话中明确提及的预约日程所使用的时区（默认取用户设备时区，例如 `Asia/Shanghai`） |
+| `--slot <start~end>` | Yes | The desired time block to query, in the format defined by `开始时间~结束时间`. If there are multiple candidate time blocks, this parameter can be passed repeatedly. |
+| `--city <text>` | No | Hard constraint on the city where the meeting room is located. Extract **only when** the user explicitly states a specific city (e.g., Beijing, Shanghai); **never** infer or fill it in based on a campus or building name. |
+| `--building <text>` | No | Hard constraint on the building where the meeting room is located; carries the office area/campus/building description below the city and above the floor.|
+| `--floor <text>` | No | Used only to filter the floor where the meeting room is located. Normalize first, then pass the canonical value; for example, `2楼` / `二楼` / `2F` are unified as `F2`. Note: this parameter only filters floors and must not be mixed with area positioning (e.g., "Zone A") or a specific meeting room number. |
+| `--room-name <text>` | No | Constraint on meeting room names; supports passing multiple names separated by **English commas**. Use only when the user explicitly mentions a meeting room proper name, meeting room number, or number range. |
+| `--min-capacity <n>` | No | Minimum meeting room capacity. When the user explicitly states the number of attendees or makes a request such as "seat at least N people", extract the number into this parameter; it must be a positive integer. |
+| `--max-capacity <n>` | No | Maximum meeting room capacity. Used to filter out spaces that are too large; must be a positive integer. |
+| `--attendee-ids <id_list>` | No | List of attendee IDs. Supports user IDs (`ou_` prefix) and group IDs (`oc_` prefix), with multiple IDs separated by commas. **Do not pass the bot's open_id**: the bot is a virtual identity, does not occupy a meeting room seat, and has no meeting room preferences; passing it in only interferes with recommendation results. |
+| `--event-rrule <rrule>` | No | Recurrence rule for a recurring calendar event; for how to set the rule, refer to rfc5545. **【⚠️Note: COUNT is absolutely not supported by the system; if the number of recurrences needs to be limited, it must be converted to UNTIL】**. Example value: "FREQ=DAILY;INTERVAL=1" |
+| `--timezone <tz>` | No | The time zone used by the calendar event being booked as explicitly mentioned in the conversation (defaults to the user's device time zone, e.g., `Asia/Shanghai`) |
 
-## 规则
+<a id="规则"></a>
+## Rules
 
-- 构造 `--attendee-ids` 前，先剔除 bot 参会人：bot 不占席位、无偏好，不应参与会议室推荐。
-- 多个 `--slot` 会由 CLI 内部并发调用单时间块接口，再聚合成一次输出
-- `+room-find` 的时间输入必须是**确定时间块**，不是时间区间搜索。
-- 如果是重复性日程，必须校验返回中的 `reserve_until_time`（该会议室最晚可预约时间）是否覆盖 `event-rrule` 对应的重复范围。
-- `--city` 仅在用户明确说出城市时才提取；不要仅凭 `望京办公室`、`漕河泾园区`、`南山办公室` 这类位置名自动补城市。
-- 若已经提取了 `--city`，则 `--building` 中不要再重复携带城市前缀。例如用户说 `北京学清嘉创大厦B座` 时，应提取为 `--city "北京"` 与 `--building "学清嘉创大厦B座"`，不要把 `北京学清嘉创大厦B座` 原样整体传入 `--building`。
-- 同一语义槽位只保留一个规范值。例如用户说“2楼”，应转换为 `--floor "F2"`；**禁止**同时传 `2楼 F2` 这类重复楼层信息。
-- 参数归类顺序应为：`city/building/floor` > `floor + room-name` 复合表达 > `room-name`。若短词更像楼层/区域定位（如 `2L`、`2F`），优先落到 `--floor`，不要默认落到 `--room-name`。像 `学清2层` 这种表达，通常拆为 `--building "学清"` 与 `--floor "F2"`。
-- 对会议室名要做轻量归一化：`木星会议室` 应提取为 `--room-name "木星"`；`会议室 02` / `02会议室` 应提取为 `--room-name "02"`。
-- 当用户表达"帮我约 XX 到 YY 号之间的会议室"或一次提及多个会议室名称时，应将所有目标名称用英文逗号拼接传入 `--room-name`。例如：
-  - "帮我约 16~20 号的会议室" → `--room-name "16,17,18,19,20"`
-  - "查下木星和火星是否有空" → `--room-name "木星,火星"`
-  - "看看 01、02、03 会议室" → `--room-name "01,02,03"`
-- 对复合会议室号要优先拆分结构化信息：`F3-05` / `F5-07` / `3楼-08` 这类表达，若可稳定识别楼层与会议室号，应优先提取为 `--floor "F3"` + `--room-name "05"`、`--floor "F5"` + `--room-name "07"`、`--floor "F3"` + `--room-name "08"`，不要把整段直接作为 `--room-name`。
-- 当提供了会议室搜索筛选条件时，返回结果也**不保证**与搜索词完全字面匹配。底层可能会结合邻近楼层做推荐，例如用户搜索 `2层`，即使 `2层` 没有空闲会议室，也可能返回相近的 `3层` 候选。这不应被误判为接口返回异常。
+- Before constructing `--attendee-ids`, first remove the bot attendee: the bot does not occupy a seat and has no preferences, so it should not participate in meeting room recommendations.
+- Multiple `--slot` are called concurrently by the CLI internally against the single-time-block API, then aggregated into one output
+- The time input for `+room-find` must be a **definite time block**, not a time range search.
+- If it is a recurring calendar event, you must verify whether the `reserve_until_time` in the response (the latest bookable time for that meeting room) covers the recurrence range corresponding to `event-rrule`.
+- `--city` is extracted only when the user explicitly states a city; do not automatically fill in a city based only on location names such as `望京办公室`, `漕河泾园区`, or `南山办公室`.
+- If `--city` has already been extracted, do not carry the city prefix again in `--building`. For example, when the user says `北京学清嘉创大厦B座`, it should be extracted as `--city "北京"` and `--building "学清嘉创大厦B座"`; do not pass `北京学清嘉创大厦B座` as-is in its entirety into `--building`.
+- Keep only one canonical value per semantic slot. For example, when the user says "2nd floor", it should be converted to `--floor "F2"`; it is **forbidden** to also pass duplicate floor information such as `2楼 F2`.
+- The parameter classification order should be: `city/building/floor` > `floor + room-name` compound expression > `room-name`. If a short term looks more like a floor/area locator (e.g., `2L`, `2F`), prefer assigning it to `--floor` rather than defaulting to `--room-name`. Expressions like `学清2层` are usually split into `--building "学清"` and `--floor "F2"`.
+- Perform lightweight normalization on meeting room names: `木星会议室` should be extracted as `--room-name "木星"`; `会议室 02` / `02会议室` should be extracted as `--room-name "02"`.
+- When the user says "help me book a meeting room between No. XX and No. YY" or mentions multiple meeting room names at once, all target names should be joined with English commas and passed to `--room-name`. For example:
+  - "help me book a meeting room from No. 16 to No. 20" → `--room-name "16,17,18,19,20"`
+  - "check whether Jupiter and Mars are free" → `--room-name "木星,火星"`
+  - "take a look at meeting rooms 01, 02, 03" → `--room-name "01,02,03"`
+- For compound meeting room numbers, prioritize splitting out structured information: for expressions such as `F3-05` / `F5-07` / `3楼-08`, if the floor and meeting room number can be reliably identified, prefer extracting them as `--floor "F3"` + `--room-name "05"`, `--floor "F5"` + `--room-name "07"`, `--floor "F3"` + `--room-name "08"`, rather than passing the whole string directly as `--room-name`.
+- When meeting room search filter conditions are provided, the returned results are also **not guaranteed** to match the search terms exactly and literally. The underlying system may make recommendations based on nearby floors; for example, if the user searches for `2层`, even if `2层` has no available meeting rooms, nearby `3层` candidates may still be returned. This should not be misjudged as an API return anomaly.
 
-## 输出格式
+<a id="输出格式"></a>
+## Output Format
 
-**将返回的候选会议室整理为易读的结构化排版向用户展示。严禁将时间和会议室名称放在同一行展示，必须分行并使用编号列表呈现可用会议室，严禁揉成一团纯文本堆叠。**
+**Organize the returned candidate meeting rooms into an easy-to-read structured layout for display to the user. It is strictly forbidden to display the time and meeting room names on the same line; available meeting rooms must be presented on separate lines using a numbered list, and it is strictly forbidden to mash them into a single blob of plain text.**
 
 ```text
-## 2026-03-27 周五
+## 2026-03-27 Friday
 
-[选项 1] 14:00 - 15:00
-  可用会议室：
-  1. 学清嘉创大厦B座-F2-02🎦(7人)
-  2. 学清嘉创大厦B座-F3-05🎦(11人)
+[Option 1] 14:00 - 15:00
+  Available meeting rooms:
+  1. Xueqing Jiachuang Building B-F2-02🎦(7 people)
+  2. Xueqing Jiachuang Building B-F3-05🎦(11 people)
 
-💡 请回复您倾向的选项编号以及对应的会议室序号，我来为您完成预定。
+💡 Please reply with the option number you prefer and the corresponding meeting room number, and I will complete the booking for you.
 ```
 
-> **AI 行为指导：**
-> - **结构化展示时间块与会议室**：默认按“时间块 -> 会议室候选”的层级结构展示，并直接询问用户意向。
-> - **`room_name` 必须逐字透传**：展示给用户的会议室名称，必须直接使用 CLI/API 返回的 `room_name` 原值。禁止提取楼层、会议室号、容量、视频能力后重组成新的名称，禁止意译、缩写、去前缀、去后缀，或仅保留"便于阅读"的摘要名。
-> - **重复日程要明确阻断原因与自动缩短**：若某候选会议室的 `reserve_until_time` 无法覆盖重复性日程，**必须**向用户明确说明该会议室最长可约至何时。若用户确认继续选用该会议室，你必须**自动将日程的重复规则结束时间缩短**至该 `reserve_until_time`，以防止会议室预约失败。不能直接按原规则继续。
-> - **正确解释推荐结果**：如果返回结果与用户输入条件不完全字面一致，先说明底层可能返回邻近位置或相近条件的推荐候选，不要直接将其判定为异常。
-> - **默认减少用户输入成本**：应主动引导用户不必一开始就提供很详细的会议室搜索条件。只要时间块已明确，用户直接表达“想约会议室”即可，先基于当前信息查询候选；只有在用户对结果不满意时，再引导其补充更具体的楼宇、楼层、会议室名或容量条件。
+> **AI Behavior Guidance:**
+> - **Display time blocks and meeting rooms in a structured way**: By default, display them in a hierarchical structure of "time block -> meeting room candidates", and directly ask the user for their preference.
+> - **`room_name` must be passed through verbatim**: The meeting room names shown to the user must directly use the original `room_name` value returned by the CLI/API. It is forbidden to extract the floor, meeting room number, capacity, or video capability and reassemble them into a new name, and forbidden to paraphrase, abbreviate, remove prefixes, remove suffixes, or keep only a "readable" summary name.
+> - **For recurring calendar events, clearly state the blocking reason and automatically shorten**: If a candidate meeting room's `reserve_until_time` cannot cover the recurring calendar event, you **must** clearly explain to the user the latest time until which that meeting room can be booked. If the user confirms that they want to continue using that meeting room, you must **automatically shorten the recurrence rule end time** of the calendar event to that `reserve_until_time` to prevent the meeting room booking from failing. You cannot continue directly with the original rule.
+> - **Correctly interpret recommendation results**: If the returned results do not exactly and literally match the user's input conditions, first explain that the underlying system may return recommended candidates from nearby locations or with similar conditions; do not directly judge it as an anomaly.
+> - **Reduce the user's input cost by default**: Proactively guide the user that they do not need to provide very detailed meeting room search conditions from the start. As long as the time block is clear, the user can simply say they "want to book a meeting room", and you should first query candidates based on the current information; only when the user is dissatisfied with the results should you guide them to add more specific building, floor, meeting room name, or capacity conditions.
 
-**字段说明：**
+**Field Descriptions:**
 
-| 字段名 | 说明 |
+| Field Name | Description |
 | :--- | :--- |
-| `room_id` | 会议室唯一标识，用于后续创建日程时添加为会议室参与人使用。 |
-| `room_name` | 会议室名称，展示给用户时必须使用原值。 |
-| `capacity` | 会议室最大容纳人数。 |
-| `reserve_until_time` | 该会议室当前允许被预约到的最晚时间点，用于校验重复性日程是否超期。 |
+| `room_id` | Unique identifier of the meeting room, used to add it as a meeting room attendee when creating a calendar event later. |
+| `room_name` | Meeting room name; the original value must be used when displaying it to the user. |
+| `capacity` | Maximum capacity of the meeting room. |
+| `reserve_until_time` | The latest time point until which the meeting room can currently be booked, used to verify whether a recurring calendar event exceeds the limit. |
 
-## 参考
+<a id="参考"></a>
+## References
 
 - [lark-calendar-create](lark-calendar-create.md)
 - [lark-calendar-suggestion](lark-calendar-suggestion.md)
-- [lark-calendar](../index.md) — skill 入口与路由
+- [lark-calendar](../index.md) — skill entry point and routing

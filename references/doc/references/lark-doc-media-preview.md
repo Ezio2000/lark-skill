@@ -1,40 +1,46 @@
 
-# docs +media-preview（预览文档素材）
+<a id="docs-media-preview预览文档素材"></a>
+# docs +media-preview (Preview document media)
 
 
-优先用于查看、预览文档中的图片或文件素材（`file_token`）。命令会把素材保存到本地路径，便于后续打开查看内容。
+Use this preferentially to view or preview image or file media in a document (`file_token`). The command saves the media to a local path so you can open and view the content afterward.
 
-## 选择规则
+<a id="选择规则"></a>
+## Selection rules
 
-- 用户说“看一下素材 / 图片 / 附件”“预览一下”时，优先使用 `docs +media-preview`
-- 用户明确说“下载”时，使用 [`docs +media-download`](lark-doc-media-download.md)
-- 如果目标明确是画板 / whiteboard / 画板缩略图，不要使用 `+media-preview`，改用 `docs +media-download --type whiteboard`
+- When the user says "take a look at the media / image / attachment" or "preview it", use `docs +media-preview` preferentially
+- When the user explicitly says "download", use [`docs +media-download`](lark-doc-media-download.md)
+- If the target is explicitly a board / whiteboard / whiteboard thumbnail, do not use `+media-preview`; use `docs +media-download --type whiteboard` instead
 
-## 命令
+<a id="命令"></a>
+## Command
 
 ```bash
-# 预览图片/文件素材
+# Preview image/file media
 lark-cli docs +media-preview --token "Z1Fjxxxxxxxx" --output ./asset
 
-# 指定输出文件名（带扩展名则不会自动补全）
+# Specify the output file name (if it includes an extension, it will not be auto-completed)
 lark-cli docs +media-preview --token "Z1Fjxxxxxxxx" --output ./asset.png
 ```
 
-## 参数
+<a id="参数"></a>
+## Parameters
 
-| 参数 | 必填 | 说明 |
+| Parameter | Required | Description |
 |------|------|------|
-| `--token <token>` | 是 | 素材 token，即 `file_token` |
-| `--output <path>` | 是 | 本地保存路径；不带扩展名会自动补全 |
+| `--token <token>` | Yes | Media token, i.e. `file_token` |
+| `--output <path>` | Yes | Local save path; if it has no extension, it will be auto-completed |
 
-## token 从哪里来
+<a id="token-从哪里来"></a>
+## Where does the token come from
 
-- 若你是从文档内容里提取：`lark-doc-fetch` 返回的内容里可能包含：
-  - 图片：`<img token="..." .../>`
-  - 文件：`<source token="..." name="..."/>`
+- If you are extracting it from document content: the content returned by `lark-doc-fetch` may include:
+  - Image: `<img token="..." .../>`
+  - File: `<source token="..." name="..."/>`
 
-## 参考
+<a id="参考"></a>
+## References
 
-- [lark-doc-fetch](lark-doc-fetch.md) — 获取文档内容（用于提取 token）
-- [lark-doc-media-download](lark-doc-media-download.md) — 明确下载素材，或下载画板缩略图
-- [lark-shared](../../shared/index.md) — 认证和全局参数
+- [lark-doc-fetch](lark-doc-fetch.md) — Fetch document content (used to extract tokens)
+- [lark-doc-media-download](lark-doc-media-download.md) — Explicitly download media, or download a whiteboard thumbnail
+- [lark-shared](../../shared/index.md) — Authentication and global parameters

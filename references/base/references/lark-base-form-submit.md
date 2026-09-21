@@ -1,46 +1,48 @@
 # base +form-submit
 
 
-通过表单分享链接填写并提交多维表格表单。仅支持分享模式（share_token），支持填写普通字段值和上传本地文件作为附件。
+Fill in and submit a Base form via a form share link. Only share mode (share_token) is supported; supports filling in regular field values and uploading local files as attachments.
 
-> **⚠️ 高风险写操作（high-risk-write）：** 本命令会向表单写入并提交数据，属于高风险写操作，必须额外传递 `--yes` 进行确认，否则会返回 `confirmation_required` 错误并退出。当用户明确要求提交且目标表单无歧义时，直接附加 `--yes`，无需再次询问。
+> **⚠️ High-risk write operation (high-risk-write):** This command writes and submits data to a form, which is a high-risk write operation. You must additionally pass `--yes` to confirm, otherwise it returns a `confirmation_required` error and exits. When the user explicitly requests submission and the target form is unambiguous, attach `--yes` directly without asking again.
 
-## 填写前必读：先获取表单详情
+<a id="填写前必读先获取表单详情"></a>
+## Must-read before filling in: first get the form details
 
-**在调用 `+form-submit` 之前，必须先使用 `+form-detail` 获取表单详情。** 原因如下：
+**Before calling `+form-submit`, you must first use `+form-detail` to get the form details.** Reasons:
 
-1. **字段类型匹配**：每个题目的 `type` 决定了值的格式（文本、数字、选项、人员、日期等），需根据类型正确构造 `fields` 中的值
-2. **必填校验**：通过 `questions[].required` 判断哪些题目为必填项，避免遗漏
-3. **显示条件过滤**：部分题目带有 `filter`（显示/隐藏逻辑），需根据用户已填的其他题目值判断该题目是否应该出现——**不应填写被 filter 隐藏的题目**
-4. **获取 base_token（附件场景必用）**：`+form-detail` 返回的 `data.base_token` 是该表单所属的多维表格标识。当表单包含附件字段时，提交时必须通过 `--base-token` 传入此值，因为附件需要上传到该 Base 的 Drive Media 中
+1. **Field type matching**: Each question's `type` determines the value format (text, number, option, person, date, etc.); the value in `fields` must be constructed correctly according to the type
+2. **Required validation**: Use `questions[].required` to determine which questions are required, to avoid omissions
+3. **Display condition filtering**: Some questions have `filter` (show/hide logic); you must determine whether the question should appear based on the values the user has filled in for other questions — **questions hidden by a filter should not be filled in**
+4. **Get base_token (required for attachment scenarios)**: The `data.base_token` returned by `+form-detail` is the identifier of the Base that the form belongs to. When the form contains attachment fields, this value must be passed via `--base-token` at submission time, because attachments need to be uploaded to that Base's Drive Media
 
-典型流程：
+Typical flow:
 
 ```bash
-# 1️⃣ 先获取表单详情，了解所有题目
+# 1️⃣ First get the form details to understand all questions
 lark-cli base +form-detail --share-token <share_token>
 
-# 2️⃣ 根据返回的 questions 列表，按 type 格式化值、检查 required、判断 filter 条件
+# 2️⃣ Based on the returned questions list, format values by type, check required, and evaluate filter conditions
 
-# 3️⃣ 再提交（高风险写操作，必须带 --yes）
+# 3️⃣ Then submit (high-risk write operation, must include --yes)
 lark-cli base +form-submit \
   --share-token <share_token> \
   --json '{"fields":{...}}' \
   --yes
 ```
 
-`+form-detail` 的返回中要重点读取 `questions[].type`、`questions[].required`、题目 `filter` 和附件场景所需的 `data.base_token`。
+In the return of `+form-detail`, focus on reading `questions[].type`, `questions[].required`, the question `filter`, and the `data.base_token` required for attachment scenarios.
 
-## 命令
+<a id="命令"></a>
+## Command
 
 ```bash
-# 基本提交（填写普通字段）
+# Basic submission (fill in regular fields)
 lark-cli base +form-submit \
   --share-token <share_token> \
   --json '{"fields":{"服务评分":5,"评价内容":"服务态度好"}}' \
   --yes
 
-# 带附件提交（需要额外提供 --base-token）
+# Submission with attachments (requires additionally providing --base-token)
 lark-cli base +form-submit \
   --share-token <share_token> \
   --base-token <base_token> \
@@ -53,39 +55,42 @@ lark-cli base +form-submit \
   }' \
   --yes
 
-# 使用应用身份（bot）
+# Use app identity (bot)
 lark-cli base +form-submit \
   --share-token <share_token> \
   --json '{"fields":{...}}' \
   --as bot \
   --yes
 
-# 预览 API 调用（不实际执行，dry-run 无需 --yes）
+# Preview the API call (does not actually execute; dry-run does not require --yes)
 lark-cli base +form-submit \
   --share-token <share_token> \
   --json '{"fields":{...}}' \
   --dry-run
 ```
 
-## 参数
+<a id="参数"></a>
+## Parameters
 
-| 参数 | 必填 | 说明 |
+| Parameter | Required | Description |
 |------|------|------|
-| `--share-token <token>` | 是 | 表单分享 Token（必填），从表单分享链接中提取 |
-| `--base-token <token>` | 条件必填 | Base token；**当 `--json` 包含 `attachments` 时必须提供**，用于将附件上传到 Base Drive Media |
-| `--json <json>` | 是 | JSON 对象，包含 `"fields"`（普通字段值）和 `"attachments"`（附件上传），详见下方说明 |
-| `--yes` | 是 | 确认高风险写操作。本命令为 high-risk-write，不带 `--yes` 会返回 `confirmation_required` |
-| `--format` | 否 | 输出格式：json（默认）\| pretty \| table \| ndjson \| csv |
-| `--as` | 否 | 身份：user（默认）\| bot |
-| `--dry-run` | 否 | 预览 API 调用，不执行 |
+| `--share-token <token>` | Yes | Form share Token (required), extracted from the form share link |
+| `--base-token <token>` | Conditionally required | Base token; **must be provided when `--json` contains `attachments`**, used to upload attachments to Base Drive Media |
+| `--json <json>` | Yes | JSON object containing `"fields"` (regular field values) and `"attachments"` (attachment uploads); see the description below for details |
+| `--yes` | Yes | Confirm the high-risk write operation. This command is high-risk-write; without `--yes` it returns `confirmation_required` |
+| `--format` | No | Output format: json (default)\| pretty \| table \| ndjson \| csv |
+| `--as` | No | Identity: user (default)\| bot |
+| `--dry-run` | No | Preview the API call without executing |
 
-### --json 结构说明
+<a id="--json-结构说明"></a>
+### --json structure description
 
-`--json` 是一个 JSON 对象，包含两个部分：
+`--json` is a JSON object containing two parts:
 
-#### fields（普通字段）
+<a id="fields普通字段"></a>
+#### fields (regular fields)
 
-`fields` 中的常见单元格值按下方示例构造（与主 skill 一致）：
+Common cell values in `fields` are constructed as in the examples below (consistent with the main skill):
 
 ```json
 {
@@ -103,13 +108,14 @@ lark-cli base +form-submit \
 }
 ```
 
-> **注意：附件类型字段不要写在 `fields` 里。** `fields` 中不包含附件，附件有独立的填写方式，见下方「attachments（附件上传）」章节。
+> **Note: Do not put attachment-type fields in `fields`.** `fields` does not include attachments; attachments have a separate way of being filled in, see the "attachments (attachment upload)" section below.
 
-> 自动编号、公式、创建/修改人、创建/修改时间等系统字段会自动填入，无需手动传入。
+> System fields such as auto-number, formula, created/modified by, and created/modified time are filled in automatically and do not need to be passed manually.
 
-#### attachments（附件上传）
+<a id="attachments附件上传"></a>
+#### attachments (attachment upload)
 
-**附件字段的填写方式与 `fields` 中的普通单元格完全不同**，不能在 `fields` 里传 `file_token` 或其他附件格式。必须将附件字段单独放在 `--json` 的顶层 `attachments` 对象中，值为**本地文件路径数组**（不是 token）：
+**The way attachment fields are filled in is completely different from regular cells in `fields`**; you cannot pass `file_token` or other attachment formats in `fields`. Attachment fields must be placed separately in the top-level `attachments` object of `--json`, with the value being an **array of local file paths** (not tokens):
 
 ```json
 {
@@ -120,24 +126,25 @@ lark-cli base +form-submit \
 }
 ```
 
-CLI 收到路径后会自动完成以下流程：
-1. 校验所有文件（存在性、大小 ≤2GB、常规文件）
-2. 并行上传到 Base Drive Media（并发上限 5，跨字段重复路径自动去重）
-3. 获取 `file_token` 后合并到最终表单提交内容中
+After receiving the paths, the CLI automatically completes the following flow:
+1. Validate all files (existence, size ≤2GB, regular files)
+2. Upload in parallel to Base Drive Media (concurrency limit 5; duplicate paths across fields are automatically deduplicated)
+3. After obtaining `file_token`, merge into the final form submission content
 
-> Record 写入时附件走独立的 `+record-upload-attachment` 命令；`+form-submit` 则在 `attachments` 中传本地路径，由 CLI 自动上传。
+> When writing a Record, attachments use the separate `+record-upload-attachment` command; `+form-submit` instead passes local paths in `attachments`, and the CLI uploads them automatically.
 
-### 从分享链接提取 share-token
+<a id="从分享链接提取-share-token"></a>
+### Extract share-token from the share link
 
-用户提供形如以下格式的表单分享链接时：
+When the user provides a form share link in a format such as the following:
 
 ```
 https://www.example.com/share/base/form/shrbcvST8eZy0vk8zjVZ1CAXNye
 ```
 
-**提取方式：** 取 URL 路径最后一段作为 `--share-token`。
+**Extraction method:** Take the last segment of the URL path as `--share-token`.
 
-以上述链接为例：
+Taking the above link as an example:
 
 - `share-token` = `shrbcvST8eZy0vk8zjVZ1CAXNye`
 
@@ -148,11 +155,12 @@ lark-cli base +form-submit \
   --yes
 ```
 
-## 输出格式
+<a id="输出格式"></a>
+## Output format
 
-| 字段 | 类型 | 说明 |
+| Field | Type | Description |
 |------|------|------|
-| `can_submit_again` | bool | 是否可以再次填写 |
+| `can_submit_again` | bool | Whether it can be filled in again |
 
 ```json
 {
@@ -163,16 +171,18 @@ lark-cli base +form-submit \
 }
 ```
 
-## 提示
+<a id="提示"></a>
+## Tips
 
-- **本命令为高风险写操作（high-risk-write），必须额外传递 `--yes` 确认**，否则返回 `confirmation_required` 并以非零码退出；`--dry-run` 预览除外
-- 本命令仅支持通过表单分享链接（share_token）提交，不支持通过 base_token + table_id + view_id 方式提交
-- **当 `--json` 包含 `attachments` 时，必须额外提供 `--base-token`**，因为附件上传到 Base Drive Media 需要指定目标 Base
-- 附件字段只需在 `--json.attachments` 中提供本地路径即可，CLI 自动完成校验、并行上传、Token 获取和合并写入
-- 限流：单应用 20 QPS，单用户 5 QPS
-- 权限要求：`base:form:update`；使用 attachments 时还需 `docs:document.media:upload`
+- **This command is a high-risk write operation (high-risk-write) and must additionally pass `--yes` to confirm**, otherwise it returns `confirmation_required` and exits with a non-zero code; `--dry-run` preview is the exception
+- This command only supports submission via a form share link (share_token); it does not support submission via base_token + table_id + view_id
+- **When `--json` contains `attachments`, `--base-token` must additionally be provided**, because uploading attachments to Base Drive Media requires specifying the target Base
+- Attachment fields only need to provide local paths in `--json.attachments`; the CLI automatically completes validation, parallel upload, Token acquisition, and merged writing
+- Rate limits: 20 QPS per app, 5 QPS per user
+- Permission requirements: `base:form:update`; when using attachments, `docs:document.media:upload` is also required
 
-## 参考
+<a id="参考"></a>
+## References
 
-- [lark-base](../index.md) — 多维表格全部命令
-- [lark-shared](../../shared/index.md) — 认证和全局参数
+- [lark-base](../index.md) — all Base commands
+- [lark-shared](../../shared/index.md) — authentication and global parameters

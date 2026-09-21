@@ -1,70 +1,74 @@
 
-# docs +media-insert（文档末尾插入图片/文件）
+<a id="docs-media-insert文档末尾插入图片文件"></a>
+# docs +media-insert (insert image/file at end of document)
 
 
-把"创建空 block → 上传文件 → 设置 token"三步合并成一个命令，在**文档末尾**插入本地图片或文件。
+Combine the three steps "create empty block → upload file → set token" into a single command to insert a local image or file at the **end of the document**.
 
-## 来源选择（Agent 必读）
+<a id="来源选择agent-必读"></a>
+## Source selection (Agent must read)
 
-> **最高优先级：用户明确指定了来源，就严格按用户的来。** 下面的启发式只在用户没表态时生效。
+> **Highest priority: if the user explicitly specifies a source, strictly follow the user's choice.** The heuristics below only apply when the user has not stated a preference.
 >
-> - 用户说"把这张截图插进去"、"用剪切板里的图"、"我刚复制的" → 无条件走 `--from-clipboard`。
-> - 用户说"用 `~/Downloads/foo.png`"、"插本地这个文件"、给了具体路径 → 无条件走 `--file`。
-> - 用户两者都没说清 → 按下表的启发式推断。
+> - If the user says "insert this screenshot", "use the image in the clipboard", "the one I just copied" → unconditionally use `--from-clipboard`.
+> - If the user says "use `~/Downloads/foo.png`", "insert this local file", or gives a specific path → unconditionally use `--file`.
+> - If the user has not made either clear → infer using the heuristics in the table below.
 >
-> 即使推断看起来更"优"（比如用户说了路径但你觉得走剪切板更省事），也**不要自作主张**换来源。要换，先问。
+> Even if the inference seems "better" (for example, the user gave a path but you think using the clipboard is easier), **do not make the decision on your own** to switch sources. If you want to switch, ask first.
 
-按下列顺序判断，**不要反向做**：
+Judge in the following order, **do not do it in reverse**:
 
-| 用户的图片来源 | 命令 | 禁止做法 |
+| User's image source | Command | Prohibited practice |
 |----------------|------|----------|
-| 图片已经在剪切板里（截图快捷键、从飞书/浏览器复制、从设计稿复制） | `--from-clipboard` | ❌ 不要先把剪切板存到本地文件再用 `--file`。多一步文件 I/O，还得清理临时文件。 |
-| 图片是磁盘上的真实文件 | `--file <path>` | — |
-| 图片是 URL | 先下载到本地 → `--file`；或用 `drive` 相关命令 | — |
+| The image is already in the clipboard (screenshot shortcut, copied from Feishu/browser, copied from a design file) | `--from-clipboard` | ❌ Do not first save the clipboard to a local file and then use `--file`. That adds an extra file I/O step and requires cleaning up temporary files. |
+| The image is a real file on disk | `--file <path>` | — |
+| The image is a URL | First download to local → `--file`; or use commands related to `drive` | — |
 
-`--from-clipboard` 走进程内存直传，不产生临时文件；macOS / Windows 内置支持，Linux 需要 `xclip` 或 `wl-paste` 或 `xsel` 任一。
+`--from-clipboard` transfers directly through process memory and does not produce temporary files; built-in support on macOS / Windows, Linux requires any one of `xclip` or `wl-paste` or `xsel`.
 
-### 剪切板为空时的 fallback
+<a id="剪切板为空时的-fallback"></a>
+### Fallback when the clipboard is empty
 
-`--from-clipboard` 失败（剪切板里不是图片 / 没有图片 / Linux 上三个工具都没装）时，命令会返回 `clipboard contains no image data`（或类似的平台错误）。**这不是错误退出理由，而是 fallback 信号。**
+When `--from-clipboard` fails (the clipboard does not contain an image / has no image / none of the three tools are installed on Linux), the command returns `clipboard contains no image data` (or a similar platform error). **This is not a reason to exit with an error, but a fallback signal.**
 
-**Agent 的标准处置顺序**（每一步失败再进下一步，不要并行）：
+**The Agent's standard handling order** (proceed to the next step only after each step fails, do not do them in parallel):
 
-1. 先用 `--from-clipboard` 试一次。
-2. 如果返回"no image data"类错误，**向用户明确说明剪切板里没有可识别的图片**，请用户提供本地文件路径或重新复制一张图。
-3. 拿到本地路径后，用 `--file <path>` 重试**同一条插入命令**（其他参数如 `--doc` / `--align` / `--caption` 保持不变）。
+1. First try once with `--from-clipboard`.
+2. If it returns a "no image data" type error, **clearly explain to the user that there is no recognizable image in the clipboard**, and ask the user to provide a local file path or copy an image again.
+3. After obtaining the local path, use `--file <path>` to retry **the same insert command** (keep other parameters such as `--doc` / `--align` / `--caption` unchanged).
 
-**禁止做法**：
-- ❌ 不要悄悄把空剪切板当"成功但没插入"处理。必须提示用户。
-- ❌ 不要在剪切板失败后自行瞎猜某个本地文件路径（比如最近修改的 png）。必须让用户给路径。
-- ❌ 不要用"先让用户保存剪切板到磁盘再 `--file`"的建议绕过 `--from-clipboard`，当且仅当剪切板确实没图片时才退回本地路径。
+**Prohibited practices**:
+- ❌ Do not quietly treat an empty clipboard as "succeeded but nothing inserted". You must notify the user.
+- ❌ Do not guess some local file path on your own after the clipboard fails (for example, the most recently modified png). You must have the user provide the path.
+- ❌ Do not bypass `--from-clipboard` with the suggestion "first have the user save the clipboard to disk and then `--file`"; fall back to a local path only when the clipboard truly has no image.
 
-## 命令
+<a id="命令"></a>
+## Command
 
 ```bash
-# 🟢 推荐：从剪切板直接插入（无需先存盘）
+# 🟢 Recommended: insert directly from the clipboard (no need to save to disk first)
 lark-cli docs +media-insert --doc doxcnXXX --from-clipboard
 
-# 从本地文件插入
-# 除了上传本地文件，还可以在 `docs +update` 时直接通过网络 URL 插入图片，无需先下载到本地：
+# Insert from a local file
+# In addition to uploading a local file, you can also insert an image directly via a network URL during `docs +update`, without downloading it locally first:
 lark-cli docs +update --doc "<doc_id>" --command block_insert_after \
   --block-id "目标 block_id" \
   --content '<img href="https://example.com/photo.png"/>'
 
-# 插入图片（默认）
+# Insert image (default)
 lark-cli docs +media-insert --doc doxcnXXX --file ./image.png
 
-# doc 支持直接传 docx URL（自动提取 document_id）
+# doc supports passing a docx URL directly (automatically extracts document_id)
 lark-cli docs +media-insert --doc "https://xxx.feishu.cn/docx/doxcnXXX" --from-clipboard
 
-# 如果上一步是 create-doc，优先传返回值里的 doc_id
-# 不要把 /wiki/... 形式的 doc_url 直接传给 docs +media-insert
+# If the previous step was create-doc, prefer passing the doc_id from the return value
+# Do not pass a doc_url in the form /wiki/... directly to docs +media-insert
 lark-cli docs +media-insert --doc doxcnReturnedByCreateDoc --file ./image.png
 
-# 插入文件（非图片）
+# Insert file (non-image)
 lark-cli docs +media-insert --doc doxcnXXX --file ./spec.pdf --type file
 
-# 图片对齐与描述（caption）
+# Image alignment and description (caption)
 lark-cli docs +media-insert --doc doxcnXXX --from-clipboard --align center --caption "架构图"
 
 # Insert image with explicit display width (height auto-computed from aspect ratio)
@@ -74,40 +78,44 @@ lark-cli docs +media-insert --doc doxcnXXX --file ./banner.png --width 800 --ali
 lark-cli docs +media-insert --doc doxcnXXX --from-clipboard --width 800 --height 447 --caption "architecture diagram"
 ```
 
-## 参数
+<a id="参数"></a>
+## Parameters
 
-| 参数 | 必填 | 说明 |
+| Parameter | Required | Description |
 |------|------|------|
-| `--doc <id>` | 是 | 文档 ID 或 docx URL（仅支持 `/docx/<document_id>` 形式自动提取；**不支持 `/wiki/...` URL 自动提取**） |
-| `--from-clipboard` | 二选一 | 从系统剪切板读取图片（与 `--file` 互斥）。macOS/Windows 内置支持，Linux 需要 `xclip` / `wl-paste` / `xsel` 之一。 |
-| `--file <path>` | 二选一 | 本地文件路径（文件大于 20MB 时自动切换分片上传） |
-| `--type <type>` | 否 | `image`（默认）或 `file`。`--from-clipboard` 目前只产出 image。 |
-| `--align <align>` | 否 | 仅图片：`left` / `center`（默认）/ `right` |
-| `--caption <text>` | 否 | 仅图片：图片描述 |
-| `--width <px>` | 否 | Image display width in pixels (only for `--type=image`). If `--height` is omitted, it is auto-computed from the source image aspect ratio. Supported auto-detection formats: PNG, JPEG, GIF; other formats (WebP, BMP, etc.) require both `--width` and `--height`. |
-| `--height <px>` | 否 | Image display height in pixels (only for `--type=image`). If `--width` is omitted, it is auto-computed from the source image aspect ratio. Supported auto-detection formats: PNG, JPEG, GIF; other formats (WebP, BMP, etc.) require both `--width` and `--height`. |
+| `--doc <id>` | Yes | Document ID or docx URL (only supports automatic extraction of the `/docx/<document_id>` form; **does not support automatic extraction of `/wiki/...` URLs**) |
+| `--from-clipboard` | Choose one of two | Read an image from the system clipboard (mutually exclusive with `--file`). Built-in support on macOS/Windows; Linux requires one of `xclip` / `wl-paste` / `xsel`. |
+| `--file <path>` | Choose one of two | Local file path (automatically switches to chunked upload when the file is larger than 20MB) |
+| `--type <type>` | No | `image` (default) or `file`. `--from-clipboard` currently only produces image. |
+| `--align <align>` | No | Image only: `left` / `center` (default) / `right` |
+| `--caption <text>` | No | Image only: image description |
+| `--width <px>` | No | Image display width in pixels (only for `--type=image`). If `--height` is omitted, it is auto-computed from the source image aspect ratio. Supported auto-detection formats: PNG, JPEG, GIF; other formats (WebP, BMP, etc.) require both `--width` and `--height`. |
+| `--height <px>` | No | Image display height in pixels (only for `--type=image`). If `--width` is omitted, it is auto-computed from the source image aspect ratio. Supported auto-detection formats: PNG, JPEG, GIF; other formats (WebP, BMP, etc.) require both `--width` and `--height`. |
 
 > [!IMPORTANT]
-> 如果上一步是 [`lark-doc-create`](lark-doc-create.md)，并且它在知识库/知识空间场景下返回的是 `/wiki/...` 形式的 `doc_url`，后续调用 `docs +media-insert` 时应优先传 `doc_id`，不要直接传这个 `doc_url`。
+> If the previous step was [`lark-doc-create`](lark-doc-create.md), and in a knowledge base/knowledge space scenario it returned a `doc_url` in the form `/wiki/...`, then when subsequently calling `docs +media-insert` you should prefer passing `doc_id`, and not pass this `doc_url` directly.
 
-## 平台注意（仅 `--from-clipboard`）
+<a id="平台注意仅---from-clipboard"></a>
+## Platform notes (only `--from-clipboard`)
 
-| 平台 | 依赖 | 典型错误 |
+| Platform | Dependency | Typical error |
 |------|------|---------|
-| macOS | osascript（内置） | 剪切板为空 / 不是图片 → "clipboard contains no image data" |
-| Windows | PowerShell + System.Windows.Forms（内置） | 同上 |
-| Linux | `xclip` 或 `wl-paste` 或 `xsel` 任一 | 都没安装 → 报错会提示用发行版包管理器安装 |
+| macOS | osascript (built-in) | Clipboard empty / not an image → "clipboard contains no image data" |
+| Windows | PowerShell + System.Windows.Forms (built-in) | Same as above |
+| Linux | Any one of `xclip` or `wl-paste` or `xsel` | None installed → the error will prompt you to install using your distribution's package manager |
 
-命令不支持读取 TIFF 等非 PNG/JPEG/GIF/WebP/BMP 的冷门格式；遇到这类剪切板会返回 "contains no image data"，此时才考虑先用系统工具转成文件再 `--file`。
+The command does not support reading uncommon formats such as TIFF that are not PNG/JPEG/GIF/WebP/BMP; when encountering such a clipboard it returns "contains no image data", and only then should you consider first converting it to a file using system tools and then using `--file`.
 
-## 输出
+<a id="输出"></a>
+## Output
 
-命令成功后会输出 JSON，包含：`document_id`、`block_id`、`file_token`、`file_name`（剪切板路径下为 `clipboard.png`）、`type`。
+After the command succeeds, it outputs JSON containing: `document_id`, `block_id`, `file_token`, `file_name` (under the clipboard path this is `clipboard.png`), `type`.
 
 > [!CAUTION]
-> 这是**写入操作**（会修改文档内容）—— 执行前必须确认用户意图。
+> This is a **write operation** (it modifies document content) — you must confirm the user's intent before executing.
 
-## 参考
+<a id="参考"></a>
+## References
 
-- [lark-doc-fetch](lark-doc-fetch.md) — 获取文档内容（可用于确认插入后的结果、以及提取媒体 token）
-- [lark-shared](../../shared/index.md) — 认证和全局参数
+- [lark-doc-fetch](lark-doc-fetch.md) — fetch document content (can be used to confirm the result after insertion, and to extract media tokens)
+- [lark-shared](../../shared/index.md) — authentication and global parameters

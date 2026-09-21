@@ -1,32 +1,37 @@
 # apps +release-create
 
-为妙搭应用创建发布 release。运行时命令事实以 `lark-cli apps +release-create --help` 为准。
+Create a release for a Miaoda app. For runtime command facts, refer to `lark-cli apps +release-create --help`.
 
-## 何时用
+<a id="何时用"></a>
+## When to use
 
-用于把应用的代码分支推进到发布流程（html / frontend / full_stack 统一走此入口）。
+Use this to advance an app's code branch into the release process (html / frontend / full_stack all go through this entry point).
 
-## 命令骨架
+<a id="命令骨架"></a>
+## Command skeleton
 
-- 必填：`--app-id`。
-- 可选：`--branch`；省略时服务端使用默认发布分支。
-- 返回 `release_id` 和 `status`，后续用 `+release-get` 轮询。
+- Required: `--app-id`.
+- Optional: `--branch`; when omitted, the server uses the default release branch.
+- Returns `release_id` and `status`; subsequently poll with `+release-get`.
 
-## 示例
+<a id="示例"></a>
+## Example
 
 ```bash
 lark-cli apps +release-create --app-id app_xxx
 lark-cli apps +release-create --app-id app_xxx --branch sprint/default --dry-run
 ```
 
-## 输出契约
+<a id="输出契约"></a>
+## Output contract
 
-- 成功读取 `data.release_id`、`data.status` 和 `data.sync`；`release_id` 是后续 `+release-get` 的入参。
-- `sync=true` 表示同步部署（服务端等待部署完成后才返回），`sync=false` 或缺失表示异步部署。
-- `status=publishing` 表示发布仍在进行；继续用 `+release-get` 轮询，轮询间隔应该为 20s。应用发布平均耗时大约 2min，整体超时时间大约 5min。
-- `status=finished` 表示部署已完成（同步部署时可能直接返回此状态）。
-- `+release-create` 返回 release 只代表发布已发起。只有 `+release-get` 对同一个 `release_id` 返回 `finished` 后，才能说本轮最新版本已部署。
+- Successfully reads `data.release_id`, `data.status`, and `data.sync`; `release_id` is the input parameter for the subsequent `+release-get`.
+- `sync=true` indicates synchronous deployment (the server waits for deployment to complete before returning); `sync=false` or missing indicates asynchronous deployment.
+- `status=publishing` indicates the release is still in progress; continue polling with `+release-get`, and the polling interval should be 20s. App releases take about 2min on average, and the overall timeout is about 5min.
+- `status=finished` indicates deployment is complete (in synchronous deployment, this status may be returned directly).
+- `+release-create` returning a release only means the release has been initiated. Only after `+release-get` returns `finished` for the same `release_id` can you say that the latest version of this round has been deployed.
 
-## Agent 规则
+<a id="agent-规则"></a>
+## Agent rules
 
-`+release-create` 部署的是远端 `sprint/default` 上已 push 的代码，不是本地工作区——本地若有你修改但未推送的改动，需要先 `git add` + `git commit` 并 `git push` 到 `sprint/default`，否则这些改动不会进入这次发布。`git push` 如遇认证失败、401/403、credential helper 缺失或 token 过期，先执行 `lark-cli apps +git-credential-init --app-id <app_id> --as user` 刷新本地 Git 凭证，再重试原 git 命令；刷新凭证也失败时，停止并向用户报告错误，不要换路；不要手动复制 token 或改 remote URL。发布后若 status 是 `publishing`，用 [`+release-get`](lark-apps-release-get.md) 查询。`+release-create` 部署上线属高影响动作——作为别的命令的连带前置时，按 index.md「高影响动作与授权」先征得用户同意再发布。
+`+release-create` deploys code that has already been pushed to the remote `sprint/default`, not the local workspace—if you have local changes that you modified but have not pushed, you need to first `git add` + `git commit` and `git push` to `sprint/default`, otherwise these changes will not be included in this release. If `git push` encounters authentication failure, 401/403, a missing credential helper, or an expired token, first run `lark-cli apps +git-credential-init --app-id <app_id> --as user` to refresh the local Git credentials, then retry the original git command; if refreshing credentials also fails, stop and report the error to the user, do not take a different path; do not manually copy the token or change the remote URL. After release, if the status is `publishing`, query with [`+release-get`](lark-apps-release-get.md). `+release-create` deployment and go-live is a high-impact action—when it is a consequential prerequisite for another command, obtain user consent first according to "High-impact actions and authorization" in index.md before releasing.

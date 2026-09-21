@@ -1,67 +1,76 @@
-# 增长飞轮图 (Flywheel)
+<a id="增长飞轮图-flywheel"></a>
+# Growth Flywheel Diagram (Flywheel)
 
-> **必须写脚本生成 JSON。** 飞轮图需要极坐标计算阶段标签位置和 SVG 圆环切割，直接手写 JSON 无法正确实现同心圆环结构。请用下方脚本模板。
+> **You must write a script to generate the JSON.** The flywheel diagram requires polar coordinate calculation of stage label positions and SVG ring cutting; directly hand-writing JSON cannot correctly implement the concentric ring structure. Please use the script template below.
 
-## Content 约束
+<a id="content-约束"></a>
+## Content Constraints
 
-- 阶段 4-6 个，每阶段短标签（title + 可选 subtitle/desc）
-- 中心放置飞轮主题标题
+- 4-6 stages, each with a short label (title + optional subtitle/desc)
+- Place the flywheel theme title in the center
 
-## Layout 选型
+<a id="layout-选型"></a>
+## Layout Selection
 
-- **脚本生成坐标**（必须）：用 .cjs 脚本极坐标计算阶段标签位置、SVG 圆环切割，脚本输出 JSON 文件后调用 `npx -y @larksuite/whiteboard-cli@^0.2.13` 渲染
+- **Script-generated coordinates** (required): Use a .cjs script to calculate stage label positions via polar coordinates and SVG ring cutting; the script outputs a JSON file, then call `npx -y @larksuite/whiteboard-cli@^0.2.13` to render
 
-## Layout 规则
+<a id="layout-规则"></a>
+## Layout Rules
 
-- 同心圆遮挡法构建圆环：大圆（底色）+ 小圆（白色遮罩）+ 中心文字
-- nodes 数组顺序决定 z-index：先大圆 -> 小圆 -> 中心文字 -> SVG 切割 -> 外围卡片
-- 阶段标签均匀分布在圆环外围，每个标签到圆心距离相等
-- SVG polyline 切割圆环形成分段 + 箭头方向感
-- 阶段数多时需动态放大半径、缩小箭头折角、收紧文字容器
+- Build the ring using the concentric circle masking method: large circle (base color) + small circle (white mask) + center text
+- The order of the nodes array determines z-index: large circle first -> small circle -> center text -> SVG cuts -> outer cards
+- Stage labels are evenly distributed around the outside of the ring, with each label at an equal distance from the circle center
+- SVG polyline cuts the ring to form segments + a sense of arrow direction
+- When there are many stages, dynamically enlarge the radius, reduce the arrow bend angle, and tighten the text containers
 
-### 同心圆遮挡法详解
+<a id="同心圆遮挡法详解"></a>
+### Detailed Explanation of the Concentric Circle Masking Method
 
-画一个大圆（作为飞轮的底层颜色），然后在它正中心画一个小圆（填充为白色 `#FFFFFF`）。大圆和小圆都设置 `borderWidth: 0`，通过叠加遮挡形成圆环。
+Draw a large circle (as the base color of the flywheel), then draw a small circle at its exact center (filled with white `#FFFFFF`). Set `borderWidth: 0` on both the large and small circles, forming a ring through overlay masking.
 
-nodes 数组中的图层顺序（必须严格遵守）：
+Layer order in the nodes array (must be strictly followed):
 
-1. **底层大圆** (`type: 'ellipse'`, 填色, `borderWidth: 0`)
-2. **遮罩小圆** (`type: 'ellipse'`, 白色填色, `borderWidth: 0`)
-3. **中心文字** — 必须在两个圆之后添加，否则被白色小圆盖住
-4. **SVG 切割箭头** — 覆盖在圆环上，用白色粗线 polyline 切出分段
-5. **外围阶段卡片** — 极坐标计算位置
+1. **Bottom large circle** (`type: 'ellipse'`, filled, `borderWidth: 0`)
+2. **Masking small circle** (`type: 'ellipse'`, white fill, `borderWidth: 0`)
+3. **Center text** — must be added after the two circles, otherwise it will be covered by the white small circle
+4. **SVG cutting arrows** — overlaid on the ring, using white thick polyline to cut out segments
+5. **Outer stage cards** — positions calculated via polar coordinates
 
-### SVG 箭头线切割分段
+<a id="svg-箭头线切割分段"></a>
+### SVG Arrow Line Cutting Segments
 
-通过插入一个铺满大圆区域的 `svg` 节点，利用极坐标计算每个分段交界处的坐标，使用 `<polyline>` 画与背景色相同的粗线条（白色、20px+ 宽度）。线条从内圆边缘穿过大圆边缘，并在穿过时产生一定角度的偏转（`da` 参数），在视觉上"切断"圆环并形成箭头方向感。
+By inserting a `svg` node that covers the large circle area, use polar coordinates to calculate the coordinates of each segment boundary, and use `<polyline>` to draw thick lines of the same color as the background (white, 20px+ width). The lines pass from the inner circle edge through the large circle edge, and produce a certain angle of deflection when passing through (`da` parameter), visually "cutting" the ring and creating a sense of arrow direction.
 
-### 外围文字环绕布局
+<a id="外围文字环绕布局"></a>
+### Outer Text Surrounding Layout
 
-- 利用极坐标 `x = cx + R * cos(θ)` 计算每个分段的中心角度
-- 在计算出的坐标点放置 `frame` 容器（`layout: 'vertical'`）
-- 外围文字容器内部的 `text` 节点不能用 `width: 'fill-container'`，必须指定固定 width 配合 `height: 'fit-content'`
+- Use polar coordinates `x = cx + R * cos(θ)` to calculate the center angle of each segment
+- Place a `frame` container at the calculated coordinate point (`layout: 'vertical'`)
+- The `text` node inside the outer text container cannot use `width: 'fill-container'`; a fixed width must be specified together with `height: 'fit-content'`
 
-### 动态缩放优化（阶段数 >= 8 时必须）
+<a id="动态缩放优化阶段数--8-时必须"></a>
+### Dynamic Scaling Optimization (required when the number of stages >= 8)
 
-当阶段数量较多（8 个、12 个或 16 个以上）时，必须动态调整：
+When there are many stages (8, 12, or 16+), you must dynamically adjust:
 
-- **放大画布与圆环半径**：节点越多，需要越长的圆周容纳外围文字。适当调大 `rOut` 和 `rIn`（如 16 阶段时 `rOut` 可设为 400+），同步放大 `cx`/`cy` 避免超出边界
-- **缩小箭头切割角度**：段数增多时每段夹角变小，保持默认折角会导致缝隙过大。应减小 `da`（如 `da = 4`）
-- **收紧外围文字容器**：缩窄 `boxWidth`，减小文字字号，确保相邻文本框不互相覆盖
+- **Enlarge the canvas and ring radius**: The more nodes there are, the longer the circumference needed to accommodate the outer text. Appropriately increase `rOut` and `rIn` (for example, with 16 stages, `rOut` can be set to 400+), and scale up `cx`/`cy` accordingly to avoid exceeding the boundaries
+- **Reduce the arrow cutting angle**: As the number of segments increases, the angle of each segment becomes smaller; keeping the default bend angle will cause gaps that are too large. Reduce `da` (for example, `da = 4`)
+- **Tighten the outer text containers**: Narrow `boxWidth`, reduce the font size, and ensure adjacent text boxes do not overlap each other
 
-## 骨架示例
+<a id="骨架示例"></a>
+## Skeleton Example
 
-此场景必须用 .cjs 脚本生成。Agent 使用时只需修改 `stages` 数组和 `centerTitle`/`centerSubtitle`，其余坐标全自动计算。
+This scene must be generated with a .cjs script. When using it, the Agent only needs to modify the `stages` array and `centerTitle`/`centerSubtitle`; all other coordinates are calculated automatically.
 
 ```javascript
 const { writeFileSync } = require('fs');
 
 // ══════════════════════════════════════════════════════════════
-// 只需修改这里 -- 填入用户要求的阶段数据和中心标题
+// Only modify here -- fill in the stage data and center title requested by the user
 // ══════════════════════════════════════════════════════════════
 
 const centerTitle = '{{CENTER_TITLE}}';
-const centerSubtitle = '{{CENTER_SUBTITLE}}'; // 可选，不需要就留空字符串
+const centerSubtitle = '{{CENTER_SUBTITLE}}'; // Optional; leave as an empty string if not needed
 
 const stages = [
   { title: '{{STAGE_1}}', subtitle: '{{SUB_1}}', desc: '{{DESC_1}}' },
@@ -71,21 +80,21 @@ const stages = [
 ];
 
 // ══════════════════════════════════════════════════════════════
-// 以下是自动计算逻辑，不需要修改
+// The following is automatic calculation logic and does not need to be modified
 // ══════════════════════════════════════════════════════════════
 
-// --- 布局参数 ---
+// --- Layout parameters ---
 const numSegments = stages.length;
-const cx = 600, cy = 450; // 画布中心
-const rOut = 240, rIn = 160; // 内外圆半径
-const textDist = rOut + 40; // 文字离圆心距离
-const boxWidth = 220; // 外围文字卡片宽度
-const boxHeight = 80; // 估算高度（用于偏移计算）
-const da = 8; // 箭头折角
+const cx = 600, cy = 450; // Canvas center
+const rOut = 240, rIn = 160; // Inner and outer circle radii
+const textDist = rOut + 40; // Distance of text from circle center
+const boxWidth = 220; // Width of outer text cards
+const boxHeight = 80; // Estimated height (used for offset calculation)
+const da = 8; // Arrow bend angle
 
 const nodes = [];
 
-// --- 图层 1：底层大圆（圆环底色） ---
+// --- Layer 1: Bottom large circle (ring base color) ---
 nodes.push({
   type: 'ellipse',
   x: cx - rOut, y: cy - rOut,
@@ -93,7 +102,7 @@ nodes.push({
   borderWidth: 0,
 });
 
-// --- 图层 2：遮罩小圆（白色） ---
+// --- Layer 2: Masking small circle (white) ---
 nodes.push({
   type: 'ellipse',
   x: cx - rIn, y: cy - rIn,
@@ -101,7 +110,7 @@ nodes.push({
   borderWidth: 0,
 });
 
-// --- 图层 3：中心文字（必须在两个圆之后） ---
+// --- Layer 3: Center text (must be after the two circles) ---
 nodes.push({
   type: 'text',
   x: cx - rIn, y: cy - (centerSubtitle ? 30 : 20),
@@ -119,7 +128,7 @@ if (centerSubtitle) {
   });
 }
 
-// --- 图层 4：SVG 切割箭头 ---
+// --- Layer 4: SVG cutting arrows ---
 let svg = `<svg viewBox="0 0 ${rOut * 2} ${rOut * 2}" xmlns="http://www.w3.org/2000/svg">`;
 for (let i = 0; i < numSegments; i++) {
   const a = -90 + i * (360 / numSegments);
@@ -139,7 +148,7 @@ nodes.push({
   svg: { code: svg },
 });
 
-// --- 图层 5：外围阶段卡片（极坐标计算位置） ---
+// --- Layer 5: Outer stage cards (positions calculated via polar coordinates) ---
 for (let i = 0; i < numSegments; i++) {
   const stage = stages[i];
   const a = -90 + (360 / numSegments) / 2 + i * (360 / numSegments);
@@ -147,7 +156,7 @@ for (let i = 0; i < numSegments; i++) {
   const tx = cx + textDist * Math.cos(rad);
   const ty = cy + textDist * Math.sin(rad);
 
-  // 动态偏移：根据角度将文本框向外推
+  // Dynamic offset: push the text box outward according to the angle
   let offsetX = 0, offsetY = 0;
   if (Math.cos(rad) > 0.1) offsetX = 0;
   else if (Math.cos(rad) < -0.1) offsetX = -boxWidth;
@@ -156,7 +165,7 @@ for (let i = 0; i < numSegments; i++) {
   else if (Math.sin(rad) < -0.1) offsetY = -boxHeight;
   else offsetY = -boxHeight / 2;
 
-  const textW = boxWidth - 24; // 卡片 padding 12 * 2
+  const textW = boxWidth - 24; // Card padding 12 * 2
   nodes.push({
     type: 'frame',
     x: tx + offsetX, y: ty + offsetY,
@@ -175,7 +184,7 @@ for (let i = 0; i < numSegments; i++) {
   });
 }
 
-// --- 图表标题 ---
+// --- Chart title ---
 nodes.push({
   type: 'text',
   x: cx - rOut - 100, y: 30,
@@ -187,9 +196,10 @@ nodes.push({
 writeFileSync('diagram.json', JSON.stringify({ version: 2, nodes }, null, 2));
 ```
 
-## 陷阱
+<a id="陷阱"></a>
+## Pitfalls
 
-- **中心文字被 SVG 遮挡**：中心文字节点必须在大圆和小圆之后、SVG 之前添加，确保 z-index 正确
-- **缺方向指示箭头**：SVG polyline 切割线必须带角度偏转（da 参数），形成顺时针/逆时针箭头感
-- **标签位置不对称**：外围卡片必须用极坐标公式 `x = cx + R * cos(θ)` 均匀分布，不可手动摆放
-- **外围文字容器死锁**：`layout: 'vertical'` 的 frame 内部 text 节点不能用 `width: 'fill-container'`，必须指定固定 width
+- **Center text obscured by SVG**: The center text node must be added after the large and small circles and before the SVG to ensure the correct z-index
+- **Missing directional arrows**: The SVG polyline cutting lines must have an angle deflection (da parameter) to create a clockwise/counterclockwise arrow feel
+- **Asymmetric label positions**: Outer cards must be evenly distributed using the polar coordinate formula `x = cx + R * cos(θ)`; do not place them manually
+- **Outer text container deadlock**: The text node inside the `layout: 'vertical'` frame cannot use `width: 'fill-container'`; a fixed width must be specified

@@ -1,128 +1,137 @@
 
 # approval approvals get
 
-获取单个审批定义详情（用户级只读操作）。适合在发起审批实例前，先确认审批名称、表单控件结构、选项值范围以及流程节点信息。
+Get details of a single approval definition (user-level read-only operation). Suitable for confirming the approval name, form control structure, option value ranges, and process node information before initiating an approval instance.
 
-需要的 scopes: ["approval:approval:read"]
+Required scopes: ["approval:approval:read"]
 
-## 命令
+<a id="命令"></a>
+## Command
 
 ```bash
-# 按 approval_code 查询审批定义详情
+# Query approval definition details by approval_code
 lark-cli approval approvals get --params '{"approval_code":"<APPROVAL_CODE>"}' --as user
 
-# 表格格式输出，便于快速浏览顶层字段
+# Table format output for quick browsing of top-level fields
 lark-cli approval approvals get --params '{"approval_code":"<APPROVAL_CODE>"}' --format table --as user
 
-# 预览 API 调用，不执行
+# Preview the API call without executing
 lark-cli approval approvals get --params '{"approval_code":"<APPROVAL_CODE>"}' --as user --dry-run
 ```
 
-## 参数
+<a id="参数"></a>
+## Parameters
 
-| 参数 | 必填 | 说明 |
+| Parameter | Required | Description |
 |------|------|------|
-| `--params '{...}'` | 是 | 查询参数，使用 JSON 传入 |
-| `approval_code` | 是 | 审批定义 Code；通常来自 `approval approvals search` 的结果 |
-| `locale` | 否 | 返回语言，例如 `zh-CN`、`en-US`、`ja-JP` |
-| `--as user` | 否 | 建议显式指定用户身份；审批定义详情通常按当前用户可见范围读取 |
-| `--format` | 否 | 输出格式：`json`（默认）、`ndjson`、`table`、`csv` |
-| `--dry-run` | 否 | 预览 API 调用，不执行 |
+| `--params '{...}'` | Yes | Query parameters, passed in as JSON |
+| `approval_code` | Yes | Approval definition Code; usually comes from the result of `approval approvals search` |
+| `locale` | No | Return language, e.g. `zh-CN`, `en-US`, `ja-JP` |
+| `--as user` | No | It is recommended to explicitly specify the user identity; approval definition details are usually read according to the current user's visibility scope |
+| `--format` | No | Output format: `json` (default), `ndjson`, `table`, `csv` |
+| `--dry-run` | No | Preview the API call without executing |
 
-## 常见输入来源
+<a id="常见输入来源"></a>
+## Common Input Sources
 
-如果你已经有 `approval_code`，可直接查询：
+If you already have `approval_code`, you can query directly:
 
 ```bash
 lark-cli approval approvals get --params '{"approval_code":"<APPROVAL_CODE>"}' --as user
 ```
 
-如果你还没有 `approval_code`，先搜索可发起审批定义：
+If you do not yet have `approval_code`, first search for initiable approval definitions:
 
 ```bash
 lark-cli approval approvals search --data '{"keyword":"请假"}' --as user
 ```
 
-## 输出重点字段
+<a id="输出重点字段"></a>
+## Key Output Fields
 
-返回结果中，优先关注以下字段：
+In the returned result, prioritize the following fields:
 
-| 字段 | 说明 |
+| Field | Description |
 |------|------|
-| `approval_code` | 审批定义 Code |
-| `approval_name` | 审批定义名称；确认是不是用户想发起的那张单 |
-| `form` | 表单定义快照；用于识别控件 `id`、`type`、选项值范围、明细子控件结构 |
-| `node_list` | 流程节点列表；用于识别节点 key、是否需要补充审批人、是否允许多人 |
+| `approval_code` | Approval definition Code |
+| `approval_name` | Approval definition name; confirm whether it is the form the user wants to initiate |
+| `form` | Form definition snapshot; used to identify controls `id`, `type`, option value ranges, and detail sub-control structures |
+| `node_list` | Process node list; used to identify node keys, whether approvers need to be supplemented, and whether multiple approvers are allowed |
 
-## form 的使用重点
+<a id="form-的使用重点"></a>
+## Key Points for Using form
 
-`form` 最重要的作用是帮助 agent **识别怎么组装 `instances.create.data.form`**，而不是直接把它原样提交出去。
+The most important role of `form` is to help the agent **identify how to assemble `instances.create.data.form`**, rather than submitting it directly as-is.
 
-重点看：
+Focus on:
 
-| 字段 / 结构 | 说明 |
+| Field / Structure | Description |
 |------|------|
-| `form[].id` | 控件 ID；后续创建实例时必须使用 |
-| `form[].type` | 控件类型，例如 `input`、`date`、`radio`、`checkbox`、`fieldList` |
-| `form[].value` / 选项定义 | 用来识别可选值范围、默认值或选项值 |
-| 明细 / 子控件结构 | 用于识别 `fieldList`、控件组等复杂控件的子字段结构 |
+| `form[].id` | Control ID; must be used when creating an instance later |
+| `form[].type` | Control type, e.g. `input`, `date`, `radio`, `checkbox`, `fieldList` |
+| `form[].value` / option definitions | Used to identify selectable value ranges, default values, or option values |
+| Detail / sub-control structure | Used to identify the sub-field structure of complex controls such as `fieldList` and control groups |
 
-**注意：`approvals.get.form` 不是 `instances.create` 可直接复用的 payload 模板。** 它是“定义快照”，主要用于识别字段结构与选项值范围。
+**Note: `approvals.get.form` is not a payload template that `instances.create` can directly reuse.** It is a "definition snapshot", mainly used to identify field structures and option value ranges.
 
-## node_list 的使用重点
+<a id="node_list-的使用重点"></a>
+## Key Points for Using node_list
 
-`node_list` 主要用于后续决定是否要补 `node_approver_list` / `node_cc_list`。
+`node_list` is mainly used to subsequently decide whether to supplement `node_approver_list` / `node_cc_list`.
 
-重点看：
+Focus on:
 
-| 字段 | 说明 |
+| Field | Description |
 |------|------|
-| `node_list[].custom_node_id` | 自定义节点标识；后续补节点参数时优先作为 key |
-| `node_list[].node_id` | 节点 ID；若没有 `custom_node_id`，通常退回用它做 key |
-| `node_list[].need_approver` | 是否要求发起人补充审批人 |
-| `node_list[].approver_chosen_multi` | 是否允许为该节点选择多个审批人 |
+| `node_list[].custom_node_id` | Custom node identifier; prioritize as the key when supplementing node parameters later |
+| `node_list[].node_id` | Node ID; if there is no `custom_node_id`, usually fall back to using it as the key |
+| `node_list[].need_approver` | Whether the initiator is required to supplement approvers |
+| `node_list[].approver_chosen_multi` | Whether multiple approvers can be selected for this node |
 
-## 使用建议
+<a id="使用建议"></a>
+## Usage Recommendations
 
-- **这是发起原生审批实例前的必要只读步骤。** 推荐固定走：`approvals search` -> `approvals get` -> `instances create`。
-- **如果用户已经明确给了 `approval_code`，直接用这个命令。** 不必再走 `approvals search`。
-- **先确认 `approval_name`。** 避免把相似名称的审批定义搞混。
-- **先用 `form` 识别控件结构，再组装创建 payload。** 不要在未看详情时猜控件 `id`、`type` 或选项值。
-- **先用 `node_list` 看是否需要补审批人。** 若某节点 `need_approver=true`，创建实例时通常要补 `node_approver_list`。
-- **`node_list` 的 key 优先取 `custom_node_id`。** 若不存在，再使用 `node_id`。
-- **`approver_chosen_multi=false` 时，一个节点通常只能补一个审批人。**
+- **This is a necessary read-only step before initiating a native approval instance.** It is recommended to always follow: `approvals search` -> `approvals get` -> `instances create`.
+- **If the user has already explicitly provided `approval_code`, use this command directly.** No need to go through `approvals search` again.
+- **First confirm `approval_name`.** Avoid confusing approval definitions with similar names.
+- **First use `form` to identify the control structure, then assemble the creation payload.** Do not guess control `id`, `type`, or option values without looking at the details.
+- **First use `node_list` to see whether approvers need to be supplemented.** If a node has `need_approver=true`, you usually need to supplement `node_approver_list` when creating an instance.
+- **For the key of `node_list`, prioritize `custom_node_id`.** If it does not exist, then use `node_id`.
+- **When `approver_chosen_multi=false`, a node usually can only have one approver supplemented.**
 
-## 输出与后续操作
+<a id="输出与后续操作"></a>
+## Output and Follow-up Operations
 
-读取定义详情后，常见下一步：
+After reading the definition details, common next steps:
 
 ```bash
-# 发起原生审批实例
+# Initiate a native approval instance
 lark-cli approval instances create --data '{"approval_code":"<APPROVAL_CODE>","form":"[...]"}' --as user --yes
 ```
 
-如果需要进一步理解控件取值与节点参数，优先参考：
+If you need to further understand control values and node parameters, prioritize referring to:
 
 - `lark-approval-instance-form-control-parameters.md`
 - `lark-approval-instance-value-sourcing.md`
 - `lark-approval-initiate.md`
 
-## 结果整理方式
+<a id="结果整理方式"></a>
+## How to Organize Results
 
-**将结果整理为“审批定义概览 + 表单结构摘要 + 节点要求摘要”。**
+**Organize the results into "approval definition overview + form structure summary + node requirements summary".**
 
-建议输出成下面这种结构：
+It is recommended to output in the following structure:
 
 ```text
-审批定义：请假申请
+Approval definition: Leave Request
 approval_code: 7C468A54-8745-2245-9675-08B7C63E7A85
 
-表单控件摘要：
-- leave_type: radio，可选值 [annual_leave, sick_leave]
+Form control summary:
+- leave_type: radio, selectable values [annual_leave, sick_leave]
 - reason: textarea
 - start_end: dateInterval
 
-节点要求摘要：
-- manager_node：need_approver=true，approver_chosen_multi=false
-- hr_node：need_approver=false
+Node requirements summary:
+- manager_node: need_approver=true, approver_chosen_multi=false
+- hr_node: need_approver=false
 ```

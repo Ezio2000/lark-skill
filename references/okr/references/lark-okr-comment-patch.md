@@ -1,43 +1,47 @@
 # okr +comment-patch
 
-修改指定评论的正文。评论目标、划词定位、引用关系则一经创建不可修改。只支持 user 身份。
+Modify the body of a specified comment. The comment target, selection anchor, and reference relationship cannot be modified once created. Only the user identity is supported.
 
-`--content` 是业务必填项：OpenAPI schema 中该字段可能表现为可选，但实际修改评论必须提供非空正文。
+`--content` is a business-required field: in the OpenAPI schema this field may appear optional, but actually modifying a comment requires providing a non-empty body.
 
-## 推荐命令
+<a id="推荐命令"></a>
+## Recommended commands
 
 ```bash
-# 使用 simple 风格修改评论正文。
+# Modify the comment body using the simple style.
 lark-cli okr +comment-patch --comment-id 7000000000000000004 --content '{"text":"更新后的评论"}'
 
-# 使用 richtext 文件修改评论正文。
+# Modify the comment body using a richtext file.
 lark-cli okr +comment-patch --comment-id 7000000000000000004 --style richtext --content '@comment.json'
 
-# 写入前预览修改评论的 API 调用，不实际执行。
+# Preview the API call for modifying the comment before writing, without actually executing it.
 lark-cli okr +comment-patch --comment-id 7000000000000000004 --content '{"text":"预览更新"}' --dry-run
 ```
 
-## 参数
+<a id="参数"></a>
+## Parameters
 
-| 参数           | 必填 | 默认值  | 说明                                                                                                                          |
+| Parameter      | Required | Default | Description                                                                                                                          |
 |----------------|------|---------|-------------------------------------------------------------------------------------------------------------------------------|
-| --comment-id   | 是   | —       | 评论 ID，int64 正整数；可从 [+comment-list](lark-okr-comment-list.md) 或 [+comment-detail](lark-okr-comment-detail.md) 获取。 |
-| --content      | 是   | —       | 新正文；输入风格：`simple`（半纯文本 JSON，推荐） \| `richtext`（完整 ContentBlock JSON），支持 @文件路径。                   |
-| --style        | 否   | simple  | 输入/输出风格：simple 或 richtext。                                                                                           |
-| --user-id-type | 否   | open_id | open_id、union_id、user_id 或 user_key。                                                                                      |
-| --dry-run      | 否   | —       | 预览 API 调用而不实际执行。                                                                                                   |
-| --format       | 否   | json    | 输出格式。                                                                                                                    |
+| --comment-id   | Yes   | —       | Comment ID, int64 positive integer; can be obtained from [+comment-list](lark-okr-comment-list.md) or [+comment-detail](lark-okr-comment-detail.md). |
+| --content      | Yes   | —       | New body; input style: `simple` (semi-plain-text JSON, recommended) \| `richtext` (full ContentBlock JSON), supports @file path.                   |
+| --style        | No   | simple  | Input/output style: simple or richtext.                                                                                           |
+| --user-id-type | No   | open_id | open_id, union_id, user_id, or user_key.                                                                                      |
+| --dry-run      | No   | —       | Preview the API call without actually executing it.                                                                                                   |
+| --format       | No   | json    | Output format.                                                                                                                    |
 
-## 工作流程
+<a id="工作流程"></a>
+## Workflow
 
-1. 使用 [+comment-list](lark-okr-comment-list.md)、[+comment-detail](lark-okr-comment-detail.md) 或 [+comment-get](lark-okr-comment-get.md) 确认 comment-id 和目标评论。
-2. 准备 content：通常建议使用 simple 格式，需要精确控制 @用户的位置时，可以使用 richtext 格式，参考 [ContentBlock 格式](lark-okr-contentblock.md)
-3. 执行 +comment-patch；真实写入前用 --dry-run 检查请求。
-4. 如果要解决或重新打开评论，不要使用 patch，改用 [+comment-solve](lark-okr-comment-solve-reopen.md) 或 [+comment-reopen](lark-okr-comment-solve-reopen.md)。
+1. Use [+comment-list](lark-okr-comment-list.md), [+comment-detail](lark-okr-comment-detail.md), or [+comment-get](lark-okr-comment-get.md) to confirm the comment-id and the target comment.
+2. Prepare content: it is usually recommended to use the simple format; when you need precise control over the position of @user, you can use the richtext format, see [ContentBlock format](lark-okr-contentblock.md)
+3. Execute +comment-patch; before actually writing, use --dry-run to check the request.
+4. If you want to resolve or reopen a comment, do not use patch; instead use [+comment-solve](lark-okr-comment-solve-reopen.md) or [+comment-reopen](lark-okr-comment-solve-reopen.md).
 
-## 输出
+<a id="输出"></a>
+## Output
 
-返回 JSON：
+Returns JSON:
 
 ```json
 {
@@ -54,19 +58,21 @@ lark-cli okr +comment-patch --comment-id 7000000000000000004 --content '{"text":
 }
 ```
 
-simple 风格的 content 为 SemiPlainContent；richtext 风格的 content 为 ContentBlock。
+The content in simple style is SemiPlainContent; the content in richtext style is ContentBlock.
 
-## 注意事项
+<a id="注意事项"></a>
+## Notes
 
-- patch 不会改变评论的 target、selection、ref_comment_id 或 status。
-- simple 输入不支持 docs/images；需要富文本元素时使用 richtext。
-- 空正文不允许提交；如需删除评论，请使用 [+comment-delete](lark-okr-comment-delete.md)，删除不可恢复。
+- patch does not change the comment's target, selection, ref_comment_id, or status.
+- simple input does not support docs/images; use richtext when rich text elements are needed.
+- An empty body cannot be submitted; if you need to delete a comment, use [+comment-delete](lark-okr-comment-delete.md); deletion is irreversible.
 
-## 参考
+<a id="参考"></a>
+## References
 
-- [lark-okr](../index.md) — OKR 命令、路由和通用约定
-- [OKR 实体定义](lark-okr-entities.md) — Comment 字段与评论串规则
-- [ContentBlock 格式](lark-okr-contentblock.md) — 评论正文格式
-- [okr +comment-get](lark-okr-comment-get.md) — 获取更新前后的评论
-- [okr +comment-delete](lark-okr-comment-delete.md) — 永久删除评论
-- [lark-shared](../../shared/index.md) — 认证、身份、权限和安全规则
+- [lark-okr](../index.md) — OKR commands, routing, and general conventions
+- [OKR entity definitions](lark-okr-entities.md) — Comment fields and comment thread rules
+- [ContentBlock format](lark-okr-contentblock.md) — Comment body format
+- [okr +comment-get](lark-okr-comment-get.md) — Get the comment before and after the update
+- [okr +comment-delete](lark-okr-comment-delete.md) — Permanently delete a comment
+- [lark-shared](../../shared/index.md) — Authentication, identity, permissions, and security rules

@@ -1,55 +1,56 @@
 # base +form-questions-update
 
 
-批量更新多维表格表单/问卷中的问题配置（标题、描述、是否必填、显隐条件等）。
+Batch update question configurations (title, description, required, visibility conditions, etc.) in Base forms/surveys.
 
 > [!CAUTION]
-> `+form-questions-update` 是**题目配置全量覆盖**，不是 patch。对每个传入的题目，未携带的属性会回落为默认值，显式传空字符串 / `null` / 空数组会直接写入空或清空；如果要保留现有属性，必须先用 `+form-questions-list` 查出现状，再把要保留的字段一起带回 `--questions`。
+> `+form-questions-update` is a **full overwrite of question configuration**, not a patch. For each question passed in, attributes not carried will fall back to default values; explicitly passing an empty string / `null` / an empty array will directly write empty or clear; if you want to preserve existing attributes, you must first use `+form-questions-list` to retrieve the current state, then bring back the fields to preserve together in `--questions`.
 
-## 命令
+<a id="命令"></a>
+## Command
 
 ```bash
-# 先读取现有题目配置，作为 read-modify-write 的基线
+# First read the existing question configuration as the baseline for read-modify-write
 lark-cli base +form-questions-list \
   --base-token <base_token> \
   --table-id <table_id> \
   --form-id <form_id>
 
-# 更新一个问题的标题，同时带回要保留的 required / description / visible_rule 等字段
+# Update a question's title, while bringing back the required / description / visible_rule fields to preserve
 lark-cli base +form-questions-update \
   --base-token <base_token> \
   --table-id <table_id> \
   --form-id <form_id> \
   --questions '[{"id":"q_001","title":"您的真实姓名是？","description":"请填写真实姓名","required":true,"visible_rule":null}]'
 
-# 同时更新多个问题；每个对象都应是该题目的目标完整配置
+# Update multiple questions at once; each object should be the target complete configuration for that question
 lark-cli base +form-questions-update \
   --base-token <base_token> \
   --table-id <table_id> \
   --form-id <form_id> \
   --questions '[{"id":"q_001","title":"姓名（必填）","required":true},{"id":"q_002","title":"联系方式","required":false}]'
   
-# 更新问题描述（纯文本），同时带回要保留的 title / required / visible_rule
+# Update the question description (plain text), while bringing back the title / required / visible_rule to preserve
 lark-cli base +form-questions-update \
   --base-token <base_token> \
   --table-id <table_id> \
   --form-id <form_id> \
   --questions '[{"id":"q_001","title":"您的姓名","description":"请填写您的真实姓名","required":true,"visible_rule":null}]'
-# 更新问题描述（含链接），同时带回要保留的 title / required / visible_rule
+# Update the question description (with a link), while bringing back the title / required / visible_rule to preserve
 lark-cli base +form-questions-update \
   --base-token <base_token> \
   --table-id <table_id> \
   --form-id <form_id> \
   --questions '[{"id":"q_001","title":"反馈建议","description":"更多说明请参考[帮助文档](https://example.com/help)","required":false,"visible_rule":null}]'
 
-# 更新题目显隐条件（visible_rule），同时带回要保留的 title / description / required
+# Update the question visibility condition (visible_rule), while bringing back the title / description / required to preserve
 lark-cli base +form-questions-update \
   --base-token <base_token> \
   --table-id <table_id> \
   --form-id <form_id> \
   --questions '[{"id":"q_002","title":"发票抬头","description":"","required":false,"visible_rule":{"logic":"and","conditions":[["q_001","==","是"]]}}]'
 
-# 清空题目显隐条件（使题目始终显示），同时带回要保留的 title / description / required
+# Clear the question visibility condition (so the question is always displayed), while bringing back the title / description / required to preserve
 lark-cli base +form-questions-update \
   --base-token <base_token> \
   --table-id <table_id> \
@@ -57,48 +58,52 @@ lark-cli base +form-questions-update \
   --questions '[{"id":"q_002","title":"发票抬头","description":"","required":false,"visible_rule":null}]'
 ```
 
-## 参数
+<a id="参数"></a>
+## Parameters
 
-| 参数 | 必填 | 说明 |
+| Parameter | Required | Description |
 |------|------|------|
-| `--base-token <token>` | 是 | Base Token（base_token） |
-| `--table-id <id>` | 是 | 数据表 ID |
-| `--form-id <id>` | 是 | 表单 ID |
-| `--questions <json>` | 是 | 问题更新 JSON 数组，最多 10 个（见下方格式） |
-| `--format` | 否 | 输出格式：json（默认）\| pretty \| table \| ndjson \| csv |
-| `--as` | 否 | 身份：user（默认）\| bot |
-| `--dry-run` | 否 | 预览 API 调用，不执行 |
+| `--base-token <token>` | Yes | Base Token (base_token) |
+| `--table-id <id>` | Yes | Table ID |
+| `--form-id <id>` | Yes | Form ID |
+| `--questions <json>` | Yes | Question update JSON array, up to 10 (see format below) |
+| `--format` | No | Output format: json (default) \| pretty \| table \| ndjson \| csv |
+| `--as` | No | Identity: user (default) \| bot |
+| `--dry-run` | No | Preview the API call without executing |
 
-## `--questions` 格式
+<a id="--questions-格式"></a>
+## `--questions` Format
 
-每个问题对象必须包含 `id`。注意：对象不是增量 patch，而是该题目的目标完整配置；未携带字段会按服务端默认值重建。
+Each question object must contain `id`. Note: the object is not an incremental patch, but the target complete configuration for that question; fields not carried will be rebuilt according to server-side default values.
 
-| 字段 | 必填 | 说明 |
+| Field | Required | Description |
 |------|------|------|
-| `id` | **是** | 问题 ID（field_id），不可修改 |
-| `title` | 否 | 目标问题标题；省略会回落为字段名，传空字符串会写入空标题（若服务端允许） |
-| `description` | 否 | 目标问题描述（纯文本或 Markdown 链接，如 `[文本](https://example.com)`）；省略或传空字符串都会清空描述 |
-| `required` | 否 | 目标是否必填；省略会回落为 `false` |
-| `option_display_mode` | 否 | 目标选项展示方式（仅 `select` 有效）：`0`=下拉，`1`=纵向（默认），`2`=横向；省略会回落默认展示方式 |
-| `visible_rule` | 否 | 目标题目显隐条件；传完整 `{logic, conditions}` 对象覆盖，传 `null` 或省略都会清空（见下方说明） |
+| `id` | **Yes** | Question ID (field_id), cannot be modified |
+| `title` | No | Target question title; omitting it will fall back to the field name, passing an empty string will write an empty title (if the server allows it) |
+| `description` | No | Target question description (plain text or Markdown link, such as `[文本](https://example.com)`); omitting it or passing an empty string will clear the description |
+| `required` | No | Whether the target is required; omitting it will fall back to `false` |
+| `option_display_mode` | No | Target option display method (only valid for `select`): `0`=dropdown, `1`=vertical (default), `2`=horizontal; omitting it will fall back to the default display method |
+| `visible_rule` | No | Target question visibility condition; pass a complete `{logic, conditions}` object to overwrite, passing `null` or omitting it will clear (see explanation below) |
 
-## 全量覆盖语义
+<a id="全量覆盖语义"></a>
+## Full Overwrite Semantics
 
-- 先执行 `+form-questions-list`，读取被更新题目的当前 `id`、`title`、`description`、`required`、`option_display_mode`、`visible_rule`。
-- 构造 `--questions` 时，只改用户明确要求变化的字段；所有仍要保留的字段必须按当前值一并传回。
-- 不要用“只传要改的字段”的方式更新题目。比如只传 `{"id":"q_002","title":"新标题"}` 会让 `description` 清空、`required` 回落为 `false`、`visible_rule` 清空。
-- 用户明确要求清空时才传空值：`description:""` 清空描述，`visible_rule:null` 清空显隐条件，`conditions:[]` 也表示无条件显示。
+- First execute `+form-questions-list` to read the current `id`, `title`, `description`, `required`, `option_display_mode`, `visible_rule` of the question being updated.
+- When constructing `--questions`, only change the fields the user explicitly requested to change; all fields that should still be preserved must be passed back together according to their current values.
+- Do not update questions by "only passing the fields to change". For example, passing only `{"id":"q_002","title":"新标题"}` will cause `description` to be cleared, `required` to fall back to `false`, and `visible_rule` to be cleared.
+- Only pass empty values when the user explicitly requests clearing: `description:""` clears the description, `visible_rule:null` clears the visibility condition, and `conditions:[]` also means unconditional display.
 
-### `visible_rule` 显隐条件
+<a id="visible_rule-显隐条件"></a>
+### `visible_rule` Visibility Condition
 
-> **仅当用户明确要求为题目设置或修改显隐条件（显示/隐藏逻辑）时，才需要读下面的结构说明；否则忽略本节。**
+> **Only when the user explicitly requests to set or modify a question's visibility condition (show/hide logic) do you need to read the structure explanation below; otherwise ignore this section.**
 
-`visible_rule` 控制题目显示/隐藏，**结构与视图筛选 `filter` 完全一致**（`{logic?, conditions?}`），共用同一套公共协议。
+`visible_rule` controls question show/hide, and its **structure is completely identical to the view filter `filter`** (`{logic?, conditions?}`), sharing the same common protocol.
 
-- `conditions` 中的 `field` 引用**同一表单内其他题目的题目名称或题目 ID**（推荐用题目 ID）。
-- 更新时按表单中题目的**实际顺序**判定，只能引用排在当前题目之前的题目；不支持循环引用。
-- 更新 `visible_rule` 需传**完整**的 `{logic, conditions}` 对象（整体覆盖）；要保留现有显隐条件就必须把当前 `visible_rule` 原样带回；传 `null`、省略 `visible_rule` 或传空 `conditions` 都会使题目始终显示。
-- 列出题目（`+form-questions-list`）会在每个题目对象中**原样返回** `visible_rule`；未设置显隐条件的题目返回 `null` 或 `conditions` 为空数组。
+- `field` in `conditions` references **the question name or question ID of other questions within the same form** (using the question ID is recommended).
+- When updating, it is determined according to the **actual order** of questions in the form; you can only reference questions that come before the current question; circular references are not supported.
+- Updating `visible_rule` requires passing a **complete** `{logic, conditions}` object (full overwrite); to preserve the existing visibility condition, you must bring back the current `visible_rule` as-is; passing `null`, omitting `visible_rule`, or passing an empty `conditions` will all make the question always displayed.
+- Listing questions (`+form-questions-list`) will **return as-is** `visible_rule` in each question object; questions without a visibility condition set return `null` or `conditions` as an empty array.
 
 ```json
 {
@@ -110,11 +115,12 @@ lark-cli base +form-questions-update \
 }
 ```
 
-详细的 `visible_rule` 结构（顶层规则、operator 列表、各题目类型的 value 写法）请阅读 [lark-base-filter-condition.md](lark-base-filter-condition.md)。
+For the detailed `visible_rule` structure (top-level rules, operator list, value syntax for each question type), please read [lark-base-filter-condition.md](lark-base-filter-condition.md).
 
-## 输出格式
+<a id="输出格式"></a>
+## Output Format
 
-返回更新后的问题列表：
+Returns the updated question list:
 
 ```json
 {
@@ -127,18 +133,20 @@ lark-cli base +form-questions-update \
 }
 ```
 
-## 工作流
+<a id="工作流"></a>
+## Workflow
 
 > [!CAUTION]
-> 这是**写入操作** — 执行前必须向用户确认。
+> This is a **write operation** — you must confirm with the user before executing.
 
-1. 先用 `+form-questions-list` 获取现有问题及其 `id` 和完整配置。
-2. 以现有配置为基线，只修改用户明确要求变化的字段；要保留的字段必须原样带回。
-3. 构造包含 `id` 和目标完整配置的更新数组。
-4. 执行命令并报告更新结果。
+1. First use `+form-questions-list` to obtain the existing questions and their `id` and complete configuration.
+2. Using the existing configuration as the baseline, only modify the fields the user explicitly requested to change; fields to preserve must be brought back as-is.
+3. Construct the update array containing `id` and the target complete configuration.
+4. Execute the command and report the update result.
 
-## 参考
+<a id="参考"></a>
+## References
 
-- [lark-base](../index.md) — 多维表格全部命令
-- [lark-base-filter-condition.md](lark-base-filter-condition.md) — `visible_rule` / `filter` 条件结构公共协议
-- [lark-shared](../../shared/index.md) — 认证和全局参数
+- [lark-base](../index.md) — all Base commands
+- [lark-base-filter-condition.md](lark-base-filter-condition.md) — common protocol for `visible_rule` / `filter` condition structures
+- [lark-shared](../../shared/index.md) — authentication and global parameters

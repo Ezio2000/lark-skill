@@ -1,165 +1,178 @@
 
 # vc +meeting-events
 
-查询一场正在进行的视频会议中的会中事件列表。该命令是**读操作**，必须沿用 `meeting_id` 的来源身份：用户身份发现的会议继续用用户身份读，应用身份发现或应用机器人入会得到的会议继续用应用身份读。对已结束会议，存在一个**结束后 5 分钟内的宽限窗口**；应用身份读取时，要求应用机器人曾经在这场会里出现过。
+Query the list of in-meeting events for an ongoing video meeting. This command is a **read operation** and must use the same source identity as `meeting_id`: meetings discovered with user identity continue to be read with user identity, and meetings discovered with app identity or joined by the app bot continue to be read with app identity. For ended meetings, there is a **5-minute grace window after the meeting ends**; when reading with app identity, the app bot is required to have appeared in this meeting.
 
-本模块 对应 shortcut：`lark-cli vc +meeting-events`（调用 `GET /open-apis/vc/v1/bots/events`）。
+This module corresponds to the shortcut: `lark-cli vc +meeting-events` (calls `GET /open-apis/vc/v1/bots/events`).
 
-可见性边界：
+Visibility boundaries:
 
-- `meeting_id` 来自 `+meeting-list-active --as user`：后续读取事件继续 `--as user`。
-- `meeting_id` 来自 `+meeting-list-active --as bot --user-id <user_open_id>` 或 `+meeting-join --as bot`：后续读取事件继续 `--as bot`。
-- 应用身份下，应用机器人必须在该会中或参会过；应用身份 active meeting 返回的是“目标用户在会中且应用机器人也在会中”的会议，不表示可以读取任意 `meeting_id`。
+- `meeting_id` comes from `+meeting-list-active --as user`: subsequent event reads continue with `--as user`.
+- `meeting_id` comes from `+meeting-list-active --as bot --user-id <user_open_id>` or `+meeting-join --as bot`: subsequent event reads continue with `--as bot`.
+- Under app identity, the app bot must be in or have attended the meeting; the app identity active meeting returns meetings where "the target user is in the meeting and the app bot is also in the meeting," which does not mean any `meeting_id` can be read.
 
-## 命令
+<a id="命令"></a>
+## Command
 
 ```bash
-# 默认用法：全量拉取当前身份可见事件；输出易读时间线
+# Default usage: pull all events visible to the current identity; output a readable timeline
 lark-cli vc +meeting-events --as <same_identity> --meeting-id <id> --page-all --format pretty
 
-# 指定时间范围，并拉全该时间窗内当前可见事件
+# Specify a time range, and pull all events currently visible within that time window
 lark-cli vc +meeting-events --as <same_identity> --meeting-id <id> --start 2026-04-17T15:00:00+08:00 --end 2026-04-17T16:00:00+08:00 --page-all --format pretty
 
-# 基于上一次保存的 page_token 继续查新增事件
+# Continue querying new events based on the last saved page_token
 lark-cli vc +meeting-events --as <same_identity> --meeting-id <id> --page-token <last_page_token> --page-all --format pretty
 ```
 
-## 参数
+<a id="参数"></a>
+## Parameters
 
-| 参数 | 必填 | 说明 |
+| Parameter | Required | Description |
 |------|------|------|
-| `--meeting-id <id>` | 是 | 会议 ID（长数字 ID，不是 9 位会议号） |
-| `--start <time>` | 否 | 起始时间，支持 ISO 8601 / `YYYY-MM-DD` / Unix 秒 |
-| `--end <time>` | 否 | 结束时间，支持 ISO 8601 / `YYYY-MM-DD` / Unix 秒 |
-| `--page-token <token>` | 否 | 从指定分页游标继续拉取下一页 |
-| `--page-size <n>` | 否 | 单页模式每页大小。CLI 会自动夹紧到 `20-100`；传 `--page-all` 时固定使用 `100` |
-| `--page-all` | 否 | 自动分页，直到没有更多页面为止（内部有安全上限） |
+| `--meeting-id <id>` | Yes | Meeting ID (long numeric ID, not the 9-digit meeting number) |
+| `--start <time>` | No | Start time, supports ISO 8601 / `YYYY-MM-DD` / Unix seconds |
+| `--end <time>` | No | End time, supports ISO 8601 / `YYYY-MM-DD` / Unix seconds |
+| `--page-token <token>` | No | Continue pulling the next page from the specified pagination cursor |
+| `--page-size <n>` | No | Page size per page in single-page mode. The CLI automatically clamps it to `20-100`; when `--page-all` is passed, `100` is used fixed |
+| `--page-all` | No | Auto-paginate until there are no more pages (there is an internal safety limit) |
 
-## 核心约束
+<a id="核心约束"></a>
+## Core Constraints
 
-### 1. 输入必须是 meeting_id，不是 9 位会议号
+<a id="1-输入必须是-meeting_id不是-9-位会议号"></a>
+### 1. The input must be meeting_id, not the 9-digit meeting number
 
-`--meeting-id` 必须是会议的长数字 ID。它通常来自：
-- `+meeting-join` 返回体中的 `meeting.id`
-- `+meeting-list-active` 返回体中的 `meeting_id`
-- `+search` 结果中的 `id`
+`--meeting-id` must be the meeting's long numeric ID. It usually comes from:
+- `meeting.id` in the `+meeting-join` response body
+- `meeting_id` in the `+meeting-list-active` response body
+- `id` in the `+search` result
 
-**不要**把 9 位会议号（`--meeting-number`）传给这个命令。
-如果 `meeting_id` 来自 `+meeting-list-active`，后续 `+meeting-events` 必须沿用同一身份；如果返回多个会议，先让用户选择具体 `meeting_id`。
+**Do not** pass the 9-digit meeting number (`--meeting-number`) to this command.
+If `meeting_id` comes from `+meeting-list-active`, subsequent `+meeting-events` must use the same identity; if multiple meetings are returned, first let the user choose the specific `meeting_id`.
 
-如果用户提供的是 9 位会议号且没有明确要求应用机器人入会，先按当前场景身份查 active meetings 并按 `meeting_no` 匹配。匹配到唯一项后，取该项的长数字 `meeting_id`，再用同一身份调用本命令；匹配失败时不要自动入会，除非用户明确说“入会 / 让应用机器人旁听 / 代我参会”。
+If the user provides a 9-digit meeting number and does not explicitly request the app bot to join, first query active meetings using the current scenario identity and match by `meeting_no`. After matching a unique item, take that item's long numeric `meeting_id`, then call this command with the same identity; if matching fails, do not automatically join the meeting unless the user explicitly says "join / have the app bot listen in / attend on my behalf."
 
-### 2. 身份来源是读取事件的权限锚点
+<a id="2-身份来源是读取事件的权限锚点"></a>
+### 2. Identity source is the permission anchor for reading events
 
-- `+meeting-events` 支持 `--as user` 和 `--as bot`。
-- 用户身份路径：用户身份发现的会议继续用用户身份读取。
-- 应用身份路径：应用机器人必须在会中或参会过；不要拿任意 `meeting_id` 直接查。
-- 不要在拿到 `meeting_id` 后随意切换身份。身份不一致时，常见结果是空列表、`no permission` 或 `bot is not in meeting`。
+- `+meeting-events` supports `--as user` and `--as bot`.
+- User identity path: meetings discovered with user identity continue to be read with user identity.
+- App identity path: the app bot must be in or have attended the meeting; do not directly query any `meeting_id`.
+- Do not arbitrarily switch identities after obtaining `meeting_id`. When identities are inconsistent, common results are an empty list, `no permission`, or `bot is not in meeting`.
 
-### 3. 应用身份的可见性窗口
+<a id="3-应用身份的可见性窗口"></a>
+### 3. Visibility window for app identity
 
-若应用机器人已离会、未入会、或会议已经无法再判断身份，后端通常会报：
+If the app bot has left the meeting, did not join, or the meeting can no longer determine identity, the backend usually reports:
 - `bot is not in meeting, no permission`
 
-更精确地说，后端当前的判断规则是：
+More precisely, the backend's current judgment rules are:
 
-- **会议进行中**：要求应用机器人**当前仍在会中**
-- **会议已结束后的 5 分钟内**：只要应用机器人**曾经在这场会中出现过**，仍可拉取事件
-- **会议结束超过 5 分钟**：按会议结束处理，通常不再返回事件流
-- **应用机器人从未真实入会过**：即使会议仍在进行或刚结束，也会返回 `10005 bot is not in meeting`
+- **Meeting in progress**: requires the app bot to **currently still be in the meeting**
+- **Within 5 minutes after the meeting has ended**: as long as the app bot **has ever appeared in this meeting**, events can still be pulled
+- **More than 5 minutes after the meeting ends**: treated as meeting ended, and the event stream is usually no longer returned
+- **The app bot has never actually joined**: even if the meeting is still in progress or just ended, `10005 bot is not in meeting` is returned
 
-### 4. 自动分页规则
+<a id="4-自动分页规则"></a>
+### 4. Auto-pagination rules
 
-- **先分清两层默认值**：
-  - shortcut 本身：不传 `--page-all` 时，只查 1 页。
-  - 本模块 的默认策略：除非用户明确要求只看一页，或你确实需要控制返回体大小，否则默认**必须主动带 `--page-all`**，把当前可见事件尽量一次拉全。
-- 传 `--page-all`：开启自动分页，直到没有更多页面为止。
-- `--page-all` 时，CLI 固定使用最大 `page_size=100`。
+- **First distinguish two layers of defaults**:
+  - The shortcut itself: when `--page-all` is not passed, only 1 page is queried.
+  - This module's default policy: unless the user explicitly requests to view only one page, or you really need to control the response body size, by default you **must actively include `--page-all`** to pull all currently visible events in one go as much as possible.
+- Passing `--page-all`: enables auto-pagination until there are no more pages.
+- When `--page-all`, the CLI uses the maximum `page_size=100` fixed.
 
-执行准则：
+Execution guidelines:
 
-- **默认命令模板**：`lark-cli vc +meeting-events --as <same_identity> --meeting-id <id> --page-all --format pretty`
-- 如果你发现自己执行成了不带 `--page-all` 的单页查询，而响应里又出现 `has_more=true` / `more available` / 非空 `page_token`，应立刻意识到这只是部分结果。
-- 遇到上述情况，默认补救方式是继续使用返回的 `page_token` 续拉，例如：`lark-cli vc +meeting-events --as <same_identity> --meeting-id <id> --page-token <returned_page_token> --page-all --format pretty`
-- 只有在用户明确要求“就看第一页”“先不要翻页”时，才不要默认带 `--page-all`
-- 只要你是基于 `+meeting-events` 来回答一场**正在进行中的会议内容**，就不能直接复用上一次查询结果。无论用户是在问“现在是谁在说话”“刚刚发生了什么”“最新事件有哪些”，还是让你“总结一下这个会议讲什么”，都必须先重新执行一次 `+meeting-events`，确认拿到的是最新事件流，再回答用户。只有在用户明确要求基于某次历史快照继续分析时，才可以复用旧结果。
+- **Default command template**: `lark-cli vc +meeting-events --as <same_identity> --meeting-id <id> --page-all --format pretty`
+- If you find that you executed a single-page query without `--page-all`, and the response contains `has_more=true` / `more available` / non-empty `page_token`, you should immediately realize that this is only a partial result.
+- In the above situation, the default remedy is to continue pulling using the returned `page_token`, for example: `lark-cli vc +meeting-events --as <same_identity> --meeting-id <id> --page-token <returned_page_token> --page-all --format pretty`
+- Only when the user explicitly requests "just look at the first page" or "do not paginate for now" should you not include `--page-all` by default
+- As long as you are answering about **the content of an ongoing meeting** based on `+meeting-events`, you cannot directly reuse the previous query result. Whether the user is asking "who is speaking now," "what just happened," "what are the latest events," or asking you to "summarize what this meeting is about," you must first re-execute `+meeting-events` to confirm that you have the latest event stream, and then answer the user. Only when the user explicitly requests to continue analysis based on a certain historical snapshot may you reuse old results.
 
-### 5. 输出格式差异
+<a id="5-输出格式差异"></a>
+### 5. Output format differences
 
-- `--format pretty`：默认推荐格式，输出当前身份和逐条时间线，适合快速理解“发生了什么”。
-- `--format json`：结构化契约，顶层包含 `meeting`、`identity`、`events`、`has_more`、`page_token`。`identity` 表示当前读取身份；事件 actor 统一含 `participant_type`、`role`、`label`；每条事件保留 `payload` 便于追溯细节。
-- `--format ndjson`：输出事件行，并带 metadata 行，适合流式消费。
+- `--format pretty`: the default recommended format, outputs the current identity and an item-by-item timeline, suitable for quickly understanding "what happened."
+- `--format json`: a structured contract, whose top level contains `meeting`, `identity`, `events`, `has_more`, `page_token`. `identity` indicates the current reading identity; event actors uniformly contain `participant_type`, `role`, `label`; each event retains `payload` for tracing details.
+- `--format ndjson`: outputs event lines with metadata lines, suitable for streaming consumption.
 
-**选型原则**：默认先用 `--format pretty`；仅当 `pretty` 缺少完成任务所必需的结构化字段时，才改用 `--format json`。用户明确要求 JSON 或规则明确要求结构化字段时可直接用 `--format json`；需要流式消费时用 `--format ndjson`。
+**Selection principle**: by default use `--format pretty` first; only when `pretty` lacks the structured fields necessary to complete the task should you switch to `--format json`. When the user explicitly requests JSON or the rules explicitly require structured fields, you may directly use `--format json`; when streaming consumption is needed, use `--format ndjson`.
 
-> **JSON 成本**：JSON 保留完整 payload，输出通常远大于 `pretty`；长会全量拉取时会显著占用上下文空间。
+> **JSON cost**: JSON retains the complete payload, and the output is usually much larger than `pretty`; when pulling all events for a long meeting, it will significantly consume context space.
 
-> **注意**：pretty 输出中的正文文本会做单行转义，真实换行会显示为 `\n`，避免打乱时间线布局。
+> **Note**: body text in pretty output is escaped to a single line, and real line breaks are displayed as `\n` to avoid disrupting the timeline layout.
 
-### 6. 内容理解模式：共享文档不能只看标题
+<a id="6-内容理解模式共享文档不能只看标题"></a>
+### 6. Content understanding mode: shared documents cannot be judged by title alone
 
-当用户意图是：
+When the user's intent is:
 
-- “总结这个会议”
-- “这个会议讲了什么”
-- “有哪些结论 / 待办 / 关键讨论”
-- “共享文档里在讲什么”
+- "Summarize this meeting"
+- "What was this meeting about"
+- "What conclusions / to-dos / key discussions are there"
+- "What is being discussed in the shared document"
 
-不要只基于事件时间线直接回答。此时 `+meeting-events` 只是**线索发现器**，不是最终信息源。
+Do not answer based only on the event timeline. At this point `+meeting-events` is only a **clue finder**, not the final information source.
 
-执行准则：
+Execution guidelines:
 
-- 如果上下文没有明确 `meeting_id`，先按用户当前意图选择身份：问“我/当前用户所在会议”用 `lark-cli vc +meeting-list-active --as user --format json`；问“应用机器人可见的目标用户会议”用 `lark-cli vc +meeting-list-active --as bot --user-id <user_open_id> --format json`。返回多个会议时先让用户选择。
-- 如果上下文只有 9 位会议号，先按当前身份执行 `+meeting-list-active` 并按 `meeting_no` 匹配；匹配到唯一会议后再查事件。不要为了总结会议而自动调用 `+meeting-join`。
-- 确认 `meeting_id` 后，沿用其来源身份执行 `lark-cli vc +meeting-events --as <same_identity> --meeting-id <id> --page-all --format pretty` 拉取最新事件流。
-- 如果事件流显示共享内容（JSON 事件类型为 `magic_share_started`；pretty 时间线按 `start_reason` 显示“开始共享”或“正在共享”），并包含文档标题或 URL 等线索，必须继续读取共享文档内容后再生成总结，不能只根据共享事件和文档标题概括会议内容。
-- 若存在多个共享文档，按用户问题读取相关文档；处理某条文档上下文事件时必须按该 item 的 `share_id` 精确关联，不能用“最近一次共享”替代。
-- 若文档读取失败，必须明确说明“以下总结仅基于会中事件流，未成功读取共享文档内容”。
+- If the context does not clearly specify `meeting_id`, first choose the identity according to the user's current intent: for "me / the meeting the current user is in," use `lark-cli vc +meeting-list-active --as user --format json`; for "the target user's meeting visible to the app bot," use `lark-cli vc +meeting-list-active --as bot --user-id <user_open_id> --format json`. If multiple meetings are returned, first let the user choose.
+- If the context only has a 9-digit meeting number, first execute `+meeting-list-active` using the current identity and match by `meeting_no`; after matching a unique meeting, then query events. Do not automatically call `+meeting-join` just to summarize the meeting.
+- After confirming `meeting_id`, use its source identity to execute `lark-cli vc +meeting-events --as <same_identity> --meeting-id <id> --page-all --format pretty` to pull the latest event stream.
+- If the event stream shows shared content (JSON event type is `magic_share_started`; the pretty timeline displays "started sharing" or "is sharing" according to `start_reason`), and contains clues such as the document title or URL, you must continue to read the shared document content before generating a summary, and cannot summarize the meeting content based only on the sharing event and document title.
+- If there are multiple shared documents, read the relevant documents according to the user's question; when processing a document context event, you must precisely associate it by that item's `share_id`, and cannot substitute "the most recent sharing."
+- If document reading fails, you must clearly state "the following summary is based only on the in-meeting event stream, and the shared document content was not successfully read."
 
-### 7. 文档上下文事件消费
+<a id="7-文档上下文事件消费"></a>
+### 7. Document context event consumption
 
-`document_context_changed` 是只读线索事件。需要根据该事件执行评论、章节或预览等后续处理时，必须用 `+meeting-events --page-all --format json` 读取 `share_id`、`comment_id`、`element_token` 等完整字段；仅向用户展示时间线时仍默认使用 pretty。`vc +meeting-events` 保留原始 payload，并按既有事件输出约定派生 actor 与 pretty timeline；它不会为单个事件类型扩张 JSON/NDJSON 公共 envelope，也不会查询评论、下载素材或写文件。后续 Drive/Docs 命令只能由 Agent 按下表显式选择。
+`document_context_changed` is a read-only clue event. When subsequent processing such as comments, sections, or previews needs to be performed based on this event, you must use `+meeting-events --page-all --format json` to read complete fields such as `share_id`, `comment_id`, `element_token`; when only displaying the timeline to the user, still use pretty by default. `vc +meeting-events` retains the original payload and derives actor and pretty timeline according to the existing event output conventions; it will not expand the JSON/NDJSON common envelope for a single event type, nor will it query comments, download materials, or write files. Subsequent Drive/Docs commands can only be explicitly selected by the Agent according to the table below.
 
-#### 共享会话关联
+<a id="共享会话关联"></a>
+#### Shared session association
 
-`share_id` 标识一次共享会话。Agent 按事件时间顺序消费完整事件流，并维护共享会话状态：
+`share_id` identifies one sharing session. The Agent consumes the complete event stream in event time order and maintains sharing session state:
 
-1. 从 `payload.magic_share_started_items[]` 读取 `share_id` 和 `share_doc`，建立 `share_id -> share_doc` 映射并标记会话开始。同一 `share_id` 重复携带相同文档时按幂等事件处理；若指向不同文档则停止解析，不覆盖旧映射。
-2. `document_context_changed_items[]` 通过自己的 `share_id` 精确查找该映射。当前契约中 item 自带的 `share_doc` 不提供文档信息；只保留它的原始值，不作为 URL/title 来源，也不做冲突判定。
-3. `payload.magic_share_ended_items[]` 使用相同 `share_id` 标记该会话结束。历史映射可保留用于解释本批次中结束前已发生的上下文事件，但不能再作为新的活动共享会话。
-4. 增量拉取从会话中途开始且本地没有对应映射时，重新拉取包含 `magic_share_started` 的完整事件流；仍无法命中则标记未解析。禁止回退到当前文档、最近一次共享或其他 `share_id`。
+1. Read `share_id` and `share_doc` from `payload.magic_share_started_items[]`, establish the `share_id -> share_doc` mapping, and mark the session as started. When the same `share_id` repeatedly carries the same document, treat it as an idempotent event; if it points to a different document, stop parsing and do not overwrite the old mapping.
+2. `document_context_changed_items[]` precisely looks up this mapping through its own `share_id`. In the current contract, the item's own `share_doc` does not provide document information; only retain its original value, do not use it as a URL/title source, and do not perform conflict determination.
+3. `payload.magic_share_ended_items[]` uses the same `share_id` to mark the end of this session. Historical mappings may be retained to explain context events that occurred before the end within this batch, but they can no longer serve as a new active sharing session.
+4. When incremental pulling starts midway through a session and there is no corresponding local mapping, re-pull the complete event stream containing `magic_share_started`; if it still cannot be matched, mark it as unresolved. It is forbidden to fall back to the current document, the most recent sharing, or any other `share_id`.
 
-#### 字段合同
+<a id="字段合同"></a>
+#### Field contract
 
-| 路径 | 含义与处理 |
+| Path | Meaning and handling |
 | --- | --- |
-| `payload.magic_share_started_items[].share_id/share_doc` | 建立一次共享会话与文档 URL/title 的映射。缺 `share_id` 时不建立映射。 |
-| `payload.magic_share_started_items[].start_reason` | `share_started` 或缺失表示真实开始；`share_detected` 表示开启 Agent 入会能力时发现已有共享。两者都建立共享映射。 |
-| `payload.magic_share_ended_items[].share_id` | 结束同一 `share_id` 的共享会话；不得结束其他映射。 |
-| `payload.document_context_changed_items[]` | 结构化消费按原序读取；pretty timeline 沿用统一时间排序。每项恰有一个已知 context 才生成 pretty 条目，未知/歧义项只保留 raw。 |
-| `item.operator` | 当前 item 的 actor；缺 ID/name 时不猜共享发起人。 |
-| `item.share_id` | 当前上下文所属共享会话；用它精确查找 `magic_share_started` 建立的 `share_doc` 映射。 |
-| `item.share_doc.url/title` | 当前不作为文档元信息来源；保留在 raw payload 以兼容未来扩展。文档 URL/title 只从同 `share_id` 的 `magic_share_started` 映射取得。 |
-| `item.time` | Unix 毫秒字符串；缺失或非法时 timeline 回退到事件时间。 |
-| `item.comment_focus.comment_id/focused` | `focused=true` 才精确查询一个 comment ID；`false` 是清除焦点，零查询。 |
-| `item.section_location.parent_titles/title/level` | `section_path` 按 parent 原序再追加 title，trim 后丢弃空段，以 ` > ` 连接；`level` 仅作诊断，不参与截断或补层。 |
-| `item.element_preview.action/element_type/element_token/block_id` | 只有 `open + image + token`、`open + whiteboard + token` 可在明确预览意图下路由；其他组合零调用。 |
-| 事件公共 envelope | JSON/NDJSON 只使用既有 `event_id/event_type/event_time/actors/payload`；不新增顶层 `summary/section_path`，也不发明 `derived.document_context`。 |
-| 事件 `payload` | 原始恢复面；未知字段保留，顶层空数组沿用所有会议事件共用的压缩规则，派生字段不会写回 payload。 |
+| `payload.magic_share_started_items[].share_id/share_doc` | Establish a mapping between one sharing session and the document URL/title. When `share_id` is missing, do not establish a mapping. |
+| `payload.magic_share_started_items[].start_reason` | `share_started` or missing indicates a real start; `share_detected` indicates that an existing sharing was discovered when enabling the Agent join capability. Both establish a sharing mapping. |
+| `payload.magic_share_ended_items[].share_id` | End the sharing session for the same `share_id`; must not end other mappings. |
+| `payload.document_context_changed_items[]` | Structured consumption reads in original order; pretty timeline follows unified time sorting. Only when each item has exactly one known context is a pretty entry generated; unknown/ambiguous items retain only raw. |
+| `item.operator` | The actor of the current item; when ID/name is missing, do not guess the sharing initiator. |
+| `item.share_id` | The sharing session to which the current context belongs; use it to precisely look up the `share_doc` mapping established by `magic_share_started`. |
+| `item.share_doc.url/title` | Currently not used as a document metadata information source; retain it in the raw payload for compatibility with future extensions. Document URL/title is obtained only from the `magic_share_started` mapping of the same `share_id`. |
+| `item.time` | Unix millisecond string; when missing or invalid, the timeline falls back to the event time. |
+| `item.comment_focus.comment_id/focused` | Only `focused=true` precisely queries one comment ID; `false` is clearing focus, zero queries. |
+| `item.section_location.parent_titles/title/level` | `section_path` appends title after the original parent order, discards empty segments after trim, and joins with ` > `; `level` is only for diagnostics and does not participate in truncation or layer filling. |
+| `item.element_preview.action/element_type/element_token/block_id` | Only `open + image + token` and `open + whiteboard + token` can be routed under explicit preview intent; other combinations result in zero calls. |
+| Event common envelope | JSON/NDJSON uses only the existing `event_id/event_type/event_time/actors/payload`; do not add a new top-level `summary/section_path`, and do not invent `derived.document_context`. |
+| Event `payload` | Original recovery surface; unknown fields are retained, top-level empty arrays follow the compression rules shared by all meeting events, and derived fields are not written back to the payload. |
 
-#### 评论聚焦：只查一个 ID
+<a id="评论聚焦只查一个-id"></a>
+#### Comment focus: query only one ID
 
-先读取当前 item 的 `share_id` 和 `comment_focus.comment_id`，再按“共享会话关联”取得 `share_doc.url`。优先把完整 URL 传给现有 shortcut，由它解析实际 `file_token/file_type`（含 Wiki 解包）；如果上游只留下裸 token，则必须同时提供已解析且受支持的 `file_type`。
+First read the current item's `share_id` and `comment_focus.comment_id`, then obtain `share_doc.url` according to "shared session association." Prefer passing the complete URL to the existing shortcut and let it parse the actual `file_token/file_type` (including Wiki unwrapping); if the upstream leaves only a bare token, you must also provide the parsed and supported `file_type`.
 
 ```bash
-# 推荐：share_doc.url 完整可用
+# Recommended: share_doc.url is complete and usable
 lark-cli drive +batch-query-comments \
   --as <same_identity> \
   --url "<share_doc.url>" \
   --comment-ids "<comment_focus.comment_id>" \
   --format json
 
-# 只有已经可靠解析出裸 token/type 时使用
+# Use only when a bare token/type has already been reliably parsed
 lark-cli drive +batch-query-comments \
   --as <same_identity> \
   --token "<file_token>" \
@@ -168,12 +181,12 @@ lark-cli drive +batch-query-comments \
   --format json
 ```
 
-该 shortcut 对应 `drive.file.comments.batch_query`，请求体必须只有 `comment_ids:["<当前comment_id>"]`。响应处理规则：
+This shortcut corresponds to `drive.file.comments.batch_query`, and the request body must contain only `comment_ids:["<当前comment_id>"]`. Response handling rules:
 
-1. 整个响应 `items` 长度必须恰为 1，且 `items[0].comment_id` 必须与请求 ID 完全相等。`items` 为空、多于 1 项或唯一项 ID 不同都停止；即使多项中恰有一项匹配，也不得挑选该项继续。失败时保留 `share_doc/comment_id`，禁止改用 `drive +list-comments` 扫描整篇文档。
-2. `item.quote` 是引用位置；评论正文和回复在 `item.reply_list.replies`，其中第一条是根评论。
-3. 完整性看命中评论卡片的 **`item.has_more`**，不是外层评论分页，也不是根据非空 `page_token` 猜测。`item.has_more=false` 时直接使用内嵌列表，零 `+list-replies` 调用。
-4. `item.has_more=true` 时忽略截断列表，从**不带 `--page-token` 的第一页**开始重建完整 replies：
+1. The entire response `items` length must be exactly 1, and `items[0].comment_id` must be exactly equal to the request ID. If `items` is empty, has more than 1 item, or the unique item's ID differs, stop; even if exactly one item among multiple matches, you must not select that item and continue. On failure, retain `share_doc/comment_id`, and it is forbidden to switch to `drive +list-comments` to scan the entire document.
+2. `item.quote` is the reference position; the comment body and replies are in `item.reply_list.replies`, of which the first is the root comment.
+3. For completeness, look at the **`item.has_more`** of the matched comment card, not the outer comment pagination, and not guessing based on non-empty `page_token`. When `item.has_more=false`, directly use the embedded list, with zero `+list-replies` calls.
+4. When `item.has_more=true`, ignore the truncated list and rebuild complete replies starting from **the first page without `--page-token`**:
 
 ```bash
 lark-cli drive +list-replies \
@@ -192,84 +205,89 @@ lark-cli drive +list-replies \
   --format json
 ```
 
-第一页 `items[0]` 才是根评论；后续页的 `items[0]` 是普通回复。按页原序累积，直到页级 `has_more=false`。如果 `has_more=true` 但 `page_token` 为空、与已用 token 重复、API/权限失败或 comment ID 改变，立即停止并标记为 `partial`；保留已经取得的内容和原始标识，不循环、不重复根评论、不声称完整。
+The first page's `items[0]` is the root comment; `items[0]` on subsequent pages are ordinary replies. Accumulate in original page order until the page-level `has_more=false`. If `has_more=true` but `page_token` is empty, duplicates an already-used token, API/permission fails, or the comment ID changes, stop immediately and mark it as `partial`; retain the content already obtained and the original identifier, do not loop, do not repeat the root comment, and do not claim completeness.
 
-#### 章节定位
+<a id="章节定位"></a>
+#### Section location
 
-结构化消费直接读取当前 `section_location` item。pretty timeline 会按 `parent_titles` 原序追加 `title`，trim 后丢弃空段，并以 ` > ` 连接；多个 section item 分别展示，不选择其中一个覆盖事件级标量；标题全空时不生成 pretty 条目，只保留 raw。该路径是本地展示派生，不写回 JSON/NDJSON，也不需要或允许为它新增 API 查询。
+Structured consumption directly reads the current `section_location` item. The pretty timeline appends `title` in the original order of `parent_titles`, discards empty segments after trim, and joins with ` > `; multiple section items are displayed separately, and one of them is not selected to override event-level scalars; when all titles are empty, no pretty entry is generated and only raw is retained. This path is a local display derivation, does not write back to JSON/NDJSON, and does not need or allow new API queries for it.
 
-#### 元素预览：显式白名单
+<a id="元素预览显式白名单"></a>
+#### Element preview: explicit whitelist
 
-只有用户或上层 Agent 明确要求预览，并且 item 命中下表时才执行。两个命令都会写入 `--output`，因此输出路径必须由本次调用显式选择；不得默认覆盖已有文件。
+Execute only when the user or upper-layer Agent explicitly requests a preview and the item matches the table below. Both commands write to `--output`, so the output path must be explicitly selected by this call; do not overwrite existing files by default.
 
-| action | element_type | token 条件 | 精确命令 |
+| action | element_type | token condition | exact command |
 | --- | --- | --- | --- |
-| `open` | `image` | `element_token` 非空 | `lark-cli docs +media-preview --as <same_identity> --token "<element_token>" --output "<explicit-path>"` |
-| `open` | `whiteboard` | `element_token` 非空 | `lark-cli docs +media-download --as <same_identity> --type whiteboard --token "<element_token>" --output "<explicit-path>"` |
-| `close` | `image`/`whiteboard` | 任意 | 零调用；pretty 只记录预览关闭 |
-| 未知 | 任意 | 任意 | 零调用；不生成 pretty 条目，只保留 raw |
-| `open` | 未知/空 | 任意 | 零调用；禁止把原值透传到 `--type` |
-| `open` | `image`/`whiteboard` | token 为空 | 零调用；保留 `block_id/element_type/action` 并提示缺 token |
+| `open` | `image` | `element_token` non-empty | `lark-cli docs +media-preview --as <same_identity> --token "<element_token>" --output "<explicit-path>"` |
+| `open` | `whiteboard` | `element_token` non-empty | `lark-cli docs +media-download --as <same_identity> --type whiteboard --token "<element_token>" --output "<explicit-path>"` |
+| `close` | `image`/`whiteboard` | any | zero calls; pretty only records preview disabled |
+| unknown | any | any | zero calls; do not generate a pretty entry, retain only raw |
+| `open` | unknown/empty | any | zero calls; forbidden to pass the original value through to `--type` |
+| `open` | `image`/`whiteboard` | token empty | zero calls; retain `block_id/element_type/action` and indicate missing token |
 
-#### 失败恢复
+<a id="失败恢复"></a>
+#### Failure recovery
 
-- parser 遇到未知字段、歧义 one-of 或单 item 缺字段：保留整个事件 `payload`、`event_id/event_type/event_time` 和可用 sibling；该 item 不生成 pretty 条目，也不合成通用描述。
-- `share_id` 缺失、映射未命中或 `share_doc` 冲突：回显 `share_id`、可用的 `share_doc.url/title` 与 `comment_id`；必要时重新拉取完整事件流，仍无法关联则停止，不用最近一次共享兜底。
-- `share_doc` 无法解析：回显 `share_id`、`share_doc.url/title` 与 `comment_id`，提示需要有效文档 URL 或已确认的 `file_token/file_type`；不要猜 type。
-- Drive API/权限失败：保留精确 batch-query 命令与 `comment_id`，根据 CLI 的 `missing_scopes/hint` 恢复权限后重试；不要扫描全部评论。
-- Docs 预览失败：保留 `action/element_type/element_token/block_id` 和用户选择的输出路径，修复权限或 token 后重试同一白名单命令；不要让 `meeting-events` 自动下载兜底。
-- 未知 context/type/action：保留 raw 并说明当前 CLI 没有安全路由；不得自动调用 overwrite、download 或任何猜测的 shortcut。
+- If the parser encounters an unknown field, ambiguous one-of, or a single item missing a field: retain the entire event `payload`, `event_id/event_type/event_time`, and available siblings; that item does not generate a pretty entry, and no generic description is synthesized.
+- If `share_id` is missing, the mapping is not matched, or `share_doc` conflicts: echo `share_id`, available `share_doc.url/title`, and `comment_id`; if necessary, re-pull the complete event stream, and if it still cannot be associated, stop, and do not fall back to the most recent sharing.
+- If `share_doc` cannot be parsed: echo `share_id`, `share_doc.url/title`, and `comment_id`, and indicate that a valid document URL or confirmed `file_token/file_type` is required; do not guess the type.
+- Drive API/permission failure: retain the exact batch-query command and `comment_id`, restore permissions according to the CLI's `missing_scopes/hint`, and retry; do not scan all comments.
+- Docs preview failure: retain `action/element_type/element_token/block_id` and the output path selected by the user, fix permissions or token, and retry the same whitelist command; do not let `meeting-events` automatically download as a fallback.
+- Unknown context/type/action: retain raw and explain that the current CLI has no safe route; do not automatically call overwrite, download, or any guessed shortcut.
 
-### 8. 关于 `page_token` 的返回与续拉
+<a id="8-关于-page_token-的返回与续拉"></a>
+### 8. About the return and continued pulling of `page_token`
 
-- 不管这次是只查 1 页，还是通过 `--page-all` 已经把当前可见事件都拿完，都应把最后拿到的 `page_token` 一并保留下来并返回给用户。
-- 只要响应里出现 `has_more=true`、pretty 里出现 `more available`，或返回了非空 `page_token`，就必须先判断当前结果是否完整；默认情况下，这意味着你还需要继续分页。
-- 如果没有使用 `--page-all`，但出现了上述分页信号，默认应继续用返回的 `page_token` 拉下一页，而不是直接结束。只有在用户明确不要继续翻页时，才可以停止并明确说明当前结果不完整。
-- 下次继续“查新增事件”时，应优先复用上一次保存的 `page_token`，而不是从头全量再拉一次。
-- 只有在用户明确要求“从头回放全部事件”时，才忽略历史 `page_token`，重新从第一页开始。
-- 但如果用户要你回答的是**当前这场会正在讲什么**，而不是“上一次之后新增了什么”，也要先做一次新的事件查询，再决定是否需要基于旧 `page_token` 继续补拉。
+- Whether this time you only query 1 page, or you have already pulled all currently visible events through `--page-all`, you should retain the last obtained `page_token` and return it to the user as well.
+- As long as `has_more=true` appears in the response, `more available` appears in pretty, or a non-empty `page_token` is returned, you must first determine whether the current result is complete; by default, this means you still need to continue paginating.
+- If `--page-all` was not used, but the above pagination signals appear, by default you should continue pulling the next page using the returned `page_token`, rather than ending directly. Only when the user explicitly does not want to continue paginating may you stop and clearly state that the current result is incomplete.
+- The next time you continue to "query new events," you should preferentially reuse the last saved `page_token`, rather than pulling everything again from the beginning.
+- Only when the user explicitly requests "replay all events from the beginning" should you ignore the historical `page_token` and restart from the first page.
+- However, if what the user wants you to answer is **what this current meeting is talking about**, rather than "what was newly added after the last time," you should also first perform a new event query, and then decide whether you need to continue pulling based on the old `page_token`.
 
-## 返回结构
+<a id="返回结构"></a>
+## Return structure
 
-常见顶层字段：
+Common top-level fields:
 
-| 字段 | 说明 |
+| Field | Description |
 |------|------|
-| `meeting` | 会议身份与时间状态，包含 `id/topic/meeting_no/start_time/end_time/status` |
-| `identity` | 当前读取身份，包含 `id/name/participant_type/label` |
-| `events` | 结构化事件列表；每条事件沿用 `event_id/event_type/event_time/actors/payload` 公共 envelope，事件专属数据保留在 `payload` |
-| `warnings` | 非阻断告警列表；事件列表本身仍可使用 |
-| `has_more` | 是否还有下一页 |
-| `page_token` | 下一页游标 |
+| `meeting` | Meeting identity and time status, including `id/topic/meeting_no/start_time/end_time/status` |
+| `identity` | Current reading identity, including `id/name/participant_type/label` |
+| `events` | Structured event list; each event follows the `event_id/event_type/event_time/actors/payload` common envelope, and event-specific data is kept in `payload` |
+| `warnings` | Non-blocking warning list; the event list itself is still usable |
+| `has_more` | Whether there is a next page |
+| `page_token` | Next page cursor |
 
-事件 `event_type` 常见类型：
+Common event `event_type` types:
 
-| event_type | 含义 |
+| event_type | Meaning |
 |-----------|------|
-| `participant_joined` | 有参会人加入会议 |
-| `participant_left` | 有参会人离开会议 |
-| `chat_received` | 收到会中聊天消息 |
-| `transcript_received` | 收到转写文本 |
-| `magic_share_started` | 开始共享，或开启 Agent 入会能力时发现已有共享；由 `start_reason` 区分 |
-| `magic_share_ended` | 结束共享 |
-| `document_context_changed` | 评论聚焦、章节定位或元素预览上下文变化 |
-| `countdown_changed` | 会中倒计时被设置、延长、提前结束、关闭窗口，或自然结束、临近提醒 |
+| `participant_joined` | A participant joined the meeting |
+| `participant_left` | A participant left the meeting |
+| `chat_received` | An in-meeting chat message was received |
+| `transcript_received` | A transcript text was received |
+| `magic_share_started` | Sharing started, or an existing share was discovered when the Agent join capability was enabled; distinguished by `start_reason` |
+| `magic_share_ended` | Sharing ended |
+| `document_context_changed` | Comment focus, chapter positioning, or element preview context changed |
+| `countdown_changed` | An in-meeting countdown was set, extended, ended early, had its window closed, or naturally ended, or a near-expiry reminder occurred |
 
 ### Forwarding meeting chat and reactions to IM
 
-转发到 IM 时，Agent 必须先用 `+meeting-events --format json` 的结构化事件构造完整 Feishu `post` 内容，再调用 IM 发送 shortcut。不要解析 pretty/Markdown 输出，也不要先生成纯文本或 Markdown 后再期望 IM 侧二次识别 reaction。
+When forwarding to IM, the Agent must first use the structured events from `+meeting-events --format json` to construct complete Feishu `post` content, then call the IM send shortcut. Do not parse the pretty/Markdown output, and do not first generate plain text or Markdown and then expect the IM side to recognize reactions a second time.
 
-对 `event_type == "chat_received"` 的事件逐项处理 `payload.chat_received_items`：
+For events of `event_type == "chat_received"`, process `payload.chat_received_items` item by item:
 
-- `message_type == 3` 是会中 reaction；构造 IM `post` 内容时，以 [`lark-im` reaction emoji 列表](../../im/references/lark-im-reactions.md) 作为 IM `emotion` 白名单。白名单内的 key 写成 `{"tag":"emotion","emoji_type":"<content>"}`，例如 `JIAYI`、`THUMBSUP`、`OK`。
-- 对不在 IM reaction emoji 白名单内的 reaction key，保留原始 key 但写成文本节点，例如 `{"tag":"text","text":"[<content>]"}`；不应直接写入 `emotion.emoji_type`，否则 IM 发送会失败。
-- 不要大小写归一化或猜测映射；`content` 是原始 reaction key，必须原样判断。
-- 其他聊天消息写成文本节点：`{"tag":"text","text":"<content>"}`。
-- 最终调用 `im +messages-send --msg-type post --content '<post-json>'`，其中 `<post-json>` 应混合使用可渲染 `emotion` 节点和文本 fallback；不要用 `--markdown` 承载会中 reaction。
-- 如果 IM 返回 `message_content_emotion_tag's emoji_type is invalid`，只降级非法 reaction key，不要把整条消息退化成纯文本。
-- 如果用户原始请求已经明确“发给我 / 推送给我 / 发到我的聊天框 / 发到我的单聊”，这已经覆盖本次收件人、内容和发送动作，直接发送给当前用户，不要再二次询问“是否发送”。
-- 默认用应用身份 `--as bot` 发送；只有用户明确要求“用本人身份 / 用户身份发送”时才切到 `--as user`。
-- 如果用户要求发给某个群或其他人但收件人不可唯一确定，只询问缺失的收件人信息。
+- `message_type == 3` is an in-meeting reaction; when constructing IM `post` content, use the [`lark-im` reaction emoji list](../../im/references/lark-im-reactions.md) as the IM `emotion` whitelist. Keys within the whitelist are written as `{"tag":"emotion","emoji_type":"<content>"}`, for example `JIAYI`, `THUMBSUP`, `OK`.
+- For reaction keys not in the IM reaction emoji whitelist, keep the original key but write it as a text node, for example `{"tag":"text","text":"[<content>]"}`; do not write it directly into `emotion.emoji_type`, otherwise the IM send will fail.
+- Do not normalize case or guess mappings; `content` is the original reaction key and must be judged as-is.
+- Write other chat messages as text nodes: `{"tag":"text","text":"<content>"}`.
+- Finally call `im +messages-send --msg-type post --content '<post-json>'`, where `<post-json>` should mix renderable `emotion` nodes and text fallback; do not use `--markdown` to carry in-meeting reactions.
+- If IM returns `message_content_emotion_tag's emoji_type is invalid`, only downgrade the illegal reaction key; do not degrade the entire message to plain text.
+- If the user's original request already explicitly says "send to me / push to me / send to my chat / send to my direct chat", this already covers the recipient, content, and send action for this time; send directly to the current user and do not ask again "whether to send".
+- By default, send using the app identity `--as bot`; only switch to `--as user` when the user explicitly requests "send using my own identity / user identity".
+- If the user asks to send to a certain group or another person but the recipient cannot be uniquely determined, only ask for the missing recipient information.
 
 ```bash
 lark-cli vc +meeting-events \
@@ -279,50 +297,55 @@ lark-cli vc +meeting-events \
   --format json
 ```
 
-如果用户已经要求“发给我”，`<open_id>` 使用当前用户的 open_id；需要解析时先用用户查询能力获取当前用户信息。构造 IM post 时只发送用户请求范围内的会中内容，不要把前一条自然语言预览当作发送内容。
+If the user has already requested "send to me", `<open_id>` uses the current user's open_id; when parsing is needed, first use the user query capability to obtain the current user information. When constructing the IM post, only send the in-meeting content within the scope of the user's request; do not treat the previous natural language preview as the content to send.
 
-## pretty 输出示例
+<a id="pretty-输出示例"></a>
+## pretty output example
 
 ```text
-会议主题：张三的视频会议
-会议时间：2026-04-17 15:28:52（进行中）
+Meeting topic: Zhang San's video meeting
+Meeting time: 2026-04-17 15:28:52 (in progress)
 
-[00:00:33] 明日之虾BOE(ou_xxx) 加入了会议
-[00:00:41] 张三(ou_xxx): [text] 6666
-[00:00:44] 张三(ou_xxx) 开始共享《智能纪要：飞书20251022-140223 2026年3月9日》
+[00:00:33] Tomorrow's Shrimp BOE(ou_xxx) joined the meeting
+[00:00:41] Zhang San(ou_xxx): [text] 6666
+[00:00:44] Zhang San(ou_xxx) started sharing "Smart Minutes: Feishu 20251022-140223 March 9, 2026"
            URL: https://...
-[00:01:32] 张三(ou_xxx): [reaction] JIAYI
+[00:01:32] Zhang San(ou_xxx): [reaction] JIAYI
 ```
 
-## 如何获取输入参数
+<a id="如何获取输入参数"></a>
+## How to obtain input parameters
 
-| 输入参数 | 获取方式 |
+| Input parameter | How to obtain |
 |---------|---------|
-| `meeting-id` | `+meeting-join` 返回的 `meeting.id`；或 `+meeting-list-active` 返回的 `meeting_id`；或 `+search` 结果中的 `id`。必须同时记录来源身份 |
-| `start` / `end` | 用户给出的时间范围；如未给出则默认取全量可见事件 |
-| `page-token` | 上一页或上一次查询结果中保存的 `page_token`；建议持久化保存，便于下次继续拉取新增事件 |
+| `meeting-id` | The `meeting.id` returned by `+meeting-join`; or the `meeting_id` returned by `+meeting-list-active`; or the `id` in the `+search` result. The source identity must also be recorded |
+| `start` / `end` | The time range given by the user; if not given, default to all visible events |
+| `page-token` | The `page_token` saved from the previous page or previous query result; persisting it is recommended, to make it easier to continue pulling new events next time |
 
-## 常见错误与排查
+<a id="常见错误与排查"></a>
+## Common errors and troubleshooting
 
-| 错误现象 | 根本原因 | 解决方案 |
+| Error symptom | Root cause | Solution |
 |---------|---------|---------|
-| `--meeting-id is required` | 未传入 `--meeting-id` | 传入长数字 `meeting.id` |
-| `10005 bot is not in meeting` | 使用应用身份读取，但应用机器人从未真实入会该会议；或会议已结束但应用机器人从未在会中出现过 | 如果 `meeting_id` 来自用户身份发现，改回 `--as user`；如果确实要应用身份读取，先让应用机器人入会或确认它曾参会后再用 `--as bot`。**如果只是想看参会人快照，改用 `lark-cli vc meeting get --params '{"meeting_id":"<meeting.id>","with_participants":true}'`** |
-| 用户身份无权限 / 不可见 | 当前用户不是该会议的可见参与者，或 `meeting_id` 不是从用户身份路径获得 | 不要反复执行 `auth login`。先确认 `meeting_id` 是否来自 `+meeting-list-active --as user`；如果用户明确要切到应用身份，再通过 `+meeting-list-active --as bot --user-id <user_open_id>` 获取应用身份可读的 `meeting_id`，或在用户明确同意后让应用机器人入会，再用 `+meeting-events --as bot` 读取 |
-| `20001 meeting_status_MEETING_END` | 会议已结束且已超出后端允许的 5 分钟宽限窗口 | 本接口不再适合继续拉取事件。先用 `lark-cli vc +detail --meeting-ids <meeting.id>` 获取会议产物信息，再根据 `note_display_type` / `note_id` / `minute_token` 和用户意图选择纪要正文、逐字稿或妙记；参会人请用 `lark-cli vc meeting get --params '{"meeting_id":"<meeting.id>"}' --with-participants` |
-| `20002 meeting not exist` | `meeting_id` 错误，或会议实例当前已不可获取（常见于把 9 位会议号当 meeting_id 传） | 确认传入的是长数字 `meeting_id`，不是 9 位会议号 |
-| 应用身份权限不足 | 应用权限、租户安装或权限可访问的数据范围未配置完整 | 不要执行 `auth login`。请应用开发者开通 `vc:meeting.bot.join:write`；再检查应用发布/安装和权限可访问的数据范围；配置正确仍失败时，保留错误码和 `log_id`，按服务端权限异常排查 |
-| `HTTP 404` / `HTTP 500` | 服务端当前无法找到或处理该会议实例 | 换一个正在进行且 bot 可见的 meeting_id，或排查后端问题 |
+| `--meeting-id is required` | `--meeting-id` was not passed in | Pass in the long numeric `meeting.id` |
+| `10005 bot is not in meeting` | Reading with app identity, but the app bot has never actually joined the meeting; or the meeting has ended but the app bot has never appeared in the meeting | If `meeting_id` came from user identity discovery, switch back to `--as user`; if app identity reading is really needed, first have the app bot join the meeting or confirm that it has attended, then use `--as bot`. **If you only want to see a participant snapshot, use `lark-cli vc meeting get --params '{"meeting_id":"<meeting.id>","with_participants":true}'` instead** |
+| User identity has no permission / is not visible | The current user is not a visible participant of the meeting, or `meeting_id` was not obtained from the user identity path | Do not repeatedly execute `auth login`. First confirm whether `meeting_id` came from `+meeting-list-active --as user`; if the user explicitly wants to switch to app identity, then obtain the app-identity-readable `meeting_id` through `+meeting-list-active --as bot --user-id <user_open_id>`, or after the user explicitly agrees, have the app bot join the meeting, then read with `+meeting-events --as bot` |
+| `20001 meeting_status_MEETING_END` | The meeting has ended and the backend-allowed 5-minute grace window has been exceeded | This interface is no longer suitable for continuing to pull events. First use `lark-cli vc +detail --meeting-ids <meeting.id>` to obtain meeting artifact information, then based on `note_display_type` / `note_id` / `minute_token` and the user's intent, choose the minutes body, verbatim transcript, or Minutes; for participants, use `lark-cli vc meeting get --params '{"meeting_id":"<meeting.id>"}' --with-participants` |
+| `20002 meeting not exist` | `meeting_id` is wrong, or the meeting instance is currently unavailable (commonly caused by passing a 9-digit meeting number as meeting_id) | Confirm that what is passed in is the long numeric `meeting_id`, not a 9-digit meeting number |
+| Insufficient app identity permissions | App permissions, tenant installation, or the data range accessible by permissions is not fully configured | Do not execute `auth login`. Ask the app developer to enable `vc:meeting.bot.join:write`; then check app publishing/installation and the data range accessible by permissions; if it still fails after correct configuration, keep the error code and `log_id`, and troubleshoot as a server-side permission exception |
+| `HTTP 404` / `HTTP 500` | The server currently cannot find or process this meeting instance | Switch to a meeting_id that is in progress and visible to the bot, or troubleshoot the backend issue |
 
-## 提示
+<a id="提示"></a>
+## Tips
 
-- 这是**会中事件流**查询，不适合拿来搜历史会议记录；搜历史会议请用 `+search`。
-- 如果会议已经结束，不要卡在 `+meeting-events`：  
-  - 先用 `lark-cli vc +detail --meeting-ids <meeting.id>` 获取会议产物信息。
-  - 再根据 `note_display_type`、`note_id`、`minute_token` 和用户意图，按 `lark-meeting` 的产物决策读取纪要正文、逐字稿或妙记。
-- 事件列表是否完整，取决于应用机器人何时入会、何时离会，以及后端当前可见的会中事件范围。对于已结束会议，通常只在**结束后 5 分钟内**、且应用机器人**曾经在会中**时还能继续拉到事件。
-- 查询"谁参加过某会议"请用 `vc meeting get --params '{"meeting_id":"<id>","with_participants":true}'`——这是参会人**快照** API，不依赖 bot 是否参会，对已结束会议也可查；**不要** 用 `+meeting-events` 做参会人查询。
+- This is an **in-meeting event stream** query, and is not suitable for searching historical meeting records; to search historical meetings, use `+search`.
+- If the meeting has already ended, do not get stuck on `+meeting-events`:
+  - First use `lark-cli vc +detail --meeting-ids <meeting.id>` to obtain meeting artifact information.
+  - Then based on `note_display_type`, `note_id`, `minute_token`, and the user's intent, follow the artifact decision in `lark-meeting` to read the minutes body, verbatim transcript, or Minutes.
+- Whether the event list is complete depends on when the app bot joined the meeting, when it left, and the range of in-meeting events currently visible to the backend. For ended meetings, events can usually still be pulled only **within 5 minutes after the end** and only when the app bot **was once in the meeting**.
+- To query "who attended a certain meeting", use `vc meeting get --params '{"meeting_id":"<id>","with_participants":true}'` - this is a participant **snapshot** API, does not depend on whether the bot attended, and can also query ended meetings; **do not** use `+meeting-events` for participant queries.
 
-## 相关场景
-- [会中事件与会中互动](../scenes/live-meeting-interact.md)
-- [应用机器人参会与会中互动](../scenes/live-meeting-attend.md)
+<a id="相关场景"></a>
+## Related scenarios
+- [In-meeting events and in-meeting interactions](../scenes/live-meeting-interact.md)
+- [App bot meeting attendance and in-meeting interactions](../scenes/live-meeting-attend.md)

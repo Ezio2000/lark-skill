@@ -1,32 +1,38 @@
-# Genre Contract: Data Report / 数据报告 (`report.data_report`)
+<a id="genre-contract-data-report--数据报告-reportdata_report"></a>
+# Genre Contract: Data Report (`report.data_report`)
 
-## 体裁规则表（硬约束）
+<a id="体裁规则表硬约束"></a>
+## Genre Rules Table (Hard Constraints)
 
-| 规则项 | 规则 |
+| Rule Item | Rule |
 |-|-|
-| 写作风格 | 准确、可复算、少形容词；标题表达发现、对象和时点，并保留不确定性 |
-| 内容逻辑 | 先建立指标契约和可比基线，再回答发生了什么、为何重要、还不能断言什么；观测、解释假设与行动条件分开，限制紧邻相关结论 |
-| 事实 / 边界 | 核心指标标定义、单位、分子分母、总体 / 分群、时间窗、来源 / 版本、更新时间和修订状态；比较须同口径，估计须披露可得不确定性，敏感小群体须汇总、抑制或限制访问；数据图须标轴、单位、分母、时点和来源，并提供文字等价信息 |
-| 错误 | 只列数字；隐藏分母或口径变化；不可比数据排名；选择性窗口 / 分群；相关性当因果；图轴、单位或来源缺失；统计显著冒充效应大小或业务胜出；伪精确；限制藏在附录 |
+| Writing Style | Accurate, reproducible, few adjectives; titles express findings, objects, and time points, and preserve uncertainty |
+| Content Logic | First establish the metric contract and comparable baseline, then answer what happened, why it matters, and what cannot yet be asserted; observations, explanatory hypotheses, and action conditions are kept separate, and limitations are placed adjacent to the relevant conclusions |
+| Facts / Boundaries | Core metrics must be labeled with definition, unit, numerator and denominator, population / segment, time window, source / version, update time, and revision status; comparisons must use the same methodology, estimates must disclose available uncertainty, and sensitive small groups must be aggregated, suppressed, or access-restricted; data charts must label axes, units, denominators, time points, and sources, and provide text-equivalent information |
+| Errors | Listing only numbers; hiding denominators or methodology changes; ranking incomparable data; selective windows / segments; treating correlation as causation; missing chart axes, units, or sources; statistical significance masquerading as effect size or business victory; false precision; burying limitations in an appendix |
 
-## 适用与消歧
+<a id="适用与消歧"></a>
+## Applicability and Disambiguation
 
-解读已定义指标、趋势、分布、漏斗、监控、估计或实验观察值。`有数据`、`有数字`、`分析一下`单独不决定路由；研究问题、抽样和可推广性为主走 [`research-report.md`](research-report.md)，比较商业选项走 [`business-analysis.md`](business-analysis.md)，组织状态、偏差和下一步走 Workplace 周期报告。
+Interpret defined metrics, trends, distributions, funnels, monitoring, estimates, or experimental observations. `有数据`, `有数字`, and `分析一下` alone do not determine routing; research questions, sampling, and generalizability primarily go to [`research-report.md`](research-report.md), comparing business options goes to [`business-analysis.md`](business-analysis.md), and organizational status, deviations, and next steps go to Workplace periodic reports.
 
-## 子类型
+<a id="子类型"></a>
+## Subtypes
 
-- KPI / 经营表现与趋势；分群、cohort 与分布；漏斗 / 路径与监控异常。
-- A/B 或实验 readout；设计和推断不足时只能报告观察值，不宣布因果胜出。
-- 预测、估计、修订或统计简报；须标模型 / 假设、适用期和修订状态。
+- KPI / business performance and trends; segments, cohorts, and distributions; funnels / paths and monitoring anomalies.
+- A/B or experimental readouts; when design and inference are insufficient, only observations may be reported, and causal victory must not be declared.
+- Forecasts, estimates, revisions, or statistical briefs; must label model / assumptions, applicable period, and revision status.
 
-## 证据与方法
+<a id="证据与方法"></a>
+## Evidence and Methods
 
-- 保留可复算的基数、过滤、聚合、估计区间和质量说明；比较前核对定义、总体、时间窗、分母和处理方法。
-- 按误解风险同时给绝对值、绝对变化、相对变化和长期基线；不用多余小数位制造精确感。
-- 覆盖、缺失、偏差、口径变化和修订若会改变解释，须与对应发现同处，并说明可能方向、规模和影响。
-- 描述性差异不得写成因果；解释标为待验证假设。统计显著性不等于效应大小、实际重要性或完整决策依据。
-- 缺定义、分母、时间或来源时使用 `[指标定义待核]`、`[分母待核]`，对应值不得进入结论；不可比数据分开展示。核心决策依赖的质量缺口无法关闭时标记 `blocked`。
+- Preserve reproducible cardinality, filters, aggregations, estimation intervals, and quality notes; before comparing, verify definitions, populations, time windows, denominators, and processing methods.
+- Based on risk of misinterpretation, provide absolute values, absolute changes, relative changes, and long-term baselines simultaneously; do not use excess decimal places to create a false sense of precision.
+- If coverage, missingness, bias, methodology changes, and revisions would alter interpretation, they must appear alongside the corresponding findings, with possible direction, magnitude, and impact explained.
+- Descriptive differences must not be written as causation; explanations are labeled as hypotheses to be verified. Statistical significance does not equal effect size, practical importance, or a complete basis for decision-making.
+- When definitions, denominators, time, or sources are missing, use `[指标定义待核]` and `[分母待核]`, and the corresponding values must not enter conclusions; incomparable data is presented separately. When quality gaps on which core decisions depend cannot be closed, mark `blocked`.
 
-## 结构与高质量写法
+<a id="结构与高质量写法"></a>
+## Structure and High-Quality Writing
 
-关键发现与决策限制 → 指标契约 / 数据质量 → 总览与基线 → 必要分维、分布和反例 → 可支持的解释与待验证假设 → 条件式行动 / 验证门 → 方法、修订和来源。每段按“观测 → 基线 / 背景 → 限制 → 含义”推进；复杂图同时给出文字结论和必要精确值，任何视觉不得成为唯一证据。
+Key Findings and Decision Limitations → Metric Contract / Data Quality → Overview and Baseline → Necessary Dimensional Breakdowns, Distributions, and Counterexamples → Supportable Explanations and Hypotheses to Be Verified → Conditional Actions / Verification Gates → Methods, Revisions, and Sources. Each section advances as "Observation → Baseline / Context → Limitations → Implications"; complex charts must simultaneously provide textual conclusions and necessary precise values, and no visual may be the sole evidence.

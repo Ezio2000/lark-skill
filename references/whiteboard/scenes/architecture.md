@@ -1,41 +1,47 @@
-# 系统架构图
+<a id="系统架构图"></a>
+# System Architecture Diagram
 
-适用于：分层架构图、微服务架构图、前后端架构图等有明确模块划分的场景。
+Applicable to: scenarios with clear module division, such as layered architecture diagrams, microservice architecture diagrams, and frontend-backend architecture diagrams.
 
-## Content 约束
+<a id="content-约束"></a>
+## Content Constraints
 
-- **充分展开**：用户说"IM 架构"，要展开到接入层（Web/iOS/Android/桌面）、网关层（接入/路由/安全）、服务层（核心服务+支撑服务两个子区域）、存储层（MySQL/Redis/MongoDB + 括号说明用途）
-- 每层节点 3-6 个。超过 6 个分两排或拆为子区域（如"核心服务"和"支撑服务"各一个子 frame）
-- 层标签简短（2-4 字），如"接入层""网关层"
-- 每个节点有标题 + 简短说明（如"用户服务\n注册登录和权限管理"）
-- 技术组件加括号注明技术栈（如"消息队列\n(Kafka)"）
-- 存储节点必须用 `cylinder` 类型（弧度固定 16px，禁止 `fill-container` 宽度，用 120-200 固定宽度）。每行最多 4 个 cylinder（超过 4 个换行或合并同类项，如多个 MySQL 合并为"关系数据库\n(MySQL)"）
-- 侧边栏（如运维监控、基础设施）只在用户明确要求时才加，最多 2-3 项。不要自作主张添加侧边栏
-- 可使用 icon+text 组合更直观的进行内容展示和增强辨识度
-- **连线：非必要不画。** 架构图的分层结构本身已表达了调用方向（上层调下层），不需要每对节点都连线。只在需要强调特定调用关系时才画，且总数不超过 3-5 条
+- **Fully expand**: When the user says "IM architecture", expand it to the access layer (Web/iOS/Android/desktop), gateway layer (access/routing/security), service layer (two sub-regions: core services + supporting services), and storage layer (MySQL/Redis/MongoDB + parenthetical descriptions of their purposes)
+- Each layer has 3-6 nodes. If more than 6, split into two rows or divide into sub-regions (e.g., "Core Services" and "Supporting Services" each as a separate sub-frame)
+- Layer labels should be short (2-4 characters), such as "Access Layer" and "Gateway Layer"
+- Each node has a title + brief description (e.g., "User Service\nRegistration, login, and permission management")
+- Technical components should include the tech stack in parentheses (e.g., "Message Queue\n(Kafka)")
+- Storage nodes must use the `cylinder` type (fixed 16px corner radius, `fill-container` width is prohibited, use a fixed width of 120-200). Each row has at most 4 cylinders (if more than 4, wrap to a new line or merge similar items, e.g., merge multiple MySQL instances into "Relational Database\n(MySQL)")
+- Sidebars (e.g., operations monitoring, infrastructure) should only be added when the user explicitly requests them, with at most 2-3 items. Do not add sidebars on your own initiative
+- You can use icon+text combinations to display content more intuitively and enhance recognizability
+- **Connections: Do not draw unless necessary.** The layered structure of an architecture diagram itself already expresses the call direction (upper layers call lower layers), so there is no need to connect every pair of nodes. Only draw connections when a specific call relationship needs to be emphasized, and the total should not exceed 3-5
 
-## Layout 选型
+<a id="layout-选型"></a>
+## Layout Selection
 
-| 模式                 | 适用条件                                  | 特征                                                                                         |
-| -------------------- | ----------------------------------------- | -------------------------------------------------------------------------------------------- |
-| **grid（分层条带）** | 有明确上下层级关系（接入→网关→服务→存储） | 行=层级，每行 horizontal frame 等分节点。左侧 text 标签 + 右侧层 frame（Label-Outside 模式） |
-| **grid（网格矩阵）** | 多模块平级，无明确层级                    | N×M 网格等分，每格一个模块                                                                   |
-| **混合（岛屿式）**   | 模块间网状互联，无清晰分层                | 宏观 `layout: "none"` + x/y 定位各模块岛屿，微观每个岛屿内部用 flex 布局                     |
+| Mode                          | Applicable Conditions                                              | Characteristics                                                                                                                       |
+| ----------------------------- | ------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------- |
+| **grid (layered bands)**      | Clear top-down hierarchy (access → gateway → service → storage)    | Rows = layers, each row is a horizontal frame with equally divided nodes. Left-side text labels + right-side layer frames (Label-Outside mode) |
+| **grid (grid matrix)**        | Multiple modules at the same level, no clear hierarchy             | N×M grid with equal divisions, one module per cell                                                                                     |
+| **Hybrid (island-style)**     | Modules interconnected in a mesh, no clear layering                | Macro `layout: "none"` + x/y positioning for each module island, micro flex layout inside each island                                    |
 
-## Layout 规则
+<a id="layout-规则"></a>
+## Layout Rules
 
-- **根节点**：固定宽度（1200），`height: "fit-content"`，`layout: "vertical"`，`gap: 20`，`padding: 24`
-- **主体双栏**（有侧边栏时）：horizontal frame，`alignItems: "stretch"`，`gap: 16`
-  - 左侧 layers-container：`width: "fill-container"`，vertical，`gap: 16`
-  - 右侧 sidebar：固定宽度 160-180，`height: "fill-container"`，`justifyContent: "space-between"`
-- **单层（Label-Outside）**：horizontal frame，左侧 text 标签（`width: 80`，`textAlign: "right"`），右侧层 frame（`fill-container`，带 borderWidth/borderRadius，`padding: 24`，`gap: 16`）。**为什么用 Label-Outside**：标签放在 frame 外部更简洁，避免在 frame 内部嵌套窄 rect 导致竖排文字和对齐问题。
-- **子区域**：在层 frame 内嵌套 horizontal wrapper（`alignItems: "stretch"` 保证同行等高），内含多个 vertical frame（各子区域），每个子区域有自己的标题 text + 内容行。行内组件 `width: "fill-container"` 自动均分。
-- **侧边栏**：拆成独立的逻辑块 frame（如"运维监控"和"基础设施"分开），各块 `height: "fill-container"`。外层 `justifyContent: "space-between"` 保证与左侧对齐，内部可设 `justifyContent: "center"` 使内容居中。
-- **行内标签**：层内如有贯穿多列的特殊组件（如中间件），可采用"左侧小标签 + 右侧组件组"的横向布局
+- **Root node**: Fixed width (1200), `height: "fit-content"`, `layout: "vertical"`, `gap: 20`, `padding: 24`
+- **Main body two-column** (when there is a sidebar): horizontal frame, `alignItems: "stretch"`, `gap: 16`
+  - Left layers-container: `width: "fill-container"`, vertical, `gap: 16`
+  - Right sidebar: fixed width 160-180, `height: "fill-container"`, `justifyContent: "space-between"`
+- **Single layer (Label-Outside)**: horizontal frame, left-side text label (`width: 80`, `textAlign: "right"`), right-side layer frame (`fill-container`, with borderWidth/borderRadius, `padding: 24`, `gap: 16`). **Why use Label-Outside**: Placing the label outside the frame is cleaner and avoids nesting narrow rects inside the frame, which causes vertical text and alignment issues.
+- **Sub-regions**: Nest a horizontal wrapper inside the layer frame (`alignItems: "stretch"` ensures equal height in the same row), containing multiple vertical frames (each sub-region), where each sub-region has its own title text + content row. Components within a row are automatically evenly distributed by `width: "fill-container"`.
+- **Sidebar**: Split into independent logical block frames (e.g., "Operations Monitoring" and "Infrastructure" separated), each block `height: "fill-container"`. The outer `justifyContent: "space-between"` ensures alignment with the left side, and `justifyContent: "center"` can be set internally to center the content.
+- **Inline labels**: If a layer contains special components that span multiple columns (e.g., middleware), a horizontal layout of "small label on the left + component group on the right" can be used
 
-## 骨架示例
+<a id="骨架示例"></a>
+## Skeleton Examples
 
-### 分层条带（Label-Outside + 侧边栏）
+<a id="分层条带label-outside--侧边栏"></a>
+### Layered Bands (Label-Outside + Sidebar)
 
 ```json
 {
@@ -338,7 +344,8 @@
 }
 ```
 
-### 岛屿式（网状互联）
+<a id="岛屿式网状互联"></a>
+### Island-Style (Mesh Interconnection)
 
 ```json
 {
@@ -423,11 +430,12 @@
 }
 ```
 
-## 陷阱
+<a id="陷阱"></a>
+## Pitfalls
 
-- **所有架构图都用分层条带**：多模块平级网状互联时应选岛屿式；无明确层级时应选网格矩阵。先判断信息结构再选布局。
-- **连线过多导致交叉**：架构图非必要不画连线。分层结构本身已表达调用方向，不需要每对节点连线。如果一定要画，最多 3-5 条关键路径。
-- **层标签用 frame title（不可读）**：层标签必须用独立的 text 节点放在 frame 外侧（Label-Outside 模式），不要嵌入 frame 内部。
-- **cylinder 用 fill-container 宽度**：cylinder 弧度固定 16px 不随宽度缩放，必须用固定宽度（120-200）。
-- **侧边栏逻辑混合**："运维监控"和"基础设施"必须是独立 frame，不可合并成一个长条。
-- **根节点没有固定宽度**：根 frame 必须有明确宽度（如 1200），否则子节点的 `fill-container` 无法计算。
+- **Using layered bands for all architecture diagrams**: When multiple modules are at the same level and interconnected in a mesh, island-style should be chosen; when there is no clear hierarchy, grid matrix should be chosen. Determine the information structure first, then choose the layout.
+- **Too many connections causing crossings**: Do not draw connections in architecture diagrams unless necessary. The layered structure itself already expresses the call direction, so there is no need to connect every pair of nodes. If connections must be drawn, at most 3-5 critical paths.
+- **Using frame title for layer labels (unreadable)**: Layer labels must use independent text nodes placed outside the frame (Label-Outside mode), not embedded inside the frame.
+- **Using fill-container width for cylinder**: The cylinder corner radius is fixed at 16px and does not scale with width, so a fixed width (120-200) must be used.
+- **Mixing sidebar logic**: "Operations Monitoring" and "Infrastructure" must be independent frames and cannot be merged into one long strip.
+- **Root node without fixed width**: The root frame must have an explicit width (e.g., 1200), otherwise the `fill-container` of child nodes cannot be calculated.

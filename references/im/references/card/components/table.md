@@ -1,8 +1,10 @@
-# 表格 `table`
+<a id="表格-table"></a>
+# Table `table`
 
-多列数据表，支持文本/数字/选项/人员/日期等列类型。**Card 2.0**。
+Multi-column data table, supporting column types such as text/number/option/person/date. **Card 2.0**.
 
-## 最小示例
+<a id="最小示例"></a>
+## Minimal example
 
 ```json
 {
@@ -18,36 +20,38 @@
 }
 ```
 
-## 字段
+<a id="字段"></a>
+## Fields
 
-| 字段 | 必填 | 类型 | 默认 | 说明 |
+| Field | Required | Type | Default | Description |
 |---|---|---|---|---|
-| `tag` | 是 | String | / | 固定 `table` |
-| `columns` | 是 | column[] | / | 列定义，≤50 列，见下 |
-| `rows` | 是 | Object[] | / | 行数据，按 `列name: 值` 填充 |
-| `page_size` | 否 | Number | 5 | 每页行数，[1,10] |
-| `row_height` | 否 | String | low | `low`/`middle`/`high`/`auto`/`[32,124]px` |
-| `row_max_height` | 否 | String | 124px | `row_height:auto` 时最大行高 [32,999]px |
-| `freeze_first_column` | 否 | Boolean | false | 冻结首列 |
-| `header_style` | 否 | Object | / | 表头样式：`{text_align, text_size, background_style:grey\|none, text_color, bold, lines}` |
-| `margin` | 否 | String | 0 | 外边距 [-99,99]px |
+| `tag` | Yes | String | / | Fixed `table` |
+| `columns` | Yes | column[] | / | Column definitions, ≤50 columns, see below |
+| `rows` | Yes | Object[] | / | Row data, populated according to `列name: 值` |
+| `page_size` | No | Number | 5 | Rows per page, [1,10] |
+| `row_height` | No | String | low | `low`/`middle`/`high`/`auto`/`[32,124]px` |
+| `row_max_height` | No | String | 124px | Maximum row height when `row_height:auto` [32,999]px |
+| `freeze_first_column` | No | Boolean | false | Freeze first column |
+| `header_style` | No | Object | / | Header style: `{text_align, text_size, background_style:grey\|none, text_color, bold, lines}` |
+| `margin` | No | String | 0 | Outer margin [-99,99]px |
 
-**column 字段**：`name`(必填，键名) / `display_name`(表头名) / `data_type`(见下) / `width`(`auto`/`[80,600]px`/`%`) / `horizontal_align` / `vertical_align`；`number` 列可加 `format:{precision, symbol, separator}`；`date` 列可加 `date_format`(如 `YYYY/MM/DD`)。
+**column fields**: `name` (required, key name) / `display_name` (header name) / `data_type` (see below) / `width` (`auto`/`[80,600]px`/`%`) / `horizontal_align` / `vertical_align`; `number` columns can add `format:{precision, symbol, separator}`; `date` columns can add `date_format` (e.g. `YYYY/MM/DD`).
 
-**data_type 与行值结构**：
+**data_type and row value structure**:
 
-| data_type | 行值 |
+| data_type | Row value |
 |---|---|
 | `text` | `"飞书"` |
 | `lark_md` | `"[链接](https://x)"` |
 | `number` | `168.23` |
-| `options` | `[{text:"S2", color:"blue"}]`（颜色枚举见 `../resource/colors.md`，文本勿过长） |
-| `persons` | `"ou_xxx"` 或 `["ou_a","ou_b"]` |
-| `date` | `1699341315000`（毫秒时间戳，按本地时区显示） |
-| `markdown` | `"![img](img_key)"` 完整 Markdown |
+| `options` | `[{text:"S2", color:"blue"}]` (for color enums see `../resource/colors.md`, text should not be too long) |
+| `persons` | `"ou_xxx"` or `["ou_a","ou_b"]` |
+| `date` | `1699341315000` (millisecond timestamp, displayed in local time zone) |
+| `markdown` | `"![img](img_key)"` full Markdown |
 
-## 嵌套 / 易错点
+<a id="嵌套--易错点"></a>
+## Nesting / common pitfalls
 
-- **table 只能放卡片根 `body.elements`**：不能被任何容器嵌套，自身也不能嵌别的组件。
-- 单卡最多 5 个 table（多语言每语言 5 个）。
-- `rows` 的键必须与 `columns[].name` 对应。
+- **table can only be placed at the card root `body.elements`**: it cannot be nested inside any container, and it cannot itself contain other components.
+- A single card can have at most 5 tables (5 per language for multilingual).
+- The keys of `rows` must correspond to `columns[].name`.

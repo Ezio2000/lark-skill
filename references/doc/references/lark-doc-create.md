@@ -1,18 +1,21 @@
-# docs +create（创建飞书云文档）
+<a id="docs-create创建飞书云文档"></a>
+# docs +create (Create a Feishu cloud document)
 
-从 XML（CLI 默认）或 Markdown 内容创建飞书云文档。简单段落、列表和表格可直接用 Markdown；精确布局、复杂块或 XML 扩展组件使用 XML。显式指定 `--doc-format`，以用户的格式和保真要求为准。
+Create a Feishu cloud document from XML (CLI default) or Markdown content. Simple paragraphs, lists, and tables can use Markdown directly; use XML for precise layout, complex blocks, or XML extension components. Explicitly specify `--doc-format`, and follow the user's format and fidelity requirements.
 
-写入前必须按 `--doc-format` 读取对应格式参考：`xml` 读取 [`lark-doc-xml.md`](lark-doc-xml.md)，`markdown` 读取 [`lark-doc-md.md`](lark-doc-md.md)；Markdown 中使用 XML 扩展标签时还须读取 `lark-doc-xml.md`。
+Before writing, you must read the corresponding format reference according to `--doc-format`: for `xml`, read [`lark-doc-xml.md`](lark-doc-xml.md); for `markdown`, read [`lark-doc-md.md`](lark-doc-md.md); when using XML extension tags in Markdown, you must also read `lark-doc-xml.md`.
 
-## 命令
+<a id="命令"></a>
+## Command
 
 ```bash
-# 简单内容优先使用 `--content -`，文件导入如下：
+# For simple content, prefer `--content -`; file import is as follows:
 lark-cli docs +create --doc-format xml --content "@<XML 文件相对路径>"
 lark-cli docs +create --doc-format markdown --content "@./draft.md"
 ```
 
-## 返回值
+<a id="返回值"></a>
+## Return Value
 
 ```json
 {
@@ -33,22 +36,24 @@ lark-cli docs +create --doc-format markdown --content "@./draft.md"
 }
 ```
 
-- **`document.new_blocks`**：本次操作新增的 block 列表（如画板）。`block_id` 可用于 `docs +update` 的 `--block-id` 做精确编辑；`block_token` 是资源块（如画板）的 token，可交给 `lark-whiteboard` 等 skill 继续操作。
-- **`warnings`**：服务端返回的警告列表；`ok=true` 时也要检查，按提示确认是否存在降级或未完全处理的内容。
-- **`tips`**：服务端返回的后续处理建议；为空表示没有额外建议，非空本身不表示创建失败。
-- **`permission_grant`**：仅以 bot 身份创建时返回。CLI 会尝试为当前 CLI 用户授予新文档的 `full_access`；`status` 为 `granted` 表示授权成功，`skipped` 表示没有可用的当前用户 `open_id`，`failed` 表示文档已创建但授权失败。`perm` 固定为 `full_access`，失败或跳过时按 `message` / `hint` 处理。**自动授权不等于 owner 转移；只有用户授权转移 owner 时才执行；已有明确授权可沿用。**
+- **`document.new_blocks`**: The list of blocks newly added by this operation (such as a whiteboard). `block_id` can be used for precise editing of `docs +update`'s `--block-id`; `block_token` is the token of a resource block (such as a whiteboard), which can be handed to skills such as `lark-whiteboard` for further operations.
+- **`warnings`**: The list of warnings returned by the server; also check when `ok=true`, and follow the prompts to confirm whether there is degraded or incompletely processed content.
+- **`tips`**: Follow-up handling suggestions returned by the server; empty means there are no additional suggestions, and non-empty itself does not indicate that creation failed.
+- **`permission_grant`**: Returned only when creating as a bot. The CLI will attempt to grant the current CLI user `full_access` on the new document; `status` being `granted` indicates successful authorization, `skipped` indicates there is no available current user `open_id`, and `failed` indicates the document was created but authorization failed. `perm` is fixed as `full_access`; on failure or skip, handle according to `message` / `hint`. **Automatic authorization does not equal owner transfer; it is only executed when the user authorizes an owner transfer; existing explicit authorization can be reused.**
 
-## 参数
+<a id="参数"></a>
+## Parameters
 
-|参数|必填|说明|
+|Parameter|Required|Description|
 |-|-|-|
-|`--title`|否|文档标题，Markdown 导入时使用；XML 创建推荐在 `--content` 开头写 `<title>...</title>`；多个标题仅保留第一个|
-|`--content`|视情况|文档内容（XML 或 Markdown 格式）；不传 `--content` 时必须传 `--title`|
-|`--reference-map`|否|结构化 `reference_map` JSON object；必须与 `--content` 一起使用。普通写入优先把结构写在正文里；该参数主要用于保留或回放已有 `document.reference_map`。支持直接 JSON、任务独占目录内的相对 `@file`，或 `-` 从 stdin 读取。|
-|`--doc-format`|否|CLI 默认 `xml`，应显式传入；普通文本结构或原样导入 Markdown 可用 `markdown`。不要混用完整的 XML 与 Markdown 文档格式；Markdown 中允许使用文档已定义的 XML 扩展标签。|
-|`--parent-token`|否|父文件夹或知识库节点 token（与 `--parent-position` 互斥）|
-|`--parent-position`|否|父节点位置，如 `my_library`（与 `--parent-token` 互斥）|
+|`--title`|No|Document title, used for Markdown import; for XML creation, it is recommended to write `<title>...</title>` at the beginning of `--content`; if there are multiple titles, only the first is kept|
+|`--content`|Depends|Document content (XML or Markdown format); if `--content` is not passed, `--title` must be passed|
+|`--reference-map`|No|Structured `reference_map` JSON object; must be used together with `--content`. For ordinary writing, prefer putting the structure in the body; this parameter is mainly used to preserve or replay an existing `document.reference_map`. Supports direct JSON, a relative `@file` within the task-exclusive directory, or `-` to read from stdin.|
+|`--doc-format`|No|CLI default is `xml`, and it should be passed explicitly; for plain text structures or importing Markdown as-is, `markdown` can be used. Do not mix complete XML and Markdown document formats; XML extension tags already defined by the document are allowed in Markdown.|
+|`--parent-token`|No|Parent folder or wiki node token (mutually exclusive with `--parent-position`)|
+|`--parent-position`|No|Parent node position, such as `my_library` (mutually exclusive with `--parent-token`)|
 
-## 需要回查文档
+<a id="需要回查文档"></a>
+## Need to Look Up the Document
 
-用 `lark-cli docs +fetch --doc "<document_id 或文档 URL>" --detail with-ids` 回查，若需要更多信息可查看 [`+fetch`](lark-doc-fetch.md)。
+Use `lark-cli docs +fetch --doc "<document_id 或文档 URL>" --detail with-ids` to look it up; if more information is needed, see [`+fetch`](lark-doc-fetch.md).

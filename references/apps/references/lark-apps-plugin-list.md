@@ -1,23 +1,27 @@
 # apps +plugin-list
 
-> **本地命令**：读当前目录的 `package.json`，在项目根目录下运行（和 npm 一样）。**不接受 `--app-id`**——它不是远端 API 命令。
+> **Local command**: reads the `package.json` in the current directory, and runs in the project root directory (just like npm). **Does not accept `--app-id`**—it is not a remote API command.
 
-列出已声明的插件包及安装状态。运行时命令事实以 `lark-cli apps +plugin-list --help` 为准。
+Lists the declared plugin packages and their installation status. For runtime command facts, refer to `lark-cli apps +plugin-list --help`.
 
-## 何时用
+<a id="何时用"></a>
+## When to use
 
-查看当前项目声明了哪些插件、是否已安装。`declared_not_installed` 状态表示需要运行 `+plugin-install` 安装。
+Check which plugins the current project has declared and whether they are installed. A `declared_not_installed` status means you need to run `+plugin-install` to install.
 
-## 命令骨架
+<a id="命令骨架"></a>
+## Command skeleton
 
-在项目根目录下运行（和 npm 一样，无需指定路径）。
+Run in the project root directory (just like npm, no path needs to be specified).
 
-## 示例
+<a id="示例"></a>
+## Examples
 
 ```bash
 lark-cli apps +plugin-list --format json
 ```
 
-## 输出契约
+<a id="输出契约"></a>
+## Output contract
 
-- `data.plugins[]` 包含 `key`、`version`、`status`（`installed` / `declared_not_installed`）。
+- `data.plugins[]` contains `key`, `version`, `status` (`installed` / `declared_not_installed`).

@@ -1,120 +1,133 @@
-# lark-apps 云端会话开发
+<a id="lark-apps-云端会话开发"></a>
+# lark-apps Cloud Session Development
 
-适用：用户希望让云端妙搭 Agent 生成或迭代应用，而不是把代码拉到本地开发。
+Applicable: the user wants a cloud Miaoda Agent to generate or iterate on an app, rather than pulling the code locally for development.
 
-## 核心流程
+<a id="核心流程"></a>
+## Core Flow
 
-整个开发在云端进行：本地只负责「发消息 + 轮询状态」，不拉源码、不产出代码、不启动本地 dev server。所有 session/chat 命令都以用户身份执行（`--as user`）。
+The entire development happens in the cloud: locally you only "send messages + poll status"; you do not pull source code, do not produce code, and do not start a local dev server. All session/chat commands are executed as the user (`--as user`).
 
-### 资源模型：app → session → turn
+<a id="资源模型app--session--turn"></a>
+### Resource Model: app → session → turn
 
-三层父子关系，下层都挂在上层之下：
+A three-level parent-child relationship, where each lower level hangs under the level above it:
 
-- **app（应用资产）**：一个妙搭应用，由 `+create` 创建并拿到 `app_id`。`--app-type` 沿用 index.md「选择开发路径」判定的类型（有数据库需求→`full_stack`；纯前端交互、未提数据库→默认 `frontend`），云端生成不写死 `full_stack`。
-- **session（会话）**：一个 app 下的一段独立对话上下文，由 `+session-create` 创建并拿到 `session_id`。一个 app 可有多个 session；`is_active` 表示该 session 当前是否可写（可发起对话）。
-- **turn（轮）**：一个 session 里的一轮交互 = 一条用户消息 + 妙搭 Agent 针对它的生成/迭代。`+chat` 发一条消息就发起一轮；轮的句柄是 `turn_id`，状态看 `latest_turn.status`。
+- **app (application asset)**: a Miaoda app, created by `+create` and yielding `app_id`. `--app-type` follows the type determined by "Choosing a Development Path" in index.md (has database requirements → `full_stack`; pure frontend interaction, no database mentioned → defaults to `frontend`); cloud generation does not hardcode `full_stack`.
+- **session**: an independent conversation context under one app, created by `+session-create` and yielding `session_id`. One app can have multiple sessions; `is_active` indicates whether that session is currently writable (can start a conversation).
+- **turn**: one round of interaction within a session = one user message + the Miaoda Agent's generation/iteration in response to it. `+chat` sends one message to start one turn; the turn's handle is `turn_id`, and its status is read from `latest_turn.status`.
 
-### 执行模型：异步 + 轮询
+<a id="执行模型异步--轮询"></a>
+### Execution Model: Asynchronous + Polling
 
-`+chat` 把消息入队后**立即返回、不等生成完成，响应不带 `turn_id`**；本轮状态与轮询节奏全靠 `+session-get` 读 `latest_turn.status` / `is_streaming` / `next_poll_after_ms`。
+`+chat` enqueues the message and then **returns immediately without waiting for generation to complete; the response does not include `turn_id`**; the turn's status and polling cadence rely entirely on `+session-get` reading `latest_turn.status` / `is_streaming` / `next_poll_after_ms`.
 
-`+session-get` 关键字段：
+`+session-get` key fields:
 
-- `is_streaming`：当前是否有一轮正在跑（`true`=还在生成）。
-- `latest_turn.status`：最近一轮的状态，只有 `running` / `completed` / `failed` / `cancelled`。
-- `latest_turn.turn_id`：最近一轮的句柄（`+session-stop --turn-id` 用它）。
-- `latest_turn.user_message`：本轮用户发的消息。
-- `latest_turn.messages`：本轮完成后回看全貌的消息列表，按时序排列、每条带 `role`（用户消息、模型回复、工具调用等都在内，role 取值如 `user` / `assistant` / `tool`）。注意它在 `latest_turn` 仍 running/初始化期可能为空——该轮**进行中**的实时进展改用 `+session-messages-list --turn-id <latest_turn.turn_id>` 读（见下方轮询规则）。
-- `queued_messages` / `queued_count`：还没开始跑、排在后面的消息。
-- `next_poll_after_ms`：建议的下次轮询间隔（毫秒，固定值）；非空时优先用它。
+- `is_streaming`: whether a turn is currently running (`true` = still generating).
+- `latest_turn.status`: the status of the most recent turn; only `running` / `completed` / `failed` / `cancelled`.
+- `latest_turn.turn_id`: the handle of the most recent turn (`+session-stop --turn-id` uses it).
+- `latest_turn.user_message`: the message the user sent in this turn.
+- `latest_turn.messages`: the message list for reviewing the full picture after this turn completes, arranged in chronological order, each entry carrying `role` (user messages, model replies, tool calls, etc. are all included; role values such as `user` / `assistant` / `tool`). Note that it may be empty while `latest_turn` is still running/initializing—for real-time progress of the turn **in progress**, read `+session-messages-list --turn-id <latest_turn.turn_id>` instead (see the polling rules below).
+- `queued_messages` / `queued_count`: messages that have not started running yet and are queued behind.
+- `next_poll_after_ms`: the suggested next polling interval (in milliseconds, a fixed value); when non-empty, prefer using it.
 
-轮询规则：
+Polling rules:
 
-- 节奏按 [初始化 vs 增量修改](#初始化-vs-增量修改) 判定：增量 5-10 秒一次；初始化 60-120 秒一次；`next_poll_after_ms` 非空时用它。
-- `is_streaming=true`、`building` / `running` / `streaming` 表示仍在生成，继续轮询，不傻等也不提前放弃；初始化阶段单次 sleep 拉到 60-120 秒，进入 `streaming` 或属增量修改时切回 5-10 秒。
-- `is_streaming=false` 且 `latest_turn.status=completed` 表示本轮完成，可发下一条。
-- `failed` / `cancelled` 时转述错误字段或 hint，由用户决定是否重试，不要静默重发。
-- 不知道某 app 有哪些 session 时，先 `+session-list --app-id <id>`，再选最近活跃的或让用户确认，别直接猜 `session_id`。
-- 要中止正在运行的一轮，从 `+session-get` 的 `latest_turn.turn_id` 取值，再调用 `+session-stop --turn-id <turn_id>`。
-- 状态与节奏看 `+session-get`，本轮实时内容看 `+session-messages-list`：想在 running 期间向用户播报"云端 Agent 此刻在做什么"，用 `+session-messages-list --turn-id <latest_turn.turn_id>` 读已产出的增量消息（running 期间即可读，不必等本轮结束）。复用上面的轮询节奏、不另起更密的轮询；续拉时把上次响应的 `next_page_token` 作 `--page-token` 只取新消息，转述时简述进展、不原样打印整段消息或工具输出。
+- Cadence is determined by [Initialization vs Incremental Modification](#初始化-vs-增量修改): incremental 5-10 seconds; initialization 60-120 seconds; when `next_poll_after_ms` is non-empty, use it.
+- `is_streaming=true`, `building` / `running` / `streaming` indicate still generating; keep polling, neither waiting blindly nor giving up early; during the initialization phase, stretch a single sleep to 60-120 seconds, and when entering `streaming` or when it is an incremental modification, switch back to 5-10 seconds.
+- `is_streaming=false` and `latest_turn.status=completed` indicate this turn is complete and the next message can be sent.
+- On `failed` / `cancelled`, relay the error field or hint and let the user decide whether to retry; do not silently resend.
+- When you do not know which sessions an app has, first `+session-list --app-id <id>`, then choose the most recently active one or have the user confirm; do not directly guess `session_id`.
+- To abort a running turn, take the value from `latest_turn.turn_id` in `+session-get`, then call `+session-stop --turn-id <turn_id>`.
+- Status and cadence come from `+session-get`; real-time content of this turn comes from `+session-messages-list`: if you want to report to the user during running "what the cloud Agent is doing right now", use `+session-messages-list --turn-id <latest_turn.turn_id>` to read the incremental messages already produced (readable during running, no need to wait for the turn to end). Reuse the polling cadence above; do not start a separate, denser polling loop; when continuing to pull, pass the previous response's `next_page_token` as `--page-token` to fetch only new messages; when relaying, briefly describe progress and do not print entire messages or tool output verbatim.
 
-### 典型链路
+<a id="典型链路"></a>
+### Typical Chain
 
 ```bash
-# 1) 建 app，拿 app_id（--app-type 用主路由判定的类型；此例"待办应用"要存待办→full_stack，
-#    若是纯前端交互工具且未提数据库则用 frontend）
+# 1) Create an app, get app_id (--app-type uses the type determined by the main routing; in this example "to-do app" needs to store to-dos → full_stack,
+#    if it is a pure frontend interaction tool and no database is mentioned, use frontend)
 lark-cli apps +create --name "待办应用" --app-type full_stack \
   --description "支持新增、完成、筛选待办"
 
-# 2) 在该 app 下建 session，拿 session_id
+# 2) Create a session under that app, get session_id
 lark-cli apps +session-create --app-id app_xxx
 
-# 3) 发消息发起一轮（异步入队，立即返回，无 turn_id）
+# 3) Send a message to start a turn (asynchronously enqueued, returns immediately, no turn_id)
 lark-cli apps +chat --app-id app_xxx --session-id sess_xxx --message "做一个待办清单页面"
 
-# 4) 轮询本轮状态；完成后从 latest_turn.messages 读取结果
+# 4) Poll this turn's status; after completion, read the result from latest_turn.messages
 lark-cli apps +session-get --app-id app_xxx --session-id sess_xxx
 
-# 找该 app 已有的会话（续聊/不确定 session 时用）
+# Find existing sessions for that app (used when continuing a chat / when the session is uncertain)
 lark-cli apps +session-list --app-id app_xxx
 ```
 
-## 完成态不等于发布态
+<a id="完成态不等于发布态"></a>
+## Completion State Is Not the Same as Published State
 
-通用发布态判定（is_published 语义、开发态链接拼接、发布态链接来源）见 index.md「发布态护栏」。本 reference 只补云端会话特有的措辞：
+For general published-state determination (is_published semantics, development-state link concatenation, published-state link sources), see "Published-State Guardrails" in index.md. This reference only adds wording specific to cloud sessions:
 
-- `+session-get` 返回 `is_streaming=false` 且 `latest_turn.status=completed`，只说明本轮云端生成/迭代结束，不等于已发布部署。
-- 如果只完成了云端会话、没有确认发布完成，就明确告诉用户“开发态链接可进入继续编辑，发布态是否为最新版本尚未确认”。
+- `+session-get` returning `is_streaming=false` and `latest_turn.status=completed` only means this round of cloud generation/iteration has ended; it does not mean it has been published and deployed.
+- If only the cloud session has completed and publication completion has not been confirmed, explicitly tell the user "the development-state link can be entered to continue editing; whether the published state is the latest version has not yet been confirmed."
 
-## 需求发送
+<a id="需求发送"></a>
+## Sending Requirements
 
-- 只有用户明确选择云端路径，或明确说“让妙搭 Agent / 云端 AI 生成/迭代”时，才进入本 reference；不要因为用户只说“做个 X”或“给我链接”就默认云端。
-- 进入云端路径后，极简需求也可直接发起生成，例如“做个投票工具”“做个站会小应用”。先按主路由判定的 `--app-type` 建 app（有数据库需求→`full_stack`，纯前端交互未提数据库→默认 `frontend`），再用 `+chat --message "<用户原话>"` 透传需求，不编造实体、字段或业务细节。
-- 如果需求过泛，可在 `+chat --message` 中保留原话，并只补一句“请先生成通用版本，后续可继续迭代”，不要用多轮追问阻塞生成。
+- Enter this reference only when the user explicitly chooses the cloud path, or explicitly says "let the Miaoda Agent / cloud AI generate/iterate"; do not default to the cloud just because the user only says "make an X" or "give me a link."
+- After entering the cloud path, even a minimal requirement can directly start generation, for example "make a voting tool" or "make a small standup app." First create the app according to the `--app-type` determined by the main routing (has database requirements → `full_stack`; pure frontend interaction with no database mentioned → defaults to `frontend`), then use `+chat --message "<用户原话>"` to pass the requirement through; do not invent entities, fields, or business details.
+- If the requirement is too broad, you may keep the original wording in `+chat --message` and add only one sentence: "Please generate a general version first; it can be iterated on later"; do not block generation with multiple rounds of follow-up questions.
 
-## 会话落点
+<a id="会话落点"></a>
+## Session Placement
 
-| 情形 | 动作 |
+| Situation | Action |
 |---|---|
-| 全新应用 + 云端生成 | 先按主路由判定的类型 `+create --app-type <frontend\|full_stack>`（未提数据库默认 frontend）拿 `app_id`，再 `+session-create` -> `+chat` |
-| 已知 app_id，用户没指定会话 | 先 `+session-list`；有活跃会话时问用户继续现有还是新开 |
-| 用户说“新开一段/换个话题” | `+session-create` 后再 `+chat` |
-| 用户说“接着刚才” | 复用上下文 session_id；拿不到就 `+session-list` 让用户选 |
-| 用户问会话“进行到哪一步/当前状态/最新进展” | 用 `+session-get --session-id <sid>` 读状态。`+session-list` 只负责发现/选择会话，不含执行状态；它返回空不等于无状态可查（session_id 也可能来自上下文），别用 `+session-list`/`+release-list` 代替 `+session-get` 回答进度 |
+| Brand-new app + cloud generation | First `+create --app-type <frontend\|full_stack>` according to the type determined by the main routing (defaults to frontend when no database is mentioned) to get `app_id`, then `+session-create` -> `+chat` |
+| app_id known, user did not specify a session | First `+session-list`; if there is an active session, ask the user whether to continue the existing one or start a new one |
+| User says "start a new one / change the topic" | `+session-create`, then `+chat` |
+| User says "continue from just now" | Reuse the context session_id; if unavailable, `+session-list` and let the user choose |
+| User asks about a session's "what step it is at / current status / latest progress" | Use `+session-get --session-id <sid>` to read status. `+session-list` is only responsible for discovering/selecting sessions and does not include execution status; its returning empty does not mean there is no status to query (session_id may also come from context); do not use `+session-list`/`+release-list` instead of `+session-get` to answer about progress |
 
-## 初始化 vs 增量修改
+<a id="初始化-vs-增量修改"></a>
+## Initialization vs Incremental Modification
 
-`+chat` 单轮的耗时差距很大，取决于目标 app 是否**已初始化**。两者的轮询节奏不同，**`+chat` 前先把状态判定清楚**，不要拿"是不是第一次发消息"当代理判断——session 是新建的不代表 app 没初始化过。
+`+chat` single-turn duration varies greatly, depending on whether the target app is **already initialized**. The polling cadence differs between the two; **determine the status clearly before `+chat`**; do not use "is this the first message sent" as a proxy judgment—a newly created session does not mean the app has never been initialized.
 
-### 判定规则
+<a id="判定规则"></a>
+### Determination Rules
 
-**已初始化**（满足任一即认为已初始化）：
+**Already initialized** (satisfying any one counts as initialized):
 
-1. 本地存在该 app 的项目目录（已 `+init` 或 clone 过），**且** git commit 数 > 2；
-2. 应用维度（云端）至少有一个已提交的版本，按以下任一信号判断：
-   - `lark-cli apps +session-get --app-id <app_id> --session-id <session_id>` 的返回里出现已提交版本信息；
-   - 在 `lark-cli apps +list`（必要时配 `--keyword <name>` 定位）的目标 app 条目里 `is_published: true`。
+1. A project directory for that app exists locally (already `+init` or cloned), **and** the git commit count > 2;
+2. At the application level (cloud), there is at least one committed version, determined by any of the following signals:
+   - Committed version information appears in the return of `lark-cli apps +session-get --app-id <app_id> --session-id <session_id>`;
+   - In the target app entry of `lark-cli apps +list` (with `--keyword <name>` to locate it if necessary), `is_published: true`.
 
-**未初始化**（两个条件同时成立）：
+**Not initialized** (both conditions hold simultaneously):
 
-1. 本地不存在该 app 的项目目录；
-2. 应用维度没有任何已提交版本（即上面两路云端信号都判 false）。
+1. No project directory for that app exists locally;
+2. There is no committed version at the application level (that is, both cloud signals above evaluate to false).
 
-### 两种 `+chat` 的行为
+<a id="两种-chat-的行为"></a>
+### Behavior of the Two `+chat`
 
-| 状态 | 服务端动作 | 单轮耗时 | 轮询建议 |
+| State | Server-side Action | Single-turn Duration | Polling Recommendation |
 |---|---|---|---|
-| 已初始化 → **增量修改** | 云端 Agent 在已有云端工作区上对**已提交代码**做局部修改，跳过方案设计与首次生成 | 通常分钟级 | `next_poll_after_ms` 为空时 5-10 秒一次 |
-| 未初始化 → **首次初始化 + 生成** | 服务端跑完整的应用初始化流程：需求分析、技术方案、数据模型、UI 与后端代码生成、首版代码提交到云端工作区 | 视需求复杂度，**通常 20~50 分钟** | `next_poll_after_ms` 为空时 60-120 秒一次 |
+| Already initialized → **Incremental Modification** | The cloud Agent makes local modifications to **committed code** on the existing cloud workspace, skipping solution design and first-time generation | Usually minute-level | When `next_poll_after_ms` is empty, once every 5-10 seconds |
+| Not initialized → **First Initialization + Generation** | The server runs the full app initialization flow: requirement analysis, technical solution, data model, UI and backend code generation, first version of code committed to the cloud workspace | Depends on requirement complexity, **usually 20~50 minutes** | When `next_poll_after_ms` is empty, once every 60-120 seconds |
 
-初始化阶段 `+session-get` 可能长时间持续返回 `building` / `running`，是正常状态，**不要按失败处理，也不要催用户**。
+During the initialization phase, `+session-get` may keep returning `building` / `running` for a long time; this is a normal state, **do not treat it as a failure, and do not rush the user**.
 
-## 字段注意
+<a id="字段注意"></a>
+## Field Notes
 
-所有字段统一 snake_case，顶层和嵌套 turn 字段都一样：`session_id`、`is_active`、`is_streaming`、`next_poll_after_ms`、`latest_turn.turn_id`、`latest_turn.status`、`latest_turn.user_message`、`latest_turn.messages`。
+All fields uniformly use snake_case, both top-level and nested turn fields: `session_id`, `is_active`, `is_streaming`, `next_poll_after_ms`, `latest_turn.turn_id`, `latest_turn.status`, `latest_turn.user_message`, `latest_turn.messages`.
 
-`+session-stop` 只停止正在运行的当前轮，不关闭会话；停完仍可继续 `+chat`。
+`+session-stop` only stops the currently running turn; it does not close the session; after stopping, you can still continue `+chat`.
 
-## 不适用
+<a id="不适用"></a>
+## Not Applicable
 
-- 用户要本地写代码、改仓库、跑 dev server：读 [`lark-apps-local-dev.md`](lark-apps-local-dev.md)。
+- The user wants to write code locally, modify the repository, or run a dev server: read [`lark-apps-local-dev.md`](lark-apps-local-dev.md).

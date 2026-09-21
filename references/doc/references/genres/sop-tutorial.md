@@ -1,41 +1,47 @@
 # Genre Contract: SOP / Runbook (`workplace.sop_tutorial`)
 
-## 体裁规则表（硬约束）
+<a id="体裁规则表硬约束"></a>
+## Genre Rules Table (Hard Constraints)
 
-| 规则项 | 规则 |
+| Rule Item | Rule |
 |-|-|
-| 写作风格 | 命令式、具体、顺序稳定，一步一动作并紧邻可观察判据，不写无条件的“适当 / 必要时” |
-| 内容逻辑 | 先定 routine / controlled / high-risk，并识别是否为响应预案，再按“版本 → 触发 / 范围 / 终态 → 角色 / 前置 → 动作 / 判据 / 证据 → 异常 / 停止 / 恢复 → 完成记录 / 复审”推进 |
-| 事实 / 边界 | owner、版本、环境、资格、权限、工具、命令、阈值、预期结果和恢复路径均须已验证；警告在动作前；命令成功不等于业务终态；流程图 / 示意不能替代可执行步骤、判据与异常路径，须有文字等价；关键未知使可发布稿 `blocked` |
-| 错误 | 教程冒充 SOP、未分风险、缺 owner / 版本 / 前置、一条多动作、编造入口 / 阈值 / 权限 / 命令、停止后状态未知、只写“必要时回滚”或未验证终态；响应预案无分级触发、替补指挥、降级路径或解除条件，任一出现即失败 |
+| Writing Style | Imperative, specific, stable order, one action per step with an immediately adjacent observable criterion; do not write unconditional "as appropriate / when necessary" |
+| Content Logic | First determine routine / controlled / high-risk, and identify whether it is a response plan; then proceed by "version → trigger / scope / end state → roles / prerequisites → actions / criteria / evidence → exceptions / stop / recovery → completion record / review" |
+| Facts / Boundaries | Owner, version, environment, qualifications, permissions, tools, commands, thresholds, expected results, and recovery paths must all be verified; warnings precede actions; command success does not equal business end state; flowcharts / diagrams cannot replace executable steps, criteria, and exception paths, and must have textual equivalents; critical unknowns make the publishable draft `blocked` |
+| Errors | A tutorial masquerading as an SOP, no risk classification, missing owner / version / prerequisites, multiple actions in one step, fabricated entry points / thresholds / permissions / commands, unknown state after stop, only writing "roll back when necessary" or unverified end state; a response plan lacking tiered triggers, alternate commander, degradation paths, or release conditions—any one of these appearing means failure |
 
-## 适用与风险分类
+<a id="适用与风险分类"></a>
+## Applicability and Risk Classification
 
-用于组织规定的重复作业、沿已批准路线取得确定终态的 runbook，或针对已知事件类别预置并授权的响应 / 业务连续性路径。一次性自助 how-to / 学习走 Knowledge；未来设计取舍、活跃未知故障或临场根因调查走 `technical-doc.md`；只建立组织权威、职责或发布要求而不提供现场步骤走 `formal-doc.md`。“教程 / 操作 / 手册 / 应急预案”单词本身不触发。
+Used for organization-mandated repetitive operations, runbooks that follow an approved route to a definite end state, or response / business continuity paths that are pre-established and authorized for known event categories. One-off self-service how-to / learning goes to Knowledge; future design trade-offs, active unknown failures, or on-the-spot root cause investigation go to `technical-doc.md`; establishing only organizational authority, responsibilities, or release requirements without providing on-site steps goes to `formal-doc.md`. The words "tutorial / operation / manual / emergency plan" by themselves do not trigger.
 
-| 分类 | 增量证明义务 |
+| Classification | Incremental Proof Obligations |
 |-|-|
-| `routine` | 阶段或终态验证、常见异常和升级 |
-| `controlled` | 再含审批、接受 / 拒绝、偏差记录、变更复审和代表性试跑 |
-| `high-risk` | 再含 precheck、hold point、go / no-go、停止条件，以及可执行 rollback / fallback / roll-forward 和恢复验证 |
+| `routine` | Stage or end-state verification, common exceptions, and escalation |
+| `controlled` | Additionally includes approval, acceptance / rejection, deviation records, change review, and representative trial run |
+| `high-risk` | Additionally includes precheck, hold point, go / no-go, stop conditions, and executable rollback / fallback / roll-forward and recovery verification |
 
-## 响应预案增量
+<a id="响应预案增量"></a>
+## Response Plan Increment
 
-- 涉及人身安全或法定直报时，其优先级高于业务与财产；按已核风险设置进入、升级、降级和解除条件，明确指挥 / 决策权限、替补角色、首轮动作、信息报送与对外口径边界。联络序列、等待时长和重试次数须预先批准；未知时保留占位，仅放行无需等待授权的安全动作。
-- 预设负责人失联、断网断电、主资源不可用等降级场景及可达的安全终态；恢复须验证真实业务终态。发布前按风险做桌面推演或代表性演练，高风险场景包含故障注入并记录缺口、owner 和复验。
+- When personal safety or legally mandated direct reporting is involved, its priority is higher than business and property; set entry, escalation, degradation, and release conditions according to verified risks, and clarify command / decision authority, alternate roles, first-round actions, information reporting, and external communication boundaries. Contact sequences, wait durations, and retry counts must be pre-approved; when unknown, retain placeholders and only release safety actions that require no authorization wait.
+- Pre-set degradation scenarios such as designated responsible person unreachable, network or power outage, primary resource unavailable, and reachable safe end states; recovery must verify the true business end state. Before release, conduct tabletop exercises or representative drills according to risk; high-risk scenarios include fault injection and record gaps, owners, and re-verification.
 
-## 文控与证据
+<a id="文控与证据"></a>
+## Document Control and Evidence
 
-写明触发、目标终态、范围、owner / 资格、当前版本 / 环境、前置、权限、工具和输入。命令、参数、阈值、预期输出、备份 / 恢复资产和试跑结果须来自真实环境；流程变更后更新、复审并标 superseded 状态。
+State the trigger, target end state, scope, owner / qualifications, current version / environment, prerequisites, permissions, tools, and inputs. Commands, parameters, thresholds, expected outputs, backup / recovery assets, and trial run results must come from the real environment; after process changes, update, review, and mark superseded status.
 
-关键缺口就近使用`[待环境 owner 验证]`等具体占位。命令、权限、阈值、停止或恢复判据未知时只保留安全只读 precheck，不得创建可执行稿。
+For critical gaps, use specific placeholders such as `[待环境 owner 验证]` nearby. When commands, permissions, thresholds, stop or recovery criteria are unknown, retain only a safe read-only precheck; do not create an executable draft.
 
-## 步骤、异常与恢复
+<a id="步骤异常与恢复"></a>
+## Steps, Exceptions, and Recovery
 
-- 每个关键步骤只写一个动作，紧邻可观察结果、阈值与证据；验证需要操作时另列一步。未知偏差停止于已知安全状态，记录证据并升级。
-- high-risk 在不可逆动作前设置 hold point：列 go / no-go 信号、决策人和信号缺失时的安全终态。rollback 写触发条件、适用范围、步骤、阈值、停止点和恢复后业务验证，不能只写命令回执。
-- 有状态迁移另列不可逆点、写入归属、checkpoint / 幂等，以及完整、无重复、有序或等价验证；关闭 fallback 前必须证明新终态稳定。
+- Write only one action per critical step, with immediately adjacent observable results, thresholds, and evidence; when verification requires an operation, list it as a separate step. Stop at a known safe state for unknown deviations, record evidence, and escalate.
+- For high-risk, set a hold point before irreversible actions: list go / no-go signals, decision maker, and the safe end state when signals are missing. For rollback, write trigger conditions, applicable scope, steps, thresholds, stop points, and post-recovery business verification; do not write only command receipts.
+- For state transitions, separately list irreversible points, write ownership, checkpoint / idempotency, and complete, non-duplicate, ordered, or equivalent verification; before closing fallback, you must prove the new end state is stable.
 
-## 高质量写法
+<a id="高质量写法"></a>
+## High-Quality Writing
 
-让具备规定基础资格但不熟流程的人可独立复现；选择条件写在动作前，稳定原理链接出去，不混入原理课或临场诊断。按风险裁剪篇幅但不删证明义务；按适用治理要求由代表性执行者试跑，未经任何实际验证不得发布。
+Make it independently reproducible by someone with the specified baseline qualifications but unfamiliar with the process; write selection conditions before actions, link out stable principles, and do not mix in principle lessons or on-the-spot diagnosis. Trim length according to risk but do not delete proof obligations; conduct trial runs by representative executors according to applicable governance requirements, and do not release without any actual verification.

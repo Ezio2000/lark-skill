@@ -1,84 +1,90 @@
 # vc +meeting-message-send
 
-发送会中文本消息或会中 reaction emoji。
+Send an in-meeting text message or an in-meeting reaction emoji.
 
-本模块 对应 shortcut：`lark-cli vc +meeting-message-send`（调用 `POST /open-apis/vc/v1/bots/message`）。
+This module corresponds to shortcut: `lark-cli vc +meeting-message-send` (calls `POST /open-apis/vc/v1/bots/message`).
 
-## 适用场景
+<a id="适用场景"></a>
+## Applicable Scenarios
 
-- 用户要求“在会里发一句话”“提示大家”“给当前会议发消息”。
-- 用户要求发送会中表情，例如“发个点赞”“发个 OK”“发个爱心”。
-- 用户要求表达会中反馈，例如“听不到”“看不到”“声音清楚”“效果不错”。
-- 只用于正在进行中的会议；已结束会议不支持。
+- The user asks to "send a message in the meeting", "notify everyone", or "send a message to the current meeting".
+- The user asks to send an in-meeting emoji, for example "send a thumbs up", "send an OK", or "send a heart".
+- The user asks to express in-meeting feedback, for example "can't hear", "can't see", "sound is clear", or "looks good".
+- Only for meetings that are in progress; ended meetings are not supported.
 
-## 身份规则
+<a id="身份规则"></a>
+## Identity Rules
 
-`meeting_id` 从哪种身份路径拿到，发送消息时就沿用哪种身份：
+Whichever identity path `meeting_id` was obtained from, use that same identity when sending the message:
 
-| meeting_id 来源 | 发送时身份 |
+| meeting_id source | Identity when sending |
 | --- | --- |
 | `+meeting-list-active --as user` | `+meeting-message-send --as user` |
 | `+meeting-list-active --as bot --user-id <user_open_id>` | `+meeting-message-send --as bot` |
-| `+meeting-join --as bot` 返回的 `meeting.id` | `+meeting-message-send --as bot` |
+| `meeting.id` returned by `+meeting-join --as bot` | `+meeting-message-send --as bot` |
 
-不要把用户身份发现的 `meeting_id` 改用应用身份发送，也不要把应用身份发现的 `meeting_id` 改用用户身份发送，除非用户明确要求切换。
+Do not switch a `meeting_id` discovered via user identity to send with app identity, and do not switch a `meeting_id` discovered via app identity to send with user identity, unless the user explicitly requests a switch.
 
-## 参数
+<a id="参数"></a>
+## Parameters
 
-| 参数 | 说明 |
+| Parameter | Description |
 | --- | --- |
-| `--meeting-id` | 必填，长数字 `meeting_id`，不是 9 位会议号 |
-| `--msg-type` | 可选，`text` 或 `reaction`；只传 `--text` 或只传 `--emoji-type` 时可自动推断 |
-| `--text` | 文本消息内容 |
-| `--emoji-type` | 会中 reaction emoji key，大小写敏感，必须从本文“完整 `emoji_type` 列表”中选择 |
-| `--uuid` | 可选，幂等 key；不传则服务端生成 |
+| `--meeting-id` | Required, long numeric `meeting_id`, not the 9-digit meeting number |
+| `--msg-type` | Optional, `text` or `reaction`; can be inferred automatically when only `--text` or only `--emoji-type` is passed |
+| `--text` | Text message content |
+| `--emoji-type` | In-meeting reaction emoji key, case-sensitive, must be selected from the "Complete `emoji_type` List" in this document |
+| `--uuid` | Optional, idempotency key; if not passed, the server generates one |
 
-CLI 会把 `--text` 或 `--emoji-type` 统一映射到 OpenAPI 请求体的 `content` 字段；`meeting_id` 也在请求体中传递。
+The CLI maps `--text` or `--emoji-type` uniformly to the `content` field of the OpenAPI request body; `meeting_id` is also passed in the request body.
 
-## 文本消息
+<a id="文本消息"></a>
+## Text Message
 
 ```bash
 lark-cli vc +meeting-message-send --as user --meeting-id <meeting_id> --text "稍等，我在看文档"
 ```
 
-文本消息会出现在会议内的文本互动区。不要把它当成绑定群消息发送能力；如果用户明确要求发到群聊，路由到 `lark-im`。
+The text message appears in the in-meeting text interaction area. Do not treat it as a bound group message sending capability; if the user explicitly requests sending to a group chat, route to `lark-im`.
 
-## 会中表情
+<a id="会中表情"></a>
+## In-Meeting Emoji
 
-会中 reaction 支持普通 Feishu reaction emoji，也支持 4 个 VC 反馈 key。
+In-meeting reactions support regular Feishu reaction emoji, and also support 4 VC feedback keys.
 
-常见语义：
+Common semantics:
 
-| 用户表达 | 推荐 `emoji_type` |
+| User expression | Recommended `emoji_type` |
 | --- | --- |
-| 点赞、赞一下、认可 | `THUMBSUP` |
-| +1、加一、附议、同上 | `JIAYI` |
-| OK、好的 | `OK` |
-| 收到、了解 | `Get` |
-| 爱心、红心 | `HEART` |
-| 喜欢、爱了 | `LOVE` |
-| 比心 | `FINGERHEART` |
-| 看起来没问题、可以继续 | `LGTM` |
-| 搞定、已完成 | `DONE` |
-| -1、减一 | `MinusOne` |
-| 不赞同、踩 | `ThumbsDown` |
-| 听不到、没声音 | `VC_NoSound` |
-| 看不到、画面有问题 | `VC_CanNotSee` |
-| 声音清楚 | `VC_SoundsClear` |
-| 会议画面效果不错、画面看起来可以 | `VC_LooksGood` |
+| Thumbs up, give a like, approve | `THUMBSUP` |
+| +1, plus one, agree, same as above | `JIAYI` |
+| OK, alright | `OK` |
+| Received, understood | `Get` |
+| Heart, red heart | `HEART` |
+| Like, love it | `LOVE` |
+| Finger heart | `FINGERHEART` |
+| Looks fine, can continue | `LGTM` |
+| Done, completed | `DONE` |
+| -1, minus one | `MinusOne` |
+| Disagree, thumbs down | `ThumbsDown` |
+| Can't hear, no sound | `VC_NoSound` |
+| Can't see, screen has a problem | `VC_CanNotSee` |
+| Sound is clear | `VC_SoundsClear` |
+| Meeting screen looks good, screen looks fine | `VC_LooksGood` |
 
 ```bash
 lark-cli vc +meeting-message-send --as bot --meeting-id <meeting_id> --msg-type reaction --emoji-type LOVE
 lark-cli vc +meeting-message-send --as bot --meeting-id <meeting_id> --msg-type reaction --emoji-type VC_NoSound
 ```
 
-不要编造列表外的 `emoji_type`，也不要把 mixed-case 值改成全大写，例如 `EatingFood`、`CheckMark`、`StatusInFlight` 都要按原值传。
+Do not fabricate a `emoji_type` outside the list, and do not change mixed-case values to all uppercase; for example, `EatingFood`, `CheckMark`, and `StatusInFlight` must all be passed as their original values.
 
-如果用户给的是自然语言语义，可以在下方列表中选择语义最接近的 key；如果不确定，先向用户确认。
+If the user provides natural language semantics, you may select the key with the closest semantics from the list below; if uncertain, confirm with the user first.
 
-### 完整 `emoji_type` 列表
+<a id="完整-emoji_type-列表"></a>
+### Complete `emoji_type` List
 
-以下列表与 IM reaction 官方 emoji 列表保持一致，并额外包含 VC 会中特定反馈 key：
+The following list is consistent with the official IM reaction emoji list, and additionally includes VC in-meeting specific feedback keys:
 
 ```text
 OK, THUMBSUP, THANKS, MUSCLE, FINGERHEART, APPLAUSE, FISTBUMP, JIAYI
@@ -107,26 +113,29 @@ GoGoGo, ThanksFace, SaluteFace, Shrug, ClownFace, HappyDragon
 VC_CanNotSee, VC_NoSound, VC_LooksGood, VC_SoundsClear
 ```
 
-## 9 位会议号处理
+<a id="9-位会议号处理"></a>
+## Handling a 9-Digit Meeting Number
 
-如果用户给的是 9 位会议号并要求发送会中消息：
+If the user provides a 9-digit meeting number and requests sending an in-meeting message:
 
-1. 先按当前身份执行 `+meeting-list-active`。
-2. 在返回结果中按 `meeting_no` 匹配该 9 位会议号。
-3. 匹配到唯一会议后取长数字 `meeting_id`。
-4. 用发现该会议时的同一身份执行 `+meeting-message-send`。
+1. First execute `+meeting-list-active` using the current identity.
+2. In the returned results, match that 9-digit meeting number by `meeting_no`.
+3. After matching a unique meeting, take the long numeric `meeting_id`.
+4. Execute `+meeting-message-send` using the same identity that discovered the meeting.
 
-匹配失败时不要自动入会。只有用户明确要求“让应用机器人入会/旁听/代参会”时，才改用 `+meeting-join`。
+Do not automatically join the meeting when matching fails. Only when the user explicitly requests "have the app bot join the meeting/observe/attend on behalf" should you switch to `+meeting-join`.
 
-## 权限和前置条件
+<a id="权限和前置条件"></a>
+## Permissions and Prerequisites
 
-- 用户身份：当前用户必须正在该会议中。
-- 应用身份：应用机器人必须正在该会议中。
-- 会议需要开启会中智能体/Agent 能力开关。
-- 需要 `vc:meeting.message:write` 权限；应用身份还需要应用已安装、数据范围已配置。
+- User identity: the current user must be in that meeting.
+- App identity: the app bot must be in that meeting.
+- The meeting needs the in-meeting agent/Agent capability switch enabled.
+- The `vc:meeting.message:write` permission is required; for app identity, the app must also be installed and the data scope configured.
 
-应用身份权限错误时，不要引导用户反复 `auth login`。按主 skill 的“应用身份权限配置检查”处理。
+When there is an app identity permission error, do not guide the user to repeatedly `auth login`. Handle it according to the main skill's "App Identity Permission Configuration Check".
 
-## 相关场景
-- [会中事件与会中互动](../scenes/live-meeting-interact.md)
-- [应用机器人参会与会中互动](../scenes/live-meeting-attend.md)
+<a id="相关场景"></a>
+## Related Scenarios
+- [In-Meeting Events and In-Meeting Interaction](../scenes/live-meeting-interact.md)
+- [App Bot Meeting Participation and In-Meeting Interaction](../scenes/live-meeting-attend.md)

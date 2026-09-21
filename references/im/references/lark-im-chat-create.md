@@ -64,7 +64,7 @@ lark-cli im +chat-create --name "My Group" --dry-run
 | `--as <identity>` | No | `bot` or `user` | Identity type |
 | `--dry-run` | No | - | Preview the request without executing it |
 
-> **`--chat-mode topic` vs "normal group with topic-message mode"**: `--chat-mode topic` here creates a 话题群 — the entire group is a topic chat. This is different from "normal group (`chat_mode=group`) + topic-message mode (`group_message_type=thread`)". This CLI exposes only `chat_mode`; `group_message_type` is intentionally not surfaced.
+> **`--chat-mode topic` vs "normal group with topic-message mode"**: `--chat-mode topic` here creates a topic group — the entire group is a topic chat. This is different from "normal group (`chat_mode=group`) + topic-message mode (`group_message_type=thread`)". This CLI exposes only `chat_mode`; `group_message_type` is intentionally not surfaced.
 
 ## AI Usage Guidance
 

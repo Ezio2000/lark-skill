@@ -1,8 +1,10 @@
-# 折叠按钮组 `overflow`
+<a id="折叠按钮组-overflow"></a>
+# Overflow button group `overflow`
 
-折叠多个选项按钮，点击展开。适用于操作较多的场景。**Card 2.0**。
+Collapse multiple option buttons, click to expand. Suitable for scenarios with many actions. **Card 2.0**.
 
-## 最小示例
+<a id="最小示例"></a>
+## Minimal example
 
 ```json
 {
@@ -14,23 +16,25 @@
 }
 ```
 
-## 字段
+<a id="字段"></a>
+## Fields
 
-| 字段 | 必填 | 类型 | 默认 | 说明 |
+| Field | Required | Type | Default | Description |
 |---|---|---|---|---|
-| `tag` | 是 | String | / | 固定 `overflow` |
-| `options` | 是 | Array | / | 选项按钮，见下 |
-| `options[].text` | 否 | Object | / | `{tag:"plain_text", content}`，≤100 字符 |
-| `options[].value` | 否 | String | / | 点击回传值，用于区分点了哪个选项（回调 `action.option`） |
-| `options[].multi_url` | 否 | Object | / | 跳转链接 `{url, pc_url, ios_url, android_url}` |
-| `behaviors` | 否 | Array | / | 额外回传：`[{type:"callback", value:{...}}]` |
-| `confirm` | 否 | Object | / | 二次确认弹窗 `{title, text}`（均 plain_text） |
-| `width` | 否 | String | default | `default` / `fill` / `[100,∞)px` |
-| `margin` | 否 | String | 0 | 外边距 [-99,99]px |
-| `element_id` | 否 | String | / | 唯一标识，字母开头 ≤20 字符 |
+| `tag` | Yes | String | / | Fixed `overflow` |
+| `options` | Yes | Array | / | Option buttons, see below |
+| `options[].text` | No | Object | / | `{tag:"plain_text", content}`, ≤100 characters |
+| `options[].value` | No | String | / | Value returned on click, used to distinguish which option was clicked (callback `action.option`) |
+| `options[].multi_url` | No | Object | / | Jump link `{url, pc_url, ios_url, android_url}` |
+| `behaviors` | No | Array | / | Additional return: `[{type:"callback", value:{...}}]` |
+| `confirm` | No | Object | / | Secondary confirmation dialog `{title, text}` (both plain_text) |
+| `width` | No | String | default | `default` / `fill` / `[100,∞)px` |
+| `margin` | No | String | 0 | Outer margin [-99,99]px |
+| `element_id` | No | String | / | Unique identifier, starts with a letter, ≤20 characters |
 
-## 嵌套 / 易错点
+<a id="嵌套--易错点"></a>
+## Nesting / common pitfalls
 
-- 可嵌套在 form / collapsible_panel / 循环容器 / interactive_container / column_set 内。
-- 多按钮时务必给每个 `options[].value`，否则回调无法区分点了哪个。
-- 点击触发 `card.action.trigger`，回传 `action.tag = "overflow"` + `action.option`。
+- Can be nested inside form / collapsible_panel / loop container / interactive_container / column_set.
+- When there are multiple buttons, be sure to give each one a `options[].value`, otherwise the callback cannot distinguish which one was clicked.
+- Clicking triggers `card.action.trigger`, returning `action.tag = "overflow"` + `action.option`.

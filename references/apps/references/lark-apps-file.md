@@ -1,34 +1,39 @@
-# apps file 域命令（应用存储）
+<a id="apps-file-域命令应用存储"></a>
+# apps file domain commands (app storage)
 
-管理妙搭应用的文件存储：上传 / 下载本地文件、列出与查看已存文件、生成临时分享链接、批量删除、查看用量。运行时命令事实以 `lark-cli apps +<cmd> --help` 为准；认证、`--as user`、exit 码、`_notice` 等通用处理见 [`../../shared/index.md`](../../shared/index.md) 与本域 [`index.md`](../index.md)。
+Manage file storage for Miaoda apps: upload / download local files, list and view stored files, generate temporary share links, batch delete, and view usage. For runtime command facts, `lark-cli apps +<cmd> --help` is authoritative; for authentication, `--as user`, exit codes, `_notice`, and other common handling, see [`../../shared/index.md`](../../shared/index.md) and this domain's [`index.md`](../index.md).
 
-## 何时用
+<a id="何时用"></a>
+## When to use
 
-用户要在某个妙搭应用里上传 / 下载 / 列出 / 删除文件、拿文件的临时分享链接、或看存储用量时。普通飞书云盘走 [`lark-drive`](../../drive/index.md)；数据库里的表数据走 `+db-*`。
+When the user wants to upload / download / list / delete files in a Miaoda app, get a temporary share link for a file, or check storage usage. Regular Feishu Drive goes through [`lark-drive`](../../drive/index.md); table data in a database goes through `+db-*`.
 
-## 命令一览
+<a id="命令一览"></a>
+## Command overview
 
-| 命令 | 做什么 | 关键参数 |
+| Command | What it does | Key parameters |
 |---|---|---|
-| `+file-list` | 列出文件，可按名/路径/类型/大小/上传时间过滤 | `--app-id`、过滤器、`--page-size`/`--page-token` |
-| `+file-get` | 查单个文件的元数据 | `--app-id`、`--path` |
-| `+file-sign` | 生成有时效的下载链接（用于分享 / 直接下载） | `--app-id`、`--path`、`--expires-in` |
-| `+file-download` | 把远端文件保存到本地 | `--app-id`、`--path`、`--output` |
-| `+file-upload` | 上传本地文件到应用存储 | `--app-id`、`--file` |
-| `+file-delete` | 按路径批量删除文件 | `--app-id`、`--path`（可重复）、`--yes` |
-| `+file-quota-get` | 查应用的文件存储用量 | `--app-id` |
+| `+file-list` | List files, filterable by name/path/type/size/upload time | `--app-id`, filters, `--page-size`/`--page-token` |
+| `+file-get` | Get metadata for a single file | `--app-id`, `--path` |
+| `+file-sign` | Generate a time-limited download link (for sharing / direct download) | `--app-id`, `--path`, `--expires-in` |
+| `+file-download` | Save a remote file locally | `--app-id`, `--path`, `--output` |
+| `+file-upload` | Upload a local file to app storage | `--app-id`, `--file` |
+| `+file-delete` | Batch delete files by path | `--app-id`, `--path` (repeatable), `--yes` |
+| `+file-quota-get` | Check an app's file storage usage | `--app-id` |
 
-## 寻址与约定（先读）
+<a id="寻址与约定先读"></a>
+## Addressing and conventions (read first)
 
-- **远端文件统一用 `--path` 精确寻址**（远端路径，带前导 `/`）。只知道文件名时，先用 `+file-list --name <名>` 定位拿到 `path`，再做后续操作。
-- **本地文件 / 输出路径用工作目录内的相对路径**（如 `--file ./report.pdf`、`--output ./out.png`）；路径在别处时先 `cd` 过去或改成相对路径。
-- 上传只接收本地 `--file`：文件名沿用本地文件名，远端路径由平台分配、全局唯一（无需也无法手填）。
-- file 域不区分环境，没有 `--env`。
+- **Remote files are always addressed precisely by `--path`** (remote path, with a leading `/`). When you only know the file name, first use `+file-list --name <名>` to locate it and get the `path`, then perform subsequent operations.
+- **Local files / output paths use relative paths within the working directory** (such as `--file ./report.pdf`, `--output ./out.png`); if the path is elsewhere, first `cd` over there or change it to a relative path.
+- Upload only accepts local `--file`: the file name follows the local file name, and the remote path is assigned by the platform and is globally unique (no need and no way to fill it in manually).
+- The file domain does not distinguish environments and has no `--env`.
 
-## 各命令
+<a id="各命令"></a>
+## Commands
 
 ### +file-list
-列出应用文件，支持精确过滤：`--name`（文件名）、`--path`（远端路径）、`--type`（MIME 类型）、`--size-gt`/`--size-lt`（字节）、`--uploaded-since`/`--uploaded-until`（上传时间区间，时间格式见末尾）。分页 `--page-size`（默认 20，范围 1..200）/ `--page-token`。列表每项给名称、路径、大小、类型、上传时间（pretty 表格即这 5 列）；上传者、下载地址（如有）仅在 JSON 输出里，单文件详情用 `+file-get`。
+List app files, with support for exact filtering: `--name` (file name), `--path` (remote path), `--type` (MIME type), `--size-gt`/`--size-lt` (bytes), `--uploaded-since`/`--uploaded-until` (upload time range; time format is at the end). Pagination `--page-size` (default 20, range 1..200) / `--page-token`. Each list item gives name, path, size, type, and upload time (the pretty table is exactly these 5 columns); uploader and download address (if any) appear only in JSON output, and single-file details use `+file-get`.
 
 ```bash
 lark-cli apps +file-list --app-id app_xxx
@@ -36,35 +41,36 @@ lark-cli apps +file-list --app-id app_xxx --type image/png --uploaded-since 7d
 ```
 
 ### +file-get
-按 `--path` 查单个文件的元数据。路径不存在时返回明确的「文件不存在」错误。
+Get metadata for a single file by `--path`. When the path does not exist, returns a clear "file does not exist" error.
 
 ```bash
 lark-cli apps +file-get --app-id app_xxx --path /1858537546760216.png
 ```
 
 ### +file-sign
-为指定文件生成一个**有时效的下载链接**——适合发给用户分享、或直接下载。`--expires-in` 设有效期秒数（默认 1 天，最长 30 天）。`pretty` 模式只输出链接本身，便于复制 / 管道；要把到期时间一并告诉用户时用默认 JSON 输出（含到期时间）。
+Generate a **time-limited download link** for the specified file—suitable for sending to users to share, or for direct download. `--expires-in` sets the validity period in seconds (default 1 day, maximum 30 days). `pretty` mode outputs only the link itself, making it easy to copy / pipe; when you need to tell the user the expiration time as well, use the default JSON output (which includes the expiration time).
 
 ```bash
 lark-cli apps +file-sign --app-id app_xxx --path /1858537546760216.png --expires-in 3600
 ```
 
 ### +file-download
-把远端文件保存到本地。`--output` 指定保存路径，缺省时按远端文件名保存到当前目录。
+Save a remote file locally. `--output` specifies the save path; when omitted, it is saved to the current directory using the remote file name.
 
 ```bash
 lark-cli apps +file-download --app-id app_xxx --path /1858537546760216.png --output ./logo.png
 ```
 
 ### +file-upload
-上传一个本地文件。文件名沿用本地文件名（特殊字符做 URL 编码透传；以 `.` 开头的隐藏文件名会加 `_` 前缀，避免下载回本地时覆盖隐藏文件），远端路径由平台分配。单文件上限 100 MB。
+Upload a local file. The file name follows the local file name (special characters are passed through with URL encoding; hidden file names starting with `.` get a `_` prefix to avoid overwriting hidden files when downloading back locally), and the remote path is assigned by the platform. The single-file limit is 100 MB.
 
 ```bash
 lark-cli apps +file-upload --app-id app_xxx --file ./report.pdf
 ```
 
-### +file-delete（高危）
-按路径批量删除，`--path` 可重复传多个。删除是高危操作，必须带 `--yes`；缺省会被确认关卡拦下。**逐项返回结果**：部分文件删除失败（如某个路径不存在）不影响其余文件，整体仍算成功，失败项在结果里单独标出原因。
+<a id="file-delete高危"></a>
+### +file-delete (high risk)
+Batch delete by path; `--path` can be passed repeatedly for multiple paths. Deletion is a high-risk operation and must include `--yes`; if omitted, it will be stopped by the confirmation checkpoint. **Results are returned item by item**: if some files fail to delete (for example, a path does not exist), it does not affect the remaining files, and the overall operation is still considered successful; failed items are marked separately in the results with the reason.
 
 ```bash
 lark-cli apps +file-delete --app-id app_xxx --path /1858537546760216.png --yes
@@ -72,25 +78,27 @@ lark-cli apps +file-delete --app-id app_xxx --path /a.png --path /b.png --yes
 ```
 
 ### +file-quota-get
-查应用的文件存储用量（已用量、文件数；配额接入后还会给总配额与使用率）。
+Check an app's file storage usage (used amount, file count; once quota integration is in place, it will also provide total quota and usage rate).
 
 ```bash
 lark-cli apps +file-quota-get --app-id app_xxx
 ```
 
-## 时间格式（`--uploaded-since` / `--uploaded-until`）
+<a id="时间格式--uploaded-since----uploaded-until"></a>
+## Time format (`--uploaded-since` / `--uploaded-until`)
 
-按用户口语自然传入即可，支持：
-- 相对时间 `7d` / `2h` / `30s`（从现在往前推）
-- 日期 `2026-04-15`
-- 日期时间 `2026-04-15T10:00:00`
-- 带时区的 ISO 8601 `2026-04-15T10:00:00Z` / `2026-04-15T10:00:00+08:00`
+Just pass it in naturally as the user speaks; the following are supported:
+- Relative time `7d` / `2h` / `30s` (counting backward from now)
+- Date `2026-04-15`
+- Date-time `2026-04-15T10:00:00`
+- ISO 8601 with time zone `2026-04-15T10:00:00Z` / `2026-04-15T10:00:00+08:00`
 
-> **时区**：不带时区的 `日期` / `日期时间` 按**运行机器的本地时区**解析（再归一化到 UTC 发给服务端）。CI（UTC）与本地（如 UTC+8）跑同一条命令，过滤边界会差几小时；要精确到某时区时显式写 ISO 8601 带偏移（如 `...+08:00` / `...Z`）。
+> **Time zone**: `日期` / `日期时间` without a time zone are parsed according to the **local time zone of the machine running it** (then normalized to UTC before being sent to the server). Running the same command in CI (UTC) and locally (such as UTC+8) will differ by a few hours at the filter boundary; when you need precision for a specific time zone, explicitly write ISO 8601 with an offset (such as `...+08:00` / `...Z`).
 
-## Agent 规则
+<a id="agent-规则"></a>
+## Agent rules
 
-- 寻址一律用 `--path`；用户只给文件名时先 `+file-list --name <名>` 定位，多个同名再让用户确认。
-- 上传 / 下载的本地路径用工作目录内相对路径；不在当前目录就 `cd` 过去或改相对路径。
-- 用户要「分享链接 / 临时下载地址」时用 `+file-sign`，把返回的链接转述给用户。
-- 删除前判断意图：已明确要删且授权时可直接带 `--yes`；不确定删哪些时先 `+file-list` 给用户确认。批量删除部分失败不报错，按逐项结果向用户说明哪些成功、哪些没删掉及原因。
+- Always use `--path` for addressing; when the user gives only a file name, first use `+file-list --name <名>` to locate it, and if there are multiple files with the same name, ask the user to confirm.
+- Use relative paths within the working directory for local upload / download paths; if not in the current directory, `cd` over there or change it to a relative path.
+- When the user wants a "share link / temporary download address", use `+file-sign` and relay the returned link to the user.
+- Before deleting, determine intent: if it is already clear what to delete and authorization is given, you can directly include `--yes`; if you are unsure what to delete, first use `+file-list` to get user confirmation. Partial failures in batch deletion do not raise an error; explain to the user item by item which succeeded, which were not deleted, and why.

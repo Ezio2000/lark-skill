@@ -1,164 +1,176 @@
-# 应用机器人参会与会中互动
+<a id="应用机器人参会与会中互动"></a>
+# App bot meeting attendance and in-meeting interaction
 
-编排应用机器人的完整会中流程：发现已在参加的会议，或在用户明确授权后发起或加入会议；随后拉取会中事件、发送文本或会中表情、操作倒计时，并仅在用户明确要求时结束会议或离会。
+Orchestrate the complete in-meeting flow for an app bot: discover meetings it is already attending, or start or join a meeting after the user explicitly authorizes it; then pull in-meeting events, send text or in-meeting reactions, operate the countdown, and end the meeting or leave only when the user explicitly requests it.
 
-## 选择入口
+<a id="选择入口"></a>
+## Choose an entry point
 
-| 当前条件 | 起点 |
+| Current condition | Starting point |
 |---|---|
-| 已有应用身份取得的 `meeting_id` | 直接拉取事件，不重复查询或入会 |
-| 应用机器人可能已在会中 | 已知目标用户 `user_open_id` 时，先用 `+meeting-list-active --as bot --user-id <user_open_id>` 发现会议 |
-| 用户明确要求机器人入会、旁听或代参会 | 使用 `+meeting-join --as bot` |
-| 用户明确要求机器人发起日程会议 | 使用 `+meeting-join --as bot --action start` |
-| 只想查当前用户所在会议 | 使用 [会中事件与会中互动](live-meeting-interact.md) 的用户身份路径，不让应用机器人入会 |
+| Already have a `meeting_id` obtained with the app identity | Pull events directly; do not query again or join the meeting |
+| The app bot may already be in the meeting | When the target user `user_open_id` is known, first use `+meeting-list-active --as bot --user-id <user_open_id>` to discover the meeting |
+| The user explicitly asks the bot to join, sit in on, or attend on behalf of someone | Use `+meeting-join --as bot` |
+| The user explicitly asks the bot to start a calendar meeting | Use `+meeting-join --as bot --action start` |
+| Only want to check the meeting the current user is in | Use the user identity path in [In-meeting events and in-meeting interaction](live-meeting-interact.md); do not have the app bot join the meeting |
 
-用户只提供 9 位会议号或询问会议内容，不等于授权机器人入会。
+The user only providing a 9-digit meeting number or asking about meeting content does not equal authorizing the bot to join the meeting.
 
-## 发现应用机器人已在参加的会议
+<a id="发现应用机器人已在参加的会议"></a>
+## Discover meetings the app bot is already attending
 
-已知目标用户 `ou_` open_id 时，先查询“目标用户正在参会且应用机器人也在同一会议”的活跃会议：
+When the target user `ou_` open_id is known, first query active meetings where "the target user is currently in the meeting and the app bot is also in the same meeting":
 
 ```bash
 lark-cli vc +meeting-list-active --as bot --user-id <user_open_id> --format json
 ```
 
-- 返回多个会议时，展示主题、会议号和 `meeting_id` 让用户选择；不擅自取第一个。
-- 返回空不代表目标用户没有在开会，只表示没有找到应用机器人也在会中的可见会议。
-- 用户提供 9 位会议号时，在结果中按 `meeting_no` 匹配；匹配失败时不自动入会。
-- 保存选定的长整数 `meeting_id`，后续事件、消息、倒计时和离会命令都沿用 `--as bot`。
+- When multiple meetings are returned, show the topic, meeting number, and `meeting_id` for the user to choose; do not arbitrarily take the first one.
+- An empty return does not mean the target user is not in a meeting; it only means no visible meeting was found where the app bot is also in the meeting.
+- When the user provides a 9-digit meeting number, match it in the results by `meeting_no`; if matching fails, do not automatically join the meeting.
+- Save the selected long integer `meeting_id`; subsequent event, message, countdown, and leave commands all continue to use `--as bot`.
 
-身份可见范围、多会议选择和会议号匹配见 [`lark-vc-meeting-list-active`](../references/lark-vc-meeting-list-active.md)。
+For identity visibility scope, multi-meeting selection, and meeting number matching, see [`lark-vc-meeting-list-active`](../references/lark-vc-meeting-list-active.md).
 
-## 发起或加入会议
+<a id="发起或加入会议"></a>
+## Start or join a meeting
 
-只有用户明确要求应用机器人发起、加入、旁听或代参会时才执行。输入是 9 位会议号，不是长整数 `meeting_id`。
+Execute only when the user explicitly asks the app bot to start, join, sit in on, or attend on behalf of someone. The input is a 9-digit meeting number, not the long integer `meeting_id`.
 
 ```bash
-# 发起日程会议并加入
+# Start a calendar meeting and join it
 lark-cli vc +meeting-join --as bot --meeting-number <9_digit_meeting_number> --action start
 
-# 加入正在进行的会议
+# Join an ongoing meeting
 lark-cli vc +meeting-join --as bot --meeting-number <9_digit_meeting_number>
 ```
 
-- 入会前确认目标会议号和用户意图；这是对其他参会人可见的写操作。
-- `--action start` 仅用于发起符合条件的日程会议；未传时保持加入正在进行的会议。
-- 保存返回的 `meeting.id`；后续邀请、拉取事件、发送会中消息、操作倒计时、结束或离会都使用该 ID 与 `--as bot`。
-- 应用机器人可以同时加入多场会议；加入新会议前不需要退出其他会议。
-- 根据返回状态确认入会成功，不要把“请求已发起”当作已入会。
+- Before joining, confirm the target meeting number and the user's intent; this is a write operation visible to other participants.
+- `--action start` is only used to start a qualifying calendar meeting; when not passed, keep joining an ongoing meeting.
+- Save the returned `meeting.id`; subsequent invitations, event pulling, in-meeting message sending, countdown operations, ending, or leaving all use this ID and `--as bot`.
+- The app bot can join multiple meetings at the same time; it does not need to leave other meetings before joining a new one.
+- Confirm successful joining based on the returned status; do not treat "request initiated" as already joined.
 
-会议密码、等候室、写操作风险和异常恢复见 [`lark-vc-agent-meeting-join`](../references/lark-vc-agent-meeting-join.md)。
+For meeting passwords, waiting rooms, write operation risks, and exception recovery, see [`lark-vc-agent-meeting-join`](../references/lark-vc-agent-meeting-join.md).
 
-## 邀请参会人
+<a id="邀请参会人"></a>
+## Invite participants
 
-只有用户明确要求邀请时才执行。输入是长数字 `meeting_id`，不是 9 位会议号。
+Execute only when the user explicitly requests an invitation. The input is the long number `meeting_id`, not a 9-digit meeting number.
 
 ```bash
-# 邀请指定用户
+# Invite specified users
 lark-cli vc +meeting-invite --as bot --meeting-id <meeting_id> --type SELECTED --open-ids <open_id>
 
-# 邀请全部合格日程参会人
+# Invite all eligible calendar participants
 lark-cli vc +meeting-invite --as bot --meeting-id <meeting_id> --type ALL_SUGGESTED
 ```
 
-- 应用机器人必须已在目标 Calendar VC 中。
-- `SELECTED` 接收用户 `open_id`；`ALL_SUGGESTED` 由服务端筛选合格日程参会人。
-- 以返回结果确认邀请状态，不把请求提交当作参会人已入会。
+- The app bot must already be in the target Calendar VC.
+- `SELECTED` accepts user `open_id`; `ALL_SUGGESTED` has the server filter eligible calendar participants.
+- Confirm the invitation status based on the returned result; do not treat request submission as participants having joined.
 
-邀请类型、人数上限和结果语义见 [`lark-vc-agent-meeting-invite`](../references/lark-vc-agent-meeting-invite.md)。
+For invitation types, participant limits, and result semantics, see [`lark-vc-agent-meeting-invite`](../references/lark-vc-agent-meeting-invite.md).
 
-## 拉取会中事件
+<a id="拉取会中事件"></a>
+## Pull in-meeting events
 
-使用应用身份发现或入会得到的 `meeting_id`：
+Use the `meeting_id` obtained from discovery or joining with the app identity:
 
 ```bash
 lark-cli vc +meeting-events --as bot --meeting-id <meeting_id> --page-all --format pretty
 ```
 
-- 默认使用 `--page-all` 拉取当前完整事件流，并保留返回的 `page_token` 供后续增量查询。
-- 回答“现在、刚刚、最新”或总结当前会议前，重新拉取最新事件；不直接复用旧快照。
-- 应用机器人必须在会中，或在会议结束后的可见宽限窗口内曾经参会；不要用任意 `meeting_id` 尝试读取。
-- 会中事件不能替代已结束会议的参会人快照、纪要、逐字稿或录制。
+- By default, use `--page-all` to pull the current complete event stream, and keep the returned `page_token` for subsequent incremental queries.
+- Before answering "now, just now, latest" or summarizing the current meeting, pull the latest events again; do not directly reuse an old snapshot.
+- The app bot must be in the meeting, or must have attended within the visible grace window after the meeting ended; do not attempt to read with an arbitrary `meeting_id`.
+- In-meeting events cannot replace participant snapshots, minutes, transcripts, or recordings of an ended meeting.
 
-事件类型、分页、结束后五分钟窗口和文档上下文处理见 [`lark-vc-meeting-events`](../references/lark-vc-meeting-events.md)。
+For event types, pagination, the five-minute window after ending, and document context handling, see [`lark-vc-meeting-events`](../references/lark-vc-meeting-events.md).
 
-## 发送会中文本或表情
+<a id="发送会中文本或表情"></a>
+## Send in-meeting text or reactions
 
-每次发送都是对会中参会人可见的写操作。只有用户明确要求发送，并已确认目标会议和内容时才执行。
+Each send is a write operation visible to in-meeting participants. Execute only when the user explicitly requests sending and the target meeting and content have been confirmed.
 
 ```bash
-# 文本消息
+# Text message
 lark-cli vc +meeting-message-send --as bot --meeting-id <meeting_id> --msg-type text --text "<message>"
 
-# 普通会中表情
+# Regular in-meeting reaction
 lark-cli vc +meeting-message-send --as bot --meeting-id <meeting_id> --msg-type reaction --emoji-type THUMBSUP
 ```
 
-- 始终沿用产生 `meeting_id` 的应用身份；不要切换成用户身份。
-- reaction 必须使用 Reference 中大小写敏感的完整 `emoji_type` 列表；不编造 key。
-- 发送失败时停止并报告；不自动重试或换身份，避免产生重复可见消息。
-- 用户要发绑定群或 IM 消息时改用 `lark-im`，不使用会中消息命令。
+- Always continue to use the app identity that produced `meeting_id`; do not switch to a user identity.
+- The reaction must use the complete case-sensitive `emoji_type` list from the Reference; do not invent keys.
+- When sending fails, stop and report; do not automatically retry or switch identities, to avoid producing duplicate visible messages.
+- When the user wants to send a bound group or IM message, switch to `lark-im` instead of using the in-meeting message command.
 
-文本、reaction 语义、完整 emoji key 和幂等参数见 [`lark-vc-meeting-message-send`](../references/lark-vc-meeting-message-send.md)。
+For text, reaction semantics, the complete emoji key list, and idempotency parameters, see [`lark-vc-meeting-message-send`](../references/lark-vc-meeting-message-send.md).
 
-## 操作会中倒计时
+<a id="操作会中倒计时"></a>
+## Operate the in-meeting countdown
 
-每次倒计时操作都是对会中参会人可见的写操作。只有用户明确要求设置、延长、提前结束或关闭倒计时时才执行。
+Each countdown operation is a write operation visible to in-meeting participants. Execute only when the user explicitly requests setting, extending, ending early, or closing the countdown.
 
 ```bash
-# 设置倒计时
+# Set countdown
 lark-cli vc +meeting-countdown --as bot --meeting-id <meeting_id> --action set --duration <minutes>
 
-# 延长倒计时
+# Extend countdown
 lark-cli vc +meeting-countdown --as bot --meeting-id <meeting_id> --action prolong --duration <minutes>
 ```
 
-- 始终沿用产生 `meeting_id` 的应用身份；不要切换成用户身份。
-- 用户只给 9 位会议号时，先按应用身份活跃会议列表匹配；匹配失败时不要为了倒计时自动入会，除非用户明确要求机器人入会。
-- `end_in_advance` 和 `close_window` 不携带 `--duration`、提醒点或结束音频参数。
-- 操作失败时停止并报告；不自动重试或换身份，避免重复可见副作用。
+- Always continue to use the app identity that produced `meeting_id`; do not switch to a user identity.
+- When the user only provides a 9-digit meeting number, first match it against the app identity's active meeting list; if matching fails, do not automatically join the meeting just for the countdown, unless the user explicitly asks the bot to join.
+- `end_in_advance` and `close_window` do not carry `--duration`, reminder points, or ending audio parameters.
+- When an operation fails, stop and report; do not automatically retry or switch identities, to avoid duplicate visible side effects.
 
-动作、提醒点和权限规则见 [`lark-vc-meeting-countdown`](../references/lark-vc-meeting-countdown.md)。
+For actions, reminder points, and permission rules, see [`lark-vc-meeting-countdown`](../references/lark-vc-meeting-countdown.md).
 
-## 结束会议
+<a id="结束会议"></a>
+## End the meeting
 
-只有用户明确要求结束整场会议时才执行；不要把结束会议和机器人离会混用。
+Execute only when the user explicitly requests ending the entire meeting; do not confuse ending the meeting with the bot leaving the meeting.
 
 ```bash
 lark-cli vc +meeting-end --as bot --meeting-id <meeting_id> --yes
 ```
 
-- 输入是长数字 `meeting_id`。
-- 当前应用机器人必须是 Host；结束成功会结束整场会议。
-- 根据返回状态确认会议已结束。
+- The input is the long number `meeting_id`.
+- The current app bot must be the Host; a successful end will end the entire meeting.
+- Confirm the meeting has ended based on the returned status.
 
-身份、权限和失败原因见 [`lark-vc-agent-meeting-end`](../references/lark-vc-agent-meeting-end.md)。
+For identity, permissions, and failure reasons, see [`lark-vc-agent-meeting-end`](../references/lark-vc-agent-meeting-end.md).
 
-## 离开会议
+<a id="离开会议"></a>
+## Leave the meeting
 
-只有用户明确要求机器人退出、离开或结束参会时才执行：
+Execute only when the user explicitly requests the bot to exit, leave, or end attendance:
 
 ```bash
 lark-cli vc +meeting-leave --as bot --meeting-id <meeting_id>
 ```
 
-- 使用入会返回或应用身份活跃会议查询得到的 `meeting_id`，并确认机器人当前在该会议中。
-- 不要因为任务完成而自动离会。
-- 用户只要会后产物时，转入会议产物场景，不为此先执行离会。
-- 根据返回状态确认离会完成。
+- Use the `meeting_id` obtained from joining or from the app identity's active meeting query, and confirm the bot is currently in that meeting.
+- Do not automatically leave just because the task is complete.
+- When the user only wants post-meeting artifacts, switch to the meeting artifacts scenario; do not leave the meeting first for this purpose.
+- Confirm leaving is complete based on the returned status.
 
-离会参数、可见副作用和完成判定见 [`lark-vc-agent-meeting-leave`](../references/lark-vc-agent-meeting-leave.md)。
+For leave parameters, visible side effects, and completion determination, see [`lark-vc-agent-meeting-leave`](../references/lark-vc-agent-meeting-leave.md).
 
-## 应用身份权限配置检查
+<a id="应用身份权限配置检查"></a>
+## App identity permission configuration check
 
-应用身份返回 `no permission`、`missing required scope(s)` 或 `missing_scopes` 时，不要执行 `auth login`。按顺序检查：
+When the app identity returns `no permission`, `missing required scope(s)`, or `missing_scopes`, do not execute `auth login`. Check in order:
 
-1. 按 CLI 错误中的 `hint` 处理；返回 `console_url` 时将其原样提供给用户。
-2. 确认应用已开通对应权限，已发布并安装到当前租户。入会和应用身份会议查询需要 `vc:meeting.bot.join:write`；会中发消息需要 `vc:meeting.message:write`；会中倒计时需要 `vc:meeting.interaction:write`。
-3. 在开放平台确认“权限可访问的数据范围”已保存为“按条件筛选”，条件为“会议的归属者 包含 与应用的可用范围一致”。
-4. 上述配置均正确仍失败时，保留 CLI 返回的错误码和 `log_id`，按服务端权限异常排查；不要反复登录或改用其他身份重试。
+1. Handle according to the `hint` in the CLI error; when `console_url` is returned, provide it to the user as-is.
+2. Confirm the app has enabled the corresponding permissions, and has been published and installed to the current tenant. Joining and app identity meeting queries require `vc:meeting.bot.join:write`; sending in-meeting messages requires `vc:meeting.message:write`; the in-meeting countdown requires `vc:meeting.interaction:write`.
+3. On the open platform, confirm that "data scope accessible by permission" has been saved as "filter by condition", with the condition "meeting owner contains matches the app's available scope".
+4. If the above configurations are all correct and it still fails, keep the error code and `log_id` returned by the CLI, and troubleshoot as a server-side permission exception; do not repeatedly log in or retry with another identity.
 
-## 会后边界
+<a id="会后边界"></a>
+## Post-meeting boundaries
 
-- 已结束会议的搜索、参会人快照、智能纪要、逐字稿、妙记或录制，转入 [查询会议及其产物](query-meeting-and-artifacts.md)。
-- 会后要把产物发到群或私聊，先使用会议产物场景获取结果，再转 `lark-im`。
+- For searching ended meetings, participant snapshots, smart minutes, transcripts, Minutes, or recordings, switch to [Query meetings and their artifacts](query-meeting-and-artifacts.md).
+- To send post-meeting artifacts to a group or private chat, first use the meeting artifacts scenario to obtain the results, then switch to `lark-im`.

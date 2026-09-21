@@ -1,4 +1,5 @@
-# 知识整理工作流：Execution
+<a id="知识整理工作流execution"></a>
+# Knowledge Organization Workflow: Execution
 
 Loaded by states: `EXECUTE`, `VERIFY`.
 
@@ -21,12 +22,12 @@ Entry: user explicitly confirmed execution scope.
 
 Allowed writes only:
 
-- 创建 Drive 文件夹：`drive +create-folder`
-- 移动 Drive 文件 / 文件夹：`drive +move`
-- 创建 Wiki 节点：`wiki +node-create`
-- 移动已有 Wiki 节点：`wiki +move --node-token`
-- 续跑异步移动任务：`drive +task_result`
-- 单个资源权限申请：`drive +apply-permission`
+- Create Drive folder: `drive +create-folder`
+- Move Drive file / folder: `drive +move`
+- Create Wiki node: `wiki +node-create`
+- Move existing Wiki node: `wiki +move --node-token`
+- Resume asynchronous move task: `drive +task_result`
+- Single resource permission request: `drive +apply-permission`
 
 MUST:
 
@@ -65,9 +66,9 @@ Rules:
 Recovery question template:
 
 ```text
-执行暂停：已成功移动 <moved_success_count> 项，失败 <failed_count> 项。
+Execution paused: successfully moved <moved_success_count> items, failed <failed_count> items.
 
-执行出现错误，已有部分资源移动成功。是否需要尝试恢复到整理前的位置？
+An error occurred during execution, and some resources have already been moved successfully. Do you want to attempt to restore them to their positions before organization?
 ```
 
 ### Progress Reporting
@@ -138,31 +139,31 @@ MUST:
 
 Verification table:
 
-| plan_id | 动作 | 标题 | 预期目标 | 实际目标 | 预期 token | 实际 token | 状态 | 失败原因 |
+| plan_id | Action | Title | Expected target | Actual target | Expected token | Actual token | Status | Failure reason |
 |---------|------|------|----------|----------|------------|------------|------|----------|
 
 ### Verification Result
 
 ```text
-执行完成。
+Execution complete.
 
-| 项目 | 数量 |
+| Item | Count |
 |------|------|
-| 创建成功 |  |
-| 移动成功 |  |
-| 待人工确认 |  |
-| 失败 |  |
+| Created successfully |  |
+| Moved successfully |  |
+| Pending manual confirmation |  |
+| Failed |  |
 
-| plan_id | 动作 | 预期目标 | 实际目标 | 状态 | 失败原因 |
+| plan_id | Action | Expected target | Actual target | Status | Failure reason |
 |---------|------|----------|----------|------|----------|
 ```
 
 Serious mismatch recovery question template:
 
 ```text
-验证发现 <mismatch_count> 项结果与计划不一致。
+Verification found <mismatch_count> results inconsistent with the plan.
 
-是否需要尝试恢复到整理前的位置？
+Do you want to attempt to restore them to their positions before organization?
 ```
 
 ### Next Suggestions
@@ -182,7 +183,7 @@ Triggers:
 Template:
 
 ```text
-建议下一步：
+Suggested next steps:
 - <trigger-based suggestion>
 ```
 

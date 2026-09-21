@@ -1,38 +1,39 @@
 
 # approval tasks transfer
 
-转交一个审批任务给其他用户处理（用户级写操作）。通常先通过 `tasks query` 拿到 `task_id` 和 `instance_code`，确认目标任务后，再提供被转交人的用户 ID 执行转交。
+Transfer an approval task to another user for handling (user-level write operation). Typically, first obtain `tasks query` to get `task_id` and `instance_code`, confirm the target task, then provide the transferee's user ID to execute the transfer.
 
 > [!CAUTION]
-> 这是 **high-risk-write** 写操作。建议先用 `--dry-run` 预览；真正执行时，如果用户已明确要转交该审批且目标任务、转交对象都无误，再带 `--yes` 运行。不要在未获用户明确同意时静默追加 `--yes`。
+> This is a **high-risk-write** write operation. It is recommended to first preview with `--dry-run`; when actually executing, if the user has explicitly requested to transfer this approval and both the target task and transferee are correct, then run with `--yes`. Do not silently append `--yes` without the user's explicit consent.
 
-需要的 scopes: ["approval:task:write"]
+Required scopes: ["approval:task:write"]
 
-## 命令
+<a id="命令"></a>
+## Command
 
 ```bash
-# 先预览请求，不实际执行
+# Preview the request first, without actually executing
 lark-cli approval tasks transfer \
   --data '{"instance_code":"<INSTANCE_CODE>","task_id":"<TASK_ID>","transfer_user_id":"ou_xxx","comment":"请你继续处理"}' \
   --params '{"user_id_type":"open_id"}' \
   --as user \
   --dry-run
 
-# 按 open_id 转交审批任务
+# Transfer the approval task by open_id
 lark-cli approval tasks transfer \
   --data '{"instance_code":"<INSTANCE_CODE>","task_id":"<TASK_ID>","transfer_user_id":"ou_xxx","comment":"转交给你处理"}' \
   --params '{"user_id_type":"open_id"}' \
   --as user \
   --yes
 
-# 按 user_id 转交审批任务
+# Transfer the approval task by user_id
 lark-cli approval tasks transfer \
   --data '{"instance_code":"<INSTANCE_CODE>","task_id":"<TASK_ID>","transfer_user_id":"123456789","comment":"请补充审核"}' \
   --params '{"user_id_type":"user_id"}' \
   --as user \
   --yes
 
-# 通过文件传入请求体，适合较长 comment
+# Pass the request body via a file, suitable for longer comments
 lark-cli approval tasks transfer \
   --data @./transfer-body.json \
   --params '{"user_id_type":"open_id"}' \
@@ -40,52 +41,55 @@ lark-cli approval tasks transfer \
   --yes
 ```
 
-## 参数
+<a id="参数"></a>
+## Parameters
 
-| 参数 | 必填 | 说明 |
+| Parameter | Required | Description |
 |------|------|------|
-| `--data '{...}'` | 是 | 请求体 JSON，使用 JSON 传入 |
-| `instance_code` | 是 | 审批实例 Code；通常先通过 `tasks query` 或 `instances initiated` / `instances get` 获取 |
-| `task_id` | 是 | 审批任务 ID；通常先通过 `tasks query` 获取 |
-| `transfer_user_id` | 是 | 被转交人的用户 ID；需要和 `user_id_type` 保持一致 |
-| `comment` | 否 | 审批意见或转交说明，例如 `转交给你处理`、`请继续审核该单据` |
-| `--params '{"user_id_type":"..."}'` | 否 | 查询参数 JSON；用于声明 `transfer_user_id` 的 ID 类型 |
-| `user_id_type` | 否 | 用户 ID 类型：`user_id`、`union_id`、`open_id`；未显式指定时要特别确认 `transfer_user_id` 的真实类型 |
-| `--as user` | 否 | 建议显式指定用户身份；审批转交通常必须以用户身份执行 |
-| `--yes` | 否 | 确认执行高风险写操作；未带时可能返回 `confirmation_required` / exit 10 |
-| `--format` | 否 | 输出格式：`json`（默认）、`ndjson`、`table`、`csv` |
-| `--dry-run` | 否 | 预览 API 调用，不执行 |
+| `--data '{...}'` | Yes | Request body JSON, passed as JSON |
+| `instance_code` | Yes | Approval instance Code; typically obtained first via `tasks query` or `instances initiated` / `instances get` |
+| `task_id` | Yes | Approval task ID; typically obtained first via `tasks query` |
+| `transfer_user_id` | Yes | The transferee's user ID; must be consistent with `user_id_type` |
+| `comment` | No | Approval comment or transfer note, e.g. `转交给你处理`, `请继续审核该单据` |
+| `--params '{"user_id_type":"..."}'` | No | Query parameter JSON; used to declare the ID type of `transfer_user_id` |
+| `user_id_type` | No | User ID type: `user_id`, `union_id`, `open_id`; when not explicitly specified, be especially sure to confirm the actual type of `transfer_user_id` |
+| `--as user` | No | It is recommended to explicitly specify the user identity; approval transfer typically must be executed as a user |
+| `--yes` | No | Confirm execution of a high-risk write operation; if omitted, may return `confirmation_required` / exit 10 |
+| `--format` | No | Output format: `json` (default), `ndjson`, `table`, `csv` |
+| `--dry-run` | No | Preview the API call without executing |
 
-## 典型前置步骤
+<a id="典型前置步骤"></a>
+## Typical Prerequisite Steps
 
-先查到待办任务：
+First look up the pending task:
 
 ```bash
 lark-cli approval tasks query --params '{"topic":"1"}' --as user
 ```
 
-常用到的字段：
+Commonly used fields:
 
-| 字段 | 说明 |
+| Field | Description |
 |------|------|
-| `tasks[].instance_code` | 审批实例 Code；执行 approve / reject / transfer / rollback 等操作时通常都需要 |
-| `tasks[].task_id` | 审批任务 ID；与 `instance_code` 配对使用 |
-| `tasks[].support_api_operate` | 是否支持通过 API 处理该任务；转交前建议先检查 |
+| `tasks[].instance_code` | Approval instance Code; typically required when performing operations such as approve / reject / transfer / rollback |
+| `tasks[].task_id` | Approval task ID; used in pair with `instance_code` |
+| `tasks[].support_api_operate` | Whether the task supports handling via API; it is recommended to check before transferring |
 
-如果你手里只有姓名或邮箱，建议先通过联系人能力解析出正确的用户 ID，再执行转交。
+If you only have a name or email, it is recommended to first resolve the correct user ID via the contacts capability, then execute the transfer.
 
-如需先确认表单、节点、审批流进度，可继续查看实例详情：
+If you need to first confirm the form, nodes, or approval flow progress, you can continue to view the instance details:
 
 ```bash
 lark-cli approval instances get --params '{"instance_code":"<INSTANCE_CODE>"}' --as user
 ```
 
-## 使用建议
+<a id="使用建议"></a>
+## Usage Recommendations
 
-- **`instance_code` 和 `task_id` 要成对使用**：仅有实例 ID 或仅有任务 ID 都不足以准确执行转交操作。
-- **`transfer_user_id` 与 `user_id_type` 必须匹配**：例如传 open_id 就把 `user_id_type` 设为 `open_id`；不要混用。
-- **优先显式传 `user_id_type`**：这样 agent 更容易判断参数含义，也能减少 ID 类型不匹配带来的失败。
-- **优先从 `tasks query` 的待办列表拿任务参数**：尤其是 `topic=1` 的待办审批，最适合作为 transfer 的输入来源。
-- **先检查是否支持 API 操作**：如果 `tasks[].support_api_operate` 为 `false`，说明该任务可能不支持通过 API 执行同意/拒绝等处理动作，转交前也应谨慎验证。
-- **`comment` 建议写明转交原因**：例如 `你更熟悉该项目，请继续处理`、`转交给预算 owner 审核`，方便接收人理解上下文。
-- **先 `--dry-run` 再执行**：尤其在跨部门转交、批量处理或转交对象来源不明确时，先预览更安全。
+- **`instance_code` and `task_id` must be used in pair**: having only the instance ID or only the task ID is not sufficient to accurately execute the transfer operation.
+- **`transfer_user_id` and `user_id_type` must match**: for example, if passing open_id, set `user_id_type` to `open_id`; do not mix them.
+- **Prefer explicitly passing `user_id_type`**: this makes it easier for the agent to determine the meaning of the parameters and also reduces failures caused by ID type mismatches.
+- **Prefer obtaining task parameters from the pending list of `tasks query`**: especially pending approvals of `topic=1`, which are most suitable as the input source for transfer.
+- **First check whether API operations are supported**: if `tasks[].support_api_operate` is `false`, it means the task may not support handling actions such as approve/reject via API, and caution should also be exercised before transferring.
+- **For `comment`, it is recommended to state the reason for transfer**: for example, `你更熟悉该项目，请继续处理`, `转交给预算 owner 审核`, to help the recipient understand the context.
+- **`--dry-run` first, then execute**: especially for cross-department transfers, batch processing, or when the source of the transferee is unclear, previewing first is safer.

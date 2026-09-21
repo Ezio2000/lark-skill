@@ -6,9 +6,9 @@
 
 ## 语言分工
 
-中文用于本 README、来源说明和用户界面文案；英文用于 `SKILL.md`、全部 24 个模块入口和已重构的执行指引。用户内容、示例输入和资源名称保留原语言，助手仍按用户语言回复。
+中文用于本 README、来源说明和用户界面文案；英文用于 `SKILL.md`、全部 24 个模块入口、详细执行参考、XML 说明及脚本中的说明性注释。用户内容、示例字面量、资源名称和兼容锚点保留原语言，助手仍按用户语言回复。
 
-详细操作参考中仍保留大量上游中文内容，按需加载；**当前不是全部 LLM 参考均已英文化的版本**。全量英文化应连同参数、错误码和行为验证分模块迁移，不通过删掉参考来伪装完成。
+详细参考正文已完成英文化，仍按需加载，不把全部参考塞入技能入口。语言检查区分执行说明与中文界面文案、字段名和示例数据，不以清除所有汉字为目标。
 
 ## 安装与使用
 
@@ -16,10 +16,10 @@
 
 把本目录整体复制到宿主读取的技能目录，目录名保持 `lark`。例如 Codex 可使用 `~/.agents/skills/lark`，Claude Code 可使用 `~/.claude/skills/lark`。同一宿主只保留一个可发现的 Lark 入口，不同时安装旧的拆分技能或 `lark-suite`。已有目录时先比较差异，不盲目覆盖。
 
-从 GitHub 获取时，可先克隆到任意开发目录，再复制到技能目录或建立名为 `lark` 的符号链接；不要直接将仓库名 `lark-skill` 当作技能名。私有仓库需使用有访问权限的 GitHub 账号：
+仓库已公开，可先克隆到任意开发目录，再复制到技能目录或建立名为 `lark` 的符号链接；不要直接将仓库名 `lark-skill` 当作技能名：
 
 ```sh
-gh repo clone Ezio2000/lark-skill
+git clone https://github.com/Ezio2000/lark-skill.git
 ```
 
 ```sh
@@ -63,12 +63,12 @@ uv run --project "<lark-root>" --locked python "<lark-root>/references/slides/sc
 在项目根目录执行：
 
 ```sh
-uv run --locked python scripts/check_skill.py
+uv run --locked python scripts/check_skill.py --english
 uv run --locked --extra dataframe python -m unittest discover -s tests -p 'test_*.py'
 uv run --locked python -m unittest discover -s references/slides/scripts -p '*_test.py'
 ```
 
-第一项检查唯一入口、模块路由、本地文件链接、Python 语法和资源结构；第二项验证检查器、上游差异工具和可选 DataFrame 协议转换；第三项是继承的幻灯片脚本测试。这些检查不登录、不发送消息、不修改飞书资源，也不证明所有线上接口均已通过验证。GitHub Actions 配置复用这些命令，覆盖 Linux / Windows 和 Python 3.11 / 3.14；工作流是否通过以实际运行结果为准。
+第一项检查唯一入口、模块路由、本地文件及章节链接、Markdown 代码块、英文说明覆盖、Python 语法和资源结构；第二项验证检查器、上游差异工具和可选 DataFrame 协议转换；第三项是继承的幻灯片脚本测试。这些检查不登录、不发送消息、不修改飞书资源，也不证明所有线上接口均已通过验证。GitHub Actions 配置复用这些命令，覆盖 Linux / Windows 和 Python 3.11 / 3.14；工作流是否通过以实际运行结果为准。
 
 [行为场景](tests/scenarios.json) 用于独立前向评估：把每个场景的 `request` 与 `context` 单独交给评估者，只提供本技能和模拟数据，隐藏 `expected`；记录其实际选择的模块、读取文件和计划执行的动作，再对照预期。评估中禁止真实远端调用。文字检查不能替代这类行为评估或真实业务验收。
 

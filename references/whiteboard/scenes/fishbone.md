@@ -1,150 +1,156 @@
-# 鱼骨图（因果图）
+<a id="鱼骨图因果图"></a>
+# Fishbone Diagram (Cause-and-Effect Diagram)
 
-> **必须写脚本生成 JSON。** 鱼骨图的分支角度、原因小骨坐标需要三角函数计算，直接手写 JSON 极易导致节点重叠和连线穿模。请用下方脚本模板。
+> **You must write a script to generate the JSON.** The branch angles and cause bone coordinates of a fishbone diagram require trigonometric calculations; writing the JSON by hand directly can easily lead to node overlap and connector clipping. Please use the script template below.
 
-## Content 约束
+<a id="content-约束"></a>
+## Content Constraints
 
-- 分类 4-6 个
-- 每个分类的原因 ≤ 4
-- 总原因 ≤ 20（超过必须合并分类）
+- 4-6 categories
+- Causes per category ≤ 4
+- Total causes ≤ 20 (if exceeded, categories must be merged)
 
-## Layout 选型
+<a id="layout-选型"></a>
+## Layout Selection
 
-- **脚本生成坐标**（必须）：用 .cjs 脚本通过三角函数计算鱼骨坐标，脚本输出 JSON 文件后调用 `npx -y @larksuite/whiteboard-cli@^0.2.13` 渲染
+- **Script-generated coordinates** (required): Use a .cjs script to calculate fishbone coordinates via trigonometric functions, output a JSON file, then call `npx -y @larksuite/whiteboard-cli@^0.2.13` to render
 
-## Layout 规则
+<a id="layout-规则"></a>
+## Layout Rules
 
-- 主干水平居中，从左向右延伸
-- 分类节点按 spineX 从左到右排列，奇数（第 1、3、5...）在上方，偶数（第 2、4...）在下方
-- 每个分类的原因沿斜线（分支骨）等距排列
-- 鱼头（中心问题）在右侧，用 ellipse
-- 主干连线带箭头指向鱼头，分支骨和原因小骨连线 endArrow: "none"
-- 原因小骨水平延伸到原因框右侧，Y 坐标精准对齐
+- The main spine is horizontally centered, extending from left to right
+- Category nodes are arranged by spineX from left to right; odd-numbered ones (1st, 3rd, 5th...) are above, even-numbered ones (2nd, 4th...) are below
+- The causes of each category are evenly spaced along the diagonal line (branch bone)
+- The fish head (central problem) is on the right, using an ellipse
+- The main spine connector has an arrow pointing to the fish head; branch bones and cause bone connectors use endArrow: "none"
+- Cause bones extend horizontally to the right side of the cause box, with Y coordinates precisely aligned
 
-## 骨架示例
+<a id="骨架示例"></a>
+## Skeleton Example
 
-**上下交替**：分类标签按 spineX 从左到右排列，奇数（第1、3、5...）在上方，偶数（第2、4...）在下方。
+**Alternating top and bottom**: Category labels are arranged by spineX from left to right; odd-numbered ones (1st, 3rd, 5th...) are above, even-numbered ones (2nd, 4th...) are below.
 
-**视觉同色系**：同一个分支的分类标签、连线及其下的所有原因节点，必须使用同一个色系（如相同的背景色与边框色组合），以保持图形风格统一和逻辑连贯。可以预定义一组颜色数组，按分支轮询使用。
+**Visual same color scheme**: The category label, connector, and all cause nodes under the same branch must use the same color scheme (e.g., the same combination of background color and border color) to maintain visual consistency and logical coherence. You can predefine a set of color arrays and cycle through them by branch.
 
-### 坐标计算脚本模板（必须严格参照此算法生成）
+<a id="坐标计算脚本模板必须严格参照此算法生成"></a>
+### Coordinate Calculation Script Template (must strictly follow this algorithm for generation)
 
-以下 Node.js 脚本模板包含了完整的动态布局算法，能够自动适配任意数量的分类和原因，生成完美不重叠的鱼骨图：
+The following Node.js script template contains a complete dynamic layout algorithm that can automatically adapt to any number of categories and causes, generating a perfectly non-overlapping fishbone diagram:
 
 ```javascript
 const fs = require('fs');
 
 const nodes = [];
 
-// 1. 数据定义 (根据用户需求填充)
+// 1. Data definition (fill in according to user requirements)
 const categories = [
   { id: "c0", text: "前端代码", reasons: ["未压缩资源", "冗余请求", "超大图片未懒加载"] },
   { id: "c1", text: "后端服务", reasons: ["数据库慢查询", "缓存失效", "并发量过大"] },
   { id: "c2", text: "网络环境", reasons: ["CDN配置错误", "DNS解析缓慢", "带宽限制", "网络抖动"] }
 ];
 
-// 2. 动态布局计算
+// 2. Dynamic layout calculation
 const catWidth = 120;
 const catHeight = 40;
-const reasonWidth = 140; // 调整原因框宽度以适应长文本
+const reasonWidth = 140; // Adjust cause box width to accommodate long text
 const reasonHeight = 32;
-const lineLength = 20; // 原因小骨连线的水平延伸长度
-const paddingX = 40; // 同侧节点间的水平安全间距
+const lineLength = 20; // Horizontal extension length of the cause bone connector
+const paddingX = 40; // Horizontal safety spacing between nodes on the same side
 
-// 预置的分支色系数组（分支骨分类和具体原因保持同一色系）
+// Predefined branch color scheme array (branch bone category and specific causes maintain the same color scheme)
 const branchColors = [
-  { fill: "#E8F3FF", stroke: "#1664FF" }, // 蓝色系
-  { fill: "#E6FFED", stroke: "#00B42A" }, // 绿色系
-  { fill: "#FFF7E8", stroke: "#FF7D00" }, // 橙色系
-  { fill: "#FFECE8", stroke: "#F5319D" }, // 粉色系
-  { fill: "#F2E8FF", stroke: "#722ED1" }, // 紫色系
-  { fill: "#E8FFFF", stroke: "#14C9C9" }  // 青色系
+  { fill: "#E8F3FF", stroke: "#1664FF" }, // Blue color scheme
+  { fill: "#E6FFED", stroke: "#00B42A" }, // Green color scheme
+  { fill: "#FFF7E8", stroke: "#FF7D00" }, // Orange color scheme
+  { fill: "#FFECE8", stroke: "#F5319D" }, // Pink color scheme
+  { fill: "#F2E8FF", stroke: "#722ED1" }, // Purple color scheme
+  { fill: "#E8FFFF", stroke: "#14C9C9" }  // Cyan color scheme
 ];
 
 let maxSpineY_up = 0;
 let maxSpineY_down = 0;
 
-// 第一步：计算每个 category 的内部尺寸和相对包围盒
+// Step 1: Calculate the internal dimensions and relative bounding box of each category
 categories.forEach((cat, index) => {
   const isTop = index % 2 === 0;
   const numReasons = cat.reasons.length;
 
-  // 动态计算分支高度，确保原因小骨不会垂直重叠
-  // 每个原因需要 reasonHeight + 上下间距(约 16)
+  // Dynamically calculate branch height to ensure cause bones do not overlap vertically
+  // Each cause requires reasonHeight + top/bottom spacing (approximately 16)
   const requiredY = (numReasons + 1) * (reasonHeight + 16);
   const branchDY = Math.max(160, requiredY);
-  const branchDX = -branchDY * 0.7; // 保持固定的倾斜角度向左延伸
+  const branchDX = -branchDY * 0.7; // Maintain a fixed tilt angle extending to the left
 
   cat.isTop = isTop;
   cat.branchDX = branchDX;
   cat.branchDY = branchDY;
 
-  // 记录最大分支高度，用于计算背景高度和主骨 Y 坐标
+  // Record the maximum branch height, used to calculate background height and main spine Y coordinate
   if (isTop) maxSpineY_up = Math.max(maxSpineY_up, branchDY + catHeight + 40);
   else maxSpineY_down = Math.max(maxSpineY_down, branchDY + catHeight + 40);
 
-  // 计算该分类的相对包围盒的极值（相对于 spineX 锚点）
-  // 最左侧可能由分类框或原因框决定
+  // Calculate the extremes of the relative bounding box for this category (relative to the spineX anchor point)
+  // The leftmost side may be determined by the category box or the cause box
   cat.minX = Math.min(branchDX - catWidth / 2, branchDX - lineLength - reasonWidth);
-  // 最右侧为主骨挂载点 0 或 分类框右侧
+  // The rightmost side is the main spine attachment point 0 or the right side of the category box
   cat.maxX = Math.max(0, branchDX + catWidth / 2);
 });
 
-// 第二步：计算每个 category 在主骨上的绝对 X 坐标 (spineX)
-let currentSpineX = 100; // 初始偏移
+// Step 2: Calculate the absolute X coordinate (spineX) of each category on the main spine
+let currentSpineX = 100; // Initial offset
 for (let i = 0; i < categories.length; i++) {
   const cat = categories[i];
   let startX = currentSpineX;
 
-  // 需要和上一个同侧的 category 保持距离，防止水平重叠
+  // Must maintain distance from the previous category on the same side to prevent horizontal overlap
   if (i >= 2) {
     const prevSameSideCat = categories[i - 2];
     const requiredX = prevSameSideCat.spineX + prevSameSideCat.maxX - cat.minX + paddingX;
     startX = Math.max(startX, requiredX);
   }
 
-  // 确保左侧最长分支不会超出画布左边界
+  // Ensure the longest branch on the left does not exceed the left boundary of the canvas
   if (startX + cat.minX < 50) {
     startX = 50 - cat.minX;
   }
 
   cat.spineX = startX;
-  // 每次略微向前推进，确保异侧节点也能稍微错开
+  // Advance slightly forward each time to ensure nodes on opposite sides are also slightly offset
   currentSpineX = startX + 80;
 }
 
-// 第三步：计算全局画布尺寸
+// Step 3: Calculate global canvas dimensions
 const lastCat = categories[categories.length - 1];
-const spineY = maxSpineY_up + 50; // 动态推导主骨 Y 坐标
-const totalWidth = lastCat.spineX + 350; // 右侧留出鱼头的空间
+const spineY = maxSpineY_up + 50; // Dynamically derive the main spine Y coordinate
+const totalWidth = lastCat.spineX + 350; // Reserve space on the right for the fish head
 const totalHeight = spineY + maxSpineY_down + 50;
 
-// 4. 生成节点数据
-// 背景
+// 4. Generate node data
+// Background
 nodes.push({ type: "rect", x: 0, y: 0, width: totalWidth, height: totalHeight, fillColor: "#FFFFFF", borderWidth: 0 });
 
-// 鱼头
+// Fish head
 const headWidth = 180;
 const headHeight = 80;
 const headX = totalWidth - headWidth - 40;
 const headY = spineY - headHeight / 2;
 nodes.push({ type: "ellipse", id: "head", x: headX, y: headY, width: headWidth, height: headHeight, text: "核心问题" });
 
-// 主骨连线
+// Main spine connector
 const firstSpineX = categories[0].spineX + categories[0].minX;
 nodes.push({
   type: "connector",
   connector: { from: { x: firstSpineX, y: spineY }, to: "head", toAnchor: "left", lineShape: "straight", endArrow: "arrow" }
 });
 
-// 遍历生成分类和原因小骨
+// Iterate to generate categories and cause bones
 categories.forEach((cat, index) => {
   const isTop = cat.isTop;
   const branchDY = cat.branchDY;
   const branchDX = cat.branchDX;
   const color = branchColors[index % branchColors.length];
 
-  // 分类标签
+  // Category label
   const catX = cat.spineX + branchDX - catWidth / 2;
   const catY = spineY + (isTop ? -branchDY - catHeight : branchDY);
 
@@ -152,20 +158,20 @@ categories.forEach((cat, index) => {
     type: "rect", id: cat.id, x: catX, y: catY, width: catWidth, height: catHeight, text: cat.text,
     fillColor: color.fill, strokeColor: color.stroke
   });
-  // 分支骨连线
+  // Branch bone connector
   nodes.push({
     type: "connector",
     connector: { from: { x: cat.spineX, y: spineY }, to: cat.id, toAnchor: isTop ? "bottom" : "top", lineShape: "straight", endArrow: "none", lineColor: color.stroke }
   });
 
-  // 原因小骨
+  // Cause bone
   cat.reasons.forEach((reason, rIndex) => {
-    // 线性插值，均匀分布在分支骨上
+    // Linear interpolation, evenly distributed along the branch bone
     const t = (rIndex + 1) / (cat.reasons.length + 1);
     const attachX = cat.spineX + branchDX * t;
     const attachY = spineY + (isTop ? -branchDY : branchDY) * t;
 
-    // 关键对齐：确保原因盒子完全在连线左侧，并且 Y 坐标中心精准对齐
+    // Key alignment: Ensure the cause box is entirely to the left of the connector, and the Y coordinate center is precisely aligned
     const boxX = attachX - lineLength - reasonWidth;
     const boxY = attachY - reasonHeight / 2;
 
@@ -174,7 +180,7 @@ categories.forEach((cat, index) => {
       type: "rect", id: rId, x: boxX, y: boxY, width: reasonWidth, height: reasonHeight, text: reason,
       fillColor: color.fill, strokeColor: color.stroke
     });
-    // 原因小骨连线
+    // Cause bone connector
     nodes.push({
       type: "connector",
       connector: { from: { x: attachX, y: attachY }, to: rId, toAnchor: "right", lineShape: "straight", endArrow: "none", lineColor: color.stroke }
@@ -185,12 +191,13 @@ categories.forEach((cat, index) => {
 fs.writeFileSync('diagram.json', JSON.stringify({ version: 2, nodes }, null, 2));
 ```
 
-## 连线格式与注意点
+<a id="连线格式与注意点"></a>
+## Connector Format and Notes
 
-所有 connector 都用 `{ "type": "connector", "connector": { ... } }` 格式。
-**注意：除了主骨外，其他所有连线（分支骨、原因小骨）都必须设置 `"endArrow": "none"`，否则会默认带箭头，导致方向混乱。**
+All connectors use the `{ "type": "connector", "connector": { ... } }` format.
+**Note: Except for the main spine, all other connectors (branch bones, cause bones) must set `"endArrow": "none"`, otherwise they will have arrows by default, causing directional confusion.**
 
-分支骨：从主骨上的绝对坐标点 → 分类标签节点：
+Branch bone: from the absolute coordinate point on the main spine → category label node:
 
 ```json
 {
@@ -226,13 +233,14 @@ fs.writeFileSync('diagram.json', JSON.stringify({ version: 2, nodes }, null, 2))
 }
 ```
 
-上述骨架展示一个分类（上方）+ 一条原因的模式。完整鱼骨图重复此模式，上下交替。每个分类下可有多条原因，均匀插值分布在分支骨上。
+The above skeleton demonstrates a pattern with one category (above) + one cause. A complete fishbone diagram repeats this pattern, alternating top and bottom. Each category can have multiple causes, evenly interpolated along the branch bone.
 
-## 陷阱
+<a id="陷阱"></a>
+## Pitfalls
 
-- **代码生成**：必须使用带有动态防重叠算法的脚本来计算坐标并输出 JSON。
-- **分支骨防重叠**：同一侧的相邻分支骨和原因框必须没有任何交叉。
-- **自适应高度**：原因数量较多时，分支骨自动拉长以容纳所有小骨。
-- **原因小骨水平**：原因框右侧的附着点必须与连线起点 Y 坐标一致。
-- **无箭头**：所有分类的分支连线、小骨连线均必须关闭箭头。
-- **同色系**：同一个分支骨、分类标签节点以及原因小骨节点和连线，必须使用同色系的颜色以保持视觉连贯性。
+- **Code generation**: You must use a script with a dynamic anti-overlap algorithm to calculate coordinates and output JSON.
+- **Branch bone anti-overlap**: Adjacent branch bones and cause boxes on the same side must not have any crossing.
+- **Adaptive height**: When there are many causes, the branch bone automatically lengthens to accommodate all bones.
+- **Cause bone horizontal**: The attachment point on the right side of the cause box must have the same Y coordinate as the connector start point.
+- **No arrows**: All category branch connectors and bone connectors must have arrows disabled.
+- **Same color scheme**: The same branch bone, category label node, cause bone nodes, and connectors must use the same color scheme to maintain visual coherence.

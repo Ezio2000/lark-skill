@@ -1,15 +1,16 @@
 # apps env
 
 
-管理妙搭应用环境变量。查看用 `+env-list`，设置用 `+env-set`，删除用 `+env-delete`。没有单变量 get 命令；要确认某个 key 是否存在，使用 list 后用 `--jq` 过滤。
+Manage Miaoda app environment variables. Use `+env-list` to view, `+env-set` to set, and `+env-delete` to delete. There is no single-variable get command; to confirm whether a key exists, use list and then filter with `--jq`.
 
-环境 flag 使用 `--environment`；不要使用旧的 `--env`，也不要使用短选项。
+The environment flag uses `--environment`; do not use the old `--env`, and do not use short options.
 
-## 查看
+<a id="查看"></a>
+## View
 
-`+env-list` 默认查 dev，且默认不返回 value。只有显式传 `--include-values` 后，响应中才可能出现变量值；不要在公开日志里展示带值输出。
+`+env-list` queries dev by default, and by default does not return values. Variable values may appear in the response only after `--include-values` is explicitly passed; do not display output containing values in public logs.
 
-接口契约：list 使用 `POST env_vars`，body 固定包含 `env` 和 CLI 场景 `scene=2`；set 使用 `POST create_or_update_env_var`；delete 使用 `POST delete_env_vars`。`--include-values` 只控制 CLI 输出是否展示 value，不作为服务端查询参数发送。
+API contract: list uses `POST env_vars`, and the body always includes `env` and, for CLI scenarios, `scene=2`; set uses `POST create_or_update_env_var`; delete uses `POST delete_env_vars`. `--include-values` only controls whether the CLI output displays values, and is not sent as a server-side query parameter.
 
 ```bash
 lark-cli apps +env-list --app-id <app_id>
@@ -17,11 +18,12 @@ lark-cli apps +env-list --app-id <app_id> --environment online
 lark-cli apps +env-list --app-id <app_id> --include-values --jq '.data.items[] | select(.key == "FOO")'
 ```
 
-## 设置
+<a id="设置"></a>
+## Set
 
-dev 环境设置不需要 `--yes`。设置 online 环境需要人类确认并显式传 `--yes`；如果当前会话已明确授权同一 app、环境、key 和 value，视为已授权，直接带 `--yes`，不要再次追问。`--dry-run` 可用于预览请求且不需要 `--yes`。变量值支持直接传 `<value>`，也支持 `@file` 或 stdin 输入。
+Setting the dev environment does not require `--yes`. Setting the online environment requires human confirmation and explicitly passing `--yes`; if the current session has already explicitly authorized the same app, environment, key, and value, treat it as authorized, pass `--yes` directly, and do not ask again. `--dry-run` can be used to preview the request and does not require `--yes`. Variable values can be passed directly as `<value>`, or provided via `@file` or stdin.
 
-回复中只说明 app/env/key 和执行结果；不要回显真实 value。需要举例时使用 `<value>`、`@file` 或 stdin。
+In replies, state only the app/env/key and the execution result; do not echo the actual value. When an example is needed, use `<value>`, `@file`, or stdin.
 
 ```bash
 lark-cli apps +env-set --app-id <app_id> --key FOO --value <value>
@@ -30,9 +32,10 @@ lark-cli apps +env-set --app-id <app_id> --environment online --key FOO --value 
 lark-cli apps +env-set --app-id <app_id> --environment online --key FOO --value <value> --yes
 ```
 
-## 删除
+<a id="删除"></a>
+## Delete
 
-`+env-delete` 是 high-risk-write。核对会话授权覆盖 app、environment 和 key 后传 `--yes`；已有授权可跨轮次和认证恢复沿用。范围不清楚时先用只读查询或 dry-run 准备具体请求，再询问所缺选择。
+`+env-delete` is high-risk-write. After verifying that the session authorization covers the app, environment, and key, pass `--yes`; existing authorization can be reused across turns and authentication recovery. When the scope is unclear, first use a read-only query or dry-run to prepare the specific request, then ask about the missing choices.
 
 ```bash
 lark-cli apps +env-delete --app-id <app_id> --key FOO --dry-run
@@ -40,8 +43,9 @@ lark-cli apps +env-delete --app-id <app_id> --key FOO --yes
 lark-cli apps +env-delete --app-id <app_id> --environment online --key FOO --yes
 ```
 
-## 反模式
+<a id="反模式"></a>
+## Anti-patterns
 
-- 不要把 `+env-pull` 当成环境变量管理命令；它只是刷新本地 `.env.local` 的兜底工具。
-- 不要为了看一个变量臆造名为 env-get 的 apps shortcut；用 `+env-list --include-values` 加 `--jq`。
-- 不要把真实 secret 写进示例或对话输出；需要示例时使用 `<value>`、`@file` 或 stdin。
+- Do not treat `+env-pull` as an environment variable management command; it is only a fallback tool for refreshing the local `.env.local`.
+- Do not invent an apps shortcut named env-get just to view one variable; use `+env-list --include-values` plus `--jq`.
+- Do not write real secrets into examples or conversation output; when an example is needed, use `<value>`, `@file`, or stdin.

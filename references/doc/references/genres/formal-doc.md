@@ -1,37 +1,42 @@
-# Genre Contract: Formal Document / 内部正式材料 (`workplace.formal_doc`)
+<a id="genre-contract-formal-document--内部正式材料-workplaceformal_doc"></a>
+# Genre Contract: Formal Document / Internal Formal Material (`workplace.formal_doc`)
 
-## 体裁规则表（硬约束）
+<a id="体裁规则表硬约束"></a>
+## Genre Rule Table (Hard Constraints)
 
-| 规则项 | 规则 |
+| Rule Item | Rule |
 |-|-|
-| 写作风格 | 庄重、准确、简洁、直接；正式性来自真实权威、事实、边界、责任和生命周期，不来自套话或机械层级 |
-| 视觉策略 | 固定 `formal`；格式中立的内容稿完成后再应用，禁止高亮块、emoji 和装饰性组件 |
-| 允许 block | `title`（完整文稿最多 1 个）、`p`、`h1`、`h2`、`h3`、`h4`；标题层级连续且不超过四级 |
-| 限用 block | `ul`、`ol`容器及`li`子块仅承载真实并列或顺序；`table`容器及`thead`、`tbody`、`tfoot`、`tr`子块仅承载多对象同字段信息；`img`、`figure`仅承载有必要证据作用、来源说明和文字等价信息的材料 |
-| 禁止 block | 禁止未列入允许 / 限用清单的类型，包括`callout`、`checkbox`、`grid`容器及`column`子块、`whiteboard`、`blockquote`、`pre`、根级`code`和`hr`；禁止装饰色、贴纸、伪红头、伪印章和无证据作用的配图 |
-| 内容逻辑 | 先按读者任务选择规则 / 制度、已批准通知 / 安排、检查整改 / 台账或已核定正式说明之一；只写完成该任务所需的对象、依据、要求 / 发现、责任、核验和生命周期，不混写子类型 |
-| 事实 / 边界 | 只把已确认的授权、要求、事实和立场写成定论；来源陈述、原始记录、已复核事实和推断分开；外发前确认保密、商业秘密、个人信息、素材权利和发布权限；关键缺口未关闭时不得创建 |
-| 错误 | 因“正式”误判公文，把本 leaf 当方案 / 总结 / 简报兜底，伪造批准 / 生效，用通知偷渡未获授权的新规则，网络素材冒充本单位事实，检查线索写成责任结论，或措施与发现不对应，任一出现即失败 |
+| Writing Style | Solemn, accurate, concise, direct; formality comes from genuine authority, facts, boundaries, responsibility, and lifecycle, not from boilerplate or mechanical hierarchy |
+| Visual Strategy | Fixed `formal`; apply only after the format-neutral content draft is complete; highlight blocks, emoji, and decorative components are prohibited |
+| Allowed Blocks | `title` (at most 1 per complete document), `p`, `h1`, `h2`, `h3`, `h4`; heading levels must be consecutive and no deeper than four levels |
+| Restricted Blocks | `ul`, `ol` containers and `li` child blocks may only carry genuine parallel or sequential items; `table` containers and `thead`, `tbody`, `tfoot`, `tr` child blocks may only carry same-field information for multiple objects; `img`, `figure` may only carry material that serves necessary evidentiary purposes, source explanations, and text-equivalent information |
+| Prohibited Blocks | Types not listed in the allowed/restricted lists are prohibited, including `callout`, `checkbox`, `grid` containers and `column` child blocks, `whiteboard`, `blockquote`, `pre`, root-level `code` and `hr`; decorative colors, stickers, fake letterheads, fake seals, and images without evidentiary purpose are prohibited |
+| Content Logic | First choose one of the following based on the reader's task: rules/regulations, approved notice/arrangement, inspection rectification/ledger, or approved formal statement; write only the objects, basis, requirements/findings, responsibility, verification, and lifecycle needed to complete that task; do not mix subtypes |
+| Facts/Boundaries | Only write confirmed authorization, requirements, facts, and positions as definitive conclusions; keep source statements, original records, verified facts, and inferences separate; before external distribution, confirm confidentiality, trade secrets, personal information, material rights, and publication permissions; do not create when key gaps remain unclosed |
+| Errors | Any of the following constitutes failure: misjudging an official document as "formal," treating this leaf as a fallback for proposals/summaries/briefings, fabricating approval/effectiveness, smuggling unauthorized new rules through a notice, passing off online material as the organization's own facts, writing inspection leads as conclusions of responsibility, or measures not corresponding to findings |
 
-## 适用与收口
+<a id="适用与收口"></a>
+## Applicability and Closure
 
-用于把已授权的非公文组织规则或安排、可复核的检查整改记录，或已核定的组织立场写成正式载体，使读者能够判断适用范围、应采取的行动、记录状态或核心立场。
+Used to write authorized non-official-document organizational rules or arrangements, reviewable inspection rectification records, or approved organizational positions into a formal carrier, enabling readers to determine the scope of application, actions to take, record status, or core position.
 
-待批准方向走 `proposal.md`；复杂一次性执行走 `execution-plan.md`；重复操作步骤走 `sop-tutorial.md`；党政机关公文走 `official-redhead.md`；高层简报走 `memo-brief.md`；周期状态走 `weekly-report.md`；学习总结走 Retrospective / Report。`正式、制度、通知、方案、计划、总结、简报、讲话稿`等词单独不触发本体裁，本体裁也不是不确定请求的 fallback。
+Directions pending approval go to `proposal.md`; complex one-time execution goes to `execution-plan.md`; repeated operational steps go to `sop-tutorial.md`; Party and government official documents go to `official-redhead.md`; executive briefings go to `memo-brief.md`; periodic status goes to `weekly-report.md`; learning summaries go to Retrospective / Report. Words such as `正式、制度、通知、方案、计划、总结、简报、讲话稿` alone do not trigger this genre, and this genre is not a fallback for uncertain requests.
 
-## 按读者任务选择唯一内容路径
+<a id="按读者任务选择唯一内容路径"></a>
+## Choose the Single Content Path Based on the Reader's Task
 
-| 读者任务 | 内容主线 |
+| Reader's Task | Content Mainline |
 |-|-|
-| 判断持续规则 | 目的与权威 → 适用 / 不适用范围 → 必要定义 → 规范要求 → 责任、例外与升级 → 生效、维护、复审和替代 |
-| 执行已批准通知 | 发布主体与批准状态 → 受影响对象及范围 → 已确认事项与生效时间 → 动作、责任与期限 → 例外、反馈和联系人 |
-| 复核检查整改 | 对象、范围、方法与证据状态 → 每项可观察发现、标准、影响和已支持原因 → 对应措施、责任与期限 → 核验、关闭证据和变更痕迹 |
-| 理解已核定立场 | 讲者或发布主体、场合、受众与时长 → 核心立场 → 必要事实和理由 → 期望理解或行动；不混入制度效力 |
+| Judge ongoing rules | Purpose and authority → applicable/non-applicable scope → necessary definitions → normative requirements → responsibility, exceptions, and escalation → effectiveness, maintenance, review, and supersession |
+| Execute an approved notice | Issuing entity and approval status → affected objects and scope → confirmed matters and effective time → actions, responsibility, and deadlines → exceptions, feedback, and contacts |
+| Review inspection rectification | Objects, scope, methods, and evidence status → each observable finding, standard, impact, and supported cause → corresponding measures, responsibility, and deadlines → verification, closure evidence, and change traces |
+| Understand an approved position | Speaker or issuing entity, occasion, audience, and duration → core position → necessary facts and reasons → expected understanding or action; do not mix in regulatory effect |
 
-## 证据与高质量写法
+<a id="证据与高质量写法"></a>
+## Evidence and High-Quality Writing
 
-- 规则类按需写维护责任、版本、批准、生效、复审和替代状态；稳定描述做什么、谁负责、何时生效，易变操作方法链接到受控 SOP。规范词优先沿用组织现有定义，强度不明时标`[规范强度待确认]`。
-- 检查整改区分用户陈述、原始记录、已复核事实和待补证线索；关键日期、数量或结论证据不足时就近标`[证据待补：补证动作]`，不得推断原因或责任；归档补正保留原记录。
-- 检查措施必须对应具体发现并可核验；已批准通知只传达授权范围内的事项；正式讲话只使用已核定立场，并按真实语速朗读校验。
-- 使用主动句、明确主体和一致术语，一句只表达一个事实、判断、要求或许可；清单严守用户指定数量与字段，不机械补背景或文控字段。
-- 批准者、依据、权限、适用范围、生效状态或发布条件不明时使用具体占位并保持草案；不得以版式、标题或署名暗示已经批准、签发或生效。
+- For rule-type documents, write maintenance responsibility, version, approval, effectiveness, review, and supersession status as needed; stably describe what to do, who is responsible, and when it takes effect; link volatile operational methods to controlled SOPs. For normative terms, prefer the organization's existing definitions; when intensity is unclear, mark `[规范强度待确认]`.
+- For inspection rectification, distinguish user statements, original records, verified facts, and leads pending further evidence; when key dates, quantities, or conclusions lack sufficient evidence, mark `[证据待补：补证动作]` nearby, and do not infer causes or responsibility; archiving corrections must preserve the original records.
+- Inspection measures must correspond to specific findings and be verifiable; approved notices convey only matters within the authorized scope; formal speeches use only approved positions and are checked by reading aloud at the actual speaking pace.
+- Use active sentences, explicit subjects, and consistent terminology; each sentence expresses only one fact, judgment, requirement, or permission; lists strictly follow the user-specified quantity and fields, without mechanically adding background or document-control fields.
+- When the approver, basis, authority, scope of application, effectiveness status, or publication conditions are unclear, use specific placeholders and keep the document as a draft; do not use layout, titles, or signatures to imply that it has been approved, issued, or has taken effect.

@@ -1,40 +1,43 @@
-# slides +xml-get（读取演示文稿 XML）
+<a id="slides-xml-get读取演示文稿-xml"></a>
+# slides +xml-get (read presentation XML)
 
-读取全文或单页 XML。全文验证优先将结果保存到本地文件；局部编辑可读取单页 XML，从顶层块的 `id` 属性取得 `+replace-slide` 所需的 `block_id`。
+Read the full XML or a single page's XML. For full-document verification, prefer saving the result to a local file; for local edits, you can read a single page's XML and obtain the `block_id` needed by `+replace-slide` from the `id` attribute of the top-level block.
 
-## 参数
+<a id="参数"></a>
+## Parameters
 
-| 参数 | 必填 | 说明 |
+| Parameter | Required | Description |
 |------|------|------|
-| `--presentation` | 是 | `xml_presentation_id`、Slides URL，或可解析为 Slides 的 wiki URL |
-| `--revision-id` | 否 | 版本号；`-1` 表示最新版本 |
-| `--output` | 否 | XML 保存路径，必须使用 CWD 内相对路径；省略时返回 JSON |
-| `--raw` | 否 | 将 XML 直接输出到 stdout；不能与 `--output`、`--jq` 或非 JSON `--format` 一起使用 |
-| `--slide-id` | 否 | 只读取指定页面；不能与 `--slide-number` 或 `--remove-attr-id` 一起使用 |
-| `--slide-number` | 否 | 只读取指定的 1-based 页码；不能与 `--slide-id` 或 `--remove-attr-id` 一起使用 |
-| `--remove-attr-id` | 否 | 仅全文读取可用；移除 XML `id` 属性，不适合后续精确块编辑 |
+| `--presentation` | Yes | `xml_presentation_id`, a Slides URL, or a wiki URL that can be resolved to Slides |
+| `--revision-id` | No | Version number; `-1` means the latest version |
+| `--output` | No | XML save path, must use a relative path within the CWD; when omitted, returns JSON |
+| `--raw` | No | Output the XML directly to stdout; cannot be used together with `--output`, `--jq`, or a non-JSON `--format` |
+| `--slide-id` | No | Read only the specified page; cannot be used together with `--slide-number` or `--remove-attr-id` |
+| `--slide-number` | No | Read only the specified 1-based page number; cannot be used together with `--slide-id` or `--remove-attr-id` |
+| `--remove-attr-id` | No | Available only for full-document reads; removes the XML `id` attribute, not suitable for subsequent precise block editing |
 
-## 示例
+<a id="示例"></a>
+## Examples
 
 ```bash
-# 读取全文并保存，用于创建后验证
+# Read the full document and save it, for post-creation verification
 lark-cli slides +xml-get --as user \
   --presentation "$PRES_ID" \
   --output ".lark-slides/plan/$PRES_ID/readback.xml"
 
-# 读取单页以获取 block_id
+# Read a single page to obtain the block_id
 lark-cli slides +xml-get --as user \
   --presentation "$PRES_ID" --slide-id "$SID" --raw
 
-# 读取单页，同时记录 revision_id 用于后续乐观锁
+# Read a single page and also record the revision_id for subsequent optimistic locking
 REV=$(lark-cli slides +xml-get --as user \
   --presentation "$PRES_ID" --slide-id "$SID" \
   --jq '.data.revision_id')
 ```
 
-JSON 输出中，全文 XML 位于 `.data.xml_presentation.content`，单页 XML 位于 `.data.slide.content`；二者的 `.data.revision_id` 都可用于后续写操作。
+In the JSON output, the full-document XML is located at `.data.xml_presentation.content`, and the single-page XML is located at `.data.slide.content`; the `.data.revision_id` of both can be used for subsequent write operations.
 
-相关命令：
+Related commands:
 
-- [slides +replace-slide](lark-slides-replace-slide.md) — 块级替换 / 插入
-- [slides +update-slide](lark-slides-update-slide.md) — 整页覆盖
+- [slides +replace-slide](lark-slides-replace-slide.md) — block-level replace / insert
+- [slides +update-slide](lark-slides-update-slide.md) — full-page overwrite

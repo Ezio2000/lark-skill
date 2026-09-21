@@ -1,123 +1,135 @@
 
 # vc +search
 
-搜索已结束的历史会议记录，支持关键词、时间范围、组织者、参与者、会议室多条件过滤。只读，支持 `--as user` / `--as bot`。
+Search ended historical meeting records, supporting multi-condition filtering by keyword, time range, organizer, participant, and meeting room. Read-only, supports `--as user` / `--as bot`.
 
-## 关键词使用边界
+<a id="关键词使用边界"></a>
+## Keyword usage boundaries
 
-`--query` 只用于 9 位会议号或真实会议关键词，例如会议主题、项目名、评审名、客户名。用户只是说"我这月参加的所有视频会议"、"最近两周我组织的所有视频会议"、"总结主要议题 / 看看参会情况"时，本质是历史会议列表和后续总结，不要把"回顾"、"所有视频会议"、"总结主要议题"等动作词放进 `--query`。这类请求应先用时间范围 + `--participant-ids` / `--organizer-ids` 搜全量候选，再按结果继续取纪要或录制信息。
+`--query` is only used for 9-digit meeting numbers or real meeting keywords, such as meeting topics, project names, review names, and customer names. When the user merely says "all video meetings I attended this month", "all video meetings I organized in the last two weeks", "summarize the main topics / check the attendance", the essence is a historical meeting list and subsequent summarization; do not put action words like "review", "all video meetings", or "summarize the main topics" into `--query`. Such requests should first use a time range plus `--participant-ids` / `--organizer-ids` to search the full set of candidates, then continue to retrieve minutes or recording information based on the results.
 
-列表阶段只负责找会议记录；总结阶段必须继续取证。若用户要求"主要议题"、"主要决策"、"参会情况"，先确认搜索结果的 `meeting_id`、时间、组织者/参与者符合过滤条件，然后用 `vc +detail` 或 `minutes` 读取纪要、妙记或录制信息。没有纪要或妙记时，如实说明只能基于会议标题/参会数据汇总，不要编造议题。
+The list stage is only responsible for finding meeting records; the summarization stage must continue to gather evidence. If the user requests "main topics", "main decisions", or "attendance", first confirm that the `meeting_id`, time, organizer/participants of the search results match the filter conditions, then use `vc +detail` or `minutes` to read the minutes, Minutes, or recording information. When there are no minutes or Minutes, truthfully explain that the summary can only be based on meeting titles/attendance data, and do not fabricate topics.
 
-## 典型触发表达
+<a id="典型触发表达"></a>
+## Typical trigger expressions
 
-以下说法通常应优先使用 `vc +search`：
+The following expressions should usually prioritize `vc +search`:
 
-- 今天开过的会
-- 今天开了哪些会
-- 最近参加过哪些会
-- 我这周开过的会
-- 已结束的会议
-- 历史会议记录
+- Meetings held today
+- What meetings were held today
+- Which meetings have I attended recently
+- Meetings I held this week
+- Ended meetings
+- Historical meeting records
 
-## 命令
+<a id="命令"></a>
+## Command
 
 ```bash
-# 关键词搜索
+# Keyword search
 lark-cli vc +search --query "周会"
 
-# 通过 9 位会议号查询会议 ID
+# Query meeting ID by 9-digit meeting number
 lark-cli vc +search --query "123456789" --format json --as user
 lark-cli vc +search --query "123456789" --format json --as bot
 
-# 查询某一天开过的会（单日查询时，start 和 end 必须填写同一天）
+# Query meetings held on a certain day (for a single-day query, start and end must be set to the same day)
 lark-cli vc +search --start 2026-03-10 --end 2026-03-10
 
-# 按时间范围搜索
+# Search by time range
 lark-cli vc +search --start "2026-03-10T00:00+08:00" --end "2026-03-17T00:00+08:00"
 
-# 按组织者 / 参与者 / 会议室（逗号分隔）
+# By organizer / participant / meeting room (comma-separated)
 lark-cli vc +search --organizer-ids "ou_user1,ou_user2"
 lark-cli vc +search --participant-ids "ou_user1,ou_user2"
 lark-cli vc +search --room-ids "123,456"
 
-# 多条件组合
+# Multi-condition combination
 lark-cli vc +search --organizer-ids "ou_user1" --room-ids "123" --start "2026-03-10T00:00+08:00"
 
-# 翻页
+# Pagination
 lark-cli vc +search --query "周会" --page-token "<PAGE_TOKEN>"
 ```
 
-## 参数
+<a id="参数"></a>
+## Parameters
 
-| 参数 | 必填 | 说明 |
+| Parameter | Required | Description |
 |------|------|------|
-| `--query <text>` | 否 | 9 位会议号或搜索关键词 |
-| `--start <time>` | 否 | 开始时间（ISO 8601 或仅日期） |
-| `--end <time>` | 否 | 结束时间（ISO 8601 或仅日期） |
-| `--organizer-ids <ids>` | 否 | 组织者 open_id 列表，逗号分隔；多值为 OR 语义 |
-| `--participant-ids <ids>` | 否 | 参与者 open_id 列表，逗号分隔；多值为 OR 语义 |
-| `--room-ids <ids>` | 否 | 会议室 ID 列表，逗号分隔；多值为 OR 语义 |
-| `--page-size <n>` | 否 | 每页数量，默认 `15`，最大 `30` |
-| `--page-token <token>` | 否 | 翻页标记，用于获取下一页 |
-| `--dry-run` | 否 | 预览 API 调用，不执行 |
+| `--query <text>` | No | 9-digit meeting number or search keyword |
+| `--start <time>` | No | Start time (ISO 8601 or date only) |
+| `--end <time>` | No | End time (ISO 8601 or date only) |
+| `--organizer-ids <ids>` | No | Organizer open_id list, comma-separated; multiple values use OR semantics |
+| `--participant-ids <ids>` | No | Participant open_id list, comma-separated; multiple values use OR semantics |
+| `--room-ids <ids>` | No | Meeting room ID list, comma-separated; multiple values use OR semantics |
+| `--page-size <n>` | No | Number per page, default `15`, maximum `30` |
+| `--page-token <token>` | No | Pagination token, used to get the next page |
+| `--dry-run` | No | Preview the API call without executing it |
 
-## 核心约束
+<a id="核心约束"></a>
+## Core constraints
 
-### 1. 至少提供一个过滤条件
+<a id="1-至少提供一个过滤条件"></a>
+### 1. Provide at least one filter condition
 
-所有参数均可选，但必须至少提供一个过滤条件：`--query`、`--start`、`--end`、`--organizer-ids`、`--participant-ids` 或 `--room-ids`。
+All parameters are optional, but at least one filter condition must be provided: `--query`, `--start`, `--end`, `--organizer-ids`, `--participant-ids`, or `--room-ids`.
 
-没有真实关键词时，时间范围或人员过滤已经满足这个约束，`--query` 可以省略。
+When there is no real keyword, a time range or personnel filter already satisfies this constraint, and `--query` can be omitted.
 
-涉及"本月"、"最近两周"这类相对时间时，先基于执行当天计算 `"<YYYY-MM-DD>"` 占位符，再运行命令；不要沿用文档示例生成时的具体日期。
+When relative times such as "this month" or "the last two weeks" are involved, first calculate the `"<YYYY-MM-DD>"` placeholder based on the execution day, then run the command; do not reuse the specific dates from when the documentation examples were generated.
 
-### 2. 仅搜索历史会议
+<a id="2-仅搜索历史会议"></a>
+### 2. Only search historical meetings
 
-`vc +search` 只能搜索已结束的历史会议记录，不用于查询未来日程。查询未来会议安排请使用 [lark-calendar](../../calendar/index.md)。
+`vc +search` can only search ended historical meeting records and is not used to query future schedules. To query future meeting arrangements, use [lark-calendar](../../calendar/index.md).
 
-### 3. 支持 user 和 bot 身份
+<a id="3-支持-user-和-bot-身份"></a>
+### 3. Supports user and bot identities
 
-该接口支持 `--as user` 和 `--as bot`。user 身份需要完成 `lark-cli auth login` 并具备 `vc:meeting.search:read` 权限；bot 身份使用应用的 tenant access token，需要确认当前应用已开通 `vc:meeting.search:read` scope，且运行环境能获取有效的 TAT。
+This interface supports `--as user` and `--as bot`. The user identity requires completing `lark-cli auth login` and having the `vc:meeting.search:read` permission; the bot identity uses the app's tenant access token, and you need to confirm that the current app has enabled the `vc:meeting.search:read` scope and that the runtime environment can obtain a valid TAT.
 
-搜索得到 `meeting_id` 后，后续 `vc +detail`、`vc +recording`、`vc meeting get` 和 `note +detail` 必须显式沿用本次搜索使用的身份。不要为了绕过权限错误自动切换身份。
+After obtaining `meeting_id` from the search, subsequent `vc +detail`, `vc +recording`, `vc meeting get`, and `note +detail` must explicitly use the same identity used for this search. Do not automatically switch identities to bypass permission errors.
 
-### 4. 支持分页
+<a id="4-支持分页"></a>
+### 4. Supports pagination
 
-当返回 `has_more=true` 时，使用响应中的 `page_token` 配合 `--page-token` 获取下一页结果。
+When `has_more=true` is returned, use the `page_token` in the response together with `--page-token` to get the next page of results.
 
-### 5. 日期型 `--end` 包含当天整天
+<a id="5-日期型---end-包含当天整天"></a>
+### 5. Date-type `--end` includes the entire day
 
-当 `--end` 传入的是仅日期格式（如 `2026-03-10`）时，CLI 会将它解释为当天 `23:59:59`，而不是当天 `00:00:00`。
+When `--end` is passed in date-only format (such as `2026-03-10`), the CLI interprets it as `23:59:59` of that day, not `00:00:00` of that day.
 
-这意味着：
+This means:
 
-- `--start 2026-03-10 --end 2026-03-10` 表示只查 `2026-03-10` 当天
-- `--start 2026-03-10 --end 2026-03-11` 表示查询 `2026-03-10` 和 `2026-03-11` 两天
+- `--start 2026-03-10 --end 2026-03-10` means querying only `2026-03-10` that day
+- `--start 2026-03-10 --end 2026-03-11` means querying both days `2026-03-10` and `2026-03-11`
 
-如果用户说“昨天开过的会”“今天开过的会”“某一天开过的会”，应把 `--start` 和 `--end` 都设置为同一天，而不是把 `--end` 设成下一天。
+If the user says "meetings held yesterday", "meetings held today", or "meetings held on a certain day", set both `--start` and `--end` to the same day, rather than setting `--end` to the next day.
 
-## 时间格式
+<a id="时间格式"></a>
+## Time formats
 
-`--start` 和 `--end` 支持以下时间格式：
+`--start` and `--end` support the following time formats:
 
-| 格式 | 示例 | 说明 |
+| Format | Example | Description |
 |------|------|------|
-| ISO 8601（带时区） | `2026-03-10T14:00:00+08:00` | 推荐 |
-| ISO 8601（不带时区） | `2026-03-10T14:00:00` | 按本地时区解析 |
-| 仅日期 | `2026-03-10` | 按天粒度解析；若用于 `--end`，表示当天 `23:59:59` |
+| ISO 8601 (with time zone) | `2026-03-10T14:00:00+08:00` | Recommended |
+| ISO 8601 (without time zone) | `2026-03-10T14:00:00` | Parsed in the local time zone |
+| Date only | `2026-03-10` | Parsed at day granularity; if used for `--end`, it means `23:59:59` of that day |
 
-## 输出结果
+<a id="输出结果"></a>
+## Output results
 
-- 默认输出 JSON，包含 `items`、`has_more` 和 `page_token`。
+- By default, outputs JSON, including `items`, `has_more`, and `page_token`.
 
 ## Pagination (`has_more` / `page_token`)
 
-- 当结果中返回 `has_more=true` 时，说明还有更多页可继续获取。
-- 继续翻页时，使用响应中的 `page_token` 搭配 `--page-token` 发起下一次查询。
-- 不要假设调大 `--page-size` 就能拿全结果；分页遍历时应以 `has_more` 和 `page_token` 为准。
-- 未明确要求全量时，逐页累计已读取的 `items` 数：累计不到 50 条之前可自动继续翻页（`has_more=true` 即继续）；超过 50 条且仍 `has_more=true` 时，先向用户确认是否继续获取全部结果。
-- 用户明确说"所有 / 全部 / 统计 / 按时间排序"时，该全量意图优先于 50 条的确认门槛；直接按 `has_more` 翻完所有页并去重，再排序或统计，不要只用第一页回答。
+- When `has_more=true` is returned in the results, it means there are more pages available to continue retrieving.
+- When continuing pagination, use the `page_token` in the response together with `--page-token` to initiate the next query.
+- Do not assume that increasing `--page-size` will retrieve all results; when iterating through pages, rely on `has_more` and `page_token`.
+- When full results are not explicitly required, accumulate the number of `items` read page by page: before accumulating fewer than 50 records, you may automatically continue paginating (`has_more=true` means continue); when more than 50 records have been read and `has_more=true` still applies, first confirm with the user whether to continue retrieving all results.
+- When the user explicitly says "all / everything / statistics / sort by time", that full-result intent takes precedence over the 50-record confirmation threshold; directly paginate through all pages according to `has_more` and deduplicate, then sort or calculate statistics, and do not answer using only the first page.
 
 ```bash
 # First page
@@ -127,21 +139,24 @@ lark-cli vc +search --query "周会" --page-size 15
 lark-cli vc +search --query "周会" --page-size 15 --page-token "<PAGE_TOKEN>"
 ```
 
-## 常见错误与排查
+<a id="常见错误与排查"></a>
+## Common errors and troubleshooting
 
-| 错误现象 | 根本原因 | 解决方案 |
+| Error symptom | Root cause | Solution |
 |---------|---------|---------|
-| 命令直接报错，要求提供过滤条件 | 没有传入 `--query`、时间范围或任何过滤 ID | 至少补充一个过滤条件后重试 |
-| 时间参数校验失败 | `--start` 或 `--end` 格式不合法 | 改用 ISO 8601 或 `YYYY-MM-DD` |
-| 搜不到未来会议 | `vc +search` 只查历史会议 | 改用 [lark-calendar](../../calendar/index.md) 查询未来日程 |
-| 权限不足 | 未授权 `vc:meeting.search:read` | `--as user`：按提示完成用户授权；`--as bot`：检查 tenant access token 和应用 scope，不要执行 `auth login` |
+| The command directly errors and requires a filter condition | No `--query`, time range, or any filter ID was passed in | Add at least one filter condition and retry |
+| Time parameter validation fails | `--start` or `--end` has an invalid format | Switch to ISO 8601 or `YYYY-MM-DD` |
+| Cannot find future meetings | `vc +search` only queries historical meetings | Use [lark-calendar](../../calendar/index.md) to query future schedules |
+| Insufficient permissions | `vc:meeting.search:read` is not authorized | `--as user`: complete user authorization as prompted; `--as bot`: check the tenant access token and app scope, and do not execute `auth login` |
 
-## 提示
-- 必须使用 `--format json` 输出，便于稳定解析。
-- 排查参数与请求结构时优先使用 `--dry-run`。
-- 搜索的时间范围最大为 1 个月，如果需要搜索更长时间范围的会议，需要拆分为多次时间范围为一个月查询。
-- 不要使用 `yesterday`、`today` 这类相对时间字面量；请先转换成明确日期，例如 `2026-03-10`。
-- 用户如果明确问的是“妙记信息”而不是“纪要内容”，不要默认走 `vc +detail`；应先用 `vc +recording`。
+<a id="提示"></a>
+## Tips
+- Must use `--format json` output for stable parsing.
+- When troubleshooting parameters and request structure, prioritize using `--dry-run`.
+- The maximum search time range is 1 month. If you need to search meetings over a longer time range, split it into multiple queries each with a time range of one month.
+- Do not use relative time literals such as `yesterday` or `today`; first convert them into explicit dates, for example `2026-03-10`.
+- If the user explicitly asks about "Minutes information" rather than "minutes content", do not default to `vc +detail`; first use `vc +recording`.
 
-## 相关场景
-- [查询会议及其产物](../scenes/query-meeting-and-artifacts.md)
+<a id="相关场景"></a>
+## Related scenarios
+- [Query meetings and their artifacts](../scenes/query-meeting-and-artifacts.md)

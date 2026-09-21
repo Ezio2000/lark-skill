@@ -1,45 +1,50 @@
 # okr +progress-get
 
 
-根据进展记录 ID 获取单条 OKR 进展记录。
+Get a single OKR progress record by progress record ID.
 
-## 推荐命令
+<a id="推荐命令"></a>
+## Recommended Commands
 
 ```bash
-# 获取指定 ID 的进展记录（默认 simple 风格，半纯文本格式）
+# Get the progress record with the specified ID (default simple style, semi-plain text format)
 lark-cli okr +progress-get --progress-id 1234567890123456789
 
-# 获取指定 ID 的进展记录（richtext 风格，原始 ContentBlock JSON）
+# Get the progress record with the specified ID (richtext style, raw ContentBlock JSON)
 lark-cli okr +progress-get --progress-id 1234567890123456789 --style richtext
 
-# 使用特定的用户 ID 类型
+# Use a specific user ID type
 lark-cli okr +progress-get --progress-id 1234567890123456789 --user-id-type open_id
 
-# 预览 API 调用而不实际执行
+# Preview the API call without actually executing it
 lark-cli okr +progress-get --progress-id 1234567890123456789 --dry-run
 ```
 
-## 参数
+<a id="参数"></a>
+## Parameters
 
-| 参数               | 必填 | 默认值         | 说明                                                                 |
+| Parameter               | Required | Default         | Description                                                                 |
 |------------------|----|-------------|--------------------------------------------------------------------|
-| `--progress-id`  | 是  | —           | 进展记录 ID（int64 类型，正整数）                                               |
-| `--style`        | 否  | `simple`    | 输出风格：`simple`（半纯文本 SemiPlainContent，推荐） \| `richtext`（原始 ContentBlock JSON）。请参考 [ContentBlock 格式](lark-okr-contentblock.md)。 |
-| `--user-id-type` | 否  | `open_id`   | 用户 ID 类型：`open_id` \| `union_id` \| `user_id`                           |
-| `--dry-run`      | 否  | —           | 预览 API 调用而不实际执行。                                                        |
-| `--format`       | 否  | `json`      | 输出格式。                                                                     |
+| `--progress-id`  | Yes  | —           | Progress record ID (int64 type, positive integer)                                               |
+| `--style`        | No  | `simple`    | Output style: `simple` (semi-plain text SemiPlainContent, recommended) \| `richtext` (raw ContentBlock JSON). Please refer to [ContentBlock format](lark-okr-contentblock.md). |
+| `--user-id-type` | No  | `open_id`   | User ID type: `open_id` \| `union_id` \| `user_id`                           |
+| `--dry-run`      | No  | —           | Preview the API call without actually executing it.                                                        |
+| `--format`       | No  | `json`      | Output format.                                                                     |
 
-## 工作流程
+<a id="工作流程"></a>
+## Workflow
 
-1. 获取目标进展记录的 ID。可通过 `+cycle-detail` 获取目标和关键结果后，从中获取进展记录 ID。
-2. 执行 `lark-cli okr +progress-get --progress-id "1234567890123456789"`。
-3. 报告结果：进展记录的 ID、修改时间、进度百分比和内容。
+1. Get the ID of the target progress record. You can get the objective and key results via `+cycle-detail`, then obtain the progress record ID from them.
+2. Execute `lark-cli okr +progress-get --progress-id "1234567890123456789"`.
+3. Report the result: the progress record's ID, modification time, progress percentage, and content.
 
-## 输出
+<a id="输出"></a>
+## Output
 
-返回 JSON，`content` 字段格式由 `--style` 控制：
+Returns JSON, the format of the `content` field is controlled by `--style`:
 
-### `--style simple`（默认）输出示例：
+<a id="--style-simple默认输出示例"></a>
+### `--style simple` (default) output example:
 
 ```json
 {
@@ -61,7 +66,8 @@ lark-cli okr +progress-get --progress-id 1234567890123456789 --dry-run
 }
 ```
 
-### `--style richtext` 输出示例：
+<a id="--style-richtext-输出示例"></a>
+### `--style richtext` output example:
 
 ```json
 {
@@ -78,15 +84,16 @@ lark-cli okr +progress-get --progress-id 1234567890123456789 --dry-run
 }
 ```
 
-其中：
+Where:
 
-- `content` 字段格式由 `--style` 控制：
-  - `--style simple`（默认）：`SemiPlainContent` 对象，包含 `text`、`mention`、`docs`、`images` 字段。`text` 中包含 `@{userID}` 占位符用于标识 mention 位置。
-  - `--style richtext`：JSON 字符串，为 OKR ContentBlock 富文本格式
-- 请参考 [lark-okr-contentblock.md](lark-okr-contentblock.md) 了解两种格式的详细信息。
-- `progress_rate.status` 返回可读字符串：`normal`（正常）、`overdue`（逾期）、`done`（已完成）。
+- The format of the `content` field is controlled by `--style`:
+  - `--style simple` (default): `SemiPlainContent` object, containing the `text`, `mention`, `docs`, `images` fields. `text` contains a `@{userID}` placeholder used to identify the mention position.
+  - `--style richtext`: JSON string, in OKR ContentBlock rich text format
+- Please refer to [lark-okr-contentblock.md](lark-okr-contentblock.md) for detailed information on the two formats.
+- `progress_rate.status` returns a readable string: `normal` (normal), `overdue` (overdue), `done` (completed).
 
-## 参考
+<a id="参考"></a>
+## References
 
-- [lark-okr](../index.md) -- 所有 OKR 命令(shortcut 和 API 接口)
-- [lark-shared](../../shared/index.md) -- 认证和全局参数
+- [lark-okr](../index.md) -- all OKR commands (shortcut and API interfaces)
+- [lark-shared](../../shared/index.md) -- authentication and global parameters

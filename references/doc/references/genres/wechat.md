@@ -1,39 +1,45 @@
-# Genre Contract: WeChat Official Account / 微信公众号文章 (`platform.wechat`)
+<a id="genre-contract-wechat-official-account--微信公众号文章-platformwechat"></a>
+# Genre Contract: WeChat Official Account / WeChat Official Account article (`platform.wechat`)
 
-## 核心定位（硬约束）
+<a id="核心定位硬约束"></a>
+## Core Positioning (Hard Constraints)
 
-- 交付物是飞书文档中的“微信公众号风格”内容稿，不代表实际发布，也不执行微信平台审核、流量、商业或发布规则。
-- 视觉策略默认使用 `rich`，主动寻找图文结合的表达机会，但每个组件必须服务主线。
-- 写作风格可信、有观点、有叙事或论证推进，在专业感与亲近感之间保持平衡。公众号不是加长版小红书，也不是公文或报告换皮。
-- 一篇只服务一个读者任务和一个可兑现承诺；标题、封面、摘要、导语、正文与结尾围绕同一主线。不编造亲历、身份、数据、引语、案例或效果；无来源时不用“多数、普遍、研究表明”等统计口吻，材料不足时明确收窄表达。
-- 飞书源稿禁止使用 `callout`；生成后通过 Draft Profile Check 的 `profile.blocks` 检查，其他 block 按真实信息关系选择。
+- The deliverable is "WeChat Official Account style" content in a Feishu document; it does not represent actual publishing, nor does it execute WeChat platform review, traffic, commercial, or publishing rules.
+- The visual strategy defaults to `rich`, actively seeking opportunities for combined image-and-text expression, but every component must serve the main thread.
+- The writing style is credible, has a point of view, and advances through narrative or argumentation, maintaining a balance between professionalism and approachability. An Official Account article is not an extended Xiaohongshu post, nor is it a reskinned official document or report.
+- One article serves only one reader task and one deliverable promise; the title, cover, summary, lead, body, and ending revolve around the same main thread. Do not fabricate personal experiences, identities, data, quotations, cases, or effects; when there is no source, do not use statistical tones such as "most, generally, research shows"; when material is insufficient, explicitly narrow the expression.
+- Feishu source drafts must not use `callout`; after generation, pass the `profile.blocks` check in the Draft Profile Check, and select other blocks according to real information relationships.
 
-## 适用与消歧
+<a id="适用与消歧"></a>
+## Applicability and Disambiguation
 
-用户明确要“微信公众号文章、公众号推文、微信长文、微信爆文、公众号风格”时使用，内容保存在哪里不影响本合同生效。
+Use this when the user explicitly asks for "WeChat Official Account article, Official Account post, WeChat long-form article, WeChat viral article, Official Account style"; where the content is stored does not affect this contract taking effect.
 
-普通微信聊天消息、群公告、朋友圈文案、视频号口播、小程序页面和服务通知不走本合同。仅把微信作为研究对象、信息来源或业务渠道时也不触发；若同时要公众号稿和正式体裁，分别生成，不混写。
+Ordinary WeChat chat messages, group announcements, Moments copy, Video Account voiceovers, Mini Program pages, and service notifications do not follow this contract. When WeChat is only used as a research subject, information source, or business channel, this is also not triggered; if both an Official Account draft and a formal genre are requested, generate them separately, do not mix them.
 
-## 内容模式
+<a id="内容模式"></a>
+## Content Modes
 
-| 模式 | 内容脊柱 |
+| Mode | Content Spine |
 |-|-|
-| 知识 / 方法 | 读者处境 → 核心原理 / 结论 → 方法与验证 → 成本、例外和适用边界 → 可执行认识 |
-| 观点 / 解释 | 现象或争点 → 中心判断 → 理由、证据与机制 → 相关反论 / 边界 → 校准后的结论 |
-| 资讯 / 热点 | 已确认事实 → 为什么重要 → 必要背景与多方信息 → 争议 / 未知 → 当前结论或更新点 |
-| 案例 / 故事 | 具体场景 → 选择与行动 → 可观察结果 → 代价 / 失误 → 可迁移洞见 |
-| 品牌 / 行动 | 读者场景 → 有边界的价值 → 证据 / 体验 → 条件与取舍 → 清楚结论 |
+| Knowledge / Method | Reader situation → core principle / conclusion → method and verification → cost, exceptions, and applicable boundaries → actionable understanding |
+| Opinion / Explanation | Phenomenon or point of contention → central judgment → reasons, evidence, and mechanism → relevant counterarguments / boundaries → calibrated conclusion |
+| News / Trending Topic | Confirmed facts → why it matters → necessary background and multi-party information → controversy / unknowns → current conclusion or update point |
+| Case / Story | Specific scenario → choices and actions → observable results → costs / mistakes → transferable insights |
+| Brand / Action | Reader scenario → bounded value → evidence / experience → conditions and trade-offs → clear conclusion |
 
-## 成稿要求
+<a id="成稿要求"></a>
+## Draft Requirements
 
-- 先钉住具体读者、核心问题与中心判断；内部比较信息清晰型、问题 / 冲突型、观点浓缩型标题，成稿只输出既有张力又不透支正文的一个。
-- 标题负责建立准确预期；摘要按需补充关键背景、判断或阅读收益，不复述标题。摘要、导语和首节必须各有信息增量。封面只保留一个视觉中心，图片文案不制造第二个主题。
-- 导语在首屏内用具体场景、问题、变化或判断说明“为什么值得读”，随后尽快进入主线，不用宏大背景、客套话或悬念拖延核心信息。
-- 正文沿一条逻辑线展开，小标题概括本节增量。段落各有一个主要意思，但长短随内容变化：重点句可独立成段，证据、故事和推理要保留完整上下文，避免短句过多造成逻辑断裂。
-- 使用自然、可交流的书面语；用具体细节、例子、转折和取舍形成作者声音，不靠网络热词、排比口号或统一句式制造“爆文感”，避免连续复用同一反转句式。
-- 完整稿至少给出一个封面或正文视觉方案；已有图片时就近用于提供证据、解释信息、建立场景或调节长文节奏。图片不设固定数量，也不为“图文并茂”强塞装饰图，正文仍须独立可读。
-- 结尾回扣开头问题或中心判断，留下结论、影响或自然的下一步；互动句、emoji 和话题标签均按需使用，不要求固定收尾动作。
+- First pin down the specific reader, core question, and central judgment; internally compare information-clear, problem/conflict, and viewpoint-condensed titles, and output only one that has tension without overdrawing the body.
+- The title is responsible for establishing accurate expectations; the summary supplements key background, judgment, or reading benefit as needed, and does not restate the title. The summary, lead, and first section must each have information increment. The cover retains only one visual center, and image copy does not create a second theme.
+- The lead uses a specific scenario, question, change, or judgment within the first screen to explain "why it is worth reading," then enters the main thread as soon as possible, without using grand background, pleasantries, or suspense to delay the core information.
+- The body unfolds along one logical line, and subheadings summarize the increment of each section. Paragraphs each have one main meaning, but length varies with content: key sentences can stand alone as paragraphs, evidence, stories, and reasoning must retain complete context, and avoid too many short sentences causing logical breaks.
+- Use natural, communicative written language; use specific details, examples, turns, and trade-offs to form the author's voice, not relying on internet buzzwords, parallel slogans, or uniform sentence patterns to create a "viral article feel," and avoid continuously reusing the same reversal sentence pattern.
+- A complete draft provides at least one cover or body visual plan; when images already exist, use them nearby to provide evidence, explain information, establish a scene, or adjust the rhythm of a long article. Images have no fixed number, and decorative images are not forced in for the sake of "rich text and images"; the body must still be independently readable.
+- The ending echoes the opening question or central judgment, leaving a conclusion, impact, or natural next step; interactive sentences, emoji, and topic tags are all used as needed, with no fixed closing action required.
 
-## 交付前检查
+<a id="交付前检查"></a>
+## Pre-Delivery Check
 
-确认标题没有透支正文，摘要与导语没有重复，文章主线连续，每节都在推进事实、故事、论证或方法，手机上容易扫读但不过度碎片化，图片确实帮助理解，且没有空洞口号、标题党、模板腔或虚构事实。
+Confirm that the title does not overdraw the body, the summary and lead do not repeat, the article's main thread is continuous, each section advances facts, story, argumentation, or method, it is easy to scan on mobile but not overly fragmented, images genuinely help understanding, and there are no empty slogans, clickbait, template tone, or fabricated facts.

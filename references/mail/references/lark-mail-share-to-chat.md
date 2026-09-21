@@ -1,38 +1,41 @@
 # mail +share-to-chat
 
 
-将邮件以卡片形式分享到飞书 IM 会话（群聊或个人对话）。内部两步完成：创建分享凭证 → 发送卡片到 IM。
+Share an email as a card to a Feishu IM conversation (group chat or direct message). Internally completed in two steps: create a share credential → send the card to IM.
 
-**依赖 Scope：** `mail:user_mailbox.message:readonly`、`im:message`、`im:message.send_as_user`
+**Required Scope:** `mail:user_mailbox.message:readonly`, `im:message`, `im:message.send_as_user`
 
-## 命令
+<a id="命令"></a>
+## Command
 
 ```bash
-# 分享单封邮件到群聊（默认 receive-id-type=chat_id）
+# Share a single email to a group chat (default receive-id-type=chat_id)
 lark-cli mail +share-to-chat --message-id <邮件ID> --receive-id oc_xxx
 
-# 分享整个会话到群聊
+# Share an entire conversation to a group chat
 lark-cli mail +share-to-chat --thread-id <会话ID> --receive-id oc_xxx
 
-# 通过邮箱分享给个人
+# Share to an individual via email address
 lark-cli mail +share-to-chat --message-id <邮件ID> --receive-id user@example.com --receive-id-type email
 
 # Dry Run
 lark-cli mail +share-to-chat --message-id <邮件ID> --receive-id oc_xxx --dry-run
 ```
 
-## 参数
+<a id="参数"></a>
+## Parameters
 
-| 参数 | 必填 | 说明 |
+| Parameter | Required | Description |
 |------|------|------|
-| `--message-id <id>` | 否（二选一） | 要分享的邮件 ID，与 `--thread-id` 互斥 |
-| `--thread-id <id>` | 否（二选一） | 要分享的邮件会话 ID，与 `--message-id` 互斥 |
-| `--receive-id <id>` | 是 | 目标接收者 ID，类型由 `--receive-id-type` 决定 |
-| `--receive-id-type <type>` | 否 | 接收者 ID 类型（默认 `chat_id`）。可选：`chat_id` / `open_id` / `user_id` / `union_id` / `email` |
-| `--mailbox <email>` | 否 | 邮箱地址（默认 `me`） |
-| `--dry-run` | 否 | 仅打印请求，不执行 |
+| `--message-id <id>` | No (choose one of two) | The email ID to share, mutually exclusive with `--thread-id` |
+| `--thread-id <id>` | No (choose one of two) | The email conversation ID to share, mutually exclusive with `--message-id` |
+| `--receive-id <id>` | Yes | Target recipient ID, the type is determined by `--receive-id-type` |
+| `--receive-id-type <type>` | No | Recipient ID type (default `chat_id`). Options: `chat_id` / `open_id` / `user_id` / `union_id` / `email` |
+| `--mailbox <email>` | No | Email address (default `me`) |
+| `--dry-run` | No | Only print the request, do not execute |
 
-## 返回值
+<a id="返回值"></a>
+## Return Value
 
 ```json
 {
@@ -44,43 +47,49 @@ lark-cli mail +share-to-chat --message-id <邮件ID> --receive-id oc_xxx --dry-r
 }
 ```
 
-## 典型场景
+<a id="典型场景"></a>
+## Typical Scenarios
 
-### 场景 1：用户说"帮我把这封邮件分享到项目群"
+<a id="场景-1用户说帮我把这封邮件分享到项目群"></a>
+### Scenario 1: The user says "help me share this email to the project group"
 
 ```bash
-# Step 1: 搜索群聊获取 chat_id
+# Step 1: Search the group chat to get the chat_id
 lark-cli im +chat-search --query "项目群"
-# → 获取 chat_id: oc_xxx
+# → Get chat_id: oc_xxx
 
-# Step 2: 分享邮件
+# Step 2: Share the email
 lark-cli mail +share-to-chat --message-id <邮件ID> --receive-id oc_xxx
 ```
 
-### 场景 2：分享整个邮件会话
+<a id="场景-2分享整个邮件会话"></a>
+### Scenario 2: Share an entire email conversation
 
 ```bash
 lark-cli mail +share-to-chat --thread-id <会话ID> --receive-id oc_xxx
 ```
 
-### 场景 3：通过邮箱分享给个人
+<a id="场景-3通过邮箱分享给个人"></a>
+### Scenario 3: Share to an individual via email address
 
 ```bash
 lark-cli mail +share-to-chat --message-id <邮件ID> --receive-id alice@example.com --receive-id-type email
 ```
 
-## 常见错误
+<a id="常见错误"></a>
+## Common Errors
 
-| 症状 | 原因 | 解决 |
+| Symptom | Cause | Solution |
 |------|------|------|
-| `either --message-id or --thread-id is required` | 两个参数都未传 | 传入其中一个 |
-| `--message-id and --thread-id are mutually exclusive` | 两个参数同时传 | 只传一个 |
-| 403 `user not in chat` | 用户不在目标会话中 | 确认用户是群成员 |
-| 404 `message not found` | 邮件 ID 无效 | 确认邮件 ID 正确 |
-| 403 `permission not granted` | 缺少 `im:message` 或 `im:message.send_as_user` scope | 重新授权：`lark-cli auth login --scope "im:message,im:message.send_as_user"` |
+| `either --message-id or --thread-id is required` | Neither parameter was passed | Pass one of them |
+| `--message-id and --thread-id are mutually exclusive` | Both parameters were passed at the same time | Pass only one |
+| 403 `user not in chat` | The user is not in the target conversation | Confirm the user is a group member |
+| 404 `message not found` | Invalid email ID | Confirm the email ID is correct |
+| 403 `permission not granted` | Missing `im:message` or `im:message.send_as_user` scope | Re-authorize: `lark-cli auth login --scope "im:message,im:message.send_as_user"` |
 
-## 相关命令
+<a id="相关命令"></a>
+## Related Commands
 
-- `lark-cli im +chat-search` — 搜索群聊获取 chat_id
-- `lark-cli mail +message` — 查看邮件内容
-- `lark-cli mail +thread` — 查看邮件会话
+- `lark-cli im +chat-search` — Search the group chat to get the chat_id
+- `lark-cli mail +message` — View email content
+- `lark-cli mail +thread` — View email conversation

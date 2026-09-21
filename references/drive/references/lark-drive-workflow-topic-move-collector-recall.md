@@ -1,41 +1,45 @@
-# 主题资料收集工作流：召回
+<a id="主题资料收集工作流召回"></a>
+# Topic material collection workflow: recall
 
-由状态 `SEARCH_RECALL`、`RECALL_ENHANCE` 加载。
+Loaded by states `SEARCH_RECALL`, `RECALL_ENHANCE`.
 
-本文档负责基础搜索召回、覆盖增强、query 证据、去重和 `CandidateItem`。不得解析目标移动 token、读取完整文档内容、判断相关性或执行写操作。
+This document is responsible for basic search recall, coverage enhancement, query evidence, deduplication, and `CandidateItem`. It must not parse the target move token, read full document content, judge relevance, or perform write operations.
 
-本文档只服务 `topic_move_collector`。进入本文档时，`workflow_id` 必须是 `topic_move_collector`；不得把当前任务改路由到其他 workflow。
+This document only serves `topic_move_collector`. When entering this document, `workflow_id` must be `topic_move_collector`; the current task must not be rerouted to another workflow.
 
-## 必读上下文
+<a id="必读上下文"></a>
+## Required context
 
-执行本文档规则前：
+Before executing the rules in this document:
 
-1. 按 [`../../shared/index.md`](../../shared/index.md) 处理身份、认证和权限。
-2. 按 [`lark-drive-search.md`](lark-drive-search.md) 处理 `drive +search` 语法、过滤条件、单批最多 5 页和身份语义；本 workflow 的全量续批规则见下文。
+1. Handle identity, authentication, and permissions according to [`../../shared/index.md`](../../shared/index.md).
+2. Handle `drive +search` syntax, filter conditions, a maximum of 5 pages per batch, and identity semantics according to [`lark-drive-search.md`](lark-drive-search.md); the full continuation rules for this workflow are described below.
 
-## 搜索原则
+<a id="搜索原则"></a>
+## Search principles
 
-1. 默认使用 `drive +search --mine` 召回当前用户 owner / 负责的 Workspace 资源。
-2. 除非用户本来就要求限定范围，否则不要要求用户指定文件夹或 Wiki 范围。
-3. `SEARCH_RECALL` 和 `RECALL_ENHANCE` 必须保持为独立状态。
-4. `SEARCH_RECALL` 使用用户原始关键词、`owner_scope` 和显式限制。
-5. `RECALL_ENHANCE` 可以基于基础召回证据增加扩展 query，且必须继承同一个 `owner_scope`。
-6. 每个候选项必须保留 query 证据，方便后续解释来源。
-7. 单页或单个最多 5 页的 query 批次不代表完整覆盖；`has_more=true` 时必须保存 `next_page_token` 并自动开始下一批，直到 `has_more=false` 或出现阻塞。
-8. 召回和增强召回可能耗时较长，执行超过 60 秒时必须输出进度提示，之后约每 60 秒提示一次。
-9. 只有用户在 `CONFIRM_CONTEXT` 明确确认 `owner_scope=all_visible` 时，才允许移除 `--mine`。
+1. By default, use `drive +search --mine` to recall Workspace resources owned / managed by the current user.
+2. Unless the user originally requested a limited scope, do not ask the user to specify a folder or Wiki scope.
+3. `SEARCH_RECALL` and `RECALL_ENHANCE` must remain independent states.
+4. `SEARCH_RECALL` uses the user's original keywords, `owner_scope`, and explicit restrictions.
+5. `RECALL_ENHANCE` may add expanded queries based on basic recall evidence, and must inherit the same `owner_scope`.
+6. Each candidate must retain query evidence to facilitate later explanation of its source.
+7. A single page or a single query batch of at most 5 pages does not represent complete coverage; when `has_more=true`, you must save `next_page_token` and automatically start the next batch until `has_more=false` or a blocker occurs.
+8. Recall and enhanced recall may take a long time; when execution exceeds 60 seconds, you must output a progress notice, and then approximately once every 60 seconds thereafter.
+9. Only when the user explicitly confirms `owner_scope=all_visible` in `CONFIRM_CONTEXT` is it permitted to remove `--mine`.
 
-### 分页优先级与完成语义
+<a id="分页优先级与完成语义"></a>
+### Pagination priority and completion semantics
 
-1. 用户确认进入 `topic_move_collector` 即表示同意为本次收集任务执行完整召回；无需再要求用户额外说“全部 / 全量 / 继续翻”。本规则覆盖 `lark-drive-search.md` 的默认首屏交互规则。
-2. 仍遵守 `lark-drive-search.md` 的单轮最多 5 页限制。每读取最多 5 页形成一个批次；批次结束且 `has_more=true` 时，保存 checkpoint，并使用原 query、原过滤条件和返回的 `next_page_token` 自动开始下一批。
-3. 自动续批不改变 workflow 状态，也不触发用户确认。执行超过约 60 秒时只输出进度。
-4. 一个 query 只有在 `has_more=false` 时才是 `complete`。单批结束、达到 5 页或已有部分候选都不代表完成。
-5. 当前状态的全部 query 都为 `complete` 后，才能进入下一状态。认证、权限、无效分页 token、连续重试失败或工具预算不足属于 blocker；必须保留 checkpoint、报告部分召回并停在当前状态，不得把部分结果当成完整召回继续分类。
+1. When the user confirms entering `topic_move_collector`, it means they agree to perform a full recall for this collection task; there is no need to additionally ask the user to say "all / full / keep paging". This rule overrides the default first-screen interaction rule of `lark-drive-search.md`.
+2. The limit of at most 5 pages per round in `lark-drive-search.md` is still observed. Each read of at most 5 pages forms one batch; when the batch ends and `has_more=true`, save a checkpoint and automatically start the next batch using the original query, original filter conditions, and the returned `next_page_token`.
+3. Automatic batch continuation does not change the workflow state and does not trigger user confirmation. When execution exceeds approximately 60 seconds, only output progress.
+4. A query is `complete` only when `has_more=false`. The end of a single batch, reaching 5 pages, or already having partial candidates does not represent completion.
+5. Only after all queries in the current state are `complete` may you proceed to the next state. Authentication, permissions, invalid pagination tokens, consecutive retry failures, or insufficient tool budget are blockers; you must retain the checkpoint, report partial recall, and stop in the current state, and must not treat partial results as complete recall and continue to classification.
 
 ### QueryRecallState
 
-每个基础 / 增强 query 必须维护：
+Each basic / enhanced query must maintain:
 
 ```json
 {
@@ -51,121 +55,130 @@
 }
 ```
 
-## 状态：`SEARCH_RECALL`
+<a id="状态search_recall"></a>
+## State: `SEARCH_RECALL`
 
-进入条件：用户已确认 `CONFIRM_CONTEXT`。
+Entry condition: the user has confirmed `CONFIRM_CONTEXT`.
 
-必须：
+Must:
 
-1. 基于已确认的 `topic` 构造基础 query。
-2. 应用默认 `owner_scope=mine` 和 `constraints` 中的显式限制。
-3. 不隐式添加 `--folder-tokens` 或 `--space-ids`。
-4. 当 `owner_scope=mine` 时，所有基础 query 必须带 `--mine`。
-5. 当 `owner_scope=all_visible` 时，不带 `--mine`，并记录扩展召回风险。
-6. 除非命令限制要求更低值，否则使用 `--page-size 20`。
-7. 每个基础 query 按每批最多 5 页执行；批次结束仍有更多结果时自动续批，并合并所有页面。
-8. 记录基础统计：query、搜索范围、页数、批次数、收集数量、重复数量、阻塞项。
-9. 只有全部基础 query 的 `status=complete` 且 `has_more=false` 时，才进入 `RECALL_ENHANCE`；出现阻塞时保持在 `SEARCH_RECALL`。
+1. Construct basic queries based on the confirmed `topic`.
+2. Apply the default `owner_scope=mine` and the explicit restrictions in `constraints`.
+3. Do not implicitly add `--folder-tokens` or `--space-ids`.
+4. When `owner_scope=mine`, all basic queries must include `--mine`.
+5. When `owner_scope=all_visible`, do not include `--mine`, and record the expanded recall risk.
+6. Unless the command restrictions require a lower value, use `--page-size 20`.
+7. Execute each basic query with at most 5 pages per batch; when the batch ends and there are still more results, automatically continue batches and merge all pages.
+8. Record basic statistics: query, search scope, page count, batch count, collected count, duplicate count, blockers.
+9. Only when `status=complete` and `has_more=false` for all basic queries may you proceed to `RECALL_ENHANCE`; when a blocker occurs, remain in `SEARCH_RECALL`.
 
-### 召回进度 UI
+<a id="召回进度-ui"></a>
+### Recall progress UI
 
-当 `SEARCH_RECALL` 或 `RECALL_ENHANCE` 持续超过约 60 秒时，输出当前进度：
-
-```text
-搜索进度：当前阶段 <SEARCH_RECALL|RECALL_ENHANCE>，已执行 <query_count> 个 query，已读取 <page_count> 页，收集候选 <raw_count> 项，去重后 <unique_count> 项。继续搜索，不会创建或移动资源。
-```
-
-如果正在执行具体 query，可补充：
+When `SEARCH_RECALL` or `RECALL_ENHANCE` lasts longer than approximately 60 seconds, output the current progress:
 
 ```text
-当前 query：<query>
+Search progress: current stage <SEARCH_RECALL|RECALL_ENHANCE>, executed <query_count> queries, read <page_count> pages, collected <raw_count> candidates, <unique_count> after deduplication. Continuing the search; no resources will be created or moved.
 ```
 
-### 基础 Query 规则
+If a specific query is being executed, you may add:
 
-| 用户输入 | 基础 Query |
+```text
+Current query: <query>
+```
+
+<a id="基础-query-规则"></a>
+### Basic query rules
+
+| User input | Basic query |
 |------------|----------------|
-| 单个关键词 | 直接作为 `--query`。 |
-| 多个关键词组成一个短语 | 优先按用户输入的短语执行。 |
-| 明确精确短语 | 保留引号。 |
-| 明确排除词 | 保留负向词。 |
-| 没有真实关键词，只有过滤条件 | 使用 `--query ""` 搭配过滤条件。 |
+| A single keyword | Use directly as `--query`. |
+| Multiple keywords forming one phrase | Prefer executing as the phrase entered by the user. |
+| Explicit exact phrase | Preserve quotation marks. |
+| Explicit exclusion terms | Preserve negative terms. |
+| No real keywords, only filter conditions | Use `--query ""` with filter conditions. |
 
-在 `SEARCH_RECALL` 中不得添加同义词、仅标题搜索、仅评论搜索或 OR 扩展。
+In `SEARCH_RECALL`, do not add synonyms, title-only search, comment-only search, or OR expansion.
 
-### 基础召回输出
+<a id="基础召回输出"></a>
+### Basic recall output
 
 ```text
-基础召回完成：
-- 使用 query：
-- 搜索范围：
-- 应用限制：
-- 收集候选：
-- 去重后候选：
-- 阻塞项：
+Basic recall complete:
+- Queries used:
+- Search scope:
+- Applied restrictions:
+- Candidates collected:
+- Candidates after deduplication:
+- Blockers:
 
-下一步：继续执行覆盖增强，不需要你操作；不会创建或移动资源。
+Next step: continue executing coverage enhancement; no action is needed from you; no resources will be created or moved.
 ```
 
-## 状态：`RECALL_ENHANCE`
+<a id="状态recall_enhance"></a>
+## State: `RECALL_ENHANCE`
 
-进入条件：基础召回完成。
+Entry condition: basic recall is complete.
 
-必须：
+Must:
 
-1. 基于已确认主题和基础召回证据生成增强 query。
-2. 确保增强 query 可解释且不引入明显污染。
-3. 每个增强 query 都必须继承 `owner_scope`；`owner_scope=mine` 时必须带 `--mine`。
-4. 每个 query 都必须按每批最多 5 页处理分页，并自动续批直到 `has_more=false`。
-5. 有稳定去重键时，按稳定去重键合并候选项。
-6. 为每个候选项保留 `source_queries` 和命中证据。
-7. 当 query 不再产生新候选，或出现工具预算 / API 阻塞时，停止增强。
+1. Generate enhanced queries based on the confirmed topic and basic recall evidence.
+2. Ensure enhanced queries are explainable and do not introduce obvious contamination.
+3. Each enhanced query must inherit `owner_scope`; when `owner_scope=mine`, it must include `--mine`.
+4. Each query must handle pagination with at most 5 pages per batch, and automatically continue batches until `has_more=false`.
+5. When a stable deduplication key exists, merge candidates by the stable deduplication key.
+6. Retain `source_queries` and hit evidence for each candidate.
+7. Stop enhancement when a query no longer produces new candidates, or when a tool budget / API blocker occurs.
 
-### 召回阶段退出门禁
+<a id="召回阶段退出门禁"></a>
+### Recall stage exit gate
 
-`RECALL_ENHANCE` 完成后，必须：
+After `RECALL_ENHANCE` is complete, you must:
 
-1. 确认全部基础和增强 query 的 `status=complete` 且 `has_more=false`，再固化完整 `candidate_items`，包含去重结果、`source_queries`、`match_channels`、`snippets` 和 `dedupe_status`。
-2. 将 `current_state` 设置为 `RESOURCE_RESOLVE`。
-3. 加载 [`lark-drive-workflow-topic-move-collector-resolve-verify.md`](lark-drive-workflow-topic-move-collector-resolve-verify.md)。
-4. 把完整 `candidate_items` 交给 `RESOURCE_RESOLVE`。
-5. 不得直接进入 `RELEVANCE_CLASSIFY`、`PLAN_MOVE` 或展示相关性结果。
-6. 不得用搜索标题、摘要或 query 命中直接生成高 / 中 / 低相关分组。
+1. Confirm that `status=complete` and `has_more=false` for all basic and enhanced queries, then finalize the complete `candidate_items`, including deduplication results, `source_queries`, `match_channels`, `snippets`, and `dedupe_status`.
+2. Set `current_state` to `RESOURCE_RESOLVE`.
+3. Load [`lark-drive-workflow-topic-move-collector-resolve-verify.md`](lark-drive-workflow-topic-move-collector-resolve-verify.md).
+4. Hand the complete `candidate_items` to `RESOURCE_RESOLVE`.
+5. Do not directly proceed to `RELEVANCE_CLASSIFY`, `PLAN_MOVE`, or display relevance results.
+6. Do not directly generate high / medium / low relevance groups from search titles, summaries, or query hits.
 
-### 增强策略
+<a id="增强策略"></a>
+### Enhancement strategies
 
-| 策略 | 说明 |
+| Strategy | Description |
 |----------|------|
-| 精确短语 | 对明确短语使用 `"..."` 提高精确命中。 |
-| `intitle:` | 对项目名、客户名、制度名、报表名等标题特征强的主题执行标题召回。 |
-| `--only-title` | 当标题命中更可信时使用。 |
-| `--only-comment` | 当主题可能只出现在评论讨论中时使用。 |
-| 类型拆分 | 对 `docx`、`sheet`、`bitable`、`slides`、`file` 等分类型搜索，减少服务端排序偏差。 |
-| 同义词 / 别名 | 使用业务上明确的同义词、简称、英文名、中文名。 |
-| OR 扩展 | 对同一实体的别名做 OR 扩展。 |
-| 负向词 | 对明显噪声使用 `-term`，但不能排除可能相关的主题词。 |
+| Exact phrase | Use `"..."` for explicit phrases to improve exact hits. |
+| `intitle:` | Perform title recall for topics with strong title characteristics, such as project names, customer names, policy names, and report names. |
+| `--only-title` | Use when title hits are more reliable. |
+| `--only-comment` | Use when the topic may only appear in comment discussions. |
+| Type splitting | Search by type for `docx`, `sheet`, `bitable`, `slides`, `file`, etc., to reduce server-side ranking bias. |
+| Synonyms / aliases | Use business-explicit synonyms, abbreviations, English names, and Chinese names. |
+| OR expansion | Perform OR expansion on aliases of the same entity. |
+| Negative terms | Use `-term` for obvious noise, but do not exclude topic terms that may be relevant. |
 
-### Query 证据
+<a id="query-证据"></a>
+### Query evidence
 
-每个候选项都要记录：
+Each candidate must record:
 
-| 字段 | 说明 |
+| Field | Description |
 |-------|------|
-| `source_queries` | 命中过该资源的 query 列表。 |
-| `match_channels` | 命中位置，如 title、body、comment、metadata。 |
-| `snippets` | 搜索返回的摘要或片段。 |
-| `query_rank` | 资源在各 query 中的相对位置。 |
-| `recall_stage` | `search_recall` 或 `recall_enhance`。 |
+| `source_queries` | List of queries that hit this resource. |
+| `match_channels` | Hit location, such as title, body, comment, metadata. |
+| `snippets` | Summary or snippet returned by search. |
+| `query_rank` | Relative position of the resource in each query. |
+| `recall_stage` | `search_recall` or `recall_enhance`. |
 
-## 去重规则
+<a id="去重规则"></a>
+## Deduplication rules
 
-必须：
+Must:
 
-1. 搜索响应提供 canonical token 时，优先使用 canonical token。
-2. 对 Wiki 结果，不得只按 object token 去重；同一对象可能出现在多个 Wiki 节点中。
-3. token 缺失时，使用 URL 作为 fallback。
-4. 合并重复项时保留所有 query 证据。
-5. 如果无法确定去重是否稳定，保留该项并设置 `dedupe_status=uncertain`。
+1. When the search response provides a canonical token, prefer the canonical token.
+2. For Wiki results, do not deduplicate only by object token; the same object may appear in multiple Wiki nodes.
+3. When a token is missing, use the URL as a fallback.
+4. When merging duplicates, retain all query evidence.
+5. If it cannot be determined whether deduplication is stable, retain the item and set `dedupe_status=uncertain`.
 
 ## CandidateItem
 
@@ -184,19 +197,20 @@
 }
 ```
 
-| 字段 | 说明 |
+| Field | Description |
 |-------|------|
-| `title` | 搜索结果标题。 |
-| `url` | 资源访问链接。 |
-| `raw_type` | 搜索返回的原始类型。 |
-| `source_queries` | 命中过该资源的搜索 query。 |
-| `match_channels` | 命中位置。 |
-| `snippets` | 摘要或命中片段。 |
-| `page_rank` | 当前 query 下的排序位置。 |
-| `dedupe_key` | 候选去重键。 |
-| `dedupe_status` | 去重可信度。 |
-| `recall_stage` | 资源首次进入候选集的召回阶段。 |
+| `title` | Search result title. |
+| `url` | Resource access link. |
+| `raw_type` | Original type returned by search. |
+| `source_queries` | Search queries that hit this resource. |
+| `match_channels` | Hit location. |
+| `snippets` | Summary or hit snippet. |
+| `page_rank` | Ranking position under the current query. |
+| `dedupe_key` | Candidate deduplication key. |
+| `dedupe_status` | Deduplication confidence. |
+| `recall_stage` | Recall stage in which the resource first entered the candidate set. |
 
-## 阻塞项
+<a id="阻塞项"></a>
+## Blockers
 
-缺少认证 / scope、`drive +search` 返回权限或策略阻塞、分页 token 无效、分页重试后仍无法继续，或工具预算不足以完成全部页面时，必须把对应 `QueryRecallState.status` 设置为 `blocked`，保留累计候选、页数和 `next_page_token`，停止并报告。阻塞解除后从 checkpoint 续跑；在全部 query 完成前不得进入资源解析或分类阶段。
+When authentication / scope is missing, `drive +search` returns a permission or policy blocker, the pagination token is invalid, pagination still cannot continue after retries, or the tool budget is insufficient to complete all pages, you must set the corresponding `QueryRecallState.status` to `blocked`, retain accumulated candidates, page count, and `next_page_token`, stop, and report. After the blocker is resolved, resume from the checkpoint; before all queries are complete, do not proceed to the resource parsing or classification stage.

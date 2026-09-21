@@ -1,69 +1,76 @@
-# docs +resource-*（Docx 封面图资源）
+<a id="docs-resource-docx-封面图资源"></a>
+# docs +resource-* (Docx cover image resource)
 
 
-Docx 封面图不是正文里的 `<img token="...">` 素材块。读取、更新、删除文档封面图时，使用 `docs +resource-download/+resource-update/+resource-delete --type cover`，不要使用 `+media-insert` 或 `+media-download --token <cover.token>` 让用户手动拼步骤。
+A Docx cover image is not a `<img token="...">` material block in the body. When reading, updating, or deleting a document cover image, use `docs +resource-download/+resource-update/+resource-delete --type cover`; do not use `+media-insert` or `+media-download --token <cover.token>` to make the user assemble the steps manually.
 
-## 选择规则
+<a id="选择规则"></a>
+## Selection rules
 
-- 用户要下载文档封面图：`docs +resource-download --type cover`
-- 用户要设置/替换文档封面图：`docs +resource-update --type cover`
-- 用户要删除文档封面图：`docs +resource-delete --type cover`
-- 用户要下载正文图片、附件、画板缩略图：继续使用 [`docs +media-download`](lark-doc-media-download.md)
+- User wants to download the document cover image: `docs +resource-download --type cover`
+- User wants to set/replace the document cover image: `docs +resource-update --type cover`
+- User wants to delete the document cover image: `docs +resource-delete --type cover`
+- User wants to download body images, attachments, or board thumbnails: continue using [`docs +media-download`](lark-doc-media-download.md)
 
-## 命令
+<a id="命令"></a>
+## Commands
 
 ```bash
-# 下载封面图。CLI 会先读取 document.cover.token，再下载图片内容并保存到本地。
+# Download the cover image. The CLI first reads document.cover.token, then downloads the image content and saves it locally.
 lark-cli docs +resource-download --doc doxcnXXX --type cover --output ./cover
 
-# 使用本地文件更新封面图。
+# Update the cover image using a local file.
 lark-cli docs +resource-update --doc doxcnXXX --type cover --file ./cover.png
 
-# 使用剪切板图片更新封面图。
+# Update the cover image using a clipboard image.
 lark-cli docs +resource-update --doc doxcnXXX --type cover --from-clipboard
 
-# 使用 HTTPS URL 更新封面图。CLI 会先下载 URL 内容，再上传并写入 cover.token。
+# Update the cover image using an HTTPS URL. The CLI first downloads the URL content, then uploads it and writes cover.token.
 lark-cli docs +resource-update --doc doxcnXXX --type cover --url "https://example.com/cover.png"
 
-# 可选：设置封面图裁切偏移。
+# Optional: set the cover image crop offset.
 lark-cli docs +resource-update --doc doxcnXXX --type cover --file ./cover.png --offset-ratio-x 0.2 --offset-ratio-y 0.8
 
-# 删除封面图；当文档本来没有封面图时也成功返回。
+# Delete the cover image; also returns success when the document originally had no cover image.
 lark-cli docs +resource-delete --doc doxcnXXX --type cover
 ```
 
-## 参数
+<a id="参数"></a>
+## Parameters
 
-| 命令 | 参数 | 必填 | 说明 |
+| Command | Parameter | Required | Description |
 |------|------|------|------|
-| all | `--doc <id>` | 是 | 文档 ID、docx URL，或可解析为 docx 的 wiki URL |
-| all | `--type cover` | 否 | 当前只支持 `cover`；默认值也是 `cover` |
-| download | `--output <path>` | 是 | 本地保存路径；不带扩展名会根据响应类型自动补全 |
-| download | `--overwrite` | 否 | 覆盖已存在的输出文件 |
-| update | `--file <path>` | 三选一 | 磁盘上的真实图片文件；大于 20MiB 自动使用分片上传 |
-| update | `--from-clipboard` | 三选一 | 从系统剪切板读取图片 |
-| update | `--url <https-url>` | 三选一 | 从 HTTPS URL 下载图片后上传 |
-| update | `--offset-ratio-x <number>` | 否 | 视图相对原图中心的横向偏移比例：水平偏移 px / 原图宽度 px；0 为居中，正数向右，负数向左 |
-| update | `--offset-ratio-y <number>` | 否 | 视图相对原图中心的纵向偏移比例：垂直偏移 px / 原图高度 px；0 为居中，正数向上，负数向下 |
+| all | `--doc <id>` | Yes | Document ID, docx URL, or wiki URL resolvable to docx |
+| all | `--type cover` | No | Currently only `cover` is supported; the default value is also `cover` |
+| download | `--output <path>` | Yes | Local save path; if no extension is given, it is automatically completed based on the response type |
+| download | `--overwrite` | No | Overwrite an existing output file |
+| update | `--file <path>` | Choose one of three | A real image file on disk; files larger than 20MiB automatically use multipart upload |
+| update | `--from-clipboard` | Choose one of three | Read an image from the system clipboard |
+| update | `--url <https-url>` | Choose one of three | Download an image from an HTTPS URL and then upload it |
+| update | `--offset-ratio-x <number>` | No | Horizontal offset ratio of the view relative to the center of the original image: horizontal offset px / original image width px; 0 is centered, positive moves right, negative moves left |
+| update | `--offset-ratio-y <number>` | No | Vertical offset ratio of the view relative to the center of the original image: vertical offset px / original image height px; 0 is centered, positive moves up, negative moves down |
 
-## 输出契约
+<a id="输出契约"></a>
+## Output contract
 
-- `+resource-download` 成功时 stdout JSON 的 `data` 包含 `document_id`、`type`、`saved_path`、`size_bytes`、`content_type`、`cover.token`。如果文档没有封面图，命令失败退出，错误包含 `document has no cover` 和脱敏 `document_id`，不会创建输出文件。
-- `+resource-update` 成功时 stdout JSON 的 `data` 包含完整 `file_token` 和 `cover.token`；stderr 只打印脱敏 token。
-- `+resource-delete` 成功时 stdout JSON 的 `data.deleted` 表示本次是否真的发起删除，`data.already_empty` 表示删除前是否没有封面图。空封面图是幂等成功，不报错。
+- On success, `+resource-download` stdout JSON's `data` contains `document_id`, `type`, `saved_path`, `size_bytes`, `content_type`, and `cover.token`. If the document has no cover image, the command exits with failure, the error contains `document has no cover` and a redacted `document_id`, and no output file is created.
+- On success, `+resource-update` stdout JSON's `data` contains the complete `file_token` and `cover.token`; stderr prints only the redacted token.
+- On success, `+resource-delete` stdout JSON's `data.deleted` indicates whether a deletion was actually initiated this time, and `data.already_empty` indicates whether there was no cover image before deletion. An empty cover image is an idempotent success and does not report an error.
 
-## URL 来源安全边界
+<a id="url-来源安全边界"></a>
+## URL source security boundary
 
-`+resource-update --url` 只用于下载公开 HTTPS 图片：
+`+resource-update --url` is only used to download public HTTPS images:
 
-- 只允许 `https://`，拒绝 HTTP、空 host 和 URL userinfo。
-- 拒绝解析到 private、loopback、link-local、multicast、unspecified 地址的 host。
-- 最多跟随 3 次跳转，每次跳转都重新校验 URL。
-- 响应 `Content-Type` 只允许 `image/png`、`image/jpeg`、`image/gif`、`image/webp`。
-- 响应体最大 20MiB。
+- Only `https://` is allowed; HTTP, empty host, and URL userinfo are rejected.
+- Reject hosts that resolve to private, loopback, link-local, multicast, or unspecified addresses.
+- Follow at most 3 redirects, and revalidate the URL on every redirect.
+- The response `Content-Type` only allows `image/png`, `image/jpeg`, `image/gif`, and `image/webp`.
+- The response body is at most 20MiB.
 
-## 参考
+<a id="参考"></a>
+## References
 
-- [lark-doc-media-download](lark-doc-media-download.md) — 下载正文素材或画板缩略图
-- [lark-doc-media-insert](lark-doc-media-insert.md) — 在正文插入图片/文件
-- [lark-shared](../../shared/index.md) — 认证和全局参数
+- [lark-doc-media-download](lark-doc-media-download.md) — download body materials or board thumbnails
+- [lark-doc-media-insert](lark-doc-media-insert.md) — insert images/files into the body
+- [lark-shared](../../shared/index.md) — authentication and global parameters

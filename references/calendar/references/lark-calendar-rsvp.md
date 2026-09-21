@@ -1,38 +1,42 @@
 # calendar +rsvp
 
 
-回复指定的日程，更新当前用户的 RSVP 状态（接受、拒绝或待定）。
+Reply to the specified event, updating the current user's RSVP status (accept, decline, or tentative).
 
-## 命令
+<a id="命令"></a>
+## Command
 
 ```bash
-# 回复日程为接受 (使用主日历)
+# Reply to the event as accept (using the primary calendar)
 lark-cli calendar +rsvp --event-id evt_xxx --rsvp-status accept
 
-# 回复日程为拒绝
+# Reply to the event as decline
 lark-cli calendar +rsvp --event-id evt_xxx --rsvp-status decline
 
-# 回复日程为待定
+# Reply to the event as tentative
 lark-cli calendar +rsvp --event-id evt_xxx --rsvp-status tentative
 
-# 指定其他日历下的日程
+# Specify an event under another calendar
 lark-cli calendar +rsvp --calendar-id cal_xxx --event-id evt_xxx --rsvp-status accept
 ```
 
-## 参数
+<a id="参数"></a>
+## Parameters
 
-| 参数 | 必填 | 说明 |
+| Parameter | Required | Description |
 |------|------|------|
-| `--event-id <id>` | **是** | 日程 ID |
-| `--rsvp-status <status>` | **是** | 回复状态，可选值：`accept` (接受), `decline` (拒绝), `tentative` (待定) |
-| `--calendar-id <id>` | 否 | 日历 ID（省略则使用主日历） |
-| `--dry-run` | 否 | 预览 API 调用，不执行 |
+| `--event-id <id>` | **Yes** | Event ID |
+| `--rsvp-status <status>` | **Yes** | Reply status, possible values: `accept` (accept), `decline` (decline), `tentative` (tentative) |
+| `--calendar-id <id>` | No | Calendar ID (if omitted, the primary calendar is used) |
+| `--dry-run` | No | Preview the API call without executing it |
 
-## 提示
+<a id="提示"></a>
+## Tips
 
-- 只能回复你被邀请的日程。
-- 调用前通常需要通过 `+agenda` 等命令获取到具体的 `event-id`。
+- You can only reply to events you have been invited to.
+- Before calling, you usually need to obtain the specific `event-id` through commands such as `+agenda`.
 
-## 参考
+<a id="参考"></a>
+## References
 
-- [lark-calendar](../index.md) -- skill 入口与路由
+- [lark-calendar](../index.md) -- skill entry point and routing

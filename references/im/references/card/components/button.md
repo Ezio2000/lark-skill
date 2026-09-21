@@ -1,8 +1,10 @@
-# 按钮 `button`
+<a id="按钮-button"></a>
+# Button `button`
 
-交互按钮，支持跳转 / 回调 / 表单提交三类行为。**Card 2.0**。
+Interactive button, supporting three types of behavior: jump / callback / form submission. **Card 2.0**.
 
-## 最小示例
+<a id="最小示例"></a>
+## Minimal Example
 
 ```json
 {
@@ -13,51 +15,55 @@
 }
 ```
 
-## 字段
+<a id="字段"></a>
+## Fields
 
-| 字段 | 必填 | 类型 | 默认 | 说明 |
+| Field | Required | Type | Default | Description |
 |---|---|---|---|---|
-| `tag` | 是 | String | / | 固定 `button` |
-| `text` | 否 | Object | / | `{tag:"plain_text", content}`，≤100 字符 |
-| `type` | 否 | String | default | 见下方 type 枚举 |
-| `size` | 否 | String | medium | `tiny` / `small` / `medium` / `large` |
-| `width` | 否 | String | default | `default` / `fill` / `[100,∞)px` |
-| `behaviors` | 是* | Array | / | 交互行为，见下；表单内按钮不用 behaviors 而用 `form_action_type` |
-| `icon` | 否 | Object | / | 前缀图标（同 `div.icon`） |
-| `hover_tips` | 否 | Object | / | PC 端悬浮提示，plain_text |
-| `disabled` | 否 | Boolean | false | 是否禁用 |
-| `disabled_tips` | 否 | Object | / | 禁用后悬浮提示，plain_text |
-| `confirm` | 否 | Object | / | 二次确认弹窗 `{title, text}`（均 plain_text，title 必填） |
-| `margin` | 否 | String | 0 | 外边距 [-99,99]px |
-| `element_id` | 否 | String | / | 唯一标识，字母开头 ≤20 字符 |
+| `tag` | Yes | String | / | Fixed `button` |
+| `text` | No | Object | / | `{tag:"plain_text", content}`, ≤100 characters |
+| `type` | No | String | default | See the type enum below |
+| `size` | No | String | medium | `tiny` / `small` / `medium` / `large` |
+| `width` | No | String | default | `default` / `fill` / `[100,∞)px` |
+| `behaviors` | Yes* | Array | / | Interactive behavior, see below; buttons inside a form do not use behaviors but instead use `form_action_type` |
+| `icon` | No | Object | / | Prefix icon (same as `div.icon`) |
+| `hover_tips` | No | Object | / | PC hover tooltip, plain_text |
+| `disabled` | No | Boolean | false | Whether disabled |
+| `disabled_tips` | No | Object | / | Hover tooltip when disabled, plain_text |
+| `confirm` | No | Object | / | Secondary confirmation dialog `{title, text}` (all plain_text, title required) |
+| `margin` | No | String | 0 | Outer margin [-99,99]px |
+| `element_id` | No | String | / | Unique identifier, starts with a letter, ≤20 characters |
 
-**type 枚举**：`default`(黑字描边) / `primary`(蓝字描边) / `danger`(红字描边) / `text` / `primary_text` / `danger_text`(无边框) / `primary_filled`(蓝底白字) / `danger_filled`(红底白字) / `laser`(镭射)。
+**type enum**: `default` (black text with border) / `primary` (blue text with border) / `danger` (red text with border) / `text` / `primary_text` / `danger_text` (no border) / `primary_filled` (blue background with white text) / `danger_filled` (red background with white text) / `laser` (laser).
 
-## 按钮主次（强制）
+<a id="按钮主次强制"></a>
+## Button Hierarchy (Mandatory)
 
-- 全卡仅 1 个按钮 → `type: "primary_filled"`，并 `width: "fill"` 撑满成强焦点。
-- 多个并列按钮 → 第一个（主操作）`primary_filled`，其余一律 `default`，形成「一主多次」层级。
-- 删除 / 拒绝等危险操作用 `danger` 系（`danger` 或 `danger_filled`）。
+- Only 1 button on the entire card → `type: "primary_filled"`, and `width: "fill"` to fill the width and create a strong focal point.
+- Multiple side-by-side buttons → the first one (primary action) `primary_filled`, and all others `default`, forming a "one primary, multiple secondary" hierarchy.
+- Dangerous operations such as delete / reject use the `danger` family (`danger` or `danger_filled`).
 
-## behaviors（交互行为）
+<a id="behaviors交互行为"></a>
+## behaviors (Interactive Behavior)
 
 ```json
-// 1. 服务端回调
+// 1. Server-side callback
 { "type": "callback", "value": { "key": "v" } }
-// 2. 跳转链接（可与 callback 同数组共存）
+// 2. Jump link (can coexist with callback in the same array)
 { "type": "open_url", "default_url": "https://x", "pc_url": "", "ios_url": "", "android_url": "" }
 ```
 
-表单容器内的按钮 **不用 behaviors**，改用根字段：
+Buttons inside a form container **do not use behaviors**; instead use the root fields:
 
-| 字段 | 必填 | 说明 |
+| Field | Required | Description |
 |---|---|---|
-| `name` | 是 | 表单内唯一标识 |
-| `form_action_type` | 是 | `submit`（提交表单）/ `reset`（重置） |
+| `name` | Yes | Unique identifier within the form |
+| `form_action_type` | Yes | `submit` (submit form) / `reset` (reset) |
 
-## 嵌套 / 易错点
+<a id="嵌套--易错点"></a>
+## Nesting / Common Pitfalls
 
-- 可嵌套在 column_set / form / collapsible_panel / 循环容器 / interactive_container 内。
-- 2.0 已废弃 `action` 交互模块，按钮直接放 `elements`，用间距控制排列。
-- 旧式 `url`/`value` 顶层字段是 1.0 写法；2.0 一律用 `behaviors`。
-- 点击触发 `card.action.trigger`，回传 `action.tag="button"` + `action.value`（即 callback 的 value）。
+- Can be nested inside column_set / form / collapsible_panel / loop container / interactive_container.
+- 2.0 has deprecated the `action` interaction module; place buttons directly in `elements` and control arrangement with spacing.
+- The old-style `url`/`value` top-level fields are the 1.0 syntax; in 2.0 always use `behaviors`.
+- Clicking triggers `card.action.trigger`, returning `action.tag="button"` + `action.value` (i.e., the callback's value).

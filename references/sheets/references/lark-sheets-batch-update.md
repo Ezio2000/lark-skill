@@ -1,129 +1,131 @@
 # Lark Sheet Batch Update
 
-## 写入边界 + 回读校验
+<a id="写入边界--回读校验"></a>
+## Write boundaries + read-back verification
 
-`+batch-update` 把多次写入打包成单次请求，但每个子操作仍应按编辑类任务的范围和回读建议处理：
+`+batch-update` packs multiple writes into a single request, but each sub-operation should still be handled according to the scope and read-back recommendations for edit-type tasks:
 
-1. **目标 range 应落在用户授权范围内**：除用户明示要修改的区域外，子操作避免扩张到无关单元格 / 列 / Sheet。规划 range 时先确认每个子操作的边界。
-2. **批次完成后按子操作验证**：单元格写入/清除→`+cells-get`/`+csv-get`；对象 CRUD→对应 `+*-list`；sheet CRUD→`+workbook-info`；尺寸/隐藏/冻结/分组/合并→`+sheet-info`；网格线显隐这类没有回读接口的状态按子操作返回确认即可。至少覆盖首、中、末和用户点名项，不能只做统一 cells 抽样。
-3. **预期条数前置断言**：涉及"批量填充 N 行"或"对 M 个区域分别写入"时，建议先把 N、M 硬编码进代码，回读后比较实际与预期；不一致就优先再发一轮 `+batch-update` 补齐，补不齐则在交付说明里列出缺口。
-4. **三条工具硬约束**：`--yes` 必带（high-risk-write，不带退出码 10）；单次 ≤100 条 operations，超出按批拆分；`+cells-batch-set-style` / `+cells-batch-clear` 等批量类 shortcut 不可嵌入 operations（它们本身就是批量原子操作，直接顶层调用）。
+1. **The target range should fall within the user-authorized scope**: apart from the areas the user explicitly wants to modify, sub-operations should avoid expanding into unrelated cells / columns / Sheets. When planning ranges, first confirm the boundaries of each sub-operation.
+2. **Verify per sub-operation after the batch completes**: cell writes/clears → `+cells-get`/`+csv-get`; object CRUD → the corresponding `+*-list`; sheet CRUD → `+workbook-info`; size/hide/freeze/group/merge → `+sheet-info`; for states with no read-back interface, such as gridline visibility, confirmation from the sub-operation's return is sufficient. At minimum cover the first, middle, last, and user-named items; do not just do a uniform cells sampling.
+3. **Assert expected counts up front**: when "batch-fill N rows" or "write to M ranges separately" is involved, it is recommended to hard-code N and M into the code first, then compare actual vs. expected after read-back; if they do not match, prioritize sending another round of `+batch-update` to fill the gaps, and if the gaps cannot be filled, list them in the delivery notes.
+4. **Three hard tool constraints**: `--yes` is mandatory (high-risk-write; without it, exit code 10); a single call ≤100 operations, split into batches if exceeded; batch-type shortcuts such as `+cells-batch-set-style` / `+cells-batch-clear` cannot be embedded in operations (they are themselves batch atomic operations, so call them directly at the top level).
 
-若本次 `+batch-update` 的任一子操作写入了公式、复制了公式模板、或导入了含公式的数据块，回读之外必须对本次公式范围逐段执行 `+formula-verify --exit-on-error`；`partial` 拆分续扫，全部分段 `status='success'` 后才完成。`+batch-update` 只保证写入动作按序执行，不保证公式运行结果 zero-error。AI 公式改走 `+formula-verify --ai-only`，按 `references/lark-sheets-formula-verify.md` 的全区间一次异步状态检查规则交付（`failed` / `unsupported` 先修，只剩 pending 可交付并说明后台仍在计算）。
+If any sub-operation of this `+batch-update` wrote a formula, copied a formula template, or imported a data block containing formulas, then in addition to read-back you must run `+formula-verify --exit-on-error` segment by segment over this formula range; `partial` splits and continues scanning, and it is complete only after all segments are `status='success'`. `+batch-update` only guarantees that write actions execute in order; it does not guarantee zero-error formula results. For AI formulas, switch to `+formula-verify --ai-only` and deliver according to the rule in `references/lark-sheets-formula-verify.md` of one asynchronous status check over the entire range (fix `failed` / `unsupported` first; only pending may be delivered, with a note that background computation is still in progress).
 
-## 使用场景
+<a id="使用场景"></a>
+## Use cases
 
-写入。把**跨类型、有顺序依赖**的多个写入操作合并为一次请求按序执行（如插列 → 写表头 → 回填数据）。注意：不支持嵌套 `+batch-update`。
+Writes. Merge multiple write operations that are **cross-type and order-dependent** into a single request executed in order (e.g., insert column → write header → backfill data). Note: nested `+batch-update` is not supported.
 
-**先分流再动手（按操作组合选入口）**：美化收尾（样式 / 合并 / 行高列宽 / 冻结的任意组合）→ 一次 `+styles-put`（声明式规格，见 `references/lark-sheets-styles-put.md`），不要拼 `--operations` 子操作数组；**同一个写操作**打多个区域 → 用该命令自身的复数形态（`+cells-set --writes` / `+cells-batch-clear` / `+dim-delete --ranges` / resize 的 map 形态等）；只有跨类型、有顺序依赖的操作链才用本命令。
+**Route first, then act (choose the entry point by operation combination)**: beautification finishing touches (any combination of styles / merges / row height and column width / freeze) → a single `+styles-put` (declarative spec, see `references/lark-sheets-styles-put.md`); do not assemble a `--operations` sub-operation array; **the same write operation** targeting multiple ranges → use that command's own plural form (`+cells-set --writes` / `+cells-batch-clear` / `+dim-delete --ranges` / the map form of resize, etc.); only use this command for operation chains that are cross-type and order-dependent.
 
-**⚠️ 优先使用 `+batch-update` 的场景**：
-- 需要先插入行列再写入数据时（`+dim-{insert|delete|hide|unhide|freeze|group|ungroup}` + `+cells-set`）
-- 需要对多个区域执行**不同类型**的写入操作时（如 `+cells-set` + `+cells-clear` 组合）。同一个写操作打多区域用该命令自身的复数形态、多区域 merge 用 `+styles-put` 的 `cell_merges`、大范围 unmerge 直接单次调用——均见上方分流，不进本命令
+**⚠️ Scenarios where `+batch-update` should be preferred**:
+- When you need to insert rows/columns before writing data (`+dim-{insert|delete|hide|unhide|freeze|group|ungroup}` + `+cells-set`)
+- When you need to perform **different types** of write operations on multiple ranges (e.g., the combination of `+cells-set` + `+cells-clear`). For the same write operation targeting multiple ranges, use that command's own plural form; for multi-range merge, use `+styles-put`'s `cell_merges`; for large-scale unmerge, call it directly in a single call—all of these are covered by the routing above and do not go through this command
 
-**多个互不依赖的图表任务优先使用 `+batch-chart-create` / `+batch-chart-update`**；只有图表与其它写入存在同一批次顺序依赖时，才把图表 shortcut 放进 `+batch-update`。
+**For multiple mutually independent chart tasks, prefer `+batch-chart-create` / `+batch-chart-update`**; only when charts and other writes have order dependencies within the same batch should chart shortcuts be placed into `+batch-update`.
 
-**不可放进 `--operations` 的写 shortcut**（`shortcut` 枚举不含它们，强行写入会被校验拒）：`+cells-set-image`（需本地上传图片）、`+styles-put` / `+dropdown-update` / `+dropdown-delete` / `+cells-batch-clear`（自身已是批量入口，不可再嵌套）、`+dim-move`。这些操作需在 `+batch-update` 之外单独调用。
+**Write shortcuts that cannot be placed into `--operations`** (the `shortcut` enum does not include them; forcing them in will be rejected by validation): `+cells-set-image` (requires local image upload), `+styles-put` / `+dropdown-update` / `+dropdown-delete` / `+cells-batch-clear` (they are already batch entry points and cannot be nested again), `+dim-move`. These operations must be called separately outside `+batch-update`.
 
-**行高列宽批量不走这里**：多行 / 多列不同尺寸用 `+styles-put` 的 `row_sizes` / `col_sizes`（可与样式同批），或 `+rows-resize --heights` / `+cols-resize --widths` 的 map 形态（见 `references/lark-sheets-range-operations.md`）；map 形态不可作为 `--operations` 子操作嵌入（子操作里仍可用单区间形态 `range` + `height`/`width`）。
+**Batch row height and column width do not go here**: for different sizes across multiple rows / columns, use `+styles-put`'s `row_sizes` / `col_sizes` (can be in the same batch as styles), or the map form of `+rows-resize --heights` / `+cols-resize --widths` (see `references/lark-sheets-range-operations.md`); the map form cannot be embedded as a `--operations` sub-operation (within sub-operations you can still use the single-range form `range` + `height`/`width`).
 
-**执行语义（fail-fast；失败后哪些已生效取决于批次构成）**：默认首个失败的子操作即中断剩余操作。此前的子操作**是否已落盘不统一**：纯单元格 / 行列结构类写入在提交前只累计在内存，失败时整体不落盘（等效回滚）；而图表 / 透视表等对象类子操作执行时会**先把此前累计的写入提交落盘再创建对象**——批次含这类子操作时，失败前完成的部分（含其之前的普通写入）已实际生效、无法回滚。因此失败后**不要假设"全部回滚"或"全部保留"**：先看返回 `results` 里各子操作的状态，再回读现状（行列数 / 目标格 / `+chart-list` 等对象清单）确认已生效集合，只补发未生效部分——盲目整批重发会重复应用已生效操作（如插行 / 建图），盲目只发失败尾可能写到未生效的旧结构上。传 `--continue-on-error` 则遇失败仍继续执行剩余操作，已成功部分保留（返回 "N succeeded, M failed"）。
+**Execution semantics (fail-fast; which operations have already taken effect after a failure depends on the batch composition)**: by default, the first failed sub-operation interrupts the remaining operations. Whether prior sub-operations **have been persisted is not uniform**: pure cell / row-column structure writes only accumulate in memory before commit, and on failure nothing is persisted as a whole (equivalent to rollback); whereas object-type sub-operations such as charts / pivot tables **first commit the previously accumulated writes to disk and then create the object** during execution—when a batch contains such sub-operations, the parts completed before the failure (including the ordinary writes before them) have actually taken effect and cannot be rolled back. Therefore, after a failure, **do not assume "everything rolled back" or "everything retained"**: first look at the status of each sub-operation in the returned `results`, then read back the current state (row/column counts / target cells / object lists such as `+chart-list`) to confirm the set that has taken effect, and only resend the parts that have not taken effect—blindly resending the entire batch will re-apply operations that already took effect (such as inserting rows / creating charts), and blindly sending only the failed tail may write onto an old structure that has not taken effect. If `--continue-on-error` is passed, execution continues with the remaining operations even on failure, and the already-successful parts are retained (returning "N succeeded, M failed").
 
-**公式相关批处理的完成流程**：
-- 写前：先读 `references/lark-sheets-formula-translation.md`，把公式改写成飞书可执行语义。
-- 写时：用 `+batch-update` 一次性完成插行/写公式/复制模板等成套动作。
-- 写后：回读关键公式，并对本次公式范围逐段运行 `+formula-verify --exit-on-error`，全部 success 后完成；AI 公式改用 `+formula-verify --ai-only`，按 `references/lark-sheets-formula-verify.md` 的全区间一次异步状态检查规则交付。
+**Completion flow for formula-related batch processing**:
+- Before writing: first read `references/lark-sheets-formula-translation.md` and rewrite the formula into Feishu-executable semantics.
+- While writing: use `+batch-update` to complete the full set of actions such as inserting rows / writing formulas / copying templates in one go.
+- After writing: read back the key formulas, and run `+formula-verify --exit-on-error` segment by segment over this formula range; complete only after all are success; for AI formulas, switch to `+formula-verify --ai-only` and deliver according to the rule in `references/lark-sheets-formula-verify.md` of one asynchronous status check over the entire range.
 
-**`+dropdown-update` 的选项模式（`--options` / `--source-range` 二选一）+ 配色规则**（更新会重写完整验证规则；需要保留已有配色时先回读并透传 `--colors`）见 [`references/lark-sheets-write-cells.md`](lark-sheets-write-cells.md) 的「Dropdown 选项 + 配色」节，本文不重复。`+dropdown-delete` 不涉及这些 flag。
+**`+dropdown-update` option modes (choose one of `--options` / `--source-range`) + color rules** (updating rewrites the complete validation rule; if existing colors need to be preserved, first read back and pass through `--colors`) see the "Dropdown options + colors" section of [`references/lark-sheets-write-cells.md`](lark-sheets-write-cells.md); this document does not repeat it. `+dropdown-delete` does not involve these flags.
 
 ## Shortcuts
 
-| Shortcut | Risk | 分组 |
+| Shortcut | Risk | Group |
 | --- | --- | --- |
-| `+batch-update` | high-risk-write | 批量 |
-| `+batch-chart-create` | write | 批量 |
-| `+batch-chart-update` | write | 批量 |
-| `+dropdown-update` | write | 对象 |
-| `+dropdown-delete` | high-risk-write | 对象 |
-| `+cells-batch-clear` | high-risk-write | 批量 |
+| `+batch-update` | high-risk-write | Batch |
+| `+batch-chart-create` | write | Batch |
+| `+batch-chart-update` | write | Batch |
+| `+dropdown-update` | write | Object |
+| `+dropdown-delete` | high-risk-write | Object |
+| `+cells-batch-clear` | high-risk-write | Batch |
 
 ## Flags
 
 ### `+batch-update`
 
-_公共：URL/token（无 sheet 定位） · 系统：`--yes`、`--dry-run`_
+_Common: URL/token (no sheet targeting) · System: `--yes`, `--dry-run`_
 
-| Flag | Type | 必填 | 说明 |
+| Flag | Type | Required | Description |
 | --- | --- | --- | --- |
-| `--operations` | string + File + Stdin（复合 JSON） | required | JSON 数组：[{"shortcut":"+xxx-yyy","input":{...}}, ...]。shortcut 用 CLI 名；input 是该 shortcut 的入参集——含子表定位 sheet_id（或 sheet_name），但不含 spreadsheet token/url（后者只在顶层 --url/--spreadsheet-token 给一次；+batch-update 顶层没有 --sheet-id）；input 的键是该 shortcut 的 flag 展平成 JSON（如 "range":"A11:B12"），不是再套一层嵌套。基础 flag 查 --help，复合 JSON flag 查 --print-schema --flag-name <flag>；不要手填 operation 字段（由 CLI 按 shortcut 自动注入）。默认 fail-fast：首个失败即中断剩余操作；此前子操作是否已落盘**不统一**（纯单元格/结构写入失败时整体不落盘，图表/透视表等对象子操作会提前把累计写入落盘且自身无法回滚），失败后不要假设全回滚或全保留——先看 results 再回读现状确认已生效集合，只补发未生效部分；传 --continue-on-error 遇失败仍继续、已成功部分保留；不支持嵌套；按数组顺序串行执行 |
-| `--continue-on-error` | bool | optional | 遇子操作失败时继续执行剩余操作；默认 false（首个失败即整批中断） |
+| `--operations` | string + File + Stdin (composite JSON) | required | JSON array: [{"shortcut":"+xxx-yyy","input":{...}}, ...]. shortcut uses the CLI name; input is that shortcut's input set—it includes the sub-sheet targeting sheet_id (or sheet_name), but does not include the spreadsheet token/url (the latter is given only once at the top level via --url/--spreadsheet-token; +batch-update has no top-level --sheet-id); the keys of input are that shortcut's flags flattened into JSON (e.g., "range":"A11:B12"), not nested another layer. For basic flags check --help; for composite JSON flags check --print-schema --flag-name <flag>; do not manually fill in the operation field (it is automatically injected by the CLI according to the shortcut). Default fail-fast: the first failure interrupts the remaining operations; whether prior sub-operations have been persisted is **not uniform** (pure cell/structure writes are not persisted as a whole on failure, while object sub-operations such as charts/pivot tables commit accumulated writes to disk in advance and cannot themselves be rolled back), so after a failure do not assume full rollback or full retention—first look at results, then read back the current state to confirm the set that has taken effect, and only resend the parts that have not taken effect; passing --continue-on-error continues on failure and retains the already-successful parts; nesting is not supported; executed serially in array order |
+| `--continue-on-error` | bool | optional | Whether to continue executing the remaining operations when a sub-operation fails; default false (the first failure interrupts the entire batch) |
 
 ### `+batch-chart-create`
 
-_公共：URL/token（无 sheet 定位） · 系统：`--dry-run`_
+_Common: URL/token (no sheet targeting) · System: `--dry-run`_
 
-| Flag | Type | 必填 | 说明 |
+| Flag | Type | Required | Description |
 | --- | --- | --- | --- |
-| `--operations` | string + File + Stdin（复合 JSON） | required | 图表创建操作 JSON 数组；每项直接填写 `+chart-create-basic` 的 flag 和目标 sheet 定位，不要再套 `shortcut` / `input`。CLI 内部固定使用 `+chart-create-basic`。默认允许部分失败，成功图表保留，只重试失败项 |
-| `--continue-on-error` | bool | optional | 单个图表失败后是否继续；默认 true |
+| `--operations` | string + File + Stdin (composite JSON) | required | JSON array of chart creation operations; each item directly fills in `+chart-create-basic`'s flags and the target sheet targeting, without nesting `shortcut` / `input` again. The CLI internally always uses `+chart-create-basic`. Partial failure is allowed by default; successful charts are retained and only failed items are retried |
+| `--continue-on-error` | bool | optional | Whether to continue after a single chart fails; default true |
 
 ### `+batch-chart-update`
 
-_公共：URL/token（无 sheet 定位） · 系统：`--dry-run`_
+_Common: URL/token (no sheet targeting) · System: `--dry-run`_
 
-| Flag | Type | 必填 | 说明 |
+| Flag | Type | Required | Description |
 | --- | --- | --- | --- |
-| `--operations` | string + File + Stdin（复合 JSON） | required | 图表更新操作 JSON 数组；每项使用 `+chart-config-update` 或 `+chart-data-update`，input 传对应命令的 flag 集合和目标 sheet 定位。CLI 会先读取各图表当前快照，再生成 partial properties；默认允许部分失败 |
-| `--continue-on-error` | bool | optional | 单个图表失败后是否继续；默认 true |
+| `--operations` | string + File + Stdin (composite JSON) | required | JSON array of chart update operations; each item uses `+chart-config-update` or `+chart-data-update`, and input passes the corresponding command's flag set and the target sheet targeting. The CLI first reads each chart's current snapshot, then generates partial properties; partial failure is allowed by default |
+| `--continue-on-error` | bool | optional | Whether to continue after a single chart fails; default true |
 
 ### `+dropdown-update`
 
-_公共：URL/token（无 sheet 定位） · 系统：`--dry-run`_
+_Common: URL/token (no sheet targeting) · System: `--dry-run`_
 
-| Flag | Type | 必填 | 说明 |
+| Flag | Type | Required | Description |
 | --- | --- | --- | --- |
-| `--ranges` | string + File + Stdin（简单 JSON） | required | 目标范围 JSON 数组（最多 100 个，如 `["Sheet1!A2:A100","Sheet1!C2:C100"]`，前缀裸写不加引号），每项必须带 sheet 前缀；前缀必须与 sheet 真实显示名完全一致（含大小写），不接受 sheet reference_id |
-| `--options` | string + File + Stdin（复合 JSON） | xor | 下拉选项 JSON 数组，例如 `["opt1","opt2"]`。服务端不限制选项数量，也不限制单个选项长度；含逗号的选项可以接受（写入时会自动转义）。大量选项建议改用 `--source-range`。 |
-| `--colors` | string + File + Stdin（简单 JSON） | optional | 下拉胶囊背景色，RGB hex 数组。更新会重写整条验证规则：若用户未要求重置配色，先用 `+dropdown-get` 回读并将现有 `highlight_colors` 作为本 flag 传回；省略会按内置 10 色色板重建。用户明确要求新配色或选项有清晰语义配色时，应选浅色、低饱和度背景以适配黑色文字。长度可短不可长——超长 Validate 拦截（`--colors length (N) must not exceed dropdown source size (M)`），未指定项按内置色板循环补色。单独传即生效；`--highlight=false` 时被忽略。 |
-| `--multiple` | bool | optional | 启用多选。本 flag 只更新验证规则，不会写入选中值；后续用 `+cells-set` 写值时必须传 `multiple_values` 数组，不要传逗号拼接的 `value` |
-| `--highlight` | bool | optional | 下拉胶囊背景色高亮开关。**不传 = 开**（按内置 10 色色板循环上色）；`--highlight=false` 关闭得到纯白下拉。配色用 `--colors` 覆盖。 |
-| `--source-range` | string | xor | listFromRange 模式的下拉源 range，A1 表示法 + sheet 前缀（如 `'Sheet1'!T1:T3`）。映射到 server `data_validation.range`，搭配 server `data_validation.type='listFromRange'` 自动生效。跟 `--options` 二选一：传 `--options` 走 inline 列表（type=list），传本 flag 走 range 引用（type=listFromRange）。`--colors` 长度规则不变（≤ 源 range 单元格数），`--highlight` / `--multiple` 行为相同。当 `--highlight` 开启且 source 覆盖单元格数超过 2000 时，服务端会将该下拉判为 option-error（这是不支持的组合）；CLI 会在返回结果的 `data.warnings` 中给出 warning。如需取消，传 `--highlight=false`。 |
+| `--ranges` | string + File + Stdin (simple JSON) | required | JSON array of target ranges (at most 100, e.g., `["Sheet1!A2:A100","Sheet1!C2:C100"]`, with the prefix written bare without quotes); each item must carry a sheet prefix; the prefix must exactly match the sheet's real display name (including case), and sheet reference_id is not accepted |
+| `--options` | string + File + Stdin (composite JSON) | xor | JSON array of dropdown options, for example `["opt1","opt2"]`. The server does not limit the number of options, nor the length of a single option; options containing commas are acceptable (they are automatically escaped when written). For a large number of options, it is recommended to use `--source-range` instead. |
+| `--colors` | string + File + Stdin (simple JSON) | optional | Dropdown pill background colors, an RGB hex array. Updating rewrites the entire validation rule: if the user did not ask to reset the colors, first use `+dropdown-get` to read back and pass the existing `highlight_colors` back as this flag; omitting it rebuilds from the built-in 10-color palette. When the user explicitly requests new colors or the options have clear semantic coloring, choose light, low-saturation backgrounds to suit black text. The length may be shorter but not longer—over-length is intercepted by Validate (`--colors length (N) must not exceed dropdown source size (M)`), and unspecified items are filled by cycling through the built-in palette. Passing it alone takes effect; it is ignored when `--highlight=false`. |
+| `--multiple` | bool | optional | Enable multiple selection. This flag only updates the validation rule and does not write selected values; when subsequently writing values with `+cells-set`, you must pass a `multiple_values` array, not a comma-joined `value` |
+| `--highlight` | bool | optional | Dropdown pill background color highlight toggle. **Not passing = on** (colors cycle through the built-in 10-color palette); `--highlight=false` turns it off to get a pure white dropdown. Colors are overridden with `--colors`. |
+| `--source-range` | string | xor | The dropdown source range for listFromRange mode, A1 notation + sheet prefix (e.g., `'Sheet1'!T1:T3`). Maps to server `data_validation.range`, and takes effect automatically together with server `data_validation.type='listFromRange'`. Choose one of this and `--options`: passing `--options` uses an inline list (type=list), passing this flag uses a range reference (type=listFromRange). The `--colors` length rule is unchanged (≤ the number of cells in the source range), and `--highlight` / `--multiple` behave the same. When `--highlight` is enabled and the number of cells covered by source exceeds 2000, the server will judge the dropdown as option-error (this is an unsupported combination); the CLI will give a warning in the returned result's `data.warnings`. To cancel, pass `--highlight=false`. |
 
 ### `+dropdown-delete`
 
-_公共：URL/token（无 sheet 定位） · 系统：`--yes`、`--dry-run`_
+_Common: URL/token (no sheet targeting) · System: `--yes`, `--dry-run`_
 
-| Flag | Type | 必填 | 说明 |
+| Flag | Type | Required | Description |
 | --- | --- | --- | --- |
-| `--ranges` | string + File + Stdin（简单 JSON） | required | 目标范围 JSON 数组（最多 100 个，如 `["Sheet1!E2:E6"]`，前缀裸写不加引号），每项必须带 sheet 前缀；前缀必须与 sheet 真实显示名完全一致（含大小写），不接受 sheet reference_id |
+| `--ranges` | string + File + Stdin (simple JSON) | required | JSON array of target ranges (at most 100, e.g., `["Sheet1!E2:E6"]`, with the prefix written bare without quotes); each item must carry a sheet prefix; the prefix must exactly match the sheet's real display name (including case), and sheet reference_id is not accepted |
 
 ### `+cells-batch-clear`
 
-_公共：URL/token（无 sheet 定位） · 系统：`--yes`、`--dry-run`_
+_Common: URL/token (no sheet targeting) · System: `--yes`, `--dry-run`_
 
-| Flag | Type | 必填 | 说明 |
+| Flag | Type | Required | Description |
 | --- | --- | --- | --- |
-| `--ranges` | string + File + Stdin（简单 JSON） | required | 目标范围 JSON 数组（最多 100 个），每项必须带 sheet 前缀（如 `["Sheet1!A2:Z1000","Sheet2!A2:Z1000"]`，前缀裸写不加引号）；前缀必须与 sheet 真实显示名完全一致（含大小写），不接受 sheet reference_id；支持跨 sheet；对所有 range 执行同一 scope 的清除 |
-| `--scope` | string | optional | 清除范围 enum：`content`（默认，仅清内容）/ `formats`（仅清格式）/ `all`（清内容 + 格式）（可选值：`content` / `formats` / `all`） |
+| `--ranges` | string + File + Stdin (simple JSON) | required | JSON array of target ranges (at most 100); each item must carry a sheet prefix (e.g., `["Sheet1!A2:Z1000","Sheet2!A2:Z1000"]`, with the prefix written bare without quotes); the prefix must exactly match the sheet's real display name (including case), and sheet reference_id is not accepted; cross-sheet is supported; performs the same scope of clearing on all ranges |
+| `--scope` | string | optional | Clear scope enum: `content` (default, clears content only) / `formats` (clears format only) / `all` (clears content + format) (possible values: `content` / `formats` / `all`) |
 
 ## Schemas
 
-> 复合 JSON flag 字段速查（只列顶层 + 一层嵌套）。深层结构看下方 `## Examples`，或用 `--print-schema` 读完整 JSON Schema（用法见 index.md「公共 flag 速查」与「Agent 使用提示」）。
+> Composite JSON flag field quick reference (only top level + one level of nesting is listed). For deeper structures see `## Examples` below, or use `--print-schema` to read the complete JSON Schema (usage see "Common flag quick reference" and "Agent usage tips" in index.md).
 
 ### `+batch-update` `--operations`
 
-_要批量执行的 CLI shortcut 操作列表，按声明顺序串行执行；任一失败立即中断_
+_List of CLI shortcut operations to execute in batch, executed serially in declaration order; any failure interrupts immediately_
 
-**数组项**（类型 object）：
-- `shortcut` (enum) — CLI shortcut 名（不是底层 MCP tool 名） [+cells-set / +cells-set-style / +cells-clear / +cells-merge / +cells-unmerge / +cells-replace / +csv-put / +dropdown-set / +dim-insert / +dim-delete / +dim-hide / +dim-unhide / +dim-freeze / +dim-group / +dim-ungroup / +rows-resize / +cols-resize / +range-move / +range-copy / +range-fill / +range-sort / +sheet-create / +sheet-delete / +sheet-rename / +sheet-move / +sheet-copy / +sheet-hide / +sheet-unhide / +sheet-set-tab-color / +sheet-show-gridline / +sheet-hide-gridline / +chart-create / +chart-update / +chart-delete / +chart-create-basic / +chart-config-update / +chart-data-update / +pivot-create / +pivot-update / +pivot-delete / +cond-format-create / +cond-format-update / +cond-format-delete / +filter-create / +filter-update / +filter-delete / +filter-view-create / +filter-view-update / +filter-view-delete / +sparkline-create / +sparkline-update / +sparkline-delete / +float-image-create / +float-image-update / +float-image-delete]
-- `input` (object) — 该 shortcut 的入参集——含子表定位 sheet_id（或 sheet_name）
+**Array items** (type object):
+- `shortcut` (enum) — CLI shortcut name (not the underlying MCP tool name) [+cells-set / +cells-set-style / +cells-clear / +cells-merge / +cells-unmerge / +cells-replace / +csv-put / +dropdown-set / +dim-insert / +dim-delete / +dim-hide / +dim-unhide / +dim-freeze / +dim-group / +dim-ungroup / +rows-resize / +cols-resize / +range-move / +range-copy / +range-fill / +range-sort / +sheet-create / +sheet-delete / +sheet-rename / +sheet-move / +sheet-copy / +sheet-hide / +sheet-unhide / +sheet-set-tab-color / +sheet-show-gridline / +sheet-hide-gridline / +chart-create / +chart-update / +chart-delete / +chart-create-basic / +chart-config-update / +chart-data-update / +pivot-create / +pivot-update / +pivot-delete / +cond-format-create / +cond-format-update / +cond-format-delete / +filter-create / +filter-update / +filter-delete / +filter-view-create / +filter-view-update / +filter-view-delete / +sparkline-create / +sparkline-update / +sparkline-delete / +float-image-create / +float-image-update / +float-image-delete]
+- `input` (object) — that shortcut's input set—includes the sub-sheet targeting sheet_id (or sheet_name)
 
 ### `+batch-chart-create` `--operations`
 
 
-**数组项**（类型 object）：
-- `sheet_id` (string?) — 目标子表 ID；与 sheet_name 二选一
-- `sheet_name` (string?) — 目标子表名；与 sheet_id 二选一
+**Array items** (type object):
+- `sheet_id` (string?) — target sub-sheet ID; choose one of this and sheet_name
+- `sheet_name` (string?) — target sub-sheet name; choose one of this and sheet_id
 - `chart_type` (enum) [column / bar / line / area / pie / scatter / combo / radar / bubble / waterfall / pareto]
 - `data_range` (string)
 - `header_range` (string?)
@@ -132,56 +134,56 @@ _要批量执行的 CLI shortcut 操作列表，按声明顺序串行执行；�
 - `dim2_indexes` (oneOf?)
 - `series_types` (oneOf?)
 - `series_y_axes` (oneOf?)
-- `key_index` (integer?) — 气泡图标识/名称维度的 1-based 索引；默认 1
-- `x_index` (integer?) — 气泡图 X 值维度的 1-based 索引；与 y_index 同时提供
-- `y_index` (integer?) — 气泡图 Y 值维度的 1-based 索引；与 x_index 同时提供
-- `group_index` (integer?) — 气泡图可选分组维度的 1-based 索引
-- `size_index` (integer?) — 气泡图可选气泡大小维度的 1-based 索引
+- `key_index` (integer?) — 1-based index of the bubble chart's identifier/name dimension; default 1
+- `x_index` (integer?) — 1-based index of the bubble chart's X value dimension; provided together with y_index
+- `y_index` (integer?) — 1-based index of the bubble chart's Y value dimension; provided together with x_index
+- `group_index` (integer?) — 1-based index of the bubble chart's optional grouping dimension
+- `size_index` (integer?) — 1-based index of the bubble chart's optional bubble size dimension
 - `title` (string?)
 - `anchor_cell` (string?)
 
 ### `+batch-chart-update` `--operations`
 
 
-**数组项**（类型 object）：
+**Array items** (type object):
 - `shortcut` (enum) [+chart-config-update / +chart-data-update]
-- `input` (object) — 对应图表更新 shortcut 的 flag 集合；包含 sheet_id 或 sheet_name，不包含 spreadsheet token/url
+- `input` (object) — the flag set of the corresponding chart update shortcut; includes sheet_id or sheet_name, does not include spreadsheet token/url
 
 ### `+dropdown-update` `--options`
 
-_列表选项_
+_List options_
 
-**数组项**（类型 string）：
-- 标量：string
+**Array items** (type string):
+- Scalar: string
 
 ## Examples
 
-公共四件套：`--url` / `--spreadsheet-token` / `--sheet-id` / `--sheet-name`（前两者 XOR；`+batch-update` 本身不强制 sheet-id，子操作各自携带）。
+Common four-piece set: `--url` / `--spreadsheet-token` / `--sheet-id` / `--sheet-name` (the first two are XOR; `+batch-update` itself does not enforce sheet-id, and sub-operations each carry their own).
 
 ### `+batch-update`
 
-示例：
+Example:
 
 ```bash
 lark-cli sheets +batch-update --url "https://example.feishu.cn/sheets/shtXXX" --yes \
   --operations @ops.json
 
-# ops.json （array<{shortcut, input}>，shortcut 用 CLI 名）:
+# ops.json (array<{shortcut, input}>, shortcut uses the CLI name):
 # [
 #   {"shortcut": "+dim-insert", "input": {"sheet_id":"...","position":10,"count":3}},
 #   {"shortcut": "+cells-set",  "input": {"sheet_id":"...","range":"A11:B12","cells":[[{"value":"a"},{"value":"b"}],[{"value":"c"},{"value":"d"}]]}}
 # ]
 ```
 
-> ⚠️ **子操作定位规则**：
-> - spreadsheet 定位（`--url` / `--spreadsheet-token`）**只在顶层给一次**；`+batch-update` 顶层**没有** `--sheet-id` / `--sheet-name`，在顶层传不生效。
-> - **每个子操作的子表定位 `sheet_id`（或 `sheet_name`）写进它自己的 `input`**（见上方 ops.json 每个 item）。
-> - `input` 的键是该 shortcut 的 flag **展平**成 JSON（`"range":"A11:B12"`、`"position":11`），不要把整组 `--operations` 再套一层嵌套 JSON。
+> ⚠️ **Sub-operation targeting rules**:
+> - spreadsheet targeting (`--url` / `--spreadsheet-token`) is **given only once at the top level**; the `+batch-update` top level **has no** `--sheet-id` / `--sheet-name`, and passing them at the top level has no effect.
+> - **Each sub-operation's sheet targeting `sheet_id` (or `sheet_name`) goes into its own `input`** (see each item in ops.json above).
+> - The keys of `input` are that shortcut's flags **flattened** into JSON (`"range":"A11:B12"`, `"position":11`); do not wrap the whole set of `--operations` in another layer of nested JSON.
 
-> **常见组合：插列 + 写表头 + 整列回填**——一次批量提交，不要拆成 N 次独立调用。批量回填同一列 **只需一次** `+cells-set`（range 写整列范围、cells 写 N×1 矩阵），不需要逐行循环。
+> **Common combination: insert column + write header + backfill entire column**—submit in one batch, do not split into N separate calls. Batch backfilling the same column **requires only one** `+cells-set` (range writes the entire column range, cells writes an N×1 matrix); no need to loop row by row.
 >
 > ```jsonc
-> // 在 C 列前插入新列 → 写表头 C1 → 回填 C2:C100 共 99 行
+> // Insert a new column before column C → write header C1 → backfill C2:C100, 99 rows total
 > [
 >   {"shortcut": "+dim-insert",
 >    "input": {"sheet_name": "Sheet1", "position": "C", "count": 1}},
@@ -191,7 +193,7 @@ lark-cli sheets +batch-update --url "https://example.feishu.cn/sheets/shtXXX" --
 > ]
 > ```
 
-> **多图表组合**：先完成全部辅助数据，再把每张图的输入放进 `+batch-chart-create`；每项同时记录精确表头范围、数据方向和预期系列数。批次完成后，每个受影响的 sheet 各调用一次 `+chart-list`。已有图表的批量修正改用 `+batch-chart-update`。
+> **Multi-chart combination**: first complete all auxiliary data, then put each chart's input into `+batch-chart-create`; for each item, also record the exact header range, data direction, and expected series count. After the batch completes, call `+chart-list` once for each affected sheet. For batch corrections to existing charts, use `+batch-chart-update` instead.
 >
 > ```json
 > [
@@ -206,19 +208,20 @@ lark-cli sheets +batch-update --url "https://example.feishu.cn/sheets/shtXXX" --
 
 ### `+cells-batch-clear`
 
-多 range 一次性清除（服务端走 `+batch-update` 批量提交，fail-fast，失败处置见下方「执行语义」）；`--scope` 同 `+cells-clear`（`content` / `formats` / `all`，默认 `content`），`high-risk-write` 强制 `--yes`：
+Clear multiple ranges at once (the server uses `+batch-update` batch submission, fail-fast; for failure handling see "Execution semantics" below); `--scope` is the same as `+cells-clear` (`content` / `formats` / `all`, default `content`), `high-risk-write` forces `--yes`:
 
 ```bash
-# dry-run 先看清除范围
+# dry-run to see the clear range first
 lark-cli sheets +cells-batch-clear --url "..." \
   --ranges '["sheet1!A2:Z1000","sheet2!A2:Z1000"]' --scope all --dry-run
-# 执行
+# execute
 lark-cli sheets +cells-batch-clear --url "..." \
   --ranges '["sheet1!A2:Z1000","sheet2!A2:Z1000"]' --scope all --yes
 ```
 
-### Validate / DryRun / Execute 约束
+<a id="validate--dryrun--execute-约束"></a>
+### Validate / DryRun / Execute constraints
 
-- `Validate`：`+batch-update` 的 `--operations` 必须合法 JSON，且为非空数组；逐个子操作 `shortcut` / `input` 字段必填校验，input 键必须在该 shortcut 的 flag 词汇表内（未知键报错并提示最近似键与完整键契约）；**校验错误聚合上报**——所有子操作的首错一次性返回，全部修完再重发一次即可；**禁止嵌套 `+batch-update`**。`+cells-batch-clear` 的 `--ranges` 必须 JSON 数组、每项带 sheet 前缀，`high-risk-write` 强制 `--yes` 或 `--dry-run`（`--scope` 默认 `content`）。
-- `DryRun`：按顺序输出每个子操作的目标 API + 请求 body 模板，不发起调用。
-- `Execute`：按声明顺序串行执行；默认 fail-fast。失败时已成功子操作不回滚，先按子操作类型回读现状，只重发失败起的剩余子集；成功时也完成上述分流验证。
+- `Validate`: `+batch-update`'s `--operations` must be valid JSON and a non-empty array; validate each sub-operation's required `shortcut` / `input` fields, and input keys must be within that shortcut's flag vocabulary (unknown keys raise an error and suggest the closest key plus the full key contract); **validation errors are aggregated and reported**—the first error of all sub-operations is returned at once, so fix them all and resend once; **nested `+batch-update` is forbidden**. `+cells-batch-clear`'s `--ranges` must be a JSON array, each item prefixed with sheet, and `high-risk-write` forces `--yes` or `--dry-run` (`--scope` defaults to `content`).
+- `DryRun`: output each sub-operation's target API + request body template in order, without making any calls.
+- `Execute`: execute serially in declaration order; fail-fast by default. On failure, already-succeeded sub-operations are not rolled back; first read back the current state by sub-operation type, and resend only the remaining subset starting from the failure; on success, also complete the above branching validation.

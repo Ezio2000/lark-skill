@@ -1,32 +1,36 @@
-# Codex Agent 工具参考
+<a id="codex-agent-工具参考"></a>
+# Codex Agent Tool Reference
 
-本文档列出 [`../creative-design.md`](../creative-design.md) 所依赖的 harness 专属工具，供你在 **Codex Agent** 中运行时使用。主提示词只命名能力（"向用户提问"、"展示文件"等）；本文档给出 Codex 的调用方式。通用工具（shell、文件读/写/编辑/搜索、`gh`）不在此覆盖。
+This document lists the harness-specific tools that [`../creative-design.md`](../creative-design.md) depends on, for you to use when running in the **Codex Agent**. The main prompt only names capabilities ("ask the user a question", "show a file", etc.); this document gives the Codex invocation method. General tools (shell, file read/write/edit/search, `gh`) are not covered here.
 
-## Web 工具 → Codex 对应项
+<a id="web-工具--codex-对应项"></a>
+## Web Tools → Codex Equivalents
 
-| Web 工具 | Codex 对应项 |
+| Web Tool | Codex Equivalent |
 |---|---|
-| `ask_user_question` | 在 Codex Plan Mode 下，若 `functions.request_user_input` 可用则使用它；否则在聊天中提出简明问题并等待用户答复。 |
-| `done`、`fork_verifier_agent` | 在最终回复中呈现交付物的文件路径。 |
-| `write_file`（及其 `asset:` 参数） | Codex 的常规文件编辑工具。不存在 asset review pane；舍弃这一概念。 |
-| `copy_files` | Shell `cp`。 |
-| `read_file`、`list_files`、`view_image` | Codex 的常规文件读取/搜索工具。 |
-| `show_to_user` | 提供绝对本地文件路径；有帮助时，用 Markdown 以绝对路径嵌入图片。 |
-| `eval_js`、`eval_js_user_view`、`run_script` | 脚本用 Shell。 |
-| `web_fetch`、`web_search` | 若存在则用 Codex 的 web 工具；用于时效性事实、内容素材补充或用户要求的网络查询。 |
-| `generate_image` | 无内置对应。会话中若接入了图像生成工具则使用；否则跳过 AI 生图，用内联 SVG / CSS 图形兜底，并在交付说明中注明。 |
-| `search_images` | 无专用对应。若有 web 工具则用其检索图片，用于需要真实图片的素材与确立方向的参考图；没有就跳过。 |
-| `copy_starter_component` | Shell `cp <本模块 所在目录>/starter-components/<file> .`（cwd 通常是应用项目目录而非 skill 目录，需用 skill 目录实际路径；或读取后改编）。 |
-| 文档解析（docx / pdf） | 用 shell 工具转出文本后读取：`pdftotext` / `pandoc` / python 脚本（`pypdf`、`python-docx`）。 |
-| `invoke_skill("X")` / `invoke the "X" skill` | 阅读对应的 `references/<file>.md`（媒介技能与本文件同在 `references/` 目录）。 |
+| `ask_user_question` | In Codex Plan Mode, if `functions.request_user_input` is available, use it; otherwise ask a concise question in chat and wait for the user's reply. |
+| `done`, `fork_verifier_agent` | Present the deliverable's file path in the final reply. |
+| `write_file` (and its `asset:` parameter) | Codex's regular file editing tool. There is no asset review pane; discard this concept. |
+| `copy_files` | Shell `cp`. |
+| `read_file`, `list_files`, `view_image` | Codex's regular file reading/search tools. |
+| `show_to_user` | Provide an absolute local file path; when helpful, embed the image in Markdown using the absolute path. |
+| `eval_js`, `eval_js_user_view`, `run_script` | Use Shell for scripts. |
+| `web_fetch`, `web_search` | Use Codex's web tools if available; for time-sensitive facts, supplementing content material, or web queries requested by the user. |
+| `generate_image` | No built-in equivalent. If an image generation tool is connected in the session, use it; otherwise skip AI image generation, fall back to inline SVG / CSS graphics, and note this in the delivery description. |
+| `search_images` | No dedicated equivalent. If web tools are available, use them to search for images, for material that needs real images and reference images to establish direction; if not, skip. |
+| `copy_starter_component` | Shell `cp <本模块 所在目录>/starter-components/<file> .` (the cwd is usually the app project directory rather than the skill directory, so you need to use the skill directory's actual path; or read it and adapt it). |
+| Document parsing (docx / pdf) | Use shell tools to convert to text and then read: `pdftotext` / `pandoc` / python scripts (`pypdf`, `python-docx`). |
+| `invoke_skill("X")` / `invoke the "X" skill` | Read the corresponding `references/<file>.md` (the medium skill is in the same `references/` directory as this file). |
 
-## 提出澄清性问题
+<a id="提出澄清性问题"></a>
+## Asking Clarifying Questions
 
-当 Codex 处于 **Plan Mode** 且 `functions.request_user_input` 可用时，用它来提出聚焦的结构化问题。它最适合高影响力的设计决策，如范围、保真度、设计上下文、参考应用、变体数量。
+When Codex is in **Plan Mode** and `functions.request_user_input` is available, use it to ask focused, structured questions. It is best suited for high-impact design decisions, such as scope, fidelity, design context, reference apps, and number of variants.
 
-若 `request_user_input` 不可用，或会话不在 Plan Mode，就直接在聊天中问同样的问题并等待用户回答。一轮提问保持简明、可执行。不要虚构假的工具名。
+If `request_user_input` is unavailable, or the session is not in Plan Mode, just ask the same questions directly in chat and wait for the user's answer. Keep a round of questions concise and actionable. Do not invent fake tool names.
 
-## 交付与发布
+<a id="交付与发布"></a>
+## Delivery and Publishing
 
-- 在最终回复中给出交付物的绝对本地文件路径。
-- 产物完成并提交后，按 [`../creative-design.md`](../creative-design.md)「发布」一节发布到妙搭——交付给用户的可分享链接是 `+release-get` 返回的 `online_url`。
+- Give the deliverable's absolute local file path in the final reply.
+- After the artifact is complete and committed, publish it to Miaoda according to the "Publish" section of [`../creative-design.md`](../creative-design.md)—the shareable link delivered to the user is the `online_url` returned by `+release-get`.

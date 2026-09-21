@@ -1,51 +1,56 @@
 
-# drive +inspect（文档 URL 检视：类型、标题、Token 解析）
+<a id="drive-inspect文档-url-检视类型标题token-解析"></a>
+# drive +inspect (document URL inspection: type, title, token resolution)
 
 
-给定一个飞书文档 URL 或 bare token，返回其类型、标题和 canonical token。对 wiki URL 自动解包到底层文档。
+Given a Feishu document URL or bare token, return its type, title, and canonical token. For wiki URLs, automatically unwrap to the underlying document.
 
-## 命令
+<a id="命令"></a>
+## Command
 
 ```bash
-# 检视一个 docx URL
+# Inspect a docx URL
 lark-cli drive +inspect --url 'https://xxx.feishu.cn/docx/doxcnXXX'
 
-# 检视一个 wiki URL（自动解包到底层文档）
+# Inspect a wiki URL (automatically unwrap to the underlying document)
 lark-cli drive +inspect --url 'https://xxx.feishu.cn/wiki/wikcnXXX'
 
-# bare token 需要指定 --type
+# A bare token requires specifying --type
 lark-cli drive +inspect --url doxcnXXX --type docx
 
-# 格式化输出
+# Formatted output
 lark-cli drive +inspect --url 'https://xxx.feishu.cn/base/bascnXXX' --format pretty
 ```
 
-## 输出
+<a id="输出"></a>
+## Output
 
-JSON 输出包含以下字段：
+The JSON output contains the following fields:
 
-| 字段 | 说明 |
+| Field | Description |
 |------|------|
-| `input_url` | 原始输入 URL |
-| `type` | 文档类型（docx, doc, sheet, bitable, wiki, file, folder, mindnote, slides） |
-| `title` | 文档标题 |
+| `input_url` | Original input URL |
+| `type` | Document type (docx, doc, sheet, bitable, wiki, file, folder, mindnote, slides) |
+| `title` | Document title |
 | `token` | canonical file token |
-| `url` | 重建的 canonical URL |
-| `wiki_node` | 仅 wiki URL：包含 `space_id`, `node_token`, `obj_token`, `obj_type` |
+| `url` | Reconstructed canonical URL |
+| `wiki_node` | Wiki URLs only: contains `space_id`, `node_token`, `obj_token`, `obj_type` |
 
-## 典型场景
+<a id="典型场景"></a>
+## Typical scenarios
 
-| 场景 | 命令 |
+| Scenario | Command |
 |------|------|
-| 用户给了一个 URL，想知道它是什么类型的文档 | `lark-cli drive +inspect --url '<url>'` |
-| wiki 链接需要拿到底层文档的 token 来做后续操作 | `lark-cli drive +inspect --url '<wiki_url>'`，取输出中的 `token` |
-| 只有 token 没有 URL | `lark-cli drive +inspect --url <token> --type <type>` |
+| The user provided a URL and wants to know what type of document it is | `lark-cli drive +inspect --url '<url>'` |
+| A wiki link needs the underlying document's token for subsequent operations | `lark-cli drive +inspect --url '<wiki_url>'`, take `token` from the output |
+| Only a token is available, no URL | `lark-cli drive +inspect --url <token> --type <type>` |
 
-## 注意事项
+<a id="注意事项"></a>
+## Notes
 
-- `--url` 为必填参数
-- 当 `--url` 是 bare token（非完整 URL）时，`--type` 也是必填的
-- wiki URL 会自动调用 `node_by_token` API 解包，输出中 `type` 和 `token` 是底层文档的类型和 token
-- `+inspect` 只用于识别/消歧；如果任务已能通过 URL 路径形态完成路由判断，不必把它作为所有 Drive 操作的通用前置步骤
-- `+inspect` 失败后不要自动切到写接口继续尝试，先按错误提示处理权限、scope 或链接问题
-- 支持 `--dry-run` 查看将调用的 API 步骤
+- `--url` is a required parameter
+- When `--url` is a bare token (not a full URL), `--type` is also required
+- A wiki URL automatically calls the `node_by_token` API to unwrap; in the output, `type` and `token` are the underlying document's type and token
+- `+inspect` is only used for identification/disambiguation; if the task can already determine routing based on the URL path form, there is no need to use it as a general prerequisite step for all Drive operations
+- After `+inspect` fails, do not automatically switch to a write interface to keep trying; first handle the permission, scope, or link issue according to the error message
+- Supports `--dry-run` to view the API steps that will be called

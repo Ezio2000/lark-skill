@@ -1,64 +1,69 @@
-# slides +update-slide（整页更新已有页面）
+<a id="slides-update-slide整页更新已有页面"></a>
+# slides +update-slide (full-page update of an existing page)
 
-把一整页 XML 交给某个已有页面，页面变成 `--content` 描述的样子。`slide_id` 和页序都不变。
+Hand an entire page of XML to an existing page, and the page becomes what `--content` describes. `slide_id` and the page order stay unchanged.
 
-## 命令
+<a id="命令"></a>
+## Command
 
 ```bash
-# 标准用法：整页 XML 从文件读（推荐：避免 shell 转义和长参数截断）
+# Standard usage: read the full-page XML from a file (recommended: avoids shell escaping and long-argument truncation)
 lark-cli slides +update-slide --as user \
   --presentation "https://xxx.larkoffice.com/slides/SCtZ...ynae" \
   --slide-id "piy" \
   --content @page.xml
 
-# XML 从 stdin 读
+# Read XML from stdin
 cat page.xml | lark-cli slides +update-slide --as user \
   --presentation "$PRES" --slide-id "$SLIDE" --content -
 
-# wiki 链接直接传（CLI 自动解析并校验 obj_type=slides）
+# Pass the wiki link directly (the CLI resolves it automatically and validates obj_type=slides)
 lark-cli slides +update-slide --as user \
   --presentation "https://xxx.larkoffice.com/wiki/wikcn..." \
   --slide-id "piy" --content @page.xml
 
-# 预览请求，不实际写入
+# Preview the request without actually writing
 lark-cli slides +update-slide --as user \
   --presentation "$PRES" --slide-id "$SLIDE" --content @page.xml --dry-run
 ```
 
-## 参数
+<a id="参数"></a>
+## Parameters
 
-| 参数 | 必需 | 说明 |
+| Parameter | Required | Description |
 |------|------|------|
-| `--presentation` | 是 | `xml_presentation_id`、`/slides/` URL 或 `/wiki/` URL |
-| `--slide-id` | 是 | 要整页替换的页面 `slide_id` |
-| `--content` | 是 | 这一页的完整目标 XML，单一 `<slide>` 根；支持字面量、`@file`、stdin `-`。别名：`--xml` / `--slide-xml` / `--slide-content` / `--content-xml` |
-| `--revision-id` | 否 | 默认 `-1`（最新）。它只选择服务端执行所基于的快照，不是“页面有新编辑就拒绝”的乐观锁；传旧版本号会以旧快照重建页面并丢弃其后的编辑 |
-| `--tid` | 否 | 调用方提供的任务/事务标识，CLI 原样透传；用于关联同一编辑任务或重试，不等同于版本前置条件，不能单独保证并发冲突时拒绝写入。一般留空 |
+| `--presentation` | Yes | `xml_presentation_id`, `/slides/` URL, or `/wiki/` URL |
+| `--slide-id` | Yes | The page `slide_id` to replace in full |
+| `--content` | Yes | The complete target XML for this page, a single `<slide>` root; supports a literal, `@file`, and stdin `-`. Aliases: `--xml` / `--slide-xml` / `--slide-content` / `--content-xml` |
+| `--revision-id` | No | Defaults to `-1` (latest). It only selects the snapshot on which the server-side execution is based; it is not an optimistic lock that "rejects if the page has new edits". Passing an old version number rebuilds the page from the old snapshot and discards any edits made after it |
+| `--tid` | No | A task/transaction identifier provided by the caller, passed through by the CLI as-is; used to associate the same editing task or retries, it is not equivalent to a version precondition and cannot by itself guarantee that writes are rejected on concurrent conflicts. Generally left empty |
 
-`@file` 和 `+xml-get --output` 一样**只接受当前目录下的相对路径**，绝对路径会被拒。
-命令别名：`slides +update`（隐藏）。
+Like `+xml-get --output`, `@file` **only accepts relative paths under the current directory**; absolute paths are rejected.
+Command alias: `slides +update` (hidden).
 
-如果要求“从读取之后页面一旦变化就不再写入”，不能只传 `--revision-id` 或 `--tid`。写入前必须再次用 `+xml-get` 回读最新版，比较读取期间是否发生变化；有变化时先基于最新版重新合并本次修改，再执行整页写回。当前 shortcut 不提供严格的 compare-and-swap 保证。
+If the requirement is "once the page changes after reading, do not write again", you cannot rely on passing only `--revision-id` or `--tid`. Before writing, you must read back the latest version again with `+xml-get` and compare whether anything changed during the read; if there is a change, first re-merge this modification based on the latest version, then perform the full-page write-back. The current shortcut does not provide a strict compare-and-swap guarantee.
 
-## 语义：`--content` 就是这一页的最终状态
+<a id="语义--content-就是这一页的最终状态"></a>
+## Semantics: `--content` is the final state of this page
 
-**没写进 `--content` 的东西会从页面上消失。** 这不是补丁，是整页覆盖。
+**Anything not written into `--content` disappears from the page.** This is not a patch; it is a full-page overwrite.
 
-| 你在 `--content` 里怎么写 | 页面上的结果 |
+| How you write it in `--content` | Result on the page |
 |---|---|
-| 元素带原来的 `id` | 按新 XML 更新这个元素 |
-| 元素不带 `id` | 作为新元素插入到它所在的位置 |
-| 原来有、`--content` 里没有的元素 | **删除** |
-| `<style>` 改了 | 背景等页面样式跟着改 |
-| 没写 `<note>` | 讲者备注被清空 |
+| An element carries its original `id` | Update this element according to the new XML |
+| An element does not carry `id` | Insert it as a new element at its position |
+| An element that existed before but is not in `--content` | **Delete** |
+| `<style>` changed | Page styles such as the background change accordingly |
+| `<note>` not written | Speaker notes are cleared |
 
-一次请求就能同时做完改样式、插入、删除、换备注、换背景——这是 `+replace-slide` 逐元素 part 做不到的（它没法寻址背景，也没有 move 操作）。
+A single request can simultaneously change styles, insert, delete, change notes, and change the background—something `+replace-slide` per-element part cannot do (it cannot address the background, and it has no move operation).
 
-## 本地图片：`@路径` 占位符
+<a id="本地图片路径-占位符"></a>
+## Local images: `@路径` placeholder
 
-`--content` 的 XML 里写 `<img src="@./chart.png" .../>`，CLI 会：先把每个不重复的本地文件上传到这份演示文稿（`parent_type=slide_file`），再把 `src` 替换成返回的 `file_token`，最后才整页写回。
+Write `<img src="@./chart.png" .../>` in the XML of `--content`, and the CLI will: first upload each unique local file to this presentation (`parent_type=slide_file`), then replace `src` with the returned `file_token`, and only then write back the full page.
 
-占位符路径按**执行命令时的 CWD** 解析，跟 `--content @file` 所在目录无关；`@./assets/x.png` 找的是 `$PWD/assets/x.png`。
+Placeholder paths are resolved relative to the **CWD at the time the command is executed**, regardless of the directory where `--content @file` is located; `@./assets/x.png` looks for `$PWD/assets/x.png`.
 
 ```bash
 lark-cli slides +update-slide --as user \
@@ -66,68 +71,73 @@ lark-cli slides +update-slide --as user \
   --content '<slide xmlns="https://www.larkoffice.com/sml/2.0"><data><img src="@./chart.png" topLeftX="100" topLeftY="100" width="320" height="180"/></data></slide>'
 ```
 
-- 文件不存在、不是普通文件、超过 20 MB，都在**调用任何接口之前**报错，不会留下半成品。
-- 去重只在**单次调用内**生效：多页共用同一张图时，逐页更新会把它每页重传一次。这种图先用 [`+media-upload`](lark-slides-media-upload.md) 传一次，把 `file_token` 写进各页的 `src`。
-- 整页只发一个 part，所以上传是这条命令里**唯一不可逆的一半**：图先落进演示文稿的 media store，若随后 replace 失败，报错 hint 会告诉你已经传了几张，直接重试会再传一份。先 `--dry-run` 可提前看到 `images_to_upload` 和上传步骤。
+- If the file does not exist, is not a regular file, or exceeds 20 MB, an error is reported **before calling any API**, leaving no half-finished result.
+- Deduplication only takes effect **within a single call**: when multiple pages share the same image, updating page by page re-uploads it once per page. For such images, first upload it once with [`+media-upload`](lark-slides-media-upload.md), and write `file_token` into the `src` of each page.
+- The entire page is sent as a single part, so uploading is the **only irreversible half** of this command: the image first lands in the presentation's media store, and if the subsequent replace fails, the error hint will tell you how many images have already been uploaded, and retrying directly will upload another copy. Running `--dry-run` first lets you see `images_to_upload` and the upload steps in advance.
 
-## 标准读-改-写流程
+<a id="标准读-改-写流程"></a>
+## Standard read-modify-write flow
 
 ```bash
-# 1. 读回当前页（拿到带 id 的完整 XML）
+# 1. Read back the current page (to get the complete XML with ids)
 lark-cli slides +xml-get --as user \
   --presentation "$PRES" --slide-id "$SLIDE" --output page.xml
 
-# 2. 编辑 page.xml —— 保留想留下的元素的 id，删掉不要的整段，新元素不写 id
+# 2. Edit page.xml — keep the ids of elements you want to keep, delete entire sections you do not want, and do not write ids for new elements
 
-# 3. 整页写回
+# 3. Write back the full page
 lark-cli slides +update-slide --as user \
   --presentation "$PRES" --slide-id "$SLIDE" --content @page.xml
 ```
 
-先 `--dry-run` 看请求，确认无误再执行。
+Run `--dry-run` first to see the request, and execute only after confirming it is correct.
 
-> ⚠️ **第 1 步不要加 `--remove-attr-id`。** 那个参数会把所有元素的 `id` 去掉，再交给 `+update-slide` 的话，每个元素都会被当成新元素插入、原来的全部被删除——页面看起来一样，但所有元素换了新 id，锚在旧 id 上的评论和 block 直达链接全部失效，而且**不会有任何报错**。`--remove-attr-id` 只用于只读查看。
+> ⚠️ **Do not add `--remove-attr-id` in step 1.** That parameter strips the `id` from all elements; if you then hand it to `+update-slide`, every element will be treated as a new element to insert and all the originals will be deleted—the page will look the same, but all elements will have new ids, and comments and block direct links anchored to the old ids will all become invalid, and **no error will be reported**. `--remove-attr-id` is only for read-only viewing.
 
-## 命令校验与空页限制
+<a id="命令校验与空页限制"></a>
+## Command validation and empty-page restriction
 
-| 情况 | 报错 |
+| Situation | Error |
 |---|---|
-| 根元素不是 `<slide>`（例如直接给了 `<shape>`） | `--content root must be <slide>` → 改单个元素请用 `+replace-slide` |
-| 根 `id` 和 `--slide-id` 不一致 | 拒绝。这通常是 A 页的 XML 要写到 B 页 —— 会毁掉 B 页 |
-| 根 `id` 缺失 | 自动补上 `--slide-id`，不报错 |
-| 根标签带命名空间前缀（`<sml:slide>`） | 拒绝。页面 id 没法贴到带前缀的标签上；写成 `<slide>`，需要命名空间就用默认 `xmlns` |
-| `<slide>` 之后还有第二个根元素或多余文本 | 拒绝。服务端解析会静默丢掉它们 |
-| XML 不合法 | 拒绝，带上出错位置 |
-| `<slide/>`（自闭合，空页） | 命令本身可以解析，但提交前的强制版式 lint 会报 `blank_slide`；按本模块 不得调用接口提交空页 |
+| The root element is not `<slide>` (for example, `<shape>` was given directly) | `--content root must be <slide>` → to change a single element, use `+replace-slide` |
+| The root `id` and `--slide-id` do not match | Rejected. This usually means the XML of page A is about to be written to page B — it would destroy page B |
+| The root `id` is missing | Automatically add `--slide-id`, no error |
+| The root tag has a namespace prefix (`<sml:slide>`) | Rejected. The page id cannot be attached to a prefixed tag; write `<slide>`, and if a namespace is needed, use the default `xmlns` |
+| There is a second root element or extra text after `<slide>` | Rejected. Server-side parsing would silently drop them |
+| Invalid XML | Rejected, with the error location |
+| `<slide/>` (self-closing, empty page) | The command itself can parse it, but the mandatory layout lint before submission reports `blank_slide`; according to this module, do not call the API to submit an empty page |
 
-标为“拒绝”的情况由命令校验拦截，**不会发出任何请求**；空页则必须在调用命令前由强制版式 lint 拦截。
+Cases marked "rejected" are intercepted by command validation and **no request is sent**; an empty page must be intercepted by the mandatory layout lint before calling the command.
 
-## 什么时候不要用它
+<a id="什么时候不要用它"></a>
+## When not to use it
 
-- **只改一个元素** → 用 [`+replace-slide`](lark-slides-replace-slide.md)，一条 `block_replace` part 更省，也不用带上整页
-- **要改多个页面** → 对每一页各跑一次本命令
-- **要新建页面** → `slides +create` 或 `slides +add-slide`
+- **Changing only one element** → use [`+replace-slide`](lark-slides-replace-slide.md); a single `block_replace` part is more economical and does not require carrying the whole page
+- **Changing multiple pages** → run this command once for each page
+- **Creating a new page** → `slides +create` or `slides +add-slide`
 
-## 提交前与写入后验证
+<a id="提交前与写入后验证"></a>
+## Pre-submission and post-write verification
 
-和其他整页写入一样，把 `--content` 存成本地文件后先跑版式 lint。先取得当前已加载 `lark-slides/index.md` 的父目录，记为 `<lark-root>/references/slides`；不要猜测全局安装路径：
+As with other full-page writes, save `--content` to a local file and run the layout lint first. First obtain the parent directory of the currently loaded `lark-slides/index.md`, recorded as `<lark-root>/references/slides`; do not guess the global installation path:
 
 ```bash
 uv run python "<lark-root>/references/slides/scripts/xml_lint.py" --input page.xml
 ```
 
-`summary.error_count` 必须为 0 才调接口；`warning_count > 0` 时写完要截图复核。
+`summary.error_count` must be 0 before calling the API; when it is `warning_count > 0`, take a screenshot for review after writing.
 
-写入成功后，必须回读整份演示文稿的最新 XML，而不是只相信写接口的成功响应：
+After a successful write, you must read back the latest XML of the entire presentation, rather than trusting only the success response of the write API:
 
 ```bash
 lark-cli slides +xml-get --as user \
   --presentation "$PRES" --output readback.xml
 ```
 
-按当前已加载 `lark-slides/index.md` 指向的 [validation-xml.md](../workflow/validation-xml.md) 完成验证：核对总页数、目标页和关键元素（包括需要保留的 ID、文本、背景与备注），并对回读 XML 运行同一版式 lint；发现差异时先停止后续写入并重新基于最新版处理。
+Complete verification according to [validation-xml.md](../workflow/validation-xml.md) pointed to by the currently loaded `lark-slides/index.md`: check the total page count, the target page, and key elements (including IDs, text, background, and notes that need to be preserved), and run the same layout lint on the read-back XML; if a discrepancy is found, stop subsequent writes first and reprocess based on the latest version.
 
-## 成功输出
+<a id="成功输出"></a>
+## Success output
 
 ```json
 {
@@ -141,23 +151,24 @@ lark-cli slides +xml-get --as user \
 }
 ```
 
-| `data` 下的字段 | 说明 |
+| Field under `data` | Description |
 |------|------|
-| `xml_presentation_id` | 实际写入的演示文稿 ID |
-| `slide_id` | 与传入相同——整页覆盖不换页 id |
-| `revision_id` | 写入后的新版本号 |
-| `images_uploaded` | 仅当 `--content` 带 `@` 占位符时出现：本次去重后实际上传的图片张数 |
+| `xml_presentation_id` | The presentation ID actually written to |
+| `slide_id` | Same as passed in—a full-page overwrite does not change the page id |
+| `revision_id` | The new version number after writing |
+| `images_uploaded` | Appears only when `--content` carries the `@` placeholder: the number of images actually uploaded after deduplication in this call |
 
-服务端拒绝这次写入时（`failed_reason` 非空）**不会**返回成功输出，而是报错并带上原因——单个 part 承载整页，任何失败都意味着页面没被写入。
+When the server rejects this write (`failed_reason` is non-empty), it **does not** return a success output; instead it reports an error with the reason—a single part carries the entire page, so any failure means the page was not written.
 
-- 原因包含 `not found`：先检查 `--presentation` 和 `--slide-id`，再用 `slides +xml-get` 回读当前页面 ID。页面可能已删除，或 ID 来自另一份演示文稿。
-- 其他 invalid-parameter 错误：检查 `--content` 中不支持的元素、缺少 `<content/>` 的 `<shape>`，以及超出 960×540 的坐标。
+- If the reason contains `not found`: first check `--presentation` and `--slide-id`, then use `slides +xml-get` to read back the current page ID. The page may have been deleted, or the ID may come from another presentation.
+- Other invalid-parameter errors: check `--content` for unsupported elements, `<shape>` missing `<content/>`, and coordinates exceeding 960×540.
 
-## 常见错误
+<a id="常见错误"></a>
+## Common errors
 
-| 现象 | 原因 | 解决 |
+| Symptom | Cause | Solution |
 |------|------|------|
-| 3350001，原因包含 `not found` | `--presentation` 不匹配，或 `--slide-id` 对应的页面已被删除 | 检查 `--presentation` 和 `--slide-id`，再用 `slides +xml-get` 回读当前页面 ID |
-| 3350001，其他 invalid param | `--content` 的 XML 结构有问题（如 `<shape>` 缺 `<content/>`、包含服务端不支持的元素） | 按 [error-handling.md](../workflow/error-handling.md) 检查 `--content` 的 XML 结构 |
-| 3350002 not found | `--revision-id` 传了不存在的版本号 | 用 `-1` 或真实存在的 `revision_id` |
-| 1061004 / 403 | 当前身份对这份 PPT 没有编辑权限 | 检查是否拥有 `slides:presentation:update` 或 `slides:presentation:write_only` scope；wiki 链接另需 `wiki:node:read`，`@` 占位符另需 `docs:document.media:upload`；`--as bot` 还要求该 bot 对目标 PPT 有编辑权限 |
+| 3350001, reason contains `not found` | `--presentation` does not match, or the page corresponding to `--slide-id` has been deleted | Check `--presentation` and `--slide-id`, then use `slides +xml-get` to read back the current page ID |
+| 3350001, other invalid param | The XML structure of `--content` has a problem (such as `<shape>` missing `<content/>`, or containing elements unsupported by the server) | Check the XML structure of `--content` according to [error-handling.md](../workflow/error-handling.md) |
+| 3350002 not found | `--revision-id` passed a version number that does not exist | Use `-1` or a real existing `revision_id` |
+| 1061004 / 403 | The current identity does not have edit permission for this PPT | Check whether it has the `slides:presentation:update` or `slides:presentation:write_only` scope; a wiki link additionally requires `wiki:node:read`, the `@` placeholder additionally requires `docs:document.media:upload`; `--as bot` also requires that the bot has edit permission for the target PPT |

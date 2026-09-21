@@ -1,33 +1,36 @@
 # calendar +list-attendees
 
-列出单个日程的参与人（用户 / 会议室 / 群 / 三方邮箱）。只读。
+List the attendees of a single event (users / meeting rooms / groups / third-party email addresses). Read-only.
 
-## 命令
+<a id="命令"></a>
+## Command
 
 ```bash
-# 查看指定日历（默认primary）下某日程的全部类型参与人和会议室
+# View all types of attendees and meeting rooms for an event under the specified calendar (defaults to primary)
 lark-cli calendar +list-attendees --calendar-id <calendar_id> --event-id <event_id>
 
-# 只看会议室
+# View only meeting rooms
 lark-cli calendar +list-attendees --event-id <event_id> --type resource
 
-# 同时看用户与会议室
+# View both users and meeting rooms
 lark-cli calendar +list-attendees --event-id <event_id> --type user --type resource
 
-# 分页续拉（由调用方基于 has_more / page_token 决定是否再调一次）
+# Paginated continuation (the caller decides whether to call again based on has_more / page_token)
 lark-cli calendar +list-attendees --event-id <event_id> --page-size 100 --page-token <page_token>
 ```
 
-## 参数
+<a id="参数"></a>
+## Parameters
 
-| 参数 | 必填 | 说明 |
+| Parameter | Required | Description |
 |------|------|------|
-| `--event-id <id>` | **是** | 目标日程 ID |
-| `--calendar-id <id>` | 否 | 日历 ID，省略则使用主日历（`primary`） |
-| `--type <type>` | 否 | 按 attendee 类型过滤；可重复或逗号分隔。枚举：`user` / `resource` / `chat` / `third_party`。留空返回全部类型|
-| `--page-size <n>` | 否 | 上游分页大小；默认 `20`|
-| `--page-token <token>` | 否 | 上游分页游标，来自上一次返回的 `page_token` |
+| `--event-id <id>` | **Yes** | Target event ID |
+| `--calendar-id <id>` | No | Calendar ID; if omitted, the primary calendar is used (`primary`) |
+| `--type <type>` | No | Filter by attendee type; can be repeated or comma-separated. Enum: `user` / `resource` / `chat` / `third_party`. Leave empty to return all types |
+| `--page-size <n>` | No | Upstream page size; defaults to `20` |
+| `--page-token <token>` | No | Upstream pagination cursor, from the `page_token` returned last time |
 
-## 提示
+<a id="提示"></a>
+## Tips
 
-- `type=chat` 的群参与人**不返回 `rsvp_status`**（群本身没有群级 RSVP 状态）。需要群成员的 RSVP 请走原生 OpenAPI。
+- Group attendees of `type=chat` **do not return `rsvp_status`** (a group itself has no group-level RSVP status). For RSVP of group members, use the native OpenAPI.

@@ -1,39 +1,43 @@
 # okr +cycle-detail
 
 
-列出指定 OKR 周期下的所有目标及其关键结果。
+List all objectives and their key results under the specified OKR cycle.
 
-## 推荐命令
+<a id="推荐命令"></a>
+## Recommended Commands
 
 ```bash
-# 列出指定周期的目标和关键结果（默认 simple 风格，半纯文本格式，推荐使用，更简洁）
+# List the objectives and key results of the specified cycle (default simple style, semi-plain-text format, recommended, more concise)
 lark-cli okr +cycle-detail --cycle-id 1234567890123456789
 
-# 列出指定周期的目标和关键结果（richtext 风格，原始 ContentBlock JSON）
+# List the objectives and key results of the specified cycle (richtext style, raw ContentBlock JSON)
 lark-cli okr +cycle-detail --cycle-id 1234567890123456789 --style richtext
 
-# 预览 API 调用而不实际执行
+# Preview the API call without actually executing it
 lark-cli okr +cycle-detail --cycle-id 1234567890123456789 --dry-run
 ```
 
-## 参数
+<a id="参数"></a>
+## Parameters
 
-| 参数           | 必填 | 默认值      | 说明                                                                                                                          |
+| Parameter           | Required | Default      | Description                                                                                                                          |
 |--------------|----|----------|-----------------------------------------------------------------------------------------------------------------------------|
-| `--cycle-id` | 是  | —        | OKR 周期 ID（int64 类型）。从 `+cycle-list` 获取。                                                                                     |
-| `--style`    | 否  | `simple` | 输出风格：`simple`（半纯文本格式，不涉及字体/颜色等信息时推荐使用） \| `richtext`（原始 ContentBlock JSON）。请参考 [ContentBlock 格式](lark-okr-contentblock.md)。 |
-| `--dry-run`  | 否  | —        | 预览 API 调用而不实际执行。                                                                                                            |
-| `--format`   | 否  | `json`   | 输出格式。                                                                                                                       |
+| `--cycle-id` | Yes  | —        | OKR cycle ID (int64 type). Obtained from `+cycle-list`.                                                                                     |
+| `--style`    | No  | `simple` | Output style: `simple` (semi-plain-text format, recommended when font/color information is not involved) \| `richtext` (raw ContentBlock JSON). Please refer to [ContentBlock format](lark-okr-contentblock.md). |
+| `--dry-run`  | No  | —        | Preview the API call without actually executing it.                                                                                                            |
+| `--format`   | No  | `json`   | Output format.                                                                                                                       |
 
-## 工作流程
+<a id="工作流程"></a>
+## Workflow
 
-1. 使用 `lark-cli okr +cycle-list` 获取 OKR 周期 ID。
-2. 执行 `lark-cli okr +cycle-detail --cycle-id "123456"`。
-3. 报告结果：找到的目标数量、每个目标的 ID、分数、权重及其关键结果。
+1. Use `lark-cli okr +cycle-list` to obtain the OKR cycle ID.
+2. Execute `lark-cli okr +cycle-detail --cycle-id "123456"`.
+3. Report the results: the number of objectives found, each objective's ID, score, weight, and its key results.
 
-## 输出
+<a id="输出"></a>
+## Output
 
-返回 JSON：
+Returns JSON:
 
 ```json
 {
@@ -78,13 +82,14 @@ lark-cli okr +cycle-detail --cycle-id 1234567890123456789 --dry-run
 }
 ```
 
-其中，content 和 notes 字段格式由 `--style` 控制：
-- `--style simple`（默认）：`SemiPlainContent` 对象，包含 `text`、`mention`、`docs` 字段
-- `--style richtext`：JSON 字符串，为 OKR ContentBlock 富文本格式
+Among them, the format of the content and notes fields is controlled by `--style`:
+- `--style simple` (default): `SemiPlainContent` object, containing the `text`, `mention`, `docs` fields
+- `--style richtext`: JSON string, in OKR ContentBlock rich-text format
 
-请参考 [lark-okr-contentblock.md](lark-okr-contentblock.md) 了解两种格式的详细信息。
+Please refer to [lark-okr-contentblock.md](lark-okr-contentblock.md) for detailed information on the two formats.
 
-## 参考
+<a id="参考"></a>
+## References
 
-- [lark-okr](../index.md) -- 所有 OKR 命令(shortcut 和 API 接口)
-- [lark-shared](../../shared/index.md) -- 认证和全局参数
+- [lark-okr](../index.md) -- all OKR commands (shortcut and API interfaces)
+- [lark-shared](../../shared/index.md) -- authentication and global parameters

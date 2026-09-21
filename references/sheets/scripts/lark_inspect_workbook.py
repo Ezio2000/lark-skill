@@ -92,9 +92,9 @@ def inspect_workbook(args) -> tuple[dict[str, Any], list[str]]:
     )
     preview_targets = target_sheets
     if not args.sheet_id and not args.sheet_name:
-        # is_hidden 缺失不等于隐藏：预览只是只读预检，除显式 is_hidden=true 外一律纳入，
-        # 否则旧 payload 会静默退化成「只有 summary、零预览」。写入侧的保守可见性判定
-        # 仍由 selection 负责（visibility_unknown 在那里照样排除）。
+        # Missing is_hidden does not mean hidden: the preview is only a read-only precheck, and everything is included except for an explicit is_hidden=true,
+        # otherwise old payloads silently degrade to "summary only, zero previews". The conservative visibility determination on the write side
+        # is still handled by selection (visibility_unknown is likewise excluded there).
         preview_targets = [sheet for sheet in all_sheets if is_grid_sheet(sheet) and sheet.get("is_hidden") is not True]
     if args.max_sheets < 1:
         raise LarkCliError("--max-sheets must be at least 1")
@@ -111,16 +111,16 @@ def inspect_workbook(args) -> tuple[dict[str, Any], list[str]]:
                 "pass --sheet-id or --sheet-name to inspect one anyway"
             )
         else:
-            # 非网格子表在 visible_grid_selection 里会被显式拒绝，别提示「带 selector 重跑」
-            # ——照做必然拿到 "is not a grid sheet"，恢复动作等于死路。
+            # Non-grid sub-sheets are explicitly rejected in visible_grid_selection, so do not suggest "rerun with a selector"
+            # — doing so will inevitably return "is not a grid sheet", making the recovery action a dead end.
             warnings.append(
                 "no grid sheet in this workbook: every sheet is non-grid; "
                 "read it through the matching product API instead of the grid read/write path"
             )
-    # 按对象身份而非 sheet_id 圈定预览集合：payload 缺 sheet_id 时 sheet_identifier 全为
-    # 空串，用 id 集合会把所有子表折叠成同一个 key，--max-sheets 直接失效（照样逐表发
-    # +sheet-info / +csv-get）。all_sheets 与 preview_targets 取自同一份 workbook，元素是
-    # 同一批 dict 实例，id() 比较安全。
+    # Define the preview set by object identity rather than sheet_id: when the payload lacks sheet_id, sheet_identifier is entirely
+    # an empty string, and using an id set would collapse all sub-sheets into the same key, making --max-sheets ineffective (it would still send per-sheet
+    # +sheet-info / +csv-get). all_sheets and preview_targets come from the same workbook, and their elements are
+    # the same batch of dict instances, so id() comparison is safe.
     preview_marks = {id(sheet) for sheet in preview_targets[:inspect_count]}
 
     profiles = []

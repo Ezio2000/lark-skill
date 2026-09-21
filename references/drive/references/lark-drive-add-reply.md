@@ -1,33 +1,37 @@
 # drive +add-reply
 
 
-给已有评论添加一条回复。
+Add a reply to an existing comment.
 
-## 命令
+<a id="命令"></a>
+## Command
 
 ```bash
-# 推荐：完整 URL + 目标评论 ID + 回复内容
+# Recommended: full URL + target comment ID + reply content
 lark-cli drive +add-reply --url "https://example.larksuite.com/docx/<DOCX_TOKEN>" --comment-id '<id>' --content '[{"type":"text","text":"回复内容"}]'
 ```
 
-## 参数
+<a id="参数"></a>
+## Parameters
 
-| 参数 | 必填 | 说明 |
+| Parameter | Required | Description |
 |---|---|---|
-| `--url` | 与 `--token` 二选一 | 推荐入口。支持 doc/docx/sheet/file/slides/base/bitable/apps/wiki URL；apps 妙搭 URL 使用 `/page/<token>`；wiki URL 会自动解析到真实文档。 |
-| `--token` | 与 `--url` 二选一 | 裸 token 或 URL。裸 token 必须搭配 `--type`；wiki token 使用 `--type wiki`。 |
-| `--type` | 裸 token 时必填 | 传 token 对应类型：`doc`、`docx`、`sheet`、`file`、`slides`、`bitable`、`base`、`apps`、`wiki`。wiki token 使用 `wiki`；传 `base` 时，CLI 会按 `bitable` 类型处理。 |
-| `--comment-id` | 是 | 要回复的评论 ID；来自 `drive +list-comments` 的 `items[].comment_id` |
-| `--content` | 是 | `reply_elements` JSON，`type=text` 文本自动转义；完整 schema、mention_user/link、10000 字符限制见 [`lark-drive-comment-content.md`](lark-drive-comment-content.md) |
+| `--url` | Choose one of `--token` | Recommended entry point. Supports doc/docx/sheet/file/slides/base/bitable/apps/wiki URLs; for apps Miaoda URLs use `/page/<token>`; wiki URLs are automatically resolved to the real document. |
+| `--token` | Choose one of `--url` | Bare token or URL. A bare token must be paired with `--type`; for a wiki token use `--type wiki`. |
+| `--type` | Required when using a bare token | Pass the type corresponding to the token: `doc`, `docx`, `sheet`, `file`, `slides`, `bitable`, `base`, `apps`, `wiki`. For a wiki token use `wiki`; when `base` is passed, the CLI processes it as type `bitable`. |
+| `--comment-id` | Yes | The ID of the comment to reply to; comes from `items[].comment_id` of `drive +list-comments` |
+| `--content` | Yes | `reply_elements` JSON, `type=text` text is automatically escaped; for the full schema, mention_user/link, and the 10000-character limit, see [`lark-drive-comment-content.md`](lark-drive-comment-content.md) |
 
-## 回复限制
+<a id="回复限制"></a>
+## Reply restrictions
 
-- `is_whole=true` 的全文评论、`is_solved=true` 的已解决评论都不能回复。
-- 目标的 `is_whole` / `is_solved` 通常在上一步 `+list-comments` / `+batch-query-comments` 的结果里已有，据此判断即可；信息不足时再补查一次。
-- 补查时注意 `+list-comments` 默认只返回未解决评论：要核对某条评论是否已被解决，需要带 `--solved-status all`，否则已解决评论根本不出现在结果里，看起来像评论不存在。
-- 命中限制时如实提示（“全文评论不支持回复” / “该评论已被解决，无法回复”），不要自动替用户改回复到别的评论。
+- You cannot reply to whole-document comments in `is_whole=true` or resolved comments in `is_solved=true`.
+- The target's `is_whole` / `is_solved` are usually already present in the results of the previous step's `+list-comments` / `+batch-query-comments`, so you can judge based on that; only query again when the information is insufficient.
+- When querying again, note that `+list-comments` by default returns only unresolved comments: to verify whether a comment has been resolved, you need to include `--solved-status all`, otherwise resolved comments will not appear in the results at all, making it look like the comment does not exist.
+- When a restriction is hit, report it truthfully ("whole-document comments do not support replies" / "this comment has been resolved and cannot be replied to"), and do not automatically redirect the user's reply to a different comment.
 
-## 输出
+<a id="输出"></a>
+## Output
 
 ```json
 {
@@ -39,8 +43,9 @@ lark-cli drive +add-reply --url "https://example.larksuite.com/docx/<DOCX_TOKEN>
 }
 ```
 
-## 参考
+<a id="参考"></a>
+## References
 
-- [lark-drive-comment-content](lark-drive-comment-content.md) -- `--content` 格式
-- [lark-drive-batch-query-comments](lark-drive-batch-query-comments.md) -- 按 ID 查 is_whole/is_solved
-- [lark-drive-list-replies](lark-drive-list-replies.md) -- 获取回复
+- [lark-drive-comment-content](lark-drive-comment-content.md) -- `--content` format
+- [lark-drive-batch-query-comments](lark-drive-batch-query-comments.md) -- query is_whole/is_solved by ID
+- [lark-drive-list-replies](lark-drive-list-replies.md) -- get replies

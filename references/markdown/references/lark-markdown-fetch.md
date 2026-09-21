@@ -1,48 +1,51 @@
 # markdown +fetch
 
 
-读取 Drive 中原生 Markdown 文件的内容；也支持把内容保存到本地。
+Read the content of a native Markdown file in Drive; also supports saving the content locally.
 
-## 命令
+<a id="命令"></a>
+## Command
 
 ```bash
-# 直接返回 Markdown 文本
+# Return Markdown text directly
 lark-cli markdown +fetch --file-token boxcnxxxx
 
-# 保存到本地
+# Save locally
 lark-cli markdown +fetch \
   --file-token boxcnxxxx \
   --output ./README.md
 
-# 传目录时，使用远端文件名保存到该目录下
+# When a directory is passed, save to that directory using the remote file name
 lark-cli markdown +fetch \
   --file-token boxcnxxxx \
   --output ./downloads/
 
-# 覆盖已存在文件
+# Overwrite an existing file
 lark-cli markdown +fetch \
   --file-token boxcnxxxx \
   --output ./README.md \
   --overwrite
 
-# 预览底层请求
+# Preview the underlying request
 lark-cli markdown +fetch \
   --file-token boxcnxxxx \
   --output ./README.md \
   --dry-run
 ```
 
-## 参数
+<a id="参数"></a>
+## Parameters
 
-| 参数 | 必填 | 说明 |
+| Parameter | Required | Description |
 |------|------|------|
-| `--file-token` | 是 | 目标 Markdown 文件 token |
-| `--output` | 否 | 本地保存路径；既可传具体文件名，也可传目录路径。传目录时使用远端文件名保存；省略时直接返回 Markdown 内容 |
-| `--overwrite` | 否 | 覆盖已存在的本地输出文件；仅在传入 `--output` 时生效 |
+| `--file-token` | Yes | Target Markdown file token |
+| `--output` | No | Local save path; you can pass either a specific file name or a directory path. When a directory is passed, the remote file name is used for saving; when omitted, the Markdown content is returned directly |
+| `--overwrite` | No | Overwrite an existing local output file; takes effect only when `--output` is passed |
 
-## 返回值
+<a id="返回值"></a>
+## Return Value
 
-不传 `--output`：
+When `--output` is not passed:
 
 ```json
 {
@@ -57,7 +60,7 @@ lark-cli markdown +fetch \
 }
 ```
 
-传入 `--output`：
+When `--output` is passed:
 
 ```json
 {
@@ -72,7 +75,8 @@ lark-cli markdown +fetch \
 }
 ```
 
-## 参考
+<a id="参考"></a>
+## References
 
-- [lark-markdown](../index.md) — Markdown 域总览
-- [lark-shared](../../shared/index.md) — 认证和全局参数
+- [lark-markdown](../index.md) — Markdown domain overview
+- [lark-shared](../../shared/index.md) — Authentication and global parameters

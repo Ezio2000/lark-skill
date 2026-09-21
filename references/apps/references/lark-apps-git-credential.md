@@ -1,8 +1,9 @@
 # apps Git credential
 
-妙搭 Git 凭证用于本地原生 `git clone/pull/push`。运行时命令事实以 `lark-cli apps +git-credential-init --help`、`+git-credential-list --help`、`+git-credential-remove --help` 为准。
+Miaoda Git credentials are used for local native `git clone/pull/push`. For runtime command facts, refer to `lark-cli apps +git-credential-init --help`, `+git-credential-list --help`, and `+git-credential-remove --help`.
 
-## 命令
+<a id="命令"></a>
+## Commands
 
 ```bash
 lark-cli apps +git-credential-init --app-id app_xxx
@@ -10,18 +11,20 @@ lark-cli apps +git-credential-list
 lark-cli apps +git-credential-remove --app-id app_xxx
 ```
 
-## 输出契约
+<a id="输出契约"></a>
+## Output contract
 
-- `+git-credential-init` 成功后读取 `data.repository_url`；不要展示或保存其中的凭据细节，只用于下一步 `git clone`。响应还包含 `data.commit_author_name` 和 `data.commit_author_email`，这两个字段由 `+init` 内部消费，自动写入仓库 repo-local git config（`user.name` / `user.email`），agent 和用户无需手动配置。
-- `+git-credential-list` 返回本地记录和状态；可用来判断是否需要重新 init。
-- `+git-credential-remove` 只清本地配置；成功后告知不会删除云端应用或仓库。
+- After `+git-credential-init` succeeds, read `data.repository_url`; do not display or save the credential details within it, and use it only for the next step `git clone`. The response also includes `data.commit_author_name` and `data.commit_author_email`; these two fields are consumed internally by `+init` and automatically written to the repository's repo-local git config (`user.name` / `user.email`), so the agent and user do not need to configure them manually.
+- `+git-credential-list` returns the local record and status; it can be used to determine whether re-init is needed.
+- `+git-credential-remove` only clears the local configuration; after success, inform that the cloud app or repository will not be deleted.
 
-## 行为规则
+<a id="行为规则"></a>
+## Behavior rules
 
-- `+git-credential-init` 返回 `repository_url`，并配置 URL-scoped Git credential helper。后续 clone/pull/push 使用原生 git。
-- `+git-credential-list` 列出本地已配置的妙搭 Git 凭证，不需要 `--app-id`。
-- `+git-credential-remove` 只移除本地凭证/helper，不删除云端应用或仓库。
-- 看到 Repository URL 后继续：
+- `+git-credential-init` returns `repository_url` and configures a URL-scoped Git credential helper. Subsequent clone/pull/push use native git.
+- `+git-credential-list` lists the locally configured Miaoda Git credentials and does not require `--app-id`.
+- `+git-credential-remove` only removes the local credential/helper and does not delete the cloud app or repository.
+- After seeing the Repository URL, continue:
 
 ```bash
 git clone <repository_url>
@@ -29,9 +32,10 @@ cd <repo>
 git checkout sprint/default
 ```
 
-## Agent 规则
+<a id="agent-规则"></a>
+## Agent rules
 
-- 不要手动打印、保存或拼接 token。
-- clone、pull、push、diff、log 等代码仓库操作都使用原生 `git`；不存在 `apps +pull` / `apps +push` / `apps code +read` 这类代码读写 shortcut，不要臆造。
-- 不要 push/force-push `main`；`main` 是发布态快照，由 `apps +release-create` 成功后服务端推进，直推/force-push 会被服务端护栏拒绝。
-- Git 认证失败、本地凭证损坏或 helper 缺失时，重新执行 `+git-credential-init --app-id <id>` 覆盖本地配置；不要让用户复制 token 到 remote URL。
+- Do not manually print, save, or concatenate the token.
+- Code repository operations such as clone, pull, push, diff, and log all use native `git`; there are no code read/write shortcuts such as `apps +pull` / `apps +push` / `apps code +read`, so do not invent them.
+- Do not push/force-push `main`; `main` is a release-state snapshot that is advanced server-side after `apps +release-create` succeeds, and direct push/force-push will be rejected by server-side guardrails.
+- If Git authentication fails, the local credential is corrupted, or the helper is missing, re-run `+git-credential-init --app-id <id>` to overwrite the local configuration; do not ask the user to copy the token into the remote URL.

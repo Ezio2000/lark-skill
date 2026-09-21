@@ -53,8 +53,8 @@ User-intent inference:
 | Mentions approval instances, approval forms, approval order/status, or "instance status" | `approval.instance.status_changed_v4` | infer from relation words below |
 | Mentions approval tasks, approval todo items, approver operations, or "task status" | `approval.task.status_changed_v4` | infer from relation words below |
 | Says "approval status changes/events" without saying task vs instance | both EventKeys | infer from relation words below |
-| Says "my approvals", "approvals involving me", "I requested/approved", "待我审批", "我发起/我参与" | requested EventKey(s) | `INVOLVED_APPROVAL` |
-| Says "approvals I manage", "managed definitions", "definitions managed by me", "我管理的审批定义" | requested EventKey(s) | `MANAGED_APPROVAL` |
+| Says "my approvals", "approvals involving me", "I requested/approved", "pending my approval", "I initiated/I participated" | requested EventKey(s) | `INVOLVED_APPROVAL` |
+| Says "approvals I manage", "managed definitions", "definitions managed by me", "approval definitions I manage" | requested EventKey(s) | `MANAGED_APPROVAL` |
 | Explicitly asks for both involved and managed, or says "all approval subscriptions" | requested EventKey(s), or both if EventKey is also ambiguous | omit `subscription_type`, or pass both values in one `-p` |
 | Relation is ambiguous and the user wants broad coverage | requested EventKey(s), or both if EventKey is also ambiguous | omit `subscription_type` so PreConsume registers both |
 

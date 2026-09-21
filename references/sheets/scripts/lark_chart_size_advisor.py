@@ -272,7 +272,7 @@ def profile_matrix(
     return {
         "categories": nonempty_categories,
         "series_names": series_names,
-        # 海象运算符要 3.8，CI 的解释器是 3.7：先映射再滤空，语义等价。
+        # The walrus operator requires 3.8, but CI's interpreter is 3.7: map first, then filter out empties; semantically equivalent.
         "values": [n for n in (_numeric(v) for v in first_values) if n is not None],
         "dim2_indexes": selected,
     }

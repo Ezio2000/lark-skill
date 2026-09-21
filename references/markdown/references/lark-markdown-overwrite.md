@@ -1,64 +1,68 @@
 # markdown +overwrite
 
 
-覆盖更新 Drive 中已有的原生 Markdown 文件，并返回覆盖后的新版本号。
+Overwrite an existing native Markdown file in Drive and return the new version number after overwriting.
 
-## 命令
+<a id="命令"></a>
+## Command
 
 ```bash
-# 用行内内容覆盖
+# Overwrite with inline content
 lark-cli markdown +overwrite \
   --file-token boxcnxxxx \
   --content '# Updated'
 
-# 用本地 .md 文件覆盖
+# Overwrite with a local .md file
 lark-cli markdown +overwrite \
   --file-token boxcnxxxx \
   --file ./README.md
 
-# 覆盖内容时顺便显式指定新文件名
+# Explicitly specify a new file name while overwriting content
 lark-cli markdown +overwrite \
   --file-token boxcnxxxx \
   --name NEW-README.md \
   --content '# Updated'
 
-# 用 --content 从本地文件读取
+# Use --content to read from a local file
 lark-cli markdown +overwrite \
   --file-token boxcnxxxx \
   --content @./README.md
 
-# 用 stdin 覆盖
+# Overwrite with stdin
 printf '# Updated\n' | \
   lark-cli markdown +overwrite \
     --file-token boxcnxxxx \
     --content -
 
-# 预览底层请求
+# Preview the underlying request
 lark-cli markdown +overwrite \
   --file-token boxcnxxxx \
   --content '# Updated' \
   --dry-run
 ```
 
-## 参数
+<a id="参数"></a>
+## Parameters
 
-| 参数 | 必填 | 说明 |
+| Parameter | Required | Description |
 |------|------|------|
-| `--file-token` | 是 | 目标 Markdown 文件 token |
-| `--name` | 否 | 显式指定覆盖后的文件名；必须带 `.md` 后缀。传入时优先使用它 |
-| `--content` | 条件必填 | 新 Markdown 内容；与 `--file` 互斥；支持直接传字符串、`@file`、`-`（stdin） |
-| `--file` | 条件必填 | 本地 `.md` 文件路径；与 `--content` 互斥 |
+| `--file-token` | Yes | Target Markdown file token |
+| `--name` | No | Explicitly specify the file name after overwriting; must have the `.md` suffix. When passed, it takes precedence |
+| `--content` | Conditionally required | New Markdown content; mutually exclusive with `--file`; supports passing a string directly, `@file`, `-` (stdin) |
+| `--file` | Conditionally required | Local `.md` file path; mutually exclusive with `--content` |
 
-## 关键约束
+<a id="关键约束"></a>
+## Key Constraints
 
-- `--content` 与 `--file` 必须二选一
-- 如果传了 `--name`，直接使用它作为覆盖后的文件名
-- 如果没传 `--name` 且使用 `--content`，默认保留远端原文件名
-- 如果没传 `--name` 且使用 `--file`，默认使用本地文件名
-- `--file` 指向的本地文件名必须带 `.md` 后缀
-- 覆盖成功后 **必须** 返回 `version`
+- Exactly one of `--content` and `--file` must be provided
+- If `--name` is passed, use it directly as the file name after overwriting
+- If `--name` is not passed and `--content` is used, keep the original remote file name by default
+- If `--name` is not passed and `--file` is used, use the local file name by default
+- The local file name pointed to by `--file` must have the `.md` suffix
+- After a successful overwrite, `version` **must** be returned
 
-## 返回值
+<a id="返回值"></a>
+## Return Value
 
 ```json
 {
@@ -73,12 +77,13 @@ lark-cli markdown +overwrite \
 }
 ```
 
-其中：
+Where:
 
-- `version` 是覆盖写入后的新版本号
-- `size_bytes` 是本次覆盖后的内容大小
+- `version` is the new version number after overwrite writing
+- `size_bytes` is the content size after this overwrite
 
-## 参考
+<a id="参考"></a>
+## References
 
-- [lark-markdown](../index.md) — Markdown 域总览
-- [lark-shared](../../shared/index.md) — 认证和全局参数
+- [lark-markdown](../index.md) — Markdown domain overview
+- [lark-shared](../../shared/index.md) — Authentication and global parameters

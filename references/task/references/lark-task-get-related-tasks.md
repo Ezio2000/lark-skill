@@ -8,7 +8,7 @@
 > In `+get-related-tasks`, `page_token` is the task `updated_at` cursor in microseconds.
 >
 > **Execution Priority:**
-> 1. If the request contains a start/end time boundary (for example, "今年以来", "最近一个月", "从 3 月 1 日开始"), first convert the **start time** boundary to a microsecond `page_token` and query from that token.
+> 1. If the request contains a start/end time boundary (for example, "since the beginning of this year", "the last month", "starting from March 1"), first convert the **start time** boundary to a microsecond `page_token` and query from that token.
 > 2. Continue pagination using returned `page_token` until `has_more=false`, but never exceed 40 total page fetches.
 > 3. Do NOT default to `--page-all` for time-bounded queries.
 >

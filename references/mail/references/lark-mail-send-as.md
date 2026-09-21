@@ -1,43 +1,48 @@
 # mail send_as
 
 
-使用公共邮箱或别名发信。适用于 `+send` / `+draft-create` / `+reply` / `+reply-all` / `+forward` 等发信类 shortcut。
+Send mail using a shared mailbox or alias. Applies to sending shortcuts such as `+send` / `+draft-create` / `+reply` / `+reply-all` / `+forward`.
 
-## 参数含义
+<a id="参数含义"></a>
+## Parameter meaning
 
-- `--mailbox` 指定邮件归属邮箱（如 `shared@example.com` 或 `me`），可通过 `accessible_mailboxes` 查询可用值。
-- `--from` 指定 EML From 头里的发件人地址（别名、邮件组等），可通过 `send_as` 查询可用值。
-- 不使用公共邮箱或别名时无需指定 `--mailbox`，行为与默认发信一致。
+- `--mailbox` specifies the mailbox the email belongs to (such as `shared@example.com` or `me`); available values can be queried via `accessible_mailboxes`.
+- `--from` specifies the sender address in the EML From header (alias, mail group, etc.); available values can be queried via `send_as`.
+- When not using a shared mailbox or alias, there is no need to specify `--mailbox`; the behavior is the same as default sending.
 
-## 查询可用邮箱和发信地址
+<a id="查询可用邮箱和发信地址"></a>
+## Query available mailboxes and sending addresses
 
 ```bash
-# 查询可访问的邮箱（主邮箱 + 公共邮箱）
+# Query accessible mailboxes (primary mailbox + shared mailboxes)
 lark-cli mail user_mailboxes accessible_mailboxes --params '{"user_mailbox_id":"me"}'
 
-# 查询某个邮箱的可用发信地址（主地址、别名、邮件组）
+# Query the available sending addresses of a mailbox (primary address, alias, mail group)
 lark-cli mail user_mailbox.settings send_as --params '{"user_mailbox_id":"me"}'
 ```
 
-## 公共邮箱发信
+<a id="公共邮箱发信"></a>
+## Sending from a shared mailbox
 
 ```bash
-# --mailbox 指定公共邮箱，From 头自动使用该邮箱地址
+# --mailbox specifies the shared mailbox; the From header automatically uses that mailbox address
 lark-cli mail +send --mailbox shared@example.com \
   --to bob@example.com --subject '通知' --body '<p>你好</p>'
 ```
 
-## 别名发信
+<a id="别名发信"></a>
+## Sending from an alias
 
 ```bash
-# --mailbox 指定所属邮箱，--from 指定别名地址
+# --mailbox specifies the owning mailbox, --from specifies the alias address
 lark-cli mail +send --mailbox me --from alias@example.com \
   --to bob@example.com --subject '测试' --body '<p>你好</p>'
 ```
 
-## 相关命令
+<a id="相关命令"></a>
+## Related commands
 
-- `lark-cli mail +send` — 新邮件发信。
-- `lark-cli mail +draft-create` — 新建草稿。
-- `lark-cli mail +reply` / `+reply-all` — 回复邮件。
-- `lark-cli mail +forward` — 转发邮件。
+- `lark-cli mail +send` — Send a new email.
+- `lark-cli mail +draft-create` — Create a new draft.
+- `lark-cli mail +reply` / `+reply-all` — Reply to an email.
+- `lark-cli mail +forward` — Forward an email.

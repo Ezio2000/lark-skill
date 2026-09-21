@@ -1,4 +1,5 @@
-# 知识整理工作流：Discovery
+<a id="知识整理工作流discovery"></a>
+# Knowledge Organization Workflow: Discovery
 
 Loaded by states: `PARSE_SCOPE`, `INVENTORY`.
 
@@ -63,29 +64,29 @@ This intent is broader than Drive Folder Intent and MUST NOT be silently convert
 
 Stop and ask for clarification when:
 
-1. 用户只说"整理文件夹"、"整理目录"、"整理资料"、"整理文档"、"我的文档"，且没有 URL、token、知识库名称、Personal Library Intent、concrete Drive folder identity 或明确搜索范围。
-2. 用户说"我的文件夹"、"我的目录"、"我的空间"、"我的云盘"、"我的飞书云盘"、"我的云空间"，但无法唯一判断是具体 Drive 文件夹、Drive 根目录、owned Drive document search、个人文档库还是某个 Wiki 节点。
-3. 用户给的是单个资源 URL，但要求"整理一批文档"或"整理相关资料"。
-4. 用户目标环境不明确，且上下文中同时存在线上、BOE、PRE 或多个 profile。
+1. The user only says "organize the folder", "organize the directory", "organize the materials", "organize the documents", or "my documents", and there is no URL, token, Wiki name, Personal Library Intent, concrete Drive folder identity, or explicit search scope.
+2. The user says "my folder", "my directory", "my space", "my cloud drive", "my Feishu cloud drive", or "my cloud space", but it cannot be uniquely determined whether it is a specific Drive folder, the Drive root, an owned Drive document search, a personal document library, or a certain Wiki node.
+3. The user provides a single resource URL but asks to "organize a batch of documents" or "organize related materials".
+4. The user's target environment is unclear, and online, BOE, PRE, or multiple profiles exist simultaneously in the context.
 
 Clarification template:
 
 ```text
-请提供要整理的 Drive 文件夹链接、Wiki 节点 / 知识库链接，或明确说明要整理"我的文档库"；如果只想按关键词搜索整理，也请给出关键词或范围。
+Please provide the Drive folder link, Wiki node / Wiki link to organize, or explicitly state that you want to organize "my document library"; if you only want to search and organize by keyword, please also provide the keyword or scope.
 ```
 
 ### Scope Confirmation
 
 ```text
-我先确认本次整理范围。
+I will first confirm the scope of this organization.
 
-目标：
-范围：
-环境 / profile：
-身份：
-预计操作：先盘点并生成整理方案，不执行移动或创建。
+Target:
+Scope:
+Environment / profile:
+Identity:
+Planned operations: first take inventory and generate an organization plan; do not perform moves or creations.
 
-请确认是否按这个范围继续？
+Please confirm whether to continue with this scope?
 ```
 
 Scope confirmation is user-facing. It MUST confirm only the business scope, environment / profile, identity, and whether write operations will run.
@@ -150,7 +151,7 @@ Rules:
 Example:
 
 ```text
-盘点进度：已扫描 <scanned_container_count> 个目录 / 节点，收集 <resource_count> 项资源，队列剩余 <queued_container_count> 个目录 / 节点。继续盘点，不会执行移动或创建。
+Inventory progress: scanned <scanned_container_count> directories / nodes, collected <resource_count> resources, <queued_container_count> directories / nodes remaining in the queue. Continuing inventory; no moves or creations will be performed.
 ```
 
 ### Wiki Inventory Rules
@@ -224,21 +225,21 @@ ResourceItem rules:
 ## Inventory Summary
 
 ```text
-已完成当前可覆盖范围盘点。
+Inventory of the currently coverable scope is complete.
 
-<仅当适用：覆盖说明：Drive 根目录第一层清单不返回快捷方式；本次盘点不包含根目录第一层快捷方式。根目录下子文件夹会按普通文件夹继续盘点，普通文件夹内返回的 `type=shortcut` 条目仍会被纳入资源清单。>
+<Only when applicable: Coverage note: the first-level listing of the Drive root does not return shortcuts; this inventory does not include first-level shortcuts of the root. Subfolders under the root will continue to be inventoried as ordinary folders, and `type=shortcut` entries returned within ordinary folders will still be included in the resource inventory.>
 
-| 指标 | 数量 |
+| Metric | Count |
 |------|------|
-| 总资源数 |  |
-| 各类型资源数 |  |
-| 一级目录数量 |  |
-| 根目录直接资源数 |  |
-| 空目录数量 |  |
-| 疑似临时 / 测试 / 未整理资源数 |  |
-| 低置信度待确认资源数 |  |
+| Total resources |  |
+| Resources by type |  |
+| Number of first-level directories |  |
+| Number of direct resources in the root |  |
+| Number of empty directories |  |
+| Number of suspected temporary / test / unorganized resources |  |
+| Number of low-confidence resources pending confirmation |  |
 
-下一步将自动读取低置信度资源并分析整理问题；不会执行移动或创建。
+Next, low-confidence resources will be automatically read and organization issues analyzed; no moves or creations will be performed.
 ```
 
 ## Discovery Failure Handling

@@ -2,31 +2,33 @@
 # drive +upload
 
 
-上传本地文件到飞书云空间（云盘/云存储）。目标位置可以是 Drive 文件夹，也可以是 wiki 节点。
+Upload a local file to Feishu cloud space (Drive/cloud storage). The target location can be a Drive folder or a wiki node.
 
-## 快速决策
-- 用户要在 Drive 里上传、创建、读取、局部 patch 或覆盖更新**原生 `.md` 文件**（不是导入成 docx），切到 [`lark-markdown`](../../markdown/index.md)。
-- 用户在修改/重写/更新已有普通文件时，优先使用覆盖上传方式，而不是直接上传一个新文件。
+<a id="快速决策"></a>
+## Quick decision
+- If the user wants to upload, create, read, partially patch, or overwrite-update a **native `.md` file** in Drive (not import it as a docx), switch to [`lark-markdown`](../../markdown/index.md).
+- When the user is modifying/rewriting/updating an existing regular file, prefer the overwrite upload method rather than directly uploading a new file.
 
-## 命令
+<a id="命令"></a>
+## Command
 
 ```bash
-# 上传到 Drive 文件夹
+# Upload to a Drive folder
 lark-cli drive +upload --file ./report.pdf --folder-token fldbc_xxx
 
-# 上传到 wiki 节点
+# Upload to a wiki node
 lark-cli drive +upload --file ./report.pdf --wiki-token wikcn_xxx
 
-# 不指定目标时，上传到调用者的 Drive 根目录
+# When no target is specified, upload to the caller's Drive root directory
 lark-cli drive +upload --file ./report.pdf
 
-# 自定义上传后的文件名
+# Customize the file name after upload
 lark-cli drive +upload --file ./report.pdf --name "季度总结.pdf"
 
-# 覆盖已存在文件（原地覆盖，保留 file_token）
+# Overwrite an existing file (overwrite in place, preserving the file_token)
 lark-cli drive +upload --file ./report.pdf --file-token boxcn_existing_file
 
-# 原生命令（高级/分片上传）：预上传 + 完成上传
+# Native commands (advanced/multipart upload): pre-upload + complete upload
 lark-cli drive files upload_prepare --data '{
   "file_name": "report.pdf",
   "parent_type": "explorer",
@@ -39,63 +41,65 @@ lark-cli drive files upload_finish --data '{
   "block_num": 1
 }'
 
-# 查看完整参数定义
+# View the full parameter definitions
 lark-cli schema drive.files.upload_prepare
 ```
 
 > [!IMPORTANT]
-> 如果文件是**以应用身份（bot）新建上传**的，如 `lark-cli drive +upload --as bot` 在上传成功后，CLI 会**尝试为当前 CLI 用户自动授予该文件的 `full_access`（可管理权限）**。
+> If the file is **newly created and uploaded as an app identity (bot)**, such as `lark-cli drive +upload --as bot`, after a successful upload the CLI will **attempt to automatically grant the current CLI user `full_access` (manageable permission) for that file**.
 >
-> 如果这次调用传了 `--file-token`，表示是在**覆盖已有文件**，CLI **不会**额外修改该文件权限。
+> If this call passes `--file-token`, it means this is **overwriting an existing file**, and the CLI will **not** additionally modify that file's permissions.
 >
-> 以应用身份上传时，结果里会额外返回 `permission_grant` 字段，明确说明授权结果：
-> - `status = granted`：当前 CLI 用户已获得该文件的可管理权限
-> - `status = skipped`：本地没有可用的当前用户 `open_id`，因此不会自动授权；可提示用户先完成 `lark-cli auth login`，再让 AI / agent 继续使用应用身份（bot）授予当前用户权限
-> - `status = failed`：文件已上传成功，但自动授权用户失败；会带上失败原因，并提示稍后重试或继续使用 bot 身份处理该文件
+> When uploading as an app identity, the result will additionally return a `permission_grant` field that clearly states the authorization result:
+> - `status = granted`: the current CLI user has obtained manageable permission for that file
+> - `status = skipped`: there is no available current user `open_id` locally, so no automatic authorization will occur; you may prompt the user to complete `lark-cli auth login` first, then let the AI / agent continue using the app identity (bot) to grant the current user permission
+> - `status = failed`: the file was uploaded successfully, but automatically authorizing the user failed; the failure reason will be included, and you will be prompted to retry later or continue handling the file using the bot identity
 >
-> `permission_grant.perm = full_access` 表示该资源已授予“可管理权限”。
+> `permission_grant.perm = full_access` indicates that the resource has been granted "manageable permission".
 >
-> **不要擅自执行 owner 转移。** 创建或导入不隐含 owner 转移；用户已明确要求转移且目标已确定时沿用授权执行。
+> **Do not perform owner transfer on your own initiative.** Creating or importing does not imply owner transfer; when the user has explicitly requested a transfer and the target has been determined, follow the authorization to execute it.
 
 > [!TIP]
-> 当底层上传接口返回版本号时，shortcut 会在结果里额外透出 `version`。
+> When the underlying upload API returns a version number, the shortcut will additionally expose `version` in the result.
 
-## 目标位置选择（关键）
+<a id="目标位置选择关键"></a>
+## Target location selection (key)
 
-- 上传到 Drive 文件夹：传 `--folder-token <folder_token>`，shortcut 会发送 `parent_type=explorer`
-- 上传到 wiki 节点：传 `--wiki-token <wiki_token>`，shortcut 会发送 `parent_type=wiki`
-- 上传到 Drive 根目录：`--folder-token` 和 `--wiki-token` 都不传
-- 覆盖已有文件：额外传 `--file-token <existing_file_token>`；shortcut 会把它原样透传到底层 `upload_all` / `upload_prepare`，让后端按覆盖语义写入
-- bot 模式下，`--file-token` 覆盖只改文件内容；不会额外给当前 CLI 用户补 `full_access`
-- 不要传空目标值：`--folder-token ""` / `--wiki-token ""` 会被视为参数错误；如需上传到 Drive 根目录，应直接省略这两个参数
-- 不要传空 `--file-token`：如需新建上传，直接省略该参数；显式传空字符串会报错
-- `--folder-token` 和 `--wiki-token` 互斥，不要同时传
-- `--wiki-token` 传的是 **wiki node token**，不是 `space_id`
+- Upload to a Drive folder: pass `--folder-token <folder_token>`, and the shortcut will send `parent_type=explorer`
+- Upload to a wiki node: pass `--wiki-token <wiki_token>`, and the shortcut will send `parent_type=wiki`
+- Upload to the Drive root directory: pass neither `--folder-token` nor `--wiki-token`
+- Overwrite an existing file: additionally pass `--file-token <existing_file_token>`; the shortcut will pass it through as-is to the underlying `upload_all` / `upload_prepare`, letting the backend write with overwrite semantics
+- In bot mode, `--file-token` overwrite only changes the file content; it will not additionally grant the current CLI user `full_access`
+- Do not pass an empty target value: `--folder-token ""` / `--wiki-token ""` will be treated as a parameter error; if you need to upload to the Drive root directory, simply omit these two parameters
+- Do not pass an empty `--file-token`: if you need a new upload, simply omit this parameter; explicitly passing an empty string will cause an error
+- `--folder-token` and `--wiki-token` are mutually exclusive; do not pass both
+- `--wiki-token` passes a **wiki node token**, not `space_id`
 
-Shortcut 参数：
+Shortcut parameters:
 
-| 参数 | 必填 | 说明 |
+| Parameter | Required | Description |
 |------|------|------|
-| `--file` | 是 | 本地文件路径 |
-| `--file-token` | 否 | 已存在文件的 token；传入后按“覆盖已有文件”语义上传 |
-| `--folder-token` | 否 | 目标文件夹 token；与 `--wiki-token` 互斥；省略时默认为 Drive 根目录；显式传空字符串会报错 |
-| `--wiki-token` | 否 | 目标 wiki 节点 token；与 `--folder-token` 互斥；会映射为 `parent_type=wiki`、`parent_node=<wiki_token>`；显式传空字符串会报错 |
-| `--name` | 否 | 上传后的文件名；默认使用本地文件名 |
+| `--file` | Yes | Local file path |
+| `--file-token` | No | Token of an existing file; when passed, upload with "overwrite existing file" semantics |
+| `--folder-token` | No | Target folder token; mutually exclusive with `--wiki-token`; defaults to the Drive root directory when omitted; explicitly passing an empty string will cause an error |
+| `--wiki-token` | No | Target wiki node token; mutually exclusive with `--folder-token`; will be mapped to `parent_type=wiki`, `parent_node=<wiki_token>`; explicitly passing an empty string will cause an error |
+| `--name` | No | File name after upload; defaults to the local file name |
 
-参数（预上传 `--data` JSON body）：
+Parameters (pre-upload `--data` JSON body):
 
-| 字段 | 必填 | 说明 |
+| Field | Required | Description |
 |------|------|------|
-| `file_name` | 是 | 文件名 |
-| `parent_type` | 是 | 父节点类型；上传到文件夹 / 根目录时用 `"explorer"`，上传到 wiki 节点时用 `"wiki"` |
-| `parent_node` | 是 | 父节点 token；`explorer` 时传文件夹 token（根目录可为空字符串），`wiki` 时传 wiki node token |
-| `size` | 是 | 文件大小（字节） |
-| `file_token` | 否 | 已存在文件 token；传入后覆盖该文件内容 |
+| `file_name` | Yes | File name |
+| `parent_type` | Yes | Parent node type; use `"explorer"` when uploading to a folder / root directory, and `"wiki"` when uploading to a wiki node |
+| `parent_node` | Yes | Parent node token; when `explorer`, pass the folder token (the root directory may be an empty string); when `wiki`, pass the wiki node token |
+| `size` | Yes | File size (bytes) |
+| `file_token` | No | Existing file token; when passed, overwrite that file's content |
 
 > [!CAUTION]
-> 这是**写入操作** —— 执行前必须确认用户意图。
+> This is a **write operation** -- you must confirm the user's intent before executing.
 
-## 参考
+<a id="参考"></a>
+## Reference
 
-- [lark-drive](../index.md) -- 云空间（云盘/云存储）全部命令
-- [lark-shared](../../shared/index.md) -- 认证和全局参数
+- [lark-drive](../index.md) -- all commands for cloud space (Drive/cloud storage)
+- [lark-shared](../../shared/index.md) -- authentication and global parameters

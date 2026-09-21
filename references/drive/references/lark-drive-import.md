@@ -1,138 +1,145 @@
 # drive +import
 
 
-将本地文件（如 Word、TXT、Markdown、Excel、PPTX 等）导入并转换为飞书在线云文档（docx、sheet、bitable、slides）。底层统一通过 `POST /open-apis/drive/v1/import_tasks` 接口创建导入任务，并在 shortcut 内做有限次数轮询 `GET /open-apis/drive/v1/import_tasks/:ticket`。
+Import local files (such as Word, TXT, Markdown, Excel, PPTX, etc.) and convert them into Feishu online cloud documents (docx, sheet, bitable, slides). Under the hood, it uniformly creates an import task through the `POST /open-apis/drive/v1/import_tasks` API, and performs a limited number of polls of `GET /open-apis/drive/v1/import_tasks/:ticket` within the shortcut.
 
 > [!IMPORTANT]
-> 当用户说“把本地 Excel / CSV / `.base` 快照导入成 Base / 多维表格 / bitable 文档”时，第一步必须使用 `drive +import --type bitable`。
-> 这是 Drive 导入场景，不是 `lark-base` 的建表 / 写记录场景。
-> 只有导入完成并拿到新文档的 `token` / `url` 后，后续字段、记录、视图等表内操作才切换到 `lark-cli base +...`。
+> When the user says "import a local Excel / CSV / `.base` snapshot into a Base / Bitable / bitable document", the first step must use `drive +import --type bitable`.
+> This is a Drive import scenario, not the table creation / record writing scenario of `lark-base`.
+> Only after the import completes and you obtain the new document's `token` / `url` do subsequent in-table operations such as fields, records, and views switch to `lark-cli base +...`.
 
-## 导入后标题确认
-
-> [!IMPORTANT]
-> 当用户**未传 `--name`** 时，文档标题默认取源文件名（去掉扩展名）。在执行导入前，先友好提示用户：「当前未指定文档标题，默认将使用"xxx"作为标题。如果文件内容中也包含相同标题，导入后可能造成视觉重复。是否需要重命名？」让用户确认后再继续。
-
-## 批量导入串行规则
+<a id="导入后标题确认"></a>
+## Title confirmation after import
 
 > [!IMPORTANT]
-> 批量执行 `drive +import` 且目标是同一个位置时，必须串行执行，不要并发发起导入任务。这里的“相同位置”包括同一个 `--folder-token`、都省略 `--folder-token` 导入到默认根目录，或使用同一个 `--target-token` 导入到已有 bitable。
+> When the user **does not pass `--name`**, the document title defaults to the source file name (with the extension removed). Before executing the import, first give the user a friendly prompt: "No document title is currently specified, so 'xxx' will be used as the title by default. If the file content also contains the same title, it may cause visual duplication after import. Do you want to rename it?" Let the user confirm before continuing.
+
+<a id="批量导入串行规则"></a>
+## Serial rules for batch import
+
+> [!IMPORTANT]
+> When executing `drive +import` in batch and the target is the same location, execution must be serial; do not initiate import tasks concurrently. Here, "same location" includes the same `--folder-token`, omitting `--folder-token` for all to import into the default root directory, or using the same `--target-token` to import into an existing bitable.
 >
-> 如果在同一位置下并发导入，服务端可能返回并发冲突错误。看到错误信息或 `job_error_msg` 中包含 `232140101`、`232140100`、`233523001` 任一错误码时，按同位置并发操作处理：停止并发导入，改为串行处理失败项；每个失败项每次重试前等待几秒，总共最多重试 3 次；仍失败就停止并向用户报告冲突。
+> If imports are concurrent under the same location, the server may return a concurrency conflict error. When you see an error message or `job_error_msg` contains any of the error codes `232140101`, `232140100`, `233523001`, handle it as a same-location concurrent operation: stop concurrent imports and switch to serial processing of the failed items; before each retry of each failed item, wait a few seconds, with a maximum of 3 retries in total; if it still fails, stop and report the conflict to the user.
 
-## 命令
+<a id="命令"></a>
+## Commands
 
 ```bash
-# 导入 Word 为新版文档 (docx)
+# Import Word as a new-version document (docx)
 lark-cli drive +import --file ./report.docx --type docx
 lark-cli drive +import --file ./legacy.doc --type docx
 
-# 导入 Markdown 为新版文档 (docx)
+# Import Markdown as a new-version document (docx)
 lark-cli drive +import --file ./README.md --type docx
 
-# 导入纯文本为新版文档 (docx)
+# Import plain text as a new-version document (docx)
 lark-cli drive +import --file ./notes.txt --type docx
 
-# 导入 HTML 为新版文档 (docx)
+# Import HTML as a new-version document (docx)
 lark-cli drive +import --file ./page.html --type docx
 
-# 导入 Excel 为电子表格 (sheet)
+# Import Excel as a spreadsheet (sheet)
 lark-cli drive +import --file ./data.xlsx --type sheet
 
-# 导入 Excel 97-2003 (.xls) 为电子表格 (sheet)
+# Import Excel 97-2003 (.xls) as a spreadsheet (sheet)
 lark-cli drive +import --file ./legacy.xls --type sheet
 
-# 导入 CSV 为电子表格 (sheet)
+# Import CSV as a spreadsheet (sheet)
 lark-cli drive +import --file ./data.csv --type sheet
 
-# 导入 Excel 为多维表格 / Base (bitable)
+# Import Excel as a Bitable / Base (bitable)
 lark-cli drive +import --file ./crm.xlsx --type bitable --name "客户台账"
 
-# 导入 .base 快照为多维表格 / Base (bitable)（文件不能超过 20MB）
+# Import a .base snapshot as a Bitable / Base (bitable) (file must not exceed 20MB)
 lark-cli drive +import --file ./snapshot.base --type bitable --name "快照还原"
 
-# 导入 PPTX 为飞书幻灯片 (slides)（文件不能超过 500MB）
+# Import PPTX as Feishu Slides (slides) (file must not exceed 500MB)
 lark-cli drive +import --file ./deck.pptx --type slides --name "项目汇报"
 
-# 导入到指定文件夹，并指定导入后的文件名
+# Import to a specified folder, and specify the file name after import
 lark-cli drive +import --file ./data.csv --type bitable --folder-token <FOLDER_TOKEN> --name "导入数据表"
 
-# 导入数据到已有的多维表格（不新建，数据挂载到目标多维表格中）
+# Import data into an existing Bitable (do not create a new one; data is mounted to the target Bitable)
 lark-cli drive +import --file ./data.xlsx --type bitable --target-token <BASE_TOKEN>
 
-# 预览底层调用链（上传 -> 创建任务 -> 轮询）
+# Preview the underlying call chain (upload -> create task -> poll)
 lark-cli drive +import --file ./README.md --type docx --dry-run
 ```
 
-## 参数
+<a id="参数"></a>
+## Parameters
 
-| 参数 | 必填 | 说明 |
+| Parameter | Required | Description |
 |------|------|------|
-| `--file` | 是 | 本地文件路径，根据文件后缀名自动推断 `file_extension`；文件需满足对应格式的导入大小限制，超过 20MB 且仍在允许范围内时会自动切换分片上传 |
-| `--type` | 是 | 导入目标云文档格式。可选值：`docx` (新版文档)、`sheet` (电子表格)、`bitable` (多维表格)、`slides` (飞书幻灯片) |
-| `--folder-token` | 否 | 目标文件夹 token，不传则请求中的 `point.mount_key` 为空字符串，Import API 会将其解释为导入到云空间（云盘/云存储）根目录 |
-| `--name` | 否 | 导入后的在线云文档名称，不传默认使用本地文件名去掉扩展名后的结果 |
-| `--target-token` | 否 | 已有的多维表格 token，将数据导入到该多维表格中（**仅支持 `--type bitable`**）；传入后数据会挂载到目标多维表格而非新建一个 |
+| `--file` | Yes | Local file path; `file_extension` is automatically inferred from the file extension; the file must satisfy the import size limit for the corresponding format, and when it exceeds 20MB but is still within the allowed range, it automatically switches to multipart upload |
+| `--type` | Yes | Target cloud document format for import. Possible values: `docx` (new-version document), `sheet` (spreadsheet), `bitable` (Bitable), `slides` (Feishu Slides) |
+| `--folder-token` | No | Target folder token; if not passed, `point.mount_key` in the request is an empty string, and the Import API interprets it as importing to the root directory of the cloud space (Drive/cloud storage) |
+| `--name` | No | Name of the online cloud document after import; if not passed, the local file name with the extension removed is used by default |
+| `--target-token` | No | Token of an existing Bitable, to import data into that Bitable (**only supports `--type bitable`**); once passed, data is mounted to the target Bitable instead of creating a new one |
 
-## 行为说明
+<a id="行为说明"></a>
+## Behavior description
 
-- **完整执行流程**：此 shortcut 内部封装了完整流程：
-  1. 自动上传源文件获取 `file_token`：
-     - 20MB 及以下：调用素材上传接口 `POST /open-apis/drive/v1/medias/upload_all`
-     - 超过 20MB：自动切换为分片上传 `upload_prepare -> upload_part -> upload_finish`
-  2. 调用 `import_tasks` 接口发起导入任务，自动根据本地文件提取扩展名并构造挂载点（`mount_point`）参数
-  3. 自动轮询查询导入任务状态；如果在内置轮询窗口内完成，则直接返回导入结果；如果仍未完成，则返回 `ticket`、当前状态和后续查询命令
-- **默认根目录行为**：不传 `--folder-token` 时，shortcut 会保留空的 `point.mount_key`，Lark Import API 会将其视为"导入到调用者根目录"。
-- **导入到已有 bitable**：当 `--type bitable` 且传了 `--target-token` 时，请求 body 中会增加一个 `token` 字段指向目标多维表格的 token，point 挂载点逻辑不变。数据会挂载到该已有多维表格中，而非创建新文档。
+- **Complete execution flow**: This shortcut encapsulates the complete flow internally:
+  1. Automatically upload the source file to obtain `file_token`:
+     - 20MB and below: call the material upload API `POST /open-apis/drive/v1/medias/upload_all`
+     - Over 20MB: automatically switch to multipart upload `upload_prepare -> upload_part -> upload_finish`
+  2. Call the `import_tasks` API to initiate the import task, automatically extracting the extension from the local file and constructing the mount point (`mount_point`) parameter
+  3. Automatically poll to query the import task status; if it completes within the built-in polling window, return the import result directly; if it is still not complete, return `ticket`, the current status, and the follow-up query command
+- **Default root directory behavior**: When `--folder-token` is not passed, the shortcut keeps `point.mount_key` empty, and the Lark Import API treats it as "import to the caller's root directory".
+- **Import into an existing bitable**: When `--type bitable` and `--target-token` is passed, a `token` field is added to the request body pointing to the target Bitable's token, and the point mount logic remains unchanged. Data is mounted to that existing Bitable rather than creating a new document.
 
-### 支持的文件类型转换
+<a id="支持的文件类型转换"></a>
+### Supported file type conversions
 
-本地文件扩展名与目标云文档类型的对应关系如下：
+The correspondence between local file extensions and target cloud document types is as follows:
 
-| 本地文件扩展名 | 可导入为 | 说明 |
+| Local file extension | Can be imported as | Description |
 |--------------|---------|------|
-| `.docx`, `.doc` | `docx` | Microsoft Word 文档 |
-| `.txt` | `docx` | 纯文本文件 |
-| `.md`, `.markdown`, `.mark` | `docx` | Markdown 文档 |
-| `.html` | `docx` | HTML 文档 |
-| `.xlsx` | `sheet`, `bitable` | Microsoft Excel 表格 |
-| `.xls` | `sheet` | Microsoft Excel 97-2003 表格 |
-| `.csv` | `sheet`, `bitable` | CSV 数据文件 |
-| `.base` | `bitable` | 多维表格快照文件 |
-| `.pptx` | `slides` | Microsoft PowerPoint 演示文稿 |
+| `.docx`, `.doc` | `docx` | Microsoft Word document |
+| `.txt` | `docx` | Plain text file |
+| `.md`, `.markdown`, `.mark` | `docx` | Markdown document |
+| `.html` | `docx` | HTML document |
+| `.xlsx` | `sheet`, `bitable` | Microsoft Excel spreadsheet |
+| `.xls` | `sheet` | Microsoft Excel 97-2003 spreadsheet |
+| `.csv` | `sheet`, `bitable` | CSV data file |
+| `.base` | `bitable` | Bitable snapshot file |
+| `.pptx` | `slides` | Microsoft PowerPoint presentation |
 
 > [!IMPORTANT]
-> 用户口头说的 “Base” / “多维表格” / “bitable”，在命令里统一对应 `--type bitable`。
+> When the user verbally says "Base" / "Bitable" / "bitable", in commands it uniformly corresponds to `--type bitable`.
 >
-> 文件扩展名与目标文档类型必须匹配，否则会返回验证错误：
-> - 文档类文件（.docx, .doc, .txt, .md, .html）**只能**导入为 `docx`
-> - `.xlsx` / `.csv` 文件**只能**导入为 `sheet` 或 `bitable`
-> - `.xls` 文件**只能**导入为 `sheet`
-> - `.base` 文件**只能**导入为 `bitable`
-> - `.pptx` 文件**只能**导入为 `slides`
-> - 例如：`.csv` 文件不能导入为 `docx`，`.md` 文件不能导入为 `sheet`
+> The file extension and target document type must match, otherwise a validation error is returned:
+> - Document-type files (.docx, .doc, .txt, .md, .html) **can only** be imported as `docx`
+> - `.xlsx` / `.csv` files **can only** be imported as `sheet` or `bitable`
+> - `.xls` files **can only** be imported as `sheet`
+> - `.base` files **can only** be imported as `bitable`
+> - `.pptx` files **can only** be imported as `slides`
+> - For example: a `.csv` file cannot be imported as `docx`, and a `.md` file cannot be imported as `sheet`
 
 > [!IMPORTANT]
-> 如果在线文档是**以应用身份（bot）导入创建**的，如 `lark-cli drive +import --as bot`，当某次结果**已经返回最终在线文档目标**后，CLI 会**尝试为当前 CLI 用户自动授予该资源的 `full_access`（可管理权限）**。
+> If the online document is **imported and created with an app identity (bot)**, such as `lark-cli drive +import --as bot`, then once a certain result **has already returned the final online document target**, the CLI will **attempt to automatically grant the current CLI user `full_access` (manageable permission) for that resource**.
 >
-> 这个自动授权有两种触发时机：
-> - `drive +import` 的内置轮询窗口内已经完成，直接在 `+import` 中进行自动授权
-> - `drive +import` 先返回 `ready=false` / `timed_out=true`，之后你再执行 `lark-cli drive +task_result --scenario import --ticket <TICKET>`，当该查询第一次拿到最终在线文档目标时会自动授权
+> This automatic authorization has two trigger timings:
+> - It has already completed within the built-in polling window of `drive +import`, and automatic authorization is performed directly in `+import`
+> - `drive +import` first returns `ready=false` / `timed_out=true`, and afterward you execute `lark-cli drive +task_result --scenario import --ticket <TICKET>`; when that query obtains the final online document target for the first time, authorization is performed automatically
 >
-> 只有在已经拿到最终在线文档目标的那次结果里，才会返回 `permission_grant` 字段，明确说明授权结果：
-> - `status = granted`：当前 CLI 用户已获得该导入结果的可管理权限
-> - `status = skipped`：本地没有可用的当前用户 `open_id`，或当前结果还没有可授权目标，因此不会自动授权；可提示用户先完成 `lark-cli auth login`，再让 AI / agent 继续使用应用身份（bot）授予当前用户权限
-> - `status = failed`：导入已成功返回最终在线文档，但自动授权用户失败；会带上失败原因，并提示稍后重试或继续使用 bot 身份处理该文档
+> Only in the result where the final online document target has already been obtained will the `permission_grant` field be returned, clearly stating the authorization result:
+> - `status = granted`: the current CLI user has obtained manageable permission for the import result
+> - `status = skipped`: there is no available current user `open_id` locally, or the current result does not yet have an authorizable target, so automatic authorization will not be performed; you may prompt the user to complete `lark-cli auth login` first, then let the AI / agent continue to use the app identity (bot) to grant the current user permission
+> - `status = failed`: the import has successfully returned the final online document, but automatically authorizing the user failed; the failure reason is included, and it prompts to retry later or continue handling the document using the bot identity
 >
-> `permission_grant.perm = full_access` 表示该资源已授予“可管理权限”。
+> `permission_grant.perm = full_access` indicates that the resource has been granted "manageable permission".
 >
-> **不要擅自执行 owner 转移。** 创建或导入不隐含 owner 转移；用户已明确要求转移且目标已确定时沿用授权执行。
+> **Do not arbitrarily perform owner transfer.** Creation or import does not imply owner transfer; when the user has explicitly requested a transfer and the target is determined, follow the authorization to execute it.
 
-### 文件大小限制
+<a id="文件大小限制"></a>
+### File size limits
 
-除扩展名与目标类型匹配外，`drive +import` 还会在本地上传前校验格式级大小限制：
+In addition to matching the extension with the target type, `drive +import` also validates format-level size limits locally before upload:
 
-| 本地文件扩展名 | 导入目标 | 大小上限 |
+| Local file extension | Import target | Size limit |
 |--------------|---------|---------|
 | `.docx`, `.doc` | `docx` | 600MB |
 | `.txt` | `docx` | 20MB |
@@ -145,33 +152,35 @@ lark-cli drive +import --file ./README.md --type docx --dry-run
 | `.base` | `bitable` | 20MB |
 | `.pptx` | `slides` | 500MB |
 
-- 如果文件超出对应上限，shortcut 会在真正上传前直接返回验证错误。
-- “超过 20MB 自动切换分片上传”只表示上传链路会切到 multipart，不代表所有格式都允许导入超过 20MB 的文件。
+- If the file exceeds the corresponding limit, the shortcut directly returns a validation error before the actual upload.
+- "Automatically switch to multipart upload when over 20MB" only means the upload path switches to multipart; it does not mean all formats allow importing files over 20MB.
 
-- 若导入任务执行失败，会返回失败时的 `job_status` 及错误信息。
-- 若导入失败信息包含 `232140101`、`232140100`、`233523001`，通常表示同一位置下存在并发导入 / 创建操作；批量场景请改为串行执行，每个失败项每次重试前等待几秒，总共最多重试 3 次，仍失败就停止并报告冲突。
-- 若内置轮询超时但任务仍在处理中，shortcut 会成功返回，并带上：
+- If the import task fails, it returns the `job_status` at the time of failure and the error message.
+- If the import failure message contains `232140101`, `232140100`, `233523001`, it usually indicates concurrent import / creation operations under the same location; for batch scenarios, switch to serial execution, wait a few seconds before each retry of each failed item, with a maximum of 3 retries in total, and if it still fails, stop and report the conflict.
+- If the built-in polling times out but the task is still processing, the shortcut returns successfully with:
   - `ready=false`
   - `timed_out=true`
-  - `next_command`：可直接复制执行的后续查询命令，例如 `lark-cli drive +task_result --scenario import --ticket <TICKET>`
-- 若使用 `--as bot` 且内置轮询窗口内已经拿到最终在线文档，输出还会额外带上 `permission_grant`，用于说明是否已自动为当前 CLI 用户授予可管理权限。
-- 若使用 `--as bot` 但当前只返回 `ready=false`，此时还不会返回 `permission_grant`；应继续执行返回值里的 `next_command`，等 `drive +task_result --scenario import` 拿到最终文档后再触发自动授权。
-- 如果文件扩展名不被支持，执行时将抛出验证错误。
+  - `next_command`: a follow-up query command that can be copied and executed directly, for example `lark-cli drive +task_result --scenario import --ticket <TICKET>`
+- If `--as bot` is used and the final online document has already been obtained within the built-in polling window, the output additionally includes `permission_grant`, used to indicate whether manageable permission has been automatically granted to the current CLI user.
+- If `--as bot` is used but currently only `ready=false` is returned, then `permission_grant` is not yet returned; you should continue executing `next_command` from the returned value, and wait until `drive +task_result --scenario import` obtains the final document before triggering automatic authorization.
+- If the file extension is not supported, a validation error is thrown during execution.
 
-### 超时后的继续查询
+<a id="超时后的继续查询"></a>
+### Continuing to query after timeout
 
-当 `+import` 的内置轮询窗口结束但任务尚未完成时，使用返回结果中的 `ticket` 继续查询：
+When the built-in polling window of `+import` ends but the task is not yet complete, use `ticket` from the returned result to continue querying:
 
 ```bash
 lark-cli drive +task_result --scenario import --ticket <TICKET>
 ```
 
-如果这里最终返回 `ready=true` 且使用的是 `--as bot`，结果还会额外带上 `permission_grant`，用于说明是否已自动为当前 CLI 用户授予可管理权限。
+If this eventually returns `ready=true` and `--as bot` is used, the result additionally includes `permission_grant`, used to indicate whether manageable permission has been automatically granted to the current CLI user.
 
 > [!CAUTION]
-> `drive +import` 是**写入操作** —— 执行前必须确认用户意图。
+> `drive +import` is a **write operation** -- user intent must be confirmed before execution.
 
-## 参考
+<a id="参考"></a>
+## References
 
-- [lark-drive](../index.md) -- 云空间（云盘/云存储）全部命令
-- [lark-shared](../../shared/index.md) -- 认证和全局参数
+- [lark-drive](../index.md) -- all commands for the cloud space (Drive/cloud storage)
+- [lark-shared](../../shared/index.md) -- authentication and global parameters

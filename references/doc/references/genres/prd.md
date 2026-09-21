@@ -1,26 +1,31 @@
-# Genre Contract: PRD / 产品需求 (`workplace.prd`)
+<a id="genre-contract-prd--产品需求-workplaceprd"></a>
+# Genre Contract: PRD / Product Requirements (`workplace.prd`)
 
-## 体裁规则表（硬约束）
+<a id="体裁规则表硬约束"></a>
+## Genre Rules Table (Hard Constraints)
 
-| 规则项 | 规则 |
+| Rule Item | Rule |
 |-|-|
-| 写作风格 | 具体、行为化、术语和状态一致；不用固定大模板制造完整感 |
-| 视觉约束 | 在有明确内容作用时用场景、状态流、表格、图示等组件降低理解与验收成本，但不得替代需求、证据或验收 |
-| 内容逻辑 | 方向已定后按“用户问题 / 证据 → 目标 / 结果 → 范围 / 非目标 → 场景 → 行为需求 / 验收 → 异常 / 边界 → 适用质量约束 → 依赖 / 开放问题”推进 |
-| 事实 / 边界 | 用户需要、指标、研究、阈值、可行性、owner、状态和排期须可追溯；需求描述可观察结果，acceptance criteria 验结果；安全、隐私、无障碍等仅按实际风险和标准纳入 |
-| 错误 | 功能清单无用户问题、Proposal 论证吞没需求、范围 / 非目标缺失、需求暗藏实现、验收不可测、正常路径无异常、伪造研究 / 阈值 / 批准或机械填质量模板，任一出现即失败 |
+| Writing Style | Concrete, behavior-oriented, consistent terminology and states; do not use fixed large templates to manufacture a sense of completeness |
+| Visual Constraints | When there is a clear content purpose, use scenarios, state flows, tables, diagrams, and other components to reduce comprehension and acceptance costs, but they must not replace requirements, evidence, or acceptance |
+| Content Logic | Once the direction is set, proceed in the order of "user problem / evidence → goal / outcome → scope / non-goals → scenarios → behavioral requirements / acceptance → exceptions / boundaries → applicable quality constraints → dependencies / open questions" |
+| Facts / Boundaries | User needs, metrics, research, thresholds, feasibility, owner, status, and scheduling must be traceable; requirement descriptions state observable outcomes, acceptance criteria verify outcomes; security, privacy, accessibility, etc. are included only according to actual risks and standards |
+| Errors | A feature list without user problems, a Proposal argument that swallows the requirements, missing scope / non-goals, requirements that hide implementation, untestable acceptance, no exceptions on the normal path, fabricated research / thresholds / approvals, or mechanically filling in quality templates — any one of these constitutes failure |
 
-## 适用与消歧
+<a id="适用与消歧"></a>
+## Applicability and Disambiguation
 
-用于方向与投入原则已定后，让产品、设计、研发和测试就用户问题、范围、可观察行为与完成标准形成共识。是否立项 / 选择方向 / 批资源走 `proposal.md`；架构、接口和实现取舍走 `technical-doc.md`；已批准重复操作走 `sop-tutorial.md`。“需求 / 功能”单词本身不触发。
+Used after the direction and investment principles are set, to let product, design, engineering, and testing reach consensus on the user problem, scope, observable behavior, and completion criteria. Whether to initiate a project / choose a direction / approve resources goes to `proposal.md`; architecture, interfaces, and implementation trade-offs go to `technical-doc.md`; approved repetitive operations go to `sop-tutorial.md`. The words "requirement / feature" alone do not trigger this.
 
-## 证据与需求写法
+<a id="证据与需求写法"></a>
+## Evidence and Requirement Writing
 
-- 明确目标用户、任务情境、问题及研究 / 行为 / 支持证据；内部偏好和预设功能不冒充用户需要。
-- 产品目标连接可观测结果，指标标口径、来源和时间窗。未知目标值用`[目标值待产品 / 数据确认]`并给确认 owner / 时点，不编使用量或阈值。
-- 关键需求写成 actor + trigger / precondition + observable outcome + failure / edge；术语和状态一致。用户故事格式只是工具，不是章节配额。
-- 每个质量约束给可验证门槛或明确待确认项；不适用时不填模板。需求、验收 / 测试和来源保持追踪。
+- Clarify the target users, task context, problem, and research / behavioral / supporting evidence; internal preferences and presupposed features must not masquerade as user needs.
+- Product goals connect to observable outcomes; metrics specify definition, source, and time window. For unknown target values, use `[目标值待产品 / 数据确认]` and give a confirmation owner / time point; do not fabricate usage volumes or thresholds.
+- Write key requirements as actor + trigger / precondition + observable outcome + failure / edge; terminology and states must be consistent. The user story format is only a tool, not a section quota.
+- Give each quality constraint a verifiable threshold or an explicit item to be confirmed; when not applicable, do not fill in a template. Keep requirements, acceptance / tests, and sources traceable.
 
-## 结构与高质量写法
+<a id="结构与高质量写法"></a>
+## Structure and High-Quality Writing
 
-先定范围、非目标、优先级、依赖、假设和开放问题，防止 scope creep；再按关键场景写正常、异常和边界行为。把大而不可测的需求拆到可验收粒度，不用“体验更好 / 性能高”等形容词。没有用户证据时收窄为假设和研究计划；关键合规 / 安全门缺失时 `blocked`，开放问题不得藏在脚注。
+First define scope, non-goals, priorities, dependencies, assumptions, and open questions to prevent scope creep; then write normal, exceptional, and boundary behavior according to key scenarios. Break down large, untestable requirements into acceptance-ready granularity; do not use adjectives such as "better experience / high performance." When there is no user evidence, narrow it down to assumptions and a research plan; when key compliance / security gates are missing, `blocked`; open questions must not be hidden in footnotes.

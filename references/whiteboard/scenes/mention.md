@@ -1,26 +1,30 @@
-# 提及用户 (@用户 / mentionUser)
+<a id="提及用户-用户--mentionuser"></a>
+# Mention a user (@user / mentionUser)
 
-适用于：文本节点内需要 @ 某个飞书用户（如"负责人：@张三"、"@李四 请跟进"）。mention 不是独立节点，而是文本节点富文本中的一段 run，可与普通文字混排。
+Applies to: cases where a text node needs to @ a Feishu user (such as "Owner: @Zhang San", "@Li Si please follow up"). A mention is not a standalone node; it is a run within the rich text of a text node and can be mixed with ordinary text.
 
-> 当用户要插入 @用户提及时阅读本页。
+> Read this page when the user wants to insert an @user mention.
 
-## 取值来源（强约束）
+<a id="取值来源强约束"></a>
+## Value source (hard constraint)
 
-- 本页只讲 @用户（mentionUser）。@文档（mentionDoc）暂不支持。
-- `mentionUserId` 必须是**真实的飞书用户 open_id**（形如 `ou_xxxxxxxx`）。
-- 用户只给出**姓名**时，先用 `lark-contact` skill 把姓名解析成 open_id，再填入 `mentionUserId`。
-- **无法解析出真实 open_id 时，停下向用户确认，禁止臆造 id**。假 id 会写入失败或 @ 到错误的人。
+- This page only covers @user (mentionUser). @document (mentionDoc) is not supported yet.
+- `mentionUserId` must be a **real Feishu user open_id** (of the form `ou_xxxxxxxx`).
+- When the user only provides a **name**, first use the `lark-contact` skill to resolve the name into an open_id, then fill it into `mentionUserId`.
+- **When a real open_id cannot be resolved, stop and confirm with the user; fabricating an id is forbidden**. A fake id will fail to write or will @ the wrong person.
 
-## Content 约束（关键）
+<a id="content-约束关键"></a>
+## Content constraint (key)
 
-- 带 `mentionUserId` 的 run，其 `content` **必须非空**，约定填 `"*"`（单字符占位）。
-  - 原因：转换按字符占位来引用样式，`content` 为空串时该 mention 不会产出任何元素（静默丢失）。
-- `content` 的字面内容**不会显示**：画板上显示的是按 open_id 反查到的用户名，不是 `content` 的文字。因此不要把用户名写进 `content`，填单个 `"*"` 即可。
-- 一个 run 只能是一种类型：`mentionUserId` 与 `hyperlink` **互斥**，不能同时出现在同一个 run（校验会报错）。需要"链接 + @用户"时拆成两个 run。
+- For a run with `mentionUserId`, its `content` **must be non-empty**; by convention fill in `"*"` (a single-character placeholder).
+  - Reason: conversion references styles by character placeholder; when `content` is an empty string, that mention produces no element at all (silently dropped).
+- The literal content of `content` **is not displayed**: what is shown on the whiteboard is the username looked up in reverse by open_id, not the text of `content`. Therefore do not write the username into `content`; just fill in a single `"*"`.
+- A run can only be one type: `mentionUserId` and `hyperlink` are **mutually exclusive** and cannot appear in the same run (validation will report an error). When you need "link + @user", split it into two runs.
 
-## 骨架示例
+<a id="骨架示例"></a>
+## Skeleton example
 
-`text` 用 `WBTextRun[]`，把 @用户 拆成独立 run（`content: "*"` + `mentionUserId`），前后再接普通文字 run：
+Use `WBTextRun[]` for `text`, splitting the @user into an independent run (`content: "*"` + `mentionUserId`), with ordinary text runs before and after:
 
 ```json
 {
@@ -35,37 +39,39 @@
 }
 ```
 
-写入画板走标准 DSL 路径（`npx -y @larksuite/whiteboard-cli@^0.2.13 -i diagram.json --to openapi --format json | lark-cli whiteboard +update ... --input_format raw`），无需手写 raw JSON。
+Writing to the whiteboard goes through the standard DSL path (`npx -y @larksuite/whiteboard-cli@^0.2.13 -i diagram.json --to openapi --format json | lark-cli whiteboard +update ... --input_format raw`); there is no need to hand-write raw JSON.
 
-## 正反例
+<a id="正反例"></a>
+## Correct and incorrect examples
 
-正确：
+Correct:
 
 ```json
 { "content": "*", "mentionUserId": "ou_abc123" }
 ```
 
-错误（content 空串 → 不产出 @用户）：
+Incorrect (content is an empty string → no @user is produced):
 
 ```json
 { "content": "", "mentionUserId": "ou_abc123" }
 ```
 
-错误（把用户名写进 content → 多余占位，显示仍由 uid 决定）：
+Incorrect (writing the username into content → extra placeholder; the display is still determined by uid):
 
 ```json
 { "content": "@张三", "mentionUserId": "ou_abc123" }
 ```
 
-错误（与 hyperlink 同 run → 校验报错，须拆两个 run）：
+Incorrect (same run as hyperlink → validation reports an error; must be split into two runs):
 
 ```json
 { "content": "*", "mentionUserId": "ou_abc123", "hyperlink": "https://xxx.com" }
 ```
 
-## 陷阱
+<a id="陷阱"></a>
+## Pitfalls
 
-- **content 为空**：mention 静默丢失，画板上看不到 @用户。必须填 `"*"`。
-- **把用户名写进 content**：无意义，显示名由 open_id 反查决定；且多字符会占用多个字符位。
-- **mentionUserId + hyperlink 同 run**：一个 run 只能是一种元素类型，会被校验拦截，须拆成两个 run。
-- **用假 id 或用户中文名当 id**：`mentionUserId` 只接受真实 open_id，先经 `lark-contact` 解析。
+- **content is empty**: the mention is silently dropped, and the @user is not visible on the whiteboard. You must fill in `"*"`.
+- **Writing the username into content**: meaningless; the display name is determined by reverse lookup of the open_id; moreover, multiple characters occupy multiple character positions.
+- **mentionUserId + hyperlink in the same run**: a run can only be one element type; this will be blocked by validation and must be split into two runs.
+- **Using a fake id or the user's Chinese name as the id**: `mentionUserId` only accepts a real open_id; resolve it through `lark-contact` first.

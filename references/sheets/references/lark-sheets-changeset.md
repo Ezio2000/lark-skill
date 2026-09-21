@@ -1,38 +1,41 @@
 # Lark Sheet Changeset
 
-## 使用场景
+<a id="使用场景"></a>
+## Use Cases
 
-读取两个版本之间的 **changeset（变更操作清单）**，用于**复核某次编辑（尤其是 AI 编辑）是否真实满足用户诉求**。
+Read the **changeset (list of change operations)** between two revisions, to **verify whether a given edit (especially an AI edit) actually satisfies the user's requirements**.
 
-典型场景：AI agent 对表格做了一批编辑后，想确认它"说做的"和"真正落到表格上的"是否一致——拉取编辑前版本到编辑后版本之间的 changeset，逐条核对 action 是否覆盖了用户要求的修改、有没有多改 / 漏改。
+Typical scenario: after an AI agent makes a batch of edits to a sheet, it wants to confirm whether what it "said it did" matches what "actually landed on the sheet" — pull the changeset between the pre-edit revision and the post-edit revision, and check action by action whether the actions cover the modifications the user requested, and whether there are any extra or missing changes.
 
-## 版本（revision）语义
+<a id="版本revision语义"></a>
+## Revision Semantics
 
-- 这里的"版本"指表格的 **CS revision**（每次提交单调递增的修订号），不是文档历史里的命名版本。
-- `--start-revision` 是复核基线，即你认定的"编辑前"版本。
-- `--end-revision` 是"编辑后"版本；**省略时默认取最新 revision**，返回从 start 到最新的全部 changeset。
-- **版本差上限 20**：`end - start + 1 ≤ 20`，超出会被拒绝（服务端同样以 20 兜底）。复核大跨度变更时请分段拉取。
+- "Revision" here refers to the sheet's **CS revision** (a revision number that increases monotonically with each commit), not a named version in the document history.
+- `--start-revision` is the verification baseline, i.e. the revision you consider to be "before the edit".
+- `--end-revision` is the "after the edit" revision; **when omitted, it defaults to the latest revision**, returning all changesets from start to latest.
+- **Revision span limit 20**: `end - start + 1 ≤ 20`; exceeding it will be rejected (the server also enforces a fallback of 20). When verifying large-span changes, pull them in segments.
 
 ## Shortcuts
 
-| Shortcut | Risk | 分组 |
+| Shortcut | Risk | Group |
 | --- | --- | --- |
-| `+changeset-get` | read | 变更记录 |
+| `+changeset-get` | read | Change records |
 
 ## Flags
 
 ### `+changeset-get`
 
-_公共：URL/token（无 sheet 定位）_
+_Common: URL/token (no sheet targeting)_
 
-| Flag | Type | 必填 | 说明 |
+| Flag | Type | Required | Description |
 | --- | --- | --- | --- |
-| `--start-revision` | int | required | 起始版本（编辑前基线，>= 1） |
-| `--end-revision` | int | optional | 结束版本（省略取最新） |
+| `--start-revision` | int | required | Start revision (pre-edit baseline, >= 1) |
+| `--end-revision` | int | optional | End revision (omitted means latest) |
 
-## 返回结构
+<a id="返回结构"></a>
+## Return Structure
 
-返回一个 JSON 对象，`changesets` 数组按版本顺序排列，每个元素是一次提交的**原始 action 列表**与元信息：
+Returns a JSON object, with the `changesets` array ordered by revision, where each element is the **raw action list** of one commit plus metadata:
 
 ```json
 {
@@ -54,52 +57,55 @@ _公共：URL/token（无 sheet 定位）_
 }
 ```
 
-- 最外层 `latest_revision` 是**当前表格的最新版本号**（与查询区间无关），便于判断表格当前停在哪个版本、`--start-revision` 该取多少。
-- `actions` 是**未经语义渲染的原始操作对象**，按提交内的执行顺序排列。复核时逐条比对：每个 action 改了哪个 sheet、哪个区域、改成什么，是否对应用户的诉求。
-- `revision` / `create_time` 用于判断"这次改动属于哪个版本、什么时候做的"。
-- `is_self_edit` 表示该 changeset 是否由当前请求用户提交（committer 与请求用户相同），即"是不是我自己提交的编辑"。
-- `is_ai_edit` 表示该 changeset 是否由 AI 客户端提交（`member_id` 为 10 / 11）。复核时 `is_ai_edit=true` 即为 AI 写入的编辑（而非用户手动编辑），是核对 AI 是否完成诉求的主要对象。
+- The outermost `latest_revision` is the **current latest revision number of the sheet** (unrelated to the query range), useful for determining which revision the sheet is currently at and what value `--start-revision` should take.
+- `actions` is the **raw operation object without semantic rendering**, ordered by execution order within the commit. During verification, compare item by item: which sheet, which range, and what value each action changed, and whether it corresponds to the user's requirements.
+- `revision` / `create_time` are used to determine "which revision this change belongs to and when it was made".
+- `is_self_edit` indicates whether the changeset was committed by the current requesting user (committer is the same as the requesting user), i.e. "whether this is an edit I committed myself".
+- `is_ai_edit` indicates whether the changeset was committed by an AI client (`member_id` is 10 / 11). During verification, `is_ai_edit=true` are the edits written by the AI (rather than manual user edits), and are the main object for checking whether the AI fulfilled the requirements.
 
-## 复核工作流（判断 AI 是否真实完成诉求）
+<a id="复核工作流判断-ai-是否真实完成诉求"></a>
+## Verification Workflow (determining whether the AI actually fulfilled the requirements)
 
-1. 记下 AI 开始编辑前的 revision（编辑前 `+workbook-info` 或上一次工具返回的 revision 即可作为 `--start-revision`）。
-2. AI 编辑完成后，跑 `+changeset-get --url <表格> --start-revision <编辑前版本>`（不传 end → 取到最新）。
-3. 遍历 `changesets[].actions`，核对：
-   - 用户要求的每一处修改是否都有对应 action；
-   - 有没有越权 / 多余的修改（动了用户没让动的 sheet / 区域）；
-   - action 的目标区域、值是否与诉求一致。
-4. 若版本跨度可能 > 20，分段拉取（如 `start..start+19`、`start+20..` …）。
+1. Note the revision before the AI starts editing (the pre-edit `+workbook-info`, or the revision returned by the previous tool call, can serve as `--start-revision`).
+2. After the AI finishes editing, run `+changeset-get --url <表格> --start-revision <编辑前版本>` (without passing end → fetch up to latest).
+3. Iterate over `changesets[].actions` and check:
+   - Whether every modification requested by the user has a corresponding action;
+   - Whether there are any unauthorized / extra modifications (touching sheets / ranges the user did not ask to touch);
+   - Whether the target range and values of the actions are consistent with the requirements.
+4. If the revision span may be > 20, pull in segments (e.g. `start..start+19`, `start+20..` …).
 
-## 注意
+<a id="注意"></a>
+## Notes
 
-- `+changeset-get` 是**只读**操作，不改动表格。
-- 大跨度 / 大批量编辑的 changeset 可能体积较大；输出在传输层已 gzip。必要时缩小版本区间。
-- 该工具走只读 scope `sheets:spreadsheet:read`，需要对表格有查看权限。
+- `+changeset-get` is a **read-only** operation and does not modify the sheet.
+- The changeset for large-span / large-batch edits may be large; the output is already gzipped at the transport layer. Narrow the revision range if necessary.
+- This tool uses the read-only scope `sheets:spreadsheet:read` and requires view permission on the sheet.
 
 ## Examples
 
 ### `+changeset-get`
 
-公共：`--url` / `--spreadsheet-token`（二选一，无 sheet 定位）。changeset 是工作簿级历史，不接受 sheet 定位 flag。
+Common: `--url` / `--spreadsheet-token` (choose one, no sheet targeting). The changeset is workbook-level history and does not accept sheet targeting flags.
 
-示例：
+Example:
 
 ```bash
-# 只传起始版本 → 返回从该版本到最新的全部 changeset（最常用：复核 AI 编辑前后的差异）
+# Pass only the start revision → returns all changesets from that revision to latest (most common: verifying the diff before and after an AI edit)
 lark-cli sheets +changeset-get --url "https://example.feishu.cn/sheets/shtXXX" --start-revision 120
 
-# 传起始 + 结束版本（版本差 end-start+1 ≤ 20）
+# Pass start + end revision (revision span end-start+1 ≤ 20)
 lark-cli sheets +changeset-get --spreadsheet-token shtXXX --start-revision 120 --end-revision 135
 ```
 
-输出契约（envelope.data）：
+Output contract (envelope.data):
 
-- `latest_revision` — 当前表格最新版本号（与查询区间无关）
-- `start_revision` / `end_revision` — 实际查询区间（省略 `--end-revision` 时 `end_revision` = 最新版本）
-- `changesets[]` — 按版本顺序排列；每项含 `revision` / `create_time` / `actions`（原始操作列表）/ `is_self_edit` / `is_ai_edit`
+- `latest_revision` — current latest revision number of the sheet (unrelated to the query range)
+- `start_revision` / `end_revision` — actual query range (when `--end-revision` is omitted, `end_revision` = latest revision)
+- `changesets[]` — ordered by revision; each item contains `revision` / `create_time` / `actions` (raw operation list) / `is_self_edit` / `is_ai_edit`
 
-### Validate / DryRun / Execute 约束
+<a id="validate--dryrun--execute-约束"></a>
+### Validate / DryRun / Execute Constraints
 
-- `Validate` 阶段只做 XOR 检查（`--url` / `--spreadsheet-token` 二选一）与版本上限校验（`--start-revision ≥ 1`，传了 `--end-revision` 时 `end ≥ start` 且 `end - start + 1 ≤ 20`）；**禁止**联网。
-- `DryRun` 输出请求模板，不实际拉取 changeset。
-- `Execute` 阶段才发起 changeset 查询；省略 `--end-revision` 时由服务端解析为最新 revision。
+- The `Validate` stage only performs the XOR check (choose one of `--url` / `--spreadsheet-token`) and the revision upper-limit validation (`--start-revision ≥ 1`; when `--end-revision` is passed, `end ≥ start` and `end - start + 1 ≤ 20`); **network access is prohibited**.
+- `DryRun` outputs the request template and does not actually pull the changeset.
+- Only the `Execute` stage initiates the changeset query; when `--end-revision` is omitted, the server resolves it to the latest revision.

@@ -1,19 +1,22 @@
-# OKR ContentBlock 富文本格式
+<a id="okr-contentblock-富文本格式"></a>
+# OKR ContentBlock Rich Text Format
 
-OKR 的 Objective、KeyResult 中的 content/notes 字段使用 `ContentBlock` 富文本格式。本文档描述其结构和使用方式。
+The content/notes fields in OKR's Objective and KeyResult use the `ContentBlock` rich text format. This document describes its structure and usage.
 
-## 两种输入输出风格
+<a id="两种输入输出风格"></a>
+## Two Input/Output Styles
 
-OKR shortcuts 支持 `--style` 标志控制 content/notes 字段的输入输出格式：
+OKR shortcuts support the `--style` flag to control the input/output format of the content/notes fields:
 
-| `--style` 值  | 说明                                                                 | 适用场景                     |
+| `--style` Value  | Description                                                                 | Applicable Scenarios                     |
 |--------------|--------------------------------------------------------------------|--------------------------|
-| `simple`（默认） | 半纯文本格式 `SemiPlainContent`，简化的 JSON 结构，仅包含 text、mention、docs、images | 大多数场景，简单易用               |
-| `richtext`   | 原始 `ContentBlock` 富文本格式，完整的块结构和样式信息                                | 需要精确控制@提及用户位置、包含图片/文档链接时 |
+| `simple` (default) | Semi-plain text format `SemiPlainContent`, a simplified JSON structure containing only text, mention, docs, and images | Most scenarios, simple and easy to use               |
+| `richtext`   | Raw `ContentBlock` rich text format, with complete block structure and style information                                | When precise control over @mention user positions or inclusion of image/document links is needed |
 
-**重要**：输入时严格根据 `--style` 值验证格式，不会自动检测。输出时读操作（如 `+cycle-detail`、`+progress-get`）根据 `--style` 返回对应格式。
+**Important**: On input, the format is strictly validated based on the `--style` value and is not auto-detected. On output, read operations (such as `+cycle-detail`, `+progress-get`) return the corresponding format based on `--style`.
 
-## ContentBlock 结构概览
+<a id="contentblock-结构概览"></a>
+## ContentBlock Structure Overview
 
 ```json
 {
@@ -87,150 +90,153 @@ OKR shortcuts 支持 `--style` 标志控制 content/notes 字段的输入输出�
 }
 ```
 
-## 类型定义
+<a id="类型定义"></a>
+## Type Definitions
 
 ### ContentBlock
 
-根级别内容块。
+Root-level content block.
 
-| 字段       | 类型                      | 说明      |
+| Field       | Type                      | Description      |
 |----------|-------------------------|---------|
-| `blocks` | `ContentBlockElement[]` | 内容块元素数组 |
+| `blocks` | `ContentBlockElement[]` | Array of content block elements |
 
 ### ContentBlockElement
 
-内容块元素，支持段落或图库。
+Content block element, supporting paragraphs or galleries.
 
-| 字段                   | 类型                 | 说明                                         |
+| Field                   | Type                 | Description                                         |
 |----------------------|--------------------|--------------------------------------------|
-| `block_element_type` | `BlockElementType` | 块类型：`paragraph` \| `gallery`               |
-| `paragraph`          | `ContentParagraph` | 段落内容（当 `block_element_type="paragraph"` 时） |
-| `gallery`            | `ContentGallery`   | 图库内容（当 `block_element_type="gallery"` 时）   |
+| `block_element_type` | `BlockElementType` | Block type: `paragraph` \| `gallery`               |
+| `paragraph`          | `ContentParagraph` | Paragraph content (when `block_element_type="paragraph"`) |
+| `gallery`            | `ContentGallery`   | Gallery content (when `block_element_type="gallery"`)   |
 
 ### ContentParagraph
 
-段落内容。
+Paragraph content.
 
-| 字段         | 类型                          | 说明          |
+| Field         | Type                          | Description          |
 |------------|-----------------------------|-------------|
-| `style`    | `ContentParagraphStyle`     | 段落样式（列表类型等） |
-| `elements` | `ContentParagraphElement[]` | 段落内元素数组     |
+| `style`    | `ContentParagraphStyle`     | Paragraph style (list type, etc.) |
+| `elements` | `ContentParagraphElement[]` | Array of elements within the paragraph     |
 
 ### ContentParagraphElement
 
-段落内元素，支持文本、文档链接、提及。
+Element within a paragraph, supporting text, document links, and mentions.
 
-| 字段                       | 类型                     | 说明                                        |
+| Field                       | Type                     | Description                                        |
 |--------------------------|------------------------|-------------------------------------------|
-| `paragraph_element_type` | `ParagraphElementType` | 元素类型：`textRun` \| `docsLink` \| `mention` |
-| `text_run`               | `ContentTextRun`       | 文本内容                                      |
-| `docs_link`              | `ContentDocsLink`      | 飞书文档链接                                    |
-| `mention`                | `ContentMention`       | 用户提及                                      |
+| `paragraph_element_type` | `ParagraphElementType` | Element type: `textRun` \| `docsLink` \| `mention` |
+| `text_run`               | `ContentTextRun`       | Text content                                      |
+| `docs_link`              | `ContentDocsLink`      | Feishu document link                                    |
+| `mention`                | `ContentMention`       | User mention                                      |
 
 ### ContentTextRun
 
-文本块。
+Text block.
 
-| 字段      | 类型                 | 说明   |
+| Field      | Type                 | Description   |
 |---------|--------------------|------|
-| `text`  | `string`           | 文本内容 |
-| `style` | `ContentTextStyle` | 文本样式 |
+| `text`  | `string`           | Text content |
+| `style` | `ContentTextStyle` | Text style |
 
 ### ContentTextStyle
 
-文本样式。
+Text style.
 
-| 字段               | 类型             | 说明    |
+| Field               | Type             | Description    |
 |------------------|----------------|-------|
-| `bold`           | `boolean`      | 是否粗体  |
-| `strike_through` | `boolean`      | 是否删除线 |
-| `back_color`     | `ContentColor` | 背景颜色  |
-| `text_color`     | `ContentColor` | 文字颜色  |
-| `link`           | `ContentLink`  | 链接    |
+| `bold`           | `boolean`      | Whether bold  |
+| `strike_through` | `boolean`      | Whether strikethrough |
+| `back_color`     | `ContentColor` | Background color  |
+| `text_color`     | `ContentColor` | Text color  |
+| `link`           | `ContentLink`  | Link    |
 
 ### ContentColor
 
-颜色。
+Color.
 
-| 字段      | 类型        | 说明           |
+| Field      | Type        | Description           |
 |---------|-----------|--------------|
-| `red`   | `int32`   | 红色通道 (0-255) |
-| `green` | `int32`   | 绿色通道 (0-255) |
-| `blue`  | `int32`   | 蓝色通道 (0-255) |
-| `alpha` | `float64` | 透明度 (0-1)    |
+| `red`   | `int32`   | Red channel (0-255) |
+| `green` | `int32`   | Green channel (0-255) |
+| `blue`  | `int32`   | Blue channel (0-255) |
+| `alpha` | `float64` | Alpha (0-1)    |
 
 ### ContentParagraphStyle
 
-段落样式。
+Paragraph style.
 
-| 字段     | 类型            | 说明   |
+| Field     | Type            | Description   |
 |--------|---------------|------|
-| `list` | `ContentList` | 列表样式 |
+| `list` | `ContentList` | List style |
 
 ### ContentList
 
-列表样式。
+List style.
 
-| 字段             | 类型         | 说明                                                                  |
+| Field             | Type         | Description                                                                  |
 |----------------|------------|---------------------------------------------------------------------|
-| `list_type`    | `ListType` | 列表类型：`bullet` \| `number` \| `checkBox` \| `checkedBox` \| `indent` |
-| `indent_level` | `int32`    | 缩进层级                                                                |
-| `number`       | `int32`    | 序号（当 `list_type="number"` 时）                                        |
+| `list_type`    | `ListType` | List type: `bullet` \| `number` \| `checkBox` \| `checkedBox` \| `indent` |
+| `indent_level` | `int32`    | Indent level                                                                |
+| `number`       | `int32`    | Sequence number (when `list_type="number"`)                                        |
 
 ### ContentGallery
 
-图片块。目前仅有进展记录中的富文本支持展示图片。
+Image block. Currently, only rich text in progress records supports displaying images.
 
-由于 OKR 应用中进展页面的布局排版限制，一个 ContentGallery 元素中**仅可放置一个图片元素**，需要插入多张图片时需使用多个 ContentGallery 元素
-(同一个 ContentGallery 中添加多个 image 会导致这些图片在狭窄的横向排版空间中互相挤占，效果很差)
+Due to layout constraints on the progress page in the OKR application, a ContentGallery element **can contain only one image element**. To insert multiple images, multiple ContentGallery elements must be used.
+(Adding multiple images to the same ContentGallery causes these images to crowd each other in the narrow horizontal layout space, resulting in a poor effect.)
 
-| 字段       | 类型                   | 说明    |
+| Field       | Type                   | Description    |
 |----------|----------------------|-------|
-| `images` | `ContentImageItem[]` | 图片项数组 |
+| `images` | `ContentImageItem[]` | Array of image items |
 
 ### ContentImageItem
 
-图片项。
+Image item.
 
-| 字段           | 类型        | 说明       |
+| Field           | Type        | Description       |
 |--------------|-----------|----------|
-| `file_token` | `string`  | 文件 token |
-| `src`        | `string`  | 图片 URL   |
-| `width`      | `float64` | 宽度       |
-| `height`     | `float64` | 高度       |
+| `file_token` | `string`  | File token |
+| `src`        | `string`  | Image URL   |
+| `width`      | `float64` | Width       |
+| `height`     | `float64` | Height       |
 
-> **如何获取 `file_token`？** 使用 [`+upload-image`](lark-okr-image-upload.md) 命令上传本地图片，返回的 `file_token` 可用于构建 `ContentGallery` 图片块。
+> **How to obtain `file_token`?** Use the [`+upload-image`](lark-okr-image-upload.md) command to upload a local image. The returned `file_token` can be used to construct a `ContentGallery` image block.
 
 ### ContentDocsLink
 
-飞书文档链接。
+Feishu document link.
 
-| 字段      | 类型       | 说明     |
+| Field      | Type       | Description     |
 |---------|----------|--------|
-| `url`   | `string` | 链接 URL |
-| `title` | `string` | 链接标题   |
+| `url`   | `string` | Link URL |
+| `title` | `string` | Link title   |
 
 ### ContentMention
 
-提及。
+Mention.
 
-| 字段        | 类型       | 说明    |
+| Field        | Type       | Description    |
 |-----------|----------|-------|
-| `user_id` | `string` | 用户 ID |
+| `user_id` | `string` | User ID |
 
 ### ContentLink
 
-链接。
+Link.
 
-| 字段    | 类型       | 说明     |
+| Field    | Type       | Description     |
 |-------|----------|--------|
-| `url` | `string` | 链接 URL |
+| `url` | `string` | Link URL |
 
-## SemiPlainContent 半纯文本格式
+<a id="semiplaincontent-半纯文本格式"></a>
+## SemiPlainContent Semi-Plain Text Format
 
-`SemiPlainContent` 是 `ContentBlock` 的简化、有损表示形式，适用于大多数不需要复杂格式的场景。
+`SemiPlainContent` is a simplified, lossy representation of `ContentBlock`, suitable for most scenarios that do not require complex formatting.
 
-### 结构
+<a id="结构"></a>
+### Structure
 
 ```json
 {
@@ -248,30 +254,34 @@ OKR shortcuts 支持 `--style` 标志控制 content/notes 字段的输入输出�
 }
 ```
 
-### 类型定义
+<a id="类型定义-1"></a>
+### Type Definitions
 
-| 字段        | 类型               | 说明                                                                                                        |
+| Field        | Type               | Description                                                                                                        |
 |-----------|------------------|-----------------------------------------------------------------------------------------------------------|
-| `text`    | `string`         | 纯文本内容（必填，不能为空）。**输出时**包含 ` @{userID} ` 占位符以保留提及的位置上下文；**输入时** `@{...}` 占位符会被自动 strip 掉，只识别 `mention` 字段内容 |
-| `mention` | `string[]`       | 用户 ID 列表（可选），与 text 中的 `@{userID}` 占位符一一对应，输入时按顺序转换为 mention 元素**置于文本末尾**                                 |
-| `docs`    | `SemiPlainDoc[]` | 文档列表（仅输出时包含，输入时 simple 风格不支持）                                                                             |
-| `images`  | `string[]`       | 图片 URL 列表（仅输出时包含，输入时 simple 风格不支持）                                                                        |
+| `text`    | `string`         | Plain text content (required, cannot be empty). **On output**, it contains ` @{userID} ` placeholders to preserve the positional context of mentions; **on input**, `@{...}` placeholders are automatically stripped, and only the content of the `mention` field is recognized |
+| `mention` | `string[]`       | List of user IDs (optional), corresponding one-to-one with the `@{userID}` placeholders in text. On input, they are converted in order into mention elements **placed at the end of the text**                                 |
+| `docs`    | `SemiPlainDoc[]` | List of documents (included only on output; not supported by the simple style on input)                                                                             |
+| `images`  | `string[]`       | List of image URLs (included only on output; not supported by the simple style on input)                                                                        |
 
 ### SemiPlainDoc
 
-| 字段      | 类型       | 说明     |
+| Field      | Type       | Description     |
 |---------|----------|--------|
-| `title` | `string` | 文档标题   |
-| `url`   | `string` | 文档 URL |
+| `title` | `string` | Document title   |
+| `url`   | `string` | Document URL |
 
-### 双向转换说明
+<a id="双向转换说明"></a>
+### Bidirectional Conversion Notes
 
-- **ContentBlock → SemiPlainContent**（输出时）：提取纯文本、提及用户、文档链接和图片 URL，丢弃格式信息（粗体、列表、颜色等）。**提及的位置信息通过 ` @{userID} ` 占位符保留在 text 中**，同时 userID 也会被收集到 mention 数组中
-- **SemiPlainContent → ContentBlock**（输入时）：自动 strip 掉 text 中的 `@{...}` 占位符，然后将 text 和 mention 合并为单个段落，mention 按顺序附加在文本末尾。docs 和 images 在输入时被忽略（simple 风格不支持）
+- **ContentBlock → SemiPlainContent** (on output): Extracts plain text, mentioned users, document links, and image URLs, discarding formatting information (bold, lists, colors, etc.). **The positional information of mentions is preserved in text via ` @{userID} ` placeholders**, and userID is also collected into the mention array
+- **SemiPlainContent → ContentBlock** (on input): Automatically strips `@{...}` placeholders from text, then merges text and mention into a single paragraph, with mentions appended in order at the end of the text. docs and images are ignored on input (not supported by the simple style)
 
-## 使用示例
+<a id="使用示例"></a>
+## Usage Examples
 
-### 示例 0：--style simple 半纯文本格式
+<a id="示例-0--style-simple-半纯文本格式"></a>
+### Example 0: --style simple Semi-Plain Text Format
 
 ```json
 {
@@ -280,12 +290,13 @@ OKR shortcuts 支持 `--style` 标志控制 content/notes 字段的输入输出�
 }
 ```
 
-使用方式：
+Usage:
 ```bash
 lark-cli okr +patch --level objective --style simple --target-id 123 --content '{"text":"提升用户满意度","mention":["ou_123"]}'
 ```
 
-### 示例 1：简单文本段落（richtext 风格）
+<a id="示例-1简单文本段落richtext-风格"></a>
+### Example 1: Simple Text Paragraph (richtext style)
 
 ```json
 {
@@ -307,7 +318,8 @@ lark-cli okr +patch --level objective --style simple --target-id 123 --content '
 }
 ```
 
-### 示例 2：带格式的文本段落
+<a id="示例-2带格式的文本段落"></a>
+### Example 2: Formatted Text Paragraph
 
 ```json
 {
@@ -338,7 +350,8 @@ lark-cli okr +patch --level objective --style simple --target-id 123 --content '
 }
 ```
 
-### 示例 3：带列表的段落
+<a id="示例-3带列表的段落"></a>
+### Example 3: Paragraph with a List
 
 ```json
 {
@@ -385,7 +398,8 @@ lark-cli okr +patch --level objective --style simple --target-id 123 --content '
 }
 ```
 
-### 示例 4：带用户提及和图片（仅进展记录支持）的段落
+<a id="示例-4带用户提及和图片仅进展记录支持的段落"></a>
+### Example 4: Paragraph with User Mentions and Images (supported only in progress records)
 
 ```json
 {

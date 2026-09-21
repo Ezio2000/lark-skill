@@ -1,96 +1,108 @@
 
 # vc +meeting-join
 
-通过 9 位会议号让应用机器人加入一场正在进行的视频会议。这是一次**写操作**，会实际让应用机器人加入会议。
+Use a 9-digit meeting number to have the app bot join an ongoing video meeting. This is a **write operation** that actually makes the app bot join the meeting.
 
-本模块 对应 shortcut：`lark-cli vc +meeting-join`（调用 `POST /open-apis/vc/v1/bots/join`）。
+This module corresponds to the shortcut: `lark-cli vc +meeting-join` (calls `POST /open-apis/vc/v1/bots/join`).
 
-> **不要把 9 位会议号等同于入会意图。** 用户给出 9 位会议号并询问“会议讲了什么 / 查会中事件”时，先用 `vc +meeting-list-active` 查当前 active meetings 并按 `meeting_no` 匹配；只有用户明确要求“入会 / 让应用机器人旁听 / 代我参会”时才调用本命令。
+> **Do not equate a 9-digit meeting number with an intent to join.** When the user provides a 9-digit meeting number and asks "what was discussed in the meeting / check in-meeting events", first use `vc +meeting-list-active` to look up current active meetings and match by `meeting_no`; only call this command when the user explicitly requests "join the meeting / have the app bot listen in / attend on my behalf".
 
-## 命令
+<a id="命令"></a>
+## Command
 
 ```bash
-# 仅指定会议号（无密码）
+# Specify only the meeting number (no password)
 lark-cli vc +meeting-join --as bot --meeting-number 123456789
 
-# 发起日程会议（仅应用身份）
+# Start a scheduled meeting (app identity only)
 lark-cli vc +meeting-join --as bot --meeting-number 123456789 --action start
 ```
 
-## 参数
+<a id="参数"></a>
+## Parameters
 
-| 参数 | 必填 | 说明 |
+| Parameter | Required | Description |
 |------|------|------|
-| `--meeting-number <no>` | 是 | 会议号，必须为 **9 位纯数字** |
-| `--password <pw>` | 否 | 会议密码，仅在该会议设置了入会密码时传入 |
-| `--call-id <id>` | 否 | 从 `vc.bot.meeting_invited_v1` 邀请事件透传的 `call_id`，原样回传即可。Agent 主动入会或无邀请事件来源时不传 |
-| `--action join\|start` | 否 | 默认 `join`，保持普通入会链路；`start` 是日程发起专属参数，用同一 `bots/join` API 发起会议，且必须 `--as bot` |
-| `--dry-run` | 否 | 预览 API 调用，不实际加入会议；会议号或身份不确定时先用它确认请求 |
+| `--meeting-number <no>` | Yes | Meeting number, must be **9 pure digits** |
+| `--password <pw>` | No | Meeting password, passed only when the meeting has a join password set |
+| `--call-id <id>` | No | The `call_id` passed through from the `vc.bot.meeting_invited_v1` invitation event; just pass it back as-is. Do not pass it when the Agent actively joins a meeting or there is no invitation event source |
+| `--action join\|start` | No | Defaults to `join`, keeping the normal join path; `start` is a parameter exclusive to scheduled-meeting initiation, using the same `bots/join` API to start a meeting, and must `--as bot` |
+| `--dry-run` | No | Preview the API call without actually joining the meeting; use it first to confirm the request when the meeting number or identity is uncertain |
 
-## 核心约束
+<a id="核心约束"></a>
+## Core Constraints
 
-### 1. 使用应用身份
+<a id="1-使用应用身份"></a>
+### 1. Use app identity
 
-这是应用机器人入会能力，使用 `--as bot`。不要用当前登录用户身份尝试让应用机器人入会。
+This is an app bot meeting-join capability, using `--as bot`. Do not attempt to have the app bot join a meeting using the currently logged-in user identity.
 
-默认 `join` 不会向请求体写入 `action` 字段，也不进入日程发起筛选。`--action start` 才写入 `action: 2`，单独进入日程发起的筛选与校验。
+By default, `join` does not write the `action` field into the request body, nor does it enter scheduled-meeting initiation filtering. Only `--action start` writes `action: 2`, entering scheduled-meeting initiation filtering and validation separately.
 
-### 2. 会议号格式严格校验
+<a id="2-会议号格式严格校验"></a>
+### 2. Strict meeting number format validation
 
-`--meeting-number` 必须是 9 位纯数字，否则本地校验直接报错：
-`--meeting-number must be exactly 9 digits`。
+`--meeting-number` must be 9 pure digits, otherwise local validation fails immediately:
+`--meeting-number must be exactly 9 digits`.
 
-常见错误来源：
-- 把会议链接整条粘进来（应仅取尾部的 9 位数字）
-- 把 `meeting_id`（长数字 ID）当成会议号传入（两者不是同一个东西）
+Common sources of error:
+- Pasting the entire meeting link (only the trailing 9 digits should be taken)
+- Passing `meeting_id` (a long numeric ID) as the meeting number (the two are not the same thing)
 
-### 3. 会议必须已开始且允许入会
+<a id="3-会议必须已开始且允许入会"></a>
+### 3. The meeting must have started and allow joining
 
-- `--action join` 要求会议处于**进行中**状态；`--action start` 用于启动符合条件的日程会议。
-- 若会议设置了**等候室 / 入会审批**，应用机器人可能需要主持人放行后才真正入会。
-- 若返回 `HTTP 403: no permission`（错误码 `121003`），不要只理解成“账号没权限”。这类报错更常见的原因是：会议参数或会控配置当前不满足入会条件，例如会议号填错、密码未传或错误、会议尚未开始、等候室 / 入会审批未放行、会议禁止外部/特定身份加入等。应先确认这些配置项，再重试。
+- `--action join` requires the meeting to be **in progress**; `--action start` is used to start a qualifying scheduled meeting.
+- If the meeting has a **waiting room / join approval** set, the app bot may need the host to admit it before it actually joins.
+- If `HTTP 403: no permission` is returned (error code `121003`), do not interpret it merely as "the account has no permission". The more common cause of this type of error is that the meeting parameters or meeting control configuration currently do not satisfy the join conditions, for example: the meeting number is wrong, the password is not passed or is incorrect, the meeting has not yet started, the waiting room / join approval has not admitted it, the meeting prohibits external/specific identities from joining, etc. Confirm these configuration items first, then retry.
 
-### 4. 机器人入会后对其他参会人可见
+<a id="4-机器人入会后对其他参会人可见"></a>
+### 4. After the bot joins, it is visible to other participants
 
-这是一次真实入会操作，机器人会立即出现在参会人列表中，其他参会人可见，并产生会议日志。误入错会的社交成本高于技术成本——执行前优先确认 9 位会议号的来源（用户输入 / 会议链接末尾），不要臆造。参数格式有疑问时可用 `--dry-run` 预览请求体。
+This is a real join operation; the bot will immediately appear in the participant list, be visible to other participants, and generate a meeting log. The social cost of mistakenly joining the wrong meeting is higher than the technical cost—before executing, confirm the source of the 9-digit meeting number (user input / end of the meeting link) first; do not make it up. If you have questions about the parameter format, you can use `--dry-run` to preview the request body.
 
-## 输出结果
+<a id="输出结果"></a>
+## Output
 
-接口返回会议基本信息，字段视具体响应而定，常见字段：
+The API returns basic meeting information; the fields depend on the specific response. Common fields:
 
-| 字段 | 说明 |
+| Field | Description |
 |------|------|
-| `meeting.id` | 会议 ID（可后续传给 `+meeting-leave --as bot --meeting-id`） |
-| `meeting.meeting_no` | 会议号（与入参一致） |
-| `meeting.topic` | 会议主题 |
-| `meeting.start_time` | 会议开始时间 |
+| `meeting.id` | Meeting ID (can later be passed to `+meeting-leave --as bot --meeting-id`) |
+| `meeting.meeting_no` | Meeting number (consistent with the input parameter) |
+| `meeting.topic` | Meeting topic |
+| `meeting.start_time` | Meeting start time |
 
-> **重要**：拿到 `meeting.id` 后务必保留，退出会议（`+meeting-leave`）需要使用它，而不是会议号。
+> **Important**: Once you get `meeting.id`, be sure to keep it; leaving the meeting (`+meeting-leave`) requires using it, not the meeting number.
 
-## 如何获取输入参数
+<a id="如何获取输入参数"></a>
+## How to obtain input parameters
 
-| 输入参数 | 获取方式 |
+| Input parameter | How to obtain |
 |---------|---------|
-| `meeting-number` | 会议号由主持人分享；也可从会议链接尾部解析 9 位数字 |
-| `password` | 若会议设置了入会密码，由主持人提供 |
-| `call-id` | 由 `vc.bot.meeting_invited_v1` 邀请事件的 `call_id` 字段携带，Agent 收到事件时透传过来；无邀请事件场景（如 Agent 主动入会）不传 |
+| `meeting-number` | The meeting number is shared by the host; it can also be parsed as the 9 digits at the end of the meeting link |
+| `password` | If the meeting has a join password set, it is provided by the host |
+| `call-id` | Carried by the `call_id` field of the `vc.bot.meeting_invited_v1` invitation event, passed through when the Agent receives the event; do not pass it in scenarios without an invitation event (such as the Agent actively joining a meeting) |
 
-## 常见错误与排查
+<a id="常见错误与排查"></a>
+## Common errors and troubleshooting
 
-| 错误现象 | 根本原因 | 解决方案 |
+| Error symptom | Root cause | Solution |
 |---------|---------|---------|
-| `--meeting-number must be exactly 9 digits` | 会议号不是 9 位纯数字 | 检查是否误传了会议链接或 meeting_id |
-| 会议密码错误 | `--password` 错误或未提供 | 向主持人确认会议密码 |
-| 会议不存在 / 已结束 | 会议号错误或会议未进行中 | 确认会议正在进行中；启动日程会议时改用 `--action start` |
-| `HTTP 403: no permission` / `121003` | 入会前置条件不满足，通常不是单纯 scope 问题 | 依次确认：1）会议允许智能体加入；2）会议号正确；3）如有密码，已正确传入 `--password`；4）会议已开始；5）等候室 / 入会审批已放行；6）会议未禁止当前身份加入（如限制外部、限制应用机器人、仅特定成员可入会）；确认后重试 |
-| 应用身份权限不足 | 应用权限、租户安装或权限可访问的数据范围未配置完整 | 不要执行 `auth login`。以 CLI 返回的 metadata / error envelope 为准确认缺失权限；检查应用发布/安装，以及开放平台“权限可访问的数据范围”：选择“按条件筛选”，条件为“会议的归属者 包含 与应用的可用范围一致”；配置正确仍失败时，保留错误码和 `log_id`，按服务端权限异常排查 |
-| 入会被拒绝 | 等候室 / 入会审批 / 限制外部入会 | 联系主持人放行或调整会议设置 |
+| `--meeting-number must be exactly 9 digits` | The meeting number is not 9 pure digits | Check whether a meeting link or meeting_id was mistakenly passed |
+| Incorrect meeting password | `--password` is wrong or not provided | Confirm the meeting password with the host |
+| Meeting does not exist / has ended | The meeting number is wrong or the meeting is not in progress | Confirm the meeting is in progress; when starting a scheduled meeting, use `--action start` instead |
+| `HTTP 403: no permission` / `121003` | Join preconditions are not satisfied; usually not a simple scope issue | Confirm in order: 1) the meeting allows agents to join; 2) the meeting number is correct; 3) if there is a password, it has been correctly passed in `--password`; 4) the meeting has started; 5) the waiting room / join approval has admitted it; 6) the meeting does not prohibit the current identity from joining (e.g., restricting external, restricting app bots, only specific members may join); after confirming, retry |
+| Insufficient app identity permissions | App permissions, tenant installation, or the data scope accessible by permissions is not fully configured | Do not execute `auth login`. Use the metadata / error envelope returned by the CLI to accurately confirm the missing permission; check app publishing/installation, and the open platform's "data scope accessible by permissions": select "filter by condition", with the condition "meeting owner contains matches the app's available scope"; if it still fails after correct configuration, keep the error code and `log_id`, and troubleshoot as a server-side permission anomaly |
+| Join rejected | Waiting room / join approval / restriction on external joining | Contact the host to admit it or adjust the meeting settings |
 
-## 提示
+<a id="提示"></a>
+## Tips
 
-- 仅在 Agent 需要**真实加入**会议（例如参会机器人、会中助手）时使用；只拉取会议数据不需要入会。
-- 入会会让机器人立即出现在参会列表；若用户要求退出 / 离开 / 结束参会，直接使用 `+meeting-leave --as bot --meeting-id <meeting.id>`。参数格式不确定时可选 `--dry-run` 预览，但不是必经步骤。
-- 执行成功后，立即记录返回的 `meeting.id`，用于后续 `+meeting-leave` / `+meeting-events`。
+- Use only when the Agent needs to **actually join** a meeting (e.g., a participant bot, in-meeting assistant); merely pulling meeting data does not require joining.
+- Joining will make the bot immediately appear in the participant list; if the user requests to exit / leave / end participation, directly use `+meeting-leave --as bot --meeting-id <meeting.id>`. If the parameter format is uncertain, you may optionally use `--dry-run` to preview, but it is not a required step.
+- After successful execution, immediately record the returned `meeting.id` for subsequent `+meeting-leave` / `+meeting-events`.
 
-## 相关场景
-- [应用机器人参会与会中互动](../scenes/live-meeting-attend.md)
+<a id="相关场景"></a>
+## Related scenarios
+- [App bot meeting participation and in-meeting interaction](../scenes/live-meeting-attend.md)

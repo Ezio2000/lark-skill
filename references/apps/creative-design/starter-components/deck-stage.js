@@ -132,20 +132,20 @@
   // Slide-authored controls that should keep a tap instead of it navigating.
   const INTERACTIVE_SEL = 'a[href], button, input, select, textarea, summary, label, video[controls], audio[controls], [role="button"], [onclick], [tabindex]:not([tabindex^="-"]), [contenteditable]:not([contenteditable="false" i])';
 
-  // ── 移动端（复刻主仓 @apaas-ai/global-states isMobile() 的 UA 语义；
-  //    跨域产物 iframe 无法 import 该包）。刻意不用视口断点：桌面工作台的
-  //    预览 iframe 本身就窄，视口宽度会把桌面预览误判成移动端。
-  //    mode=desktop 逃生阀只作用于壳层自身 location、不透传到本 iframe，不实现。
+  // ── Mobile (replicates the UA semantics of isMobile() in the main repo @apaas-ai/global-states;
+  //    cross-origin artifact iframes cannot import that package). Deliberately not using viewport breakpoints: the desktop workbench's
+  //    preview iframe is itself narrow, and viewport width would misclassify desktop previews as mobile.
+  //    The mode=desktop escape hatch only applies to the shell's own location and does not propagate to this iframe, so it is not implemented.
   const MOBILE_UA_RE = /(phone|pad|pod|iPhone|iPod|ios|iPad|Android|Mobile|BlackBerry|IEMobile|MQQBrowser|JUC|Fennec|wOSBrowser|BrowserNG|WebOS|Symbian|Windows Phone)/i;
   const isMobileUA = () =>
     MOBILE_UA_RE.test(navigator.userAgent) ||
     (/iPad|Tab|Tablet/i.test(navigator.userAgent) && !!navigator.maxTouchPoints && navigator.maxTouchPoints > 1);
-  // 移动端视觉常量（Figma node 2965:32138 / 2965:32047 / 2965:34386 已确认）
-  const MOB_MARGIN = 12;        // 竖排卡片页边距
-  const MOB_GAP = 8;            // 卡片间距
-  const MOB_RADIUS = 8;         // 卡片圆角
-  const MOB_BADGE_IDLE_MS = 2000;  // 滚动停止 → 徽标淡出（UX 确认 2s）
-  const MOB_UI_HIDE_MS = 3000;     // 播放控件层自动收起
+  // Mobile visual constants (Figma node 2965:32138 / 2965:32047 / 2965:34386 confirmed)
+  const MOB_MARGIN = 12;        // Vertical card page margin
+  const MOB_GAP = 8;            // Card spacing
+  const MOB_RADIUS = 8;         // Card corner radius
+  const MOB_BADGE_IDLE_MS = 2000;  // Scroll stops → badge fades out (UX confirmed 2s)
+  const MOB_UI_HIDE_MS = 3000;     // Playback control layer auto-collapses
 
   const pad2 = (n) => String(n).padStart(2, '0');
 
@@ -411,7 +411,7 @@
     .rail[data-presenting] + .rail-resize,
     .rail[data-user-hidden] + .rail-resize { display: none; }
 
-    /* ── 移动端竖排浏览 ─────────────────────────────────────── */
+    /* ── Mobile vertical browsing ─────────────────────────────────────── */
     :host([data-mobile-list]) .stage {
       display: block;
       overflow-y: auto;
@@ -438,11 +438,12 @@
        (The equivalent rule further down lives inside @media print only.) */
     :host([data-mobile-list]) ::slotted([data-deck-skip]) { display: none !important; }
 
-    /* ── 移动端播放：CSS 旋转伪横屏（不依赖 orientation.lock）────
-       只在设备物理竖屏时旋转；用户顺势把手机转成横屏（系统自动旋转）
-       后，视口本身已是横屏，再叠 90° 会让画面侧躺——此时退化为常规
-       full-bleed 适配，_fitMobilePresent/_mobPresentZone 同步按
-       orientation 分支换轴。 */
+    /* ── Mobile playback: CSS-rotated pseudo-landscape (does not rely on orientation.lock) ────
+       Only rotate when the device is physically in portrait; after the user turns the phone
+       to landscape (system auto-rotate), the viewport itself is already landscape, and
+       stacking another 90° would lay the image on its side—in that case it degrades to
+       regular full-bleed fitting, and _fitMobilePresent/_mobPresentZone switch axes
+       accordingly based on the orientation branch. */
     :host([data-mobile-present]) .stage { background: #000; }
     @media (orientation: portrait) {
       :host([data-mobile-present]) .stage {
@@ -455,7 +456,7 @@
       }
     }
 
-    /* ── 移动端页码徽标（规格：Figma 2965:32047）────────────── */
+    /* ── Mobile page number badge (spec: Figma 2965:32047) ────────────── */
     .mob-badges { display: none; }
     :host([data-mobile-list]) .mob-badges {
       display: block;
@@ -481,7 +482,7 @@
     }
     :host([data-mob-scrolling]) .mob-badge { opacity: 1; }
 
-    /* ── 移动端播放控件层（规格：Figma 2965:34386）──────────── */
+    /* ── Mobile playback control layer (spec: Figma 2965:34386) ──────────── */
     .mob-ui { display: none; }
     :host([data-mobile-present][data-mob-ui]) .mob-ui {
       display: block;
@@ -517,7 +518,7 @@
       display: flex;
       gap: 8px;
       padding: 10px 16px calc(10px + env(safe-area-inset-bottom));
-      /* 透明浮在 slide 上（验收对齐设计稿）——缩略图自带白底+描边已足够区分 */
+      /* Transparent, floating over the slide (acceptance aligned with design mockup)—thumbnails already have a white background + border, which is enough to distinguish them */
       background: transparent;
       overflow-x: auto;
     }
@@ -543,7 +544,7 @@
       font-size: 12px;
       line-height: 20px;
       font-weight: 500;
-      /* 条带透明、底衬通常是播放态黑底/slide 内容——页码用白色（对齐设计稿） */
+      /* The strip is transparent, and the backing is usually the playback-state black background/slide content—page numbers use white (aligned with design mockup) */
       color: rgba(255, 255, 255, 0.9);
     }
     .mob-strip .mthumb[data-current] .mnum { color: #336DF4; }
@@ -1047,7 +1048,7 @@
       this._onMobScroll = this._onMobScroll.bind(this);
       stage.addEventListener('scroll', this._onMobScroll, { passive: true });
 
-      // 移动竖排的逐页定位规则（::slotted(:nth-child(i))），_fitMobileList 重建。
+      // Per-page positioning rules for mobile vertical layout (::slotted(:nth-child(i))), rebuilt by _fitMobileList.
       this._mobStyle = document.createElement('style');
 
       this._mobBadges = document.createElement('div');
@@ -1475,8 +1476,8 @@
       this._prevIndex = curr;
     }
 
-    // 移动端两种呈现互斥：竖排浏览（list）/ 旋转横屏播放（present）。
-    // noscale / _snthumb（导出与演讲者缩略图捕获）必须保持桌面几何。
+    // The two mobile presentations are mutually exclusive: vertical browsing (list) / rotated landscape playback (present).
+    // noscale / _snthumb (export and speaker thumbnail capture) must keep desktop geometry.
     _syncMobileMode() {
       const eligible = this._mobile && !this.hasAttribute('noscale') && !this._snthumb;
       this.toggleAttribute('data-mobile-list', eligible && !this._presenting);
@@ -1486,9 +1487,9 @@
     _fitMobileList() {
       const dw = this.designWidth, dh = this.designHeight;
       const vw = window.innerWidth;
-      this._mobLastVw = vw; // _onResize 高度变化跳过的基线
+      this._mobLastVw = vw; // Baseline for skipping _onResize height changes
       const stage = this._canvas.parentElement;
-      // 清掉桌面 _fit 写过的 inset 内联值
+      // Clear the inset inline values written by desktop _fit
       if (stage) { stage.style.left = '0'; stage.style.right = '0'; stage.style.top = '0'; stage.style.bottom = '0'; }
       this.removeAttribute('data-windowed');
       const cardW = vw - 2 * MOB_MARGIN;
@@ -1507,15 +1508,15 @@
           ' inset: auto !important; top: 0 !important; left: 0 !important;' +
           ' width: ' + dw + 'px !important; height: ' + dh + 'px !important;' +
           ' transform: translate(' + MOB_MARGIN + 'px, ' + y + 'px) scale(' + s + ') !important;' +
-          // 圆角/描边随 scale 反向放大，落地后视觉为 8px / 0.5px
+          // Corner radius/border scale inversely with scale, rendering visually as 8px / 0.5px
           ' border-radius: ' + (MOB_RADIUS / s) + 'px; overflow: hidden !important;' +
           ' border: ' + (0.5 / s) + 'px solid #DEE0E3; }'
         );
         cards.push({ slide, i, y, h: cardH });
         y += cardH + MOB_GAP;
       });
-      // 竖排规则只作用于屏幕媒体——print 的 ::slotted 分页规则特异性更低，
-      // 否则每页会带着列表位移/缩放进入打印流。
+      // Vertical rules apply only to screen media—print's ::slotted pagination rules have lower specificity,
+      // otherwise each page would enter the print flow with list offset/scaling.
       this._mobStyle.textContent = '@media screen {\n' + rules.join('\n') + '\n}';
       this._canvas.style.transform = 'none';
       this._canvas.style.width = vw + 'px';
@@ -1523,8 +1524,8 @@
       this._mobCards = cards;
       this._mobScale = s;
 
-      // 徽标：每卡片左下角内 6px；宽度按位数 16/16/20。布局是确定性的，
-      // 直接按 _mobCards 几何摆放，无需 IntersectionObserver。
+      // Badge: 6px inside the bottom-left corner of each card; width is 16/16/20 based on digit count. The layout is deterministic,
+      // so place it directly using _mobCards geometry, no IntersectionObserver needed.
       this._mobBadges.textContent = '';
       cards.forEach((c, ordinal) => {
         const b = document.createElement('div');
@@ -1543,7 +1544,7 @@
     _onMobScroll() {
       if (!this.hasAttribute('data-mobile-list') || !this._mobCards || !this._mobCards.length) return;
 
-      // 徽标显隐：程序化滚动也算"滚动"，两种来源都给可见性反馈。
+      // Badge visibility: programmatic scrolling also counts as "scrolling"; both sources provide visibility feedback.
       this.setAttribute('data-mob-scrolling', '');
       clearTimeout(this._mobScrollIdleTimer);
       this._mobScrollIdleTimer = setTimeout(
@@ -1555,16 +1556,16 @@
         const stage = this._canvas.parentElement;
         const top = stage.scrollTop;
         const moved = this._mobLastTop == null ? Infinity : Math.abs(top - this._mobLastTop);
-        this._mobLastTop = top; // 抑制期间也持续跟踪位置
+        this._mobLastTop = top; // Keep tracking position even during suppression
         if (this._mobProgUntil && performance.now() < this._mobProgUntil) {
-          // 程序化滚动事件流仍在到达：续期窗口，动画多长都盖得住；
-          // 事件停止 120ms 后窗口自然过期，之后才恢复用户滚动反推。
+          // The programmatic scroll event stream is still arriving: renew the window, so it covers any animation duration;
+          // the window naturally expires 120ms after events stop, and only then does user-scroll reverse inference resume.
           this._mobProgUntil = Math.max(this._mobProgUntil, performance.now() + 120);
           return;
         }
-        if (moved < 1) return; // 无真实位移（合成事件/终点回调）不反推
-        // 纯视口中心公式在卡片高 < 半视口时到不了首/末页（卡片高 ~= 0.5625 * 宽,
-        // 竖屏视口高通常远大于宽的一半），两端改用 clamp，中段维持视口中心语义。
+        if (moved < 1) return; // No real displacement (synthetic events/endpoint callbacks) → no reverse inference
+        // The pure viewport-center formula cannot reach the first/last page when card height < half the viewport (card height ~= 0.5625 * width,
+        // portrait viewport height is usually much greater than half the width), so use clamp at both ends and keep viewport-center semantics in the middle section.
         const max = stage.scrollHeight - stage.clientHeight;
         let cur;
         if (max <= 0 || stage.scrollTop <= 1) {
@@ -1580,8 +1581,8 @@
         }
         if (cur.i !== this._index) {
           this._index = cur.i;
-          // 广播走现有内核：hash 同步 + slide-changed + slidechange 事件。
-          // data-deck-active 的切换在竖排 CSS 下无视觉副作用。
+          // Broadcasting goes through the existing kernel: hash sync + slide-changed + slidechange events.
+          // Toggling data-deck-active has no visual side effects under the vertical CSS.
           this._applyIndex({ broadcast: true, reason: 'api' });
         }
       });
@@ -1592,14 +1593,14 @@
       if (!card) return;
       const stage = this._canvas.parentElement;
       const top = Math.max(0, card.y - Math.max(0, (stage.clientHeight - card.h) / 2));
-      // 程序化滚动期间抑制 _onMobScroll 的反推——goto/deep-link 已直接设定
-      // _index，多张边缘卡片的居中目标会被 clamp 到同一个 scrollTop，
-      // 反推无法区分它们对应哪一页，故导航直接落 index、反推只处理真实
-      // 用户位移。
+      // Suppress _onMobScroll's reverse inference during programmatic scrolling—goto/deep-link already directly set
+      // _index; the centering targets of multiple edge cards will be clamped to the same scrollTop,
+      // and reverse inference cannot distinguish which page they correspond to, so navigation directly sets index, and reverse inference only handles real
+      // user displacement.
       this._mobProgUntil = performance.now() + (smooth ? 800 : 200);
-      // 目标位置立为基线：即便这次 scrollTo 因目标已等于当前位置（如居中
-      // 目标 clamp 到 0）而不产生真实 scroll 事件，_mobLastTop 也不会停留
-      // 在 null——避免之后任意一次无位移事件被当成"首次滚动"误判有位移。
+      // Set the target position as the baseline immediately: even if this scrollTo produces no real scroll event because the target already equals the current position (e.g., the centering
+      // target is clamped to 0), _mobLastTop will not remain
+      // at null—avoiding any subsequent zero-displacement event being mistaken for a "first scroll" with displacement.
       this._mobLastTop = top;
       stage.scrollTo({ top, behavior: smooth ? 'smooth' : 'auto' });
     }
@@ -1610,9 +1611,9 @@
       this.removeAttribute('data-windowed');
       this._canvas.style.width = this.designWidth + 'px';
       this._canvas.style.height = this.designHeight + 'px';
-      // 物理竖屏：CSS 旋转 90°，stage 逻辑尺寸 = (innerHeight × innerWidth)；
-      // 物理横屏（用户顺势转了手机）：不旋转，按真实视口常规适配。
-      // CSS 侧由 @media (orientation) 同步分支。
+      // Physical portrait: CSS rotates 90°, stage logical size = (innerHeight × innerWidth);
+      // physical landscape (user turned the phone accordingly): no rotation, regular fitting based on the real viewport.
+      // The CSS side branches in sync via @media (orientation).
       const portrait = window.innerHeight >= window.innerWidth;
       const lw = portrait ? window.innerHeight : window.innerWidth;
       const lh = portrait ? window.innerWidth : window.innerHeight;
@@ -1672,10 +1673,10 @@
     }
 
     _onResize() {
-      // 竖排列表几何只依赖视口宽度。移动浏览器地址栏收起/展开只改高度，
-      // 若照常全量 refit（重建规则/徽标 + 无条件回中当前页），用户滚动中
-      // 会被可见地"拽"一下——纯高度变化直接跳过。宽度变化（旋转/分屏）
-      // 照常走完整 refit。
+      // Vertical list geometry depends only on viewport width. Mobile browser address bar collapse/expand only changes height,
+      // and if a full refit were performed as usual (rebuilding rules/badges + unconditionally recentering the current page), the user would
+      // be visibly "yanked" while scrolling—pure height changes are skipped directly. Width changes (rotation/split screen)
+      // go through the full refit as usual.
       if (this.hasAttribute('data-mobile-list')) {
         if (this._mobLastVw === window.innerWidth) return;
         this._mobLastVw = window.innerWidth;
@@ -1777,7 +1778,7 @@
         if (n === this._stage) break;
         if (n.matches && n.matches(INTERACTIVE_SEL)) return;
       }
-      // 竖排浏览是滚动列表，tap 不翻页（spec 决策 #5）
+      // Vertical browsing is a scrolling list; tap does not turn pages (spec decision #5)
       if (this.hasAttribute('data-mobile-list')) return;
       e.preventDefault();
       if (this.hasAttribute('data-mobile-present')) {
@@ -1794,12 +1795,12 @@
       this._advance(e.clientX < mid ? -1 : 1, 'tap');
     }
 
-    // rotate(90deg) 后视觉横屏的 x 轴对应视口 y 轴。方向以真机/仿真实测为准：
-    // 若实测发现 prev/next 颠倒，翻转此处的比较符（保持单点修改）。
+    // After rotate(90deg), the visually landscape x-axis corresponds to the viewport y-axis. Direction is subject to real-device/simulation testing:
+    // if testing finds prev/next reversed, flip the comparison operator here (keeping it a single-point change).
     _mobPresentZone(e) {
       const rect = this._stage.getBoundingClientRect();
-      // 物理竖屏 = stage 被 CSS 旋转 90°，视觉横屏 x 轴对应视口 y 轴；
-      // 物理横屏 = 无旋转，直接用视口 x 轴。与 _fitMobilePresent 同分支。
+      // Physical portrait = stage is CSS-rotated 90°, visually landscape x-axis corresponds to viewport y-axis;
+      // physical landscape = no rotation, use the viewport x-axis directly. Same branch as _fitMobilePresent.
       const portrait = window.innerHeight >= window.innerWidth;
       const x = portrait
         ? (e.clientY - rect.top) / Math.max(1, rect.height)
@@ -1813,9 +1814,9 @@
       this.toggleAttribute('data-mob-ui', on);
       clearTimeout(this._mobUiTimer);
       if (!on) return;
-      // 从隐藏态唤出才全量重建（吸收直编/重排/skip 变化——strip 是静态
-      // 快照、不接 _liveObserver 刷新管线）；已展开时的调用（缩略图点击/
-      // 翻页重置计时）只同步高亮，避免高频路径 O(页数) 重建。
+      // Only fully rebuild when summoned from a hidden state (absorbing direct edits/reordering/skip changes—the strip is a static
+      // snapshot and does not connect to the _liveObserver refresh pipeline); calls when already expanded (thumbnail click/
+      // page-turn timer reset) only sync the highlight, avoiding O(page count) rebuilds on high-frequency paths.
       if (!wasOpen || !this._mobUi) {
         if (this._mobUi) { this._mobUi.remove(); this._mobUi = null; }
         this._buildMobUi();
@@ -1825,9 +1826,9 @@
     }
 
     _buildMobUi() {
-      // 移动 viewer 语境 host 可能从不发 rail-enabled，author-CSS 快照
-      // （_enableRail 才建）不存在时缩略图克隆会裸渲染——此处兜底建一次。
-      // _snapshotAuthorCss 可重入且带 generation guard。
+      // In the mobile viewer context, the host may never emit rail-enabled, and the author-CSS snapshot
+      // (only created by _enableRail) may not exist, causing thumbnail clones to render bare—fall back to creating it once here.
+      // _snapshotAuthorCss is reentrant and has a generation guard.
       if (!this._adoptedSheet && this._authorCss == null) this._snapshotAuthorCss();
       const ui = document.createElement('div');
       ui.className = 'mob-ui export-hidden';
@@ -1863,19 +1864,19 @@
           t.addEventListener('click', (ev) => {
             ev.stopPropagation();
             this._go(e2.i, 'click');
-            this._toggleMobUi(true); // 重置自动收起计时，保持控件层可见
+            this._toggleMobUi(true); // Reset the auto-collapse timer to keep the control layer visible
           });
           strip.appendChild(t);
-          // 复用 _materialize 的克隆管线（media 熄火、canvas 快照、custom
-          // element 中性化）：它会自建 host/shadow 并直接挂进 entry.frame，
-          // 所以这里不需要再手工搭 host——只需在其后把统一走 _thumbScale
-          // （rail 宽度）算出的缩放，改写成本条带 132px 专属的缩放。
+          // Reuse _materialize's clone pipeline (media extinguished, canvas snapshot, custom
+          // element neutralized): it creates its own host/shadow and attaches directly to entry.frame,
+          // so there is no need to manually build a host here—just afterward rewrite the scale uniformly computed via _thumbScale
+          // (rail width) into the scale specific to this 132px strip.
           const entry = { slide: e2.slide, frame, host: null, clone: null };
           this._materialize(entry);
           if (entry.clone) entry.clone.style.transform = 'scale(' + (132 / this.designWidth) + ')';
           return { el: t, i: e2.i };
         });
-      // 控件层内任何点击不冒泡成翻页 tap
+      // Any click inside the control layer does not bubble up into a page-turn tap
       ui.addEventListener('click', (e) => e.stopPropagation());
       ui.append(back, strip);
       this._stage.appendChild(ui);
@@ -1929,13 +1930,13 @@
     _go(i, reason = 'api') {
       if (!this._slides.length) return;
       const clamped = Math.max(0, Math.min(this._slides.length - 1, i));
-      // 竖排浏览：导航直接落 index（与桌面语义一致），滚动只是视觉跟随；
-      // 不再依赖 _onMobScroll 从滚动位置反推——多张边缘卡片的居中滚动目标
-      // 会被 clamp 到同一个 scrollTop，反推无法区分它们是哪一页。
+      // Vertical browsing: navigation directly sets index (consistent with desktop semantics), scrolling is only visual following;
+      // no longer relies on _onMobScroll reverse-inferring from scroll position—the centering scroll targets of multiple edge cards
+      // will be clamped to the same scrollTop, and reverse inference cannot distinguish which page they are.
       if (this.hasAttribute('data-mobile-list')) {
         const changed = clamped !== this._index;
         this._index = clamped;
-        // 同页 goto 不重复广播（与桌面分支语义一致），但仍需重新居中滚动。
+        // Same-page goto does not broadcast repeatedly (consistent with desktop branch semantics), but still needs to recenter the scroll.
         if (changed) this._applyIndex({ broadcast: true, reason });
         this._mobScrollTo(clamped, true);
         return;
